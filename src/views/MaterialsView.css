@@ -1,0 +1,79 @@
+.materials-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.table-container {
+  overflow-x: auto;
+  padding: 0;
+}
+
+.materials-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.materials-table th,
+.materials-table td {
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.materials-table th {
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: sticky;
+  top: 0;
+}
+
+.materials-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.so-cell {
+  color: var(--color-cyan);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.name-cell {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.date-cell {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.mat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.badge-yes {
+  background: rgba(128, 238, 152, 0.15);
+  color: var(--color-neon-green);
+}
+
+.badge-no {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+}
+
+.badge-unknown {
+  background: transparent;
+  color: var(--text-muted);
+}

@@ -1,0 +1,31 @@
+.costs-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  height: calc(100vh - 120px);
+}
+
+.total-value-card {
+  padding: 16px 24px;
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.total-value-card h2 {
+  font-size: 2rem;
+  color: var(--color-neon-green);
+  font-family: 'Outfit', sans-serif;
+}
+
+.chart-container {
+  flex: 1;
+  min-height: 400px;
+  padding: var(--spacing-md);
+  position: relative;
+}
+
+@media (min-width: 768px) {
+  .costs-view {
+    height: calc(100vh - 80px);
+  }
+}
