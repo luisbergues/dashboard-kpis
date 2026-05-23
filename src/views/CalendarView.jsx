@@ -335,7 +335,7 @@ export default function CalendarView({ data }) {
       {/* Modern Dialog Form Modal */}
       {isModalOpen && (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content glass-card" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">
                 {selectedNote ? 'Edit Calendar Note' : 'Add Calendar Note'}

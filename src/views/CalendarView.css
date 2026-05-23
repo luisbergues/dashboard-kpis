@@ -463,9 +463,9 @@
 .modal-content {
   width: 90%;
   max-width: 500px;
-  background: var(--bg-surface);
+  background: #122130; /* Solid opaque color to prevent transparency */
   border: 1px solid var(--card-border);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(21, 145, 155, 0.1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(21, 145, 155, 0.15);
   padding: var(--spacing-lg);
   border-radius: var(--radius-md);
   position: relative;
