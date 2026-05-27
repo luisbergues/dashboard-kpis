@@ -4,7 +4,8 @@ import {
   db, 
   ref, 
   set, 
-  signInWithEmailAndPassword, 
+  initError,
+  signInWithEmailAndPassword,
   createUserWithEmailAndPassword 
 } from '../utils/firebase';
 import { Mail, Lock, User, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
@@ -19,6 +20,12 @@ export default function LoginView({ data }) {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [designers, setDesigners] = useState([]);
+
+  useEffect(() => {
+    if (!auth && initError) {
+      setError(`Firebase Initialization Error: ${initError}`);
+    }
+  }, []);
 
   useEffect(() => {
     if (data && data.priorityAnalysis) {

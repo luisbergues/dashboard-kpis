@@ -29,6 +29,7 @@ const isConfigured =
 let db = null;
 let firebaseApp = null;
 let auth = null;
+let initError = null;
 
 if (isConfigured) {
   try {
@@ -39,17 +40,20 @@ if (isConfigured) {
     console.log('🔥 Firebase initialized successfully!');
   } catch (error) {
     console.error('❌ Failed to initialize Firebase:', error);
+    initError = error.message || String(error);
     db = null;
     auth = null;
   }
 } else {
   console.warn('⚠️ Firebase credentials not fully configured in .env.local. Operating in Local Storage Mode.');
+  initError = 'Credentials not fully configured in .env.local';
 }
 
 // Export database reference and RTDB methods
 export { 
   db, 
   auth,
+  initError,
   ref, 
   set, 
   remove, 
