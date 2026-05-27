@@ -74,7 +74,37 @@ export default function LoginView({ data }) {
       }
     } catch (err) {
       console.error(err);
-      setError(err.message || 'Authentication failed. Please check your credentials.');
+      
+      // Translate common Firebase Auth errors to Spanish
+      let friendlyMessage = 'Error en la autenticación. Por favor, verifica tus datos.';
+      
+      if (err.code) {
+        switch (err.code) {
+          case 'auth/email-already-in-use':
+            friendlyMessage = 'Este correo electrónico ya está registrado. Haz clic en "Sign In" abajo para iniciar sesión.';
+            break;
+          case 'auth/invalid-email':
+            friendlyMessage = 'El formato del correo electrónico no es válido.';
+            break;
+          case 'auth/weak-password':
+            friendlyMessage = 'La contraseña es muy débil. Debe tener al menos 6 caracteres.';
+            break;
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
+            friendlyMessage = 'Correo o contraseña incorrectos. Por favor, inténtalo de nuevo.';
+            break;
+          case 'auth/too-many-requests':
+            friendlyMessage = 'Demasiados intentos fallidos. Tu cuenta ha sido bloqueada temporalmente.';
+            break;
+          default:
+            friendlyMessage = err.message || friendlyMessage;
+        }
+      } else {
+        friendlyMessage = err.message || friendlyMessage;
+      }
+      
+      setError(friendlyMessage);
     } finally {
       setLoading(false);
     }
