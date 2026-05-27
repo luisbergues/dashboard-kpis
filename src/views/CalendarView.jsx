@@ -10,7 +10,7 @@ import {
 import './CalendarView.css';
 import { db, ref, set, remove, onValue } from '../utils/firebase';
 
-export default function CalendarView({ data }) {
+export default function CalendarView({ data, currentUser, userProfile }) {
   if (!data) return null;
 
   const { priorityAnalysis } = data;
@@ -18,7 +18,7 @@ export default function CalendarView({ data }) {
   // State for user notes
   const [notes, setNotes] = useState(() => {
     try {
-      const saved = localStorage.getItem('dashboard_calendar_notes');
+      const saved = localStorage.getItem(`dashboard_calendar_notes_${currentUser?.uid || 'guest'}`);
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
       console.error('Failed to load notes from localStorage:', e);
@@ -33,14 +33,17 @@ export default function CalendarView({ data }) {
   const [noteText, setNoteText] = useState('');
   const [linkedSo, setLinkedSo] = useState('');
   
+  // Filtering state
+  const [showMyProjectsOnly, setShowMyProjectsOnly] = useState(true);
+
   // Sidebar tab state: 'installs' or 'notes'
   const [sidebarTab, setSidebarTab] = useState('installs');
 
   // Real-Time Database listener hook
   useEffect(() => {
-    if (!db) return;
+    if (!db || !currentUser) return;
 
-    const notesRef = ref(db, 'calendar_notes');
+    const notesRef = ref(db, `calendar_notes/${currentUser.uid}`);
     const unsubscribe = onValue(notesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -58,11 +61,12 @@ export default function CalendarView({ data }) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [currentUser]);
 
   // Parse projects to get valid dates
   const projectsWithDates = priorityAnalysis
     .filter(p => p.install && p.install.trim() !== '')
+    .filter(p => !showMyProjectsOnly || (userProfile && p.eng && p.eng.trim() === userProfile.designerName))
     .map(p => {
       let dateObj;
       try {
@@ -110,7 +114,7 @@ export default function CalendarView({ data }) {
   const saveNotesToLocalStorage = (updatedNotes) => {
     setNotes(updatedNotes);
     try {
-      localStorage.setItem('dashboard_calendar_notes', JSON.stringify(updatedNotes));
+      localStorage.setItem(`dashboard_calendar_notes_${currentUser?.uid || 'guest'}`, JSON.stringify(updatedNotes));
     } catch (e) {
       console.error('Failed to save notes to localStorage:', e);
     }
@@ -152,9 +156,9 @@ export default function CalendarView({ data }) {
       so: linkedSo || null
     };
 
-    if (db) {
+    if (db && currentUser) {
       try {
-        set(ref(db, `calendar_notes/${noteId}`), noteData);
+        set(ref(db, `calendar_notes/${currentUser.uid}/${noteId}`), noteData);
         setIsModalOpen(false);
       } catch (err) {
         console.error('Failed to save note to Firebase:', err);
@@ -173,9 +177,9 @@ export default function CalendarView({ data }) {
   };
 
   const handleDeleteNote = (noteId) => {
-    if (db) {
+    if (db && currentUser) {
       try {
-        remove(ref(db, `calendar_notes/${noteId}`));
+        remove(ref(db, `calendar_notes/${currentUser.uid}/${noteId}`));
         setIsModalOpen(false);
       } catch (err) {
         console.error('Failed to delete note from Firebase:', err);
@@ -284,10 +288,22 @@ export default function CalendarView({ data }) {
           <h1 className="page-title">Installation Calendar</h1>
           <p className="text-muted">Upcoming installations and custom project notes</p>
         </div>
-        <button className="btn-primary" onClick={handleAddNoteClick}>
-          <Plus size={16} />
-          <span>Add Calendar Note</span>
-        </button>
+        <div className="view-header-actions">
+          <label className="toggle-switch-container">
+            <input 
+              type="checkbox" 
+              checked={showMyProjectsOnly}
+              onChange={(e) => setShowMyProjectsOnly(e.target.checked)}
+              className="toggle-checkbox"
+            />
+            <div className="toggle-switch"></div>
+            <span className="toggle-label">Show My Projects Only</span>
+          </label>
+          <button className="btn-primary" onClick={handleAddNoteClick}>
+            <Plus size={16} />
+            <span>Add Calendar Note</span>
+          </button>
+        </div>
       </header>
 
       <div className="calendar-layout">

@@ -1,5 +1,12 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getDatabase, ref, set, remove, onValue, get, child } from 'firebase/database';
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged 
+} from 'firebase/auth';
 
 // Firebase configuration using Vite environment variables
 const firebaseConfig = {
@@ -21,16 +28,19 @@ const isConfigured =
 
 let db = null;
 let firebaseApp = null;
+let auth = null;
 
 if (isConfigured) {
   try {
     // Prevent double initialization
     firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     db = getDatabase(firebaseApp);
-    console.log('🔥 Firebase Realtime Database initialized successfully!');
+    auth = getAuth(firebaseApp);
+    console.log('🔥 Firebase initialized successfully!');
   } catch (error) {
-    console.error('❌ Failed to initialize Firebase Realtime Database:', error);
+    console.error('❌ Failed to initialize Firebase:', error);
     db = null;
+    auth = null;
   }
 } else {
   console.warn('⚠️ Firebase credentials not fully configured in .env.local. Operating in Local Storage Mode.');
@@ -39,11 +49,16 @@ if (isConfigured) {
 // Export database reference and RTDB methods
 export { 
   db, 
+  auth,
   ref, 
   set, 
   remove, 
   onValue, 
   get, 
   child,
-  isConfigured 
+  isConfigured,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
 };

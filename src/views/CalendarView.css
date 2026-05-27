@@ -665,3 +665,66 @@
   100% { transform: scale(0.9); opacity: 0.6; }
 }
 
+/* Toggle Switch Styles */
+.view-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.toggle-switch-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-checkbox {
+  display: none;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  border: 1px solid var(--card-border);
+  transition: all 0.3s ease;
+}
+
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background-color: var(--text-muted);
+  border-radius: 50%;
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.toggle-checkbox:checked + .toggle-switch {
+  background-color: rgba(9, 209, 199, 0.2);
+  border-color: var(--color-cyan);
+}
+
+.toggle-checkbox:checked + .toggle-switch::after {
+  transform: translateX(18px);
+  background-color: var(--color-cyan);
+  box-shadow: 0 0 8px var(--color-cyan);
+}
+
+.toggle-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.toggle-checkbox:checked ~ .toggle-label {
+  color: var(--color-cyan);
+}

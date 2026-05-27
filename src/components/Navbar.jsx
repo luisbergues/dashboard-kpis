@@ -1,8 +1,9 @@
 import React from 'react';
-import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User } from 'lucide-react';
+import { auth, signOut } from '../utils/firebase';
 import './Navbar.css';
 
-export default function Navbar({ activeTab, setActiveTab }) {
+export default function Navbar({ activeTab, setActiveTab, userProfile }) {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'calendar', label: 'Calendar', icon: CalendarDays },
@@ -33,6 +34,27 @@ export default function Navbar({ activeTab, setActiveTab }) {
           );
         })}
       </ul>
+      {userProfile && (
+        <div className="nav-user-section">
+          <div className="nav-user-profile">
+            <div className="user-avatar">
+              <User size={18} />
+            </div>
+            <div className="user-details">
+              <span className="user-name">{userProfile.designerName || 'Designer'}</span>
+              <span className="user-role">Engineering</span>
+            </div>
+          </div>
+          <button 
+            className="nav-btn signout-btn" 
+            onClick={() => auth && signOut(auth)}
+            title="Sign Out"
+          >
+            <LogOut size={18} className="nav-icon" />
+            <span className="nav-label">Sign Out</span>
+          </button>
+        </div>
+      )}
     </nav>
   );
 }
