@@ -606,3 +606,62 @@
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
+
+/* Database Sync Status Badge Styles */
+.db-status-bar {
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.status-badge {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.status-badge.connected {
+  background: rgba(70, 223, 177, 0.1);
+  color: var(--color-mint);
+  border-color: rgba(70, 223, 177, 0.2);
+}
+
+.status-badge.local {
+  background: rgba(9, 209, 199, 0.1);
+  color: var(--color-cyan);
+  border-color: rgba(9, 209, 199, 0.2);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.green {
+  background: var(--color-mint);
+  box-shadow: 0 0 8px var(--color-mint);
+  animation: pulseGreen 2s infinite;
+}
+
+.status-dot.blue {
+  background: var(--color-cyan);
+  box-shadow: 0 0 8px var(--color-cyan);
+}
+
+@keyframes pulseGreen {
+  0% { transform: scale(0.9); opacity: 0.6; }
+  50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 12px var(--color-mint); }
+  100% { transform: scale(0.9); opacity: 0.6; }
+}
+

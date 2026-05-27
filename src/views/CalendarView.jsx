@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   format, addMonths, subMonths, startOfMonth, endOfMonth, 
   startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, parse 
@@ -8,6 +8,7 @@ import {
   Plus, Trash2, X, FileText, ClipboardList 
 } from 'lucide-react';
 import './CalendarView.css';
+import { db, ref, set, remove, onValue } from '../utils/firebase';
 
 export default function CalendarView({ data }) {
   if (!data) return null;
@@ -34,6 +35,30 @@ export default function CalendarView({ data }) {
   
   // Sidebar tab state: 'installs' or 'notes'
   const [sidebarTab, setSidebarTab] = useState('installs');
+
+  // Real-Time Database listener hook
+  useEffect(() => {
+    if (!db) return;
+
+    const notesRef = ref(db, 'calendar_notes');
+    const unsubscribe = onValue(notesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Convert the notes object from RTDB into an array
+        const notesList = Object.keys(data).map(key => ({
+          id: key,
+          ...data[key]
+        }));
+        setNotes(notesList);
+      } else {
+        setNotes([]);
+      }
+    }, (error) => {
+      console.error('Firebase Realtime Database read error:', error);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Parse projects to get valid dates
   const projectsWithDates = priorityAnalysis
@@ -120,32 +145,47 @@ export default function CalendarView({ data }) {
     e.preventDefault();
     if (!noteText.trim()) return;
 
-    let updatedNotes;
-    if (selectedNote) {
-      // Edit existing note
-      updatedNotes = notes.map(n => n.id === selectedNote.id 
-        ? { ...n, date: selectedDate, text: noteText, so: linkedSo || null }
-        : n
-      );
-    } else {
-      // Create new note
-      const newNote = {
-        id: `note-${Date.now()}`,
-        date: selectedDate,
-        text: noteText,
-        so: linkedSo || null
-      };
-      updatedNotes = [...notes, newNote];
-    }
+    const noteId = selectedNote ? selectedNote.id : `note-${Date.now()}`;
+    const noteData = {
+      date: selectedDate,
+      text: noteText,
+      so: linkedSo || null
+    };
 
-    saveNotesToLocalStorage(updatedNotes);
-    setIsModalOpen(false);
+    if (db) {
+      try {
+        set(ref(db, `calendar_notes/${noteId}`), noteData);
+        setIsModalOpen(false);
+      } catch (err) {
+        console.error('Failed to save note to Firebase:', err);
+      }
+    } else {
+      // Local Storage Fallback
+      let updatedNotes;
+      if (selectedNote) {
+        updatedNotes = notes.map(n => n.id === noteId ? { id: noteId, ...noteData } : n);
+      } else {
+        updatedNotes = [...notes, { id: noteId, ...noteData }];
+      }
+      saveNotesToLocalStorage(updatedNotes);
+      setIsModalOpen(false);
+    }
   };
 
   const handleDeleteNote = (noteId) => {
-    const updatedNotes = notes.filter(n => n.id !== noteId);
-    saveNotesToLocalStorage(updatedNotes);
-    setIsModalOpen(false);
+    if (db) {
+      try {
+        remove(ref(db, `calendar_notes/${noteId}`));
+        setIsModalOpen(false);
+      } catch (err) {
+        console.error('Failed to delete note from Firebase:', err);
+      }
+    } else {
+      // Local Storage Fallback
+      const updatedNotes = notes.filter(n => n.id !== noteId);
+      saveNotesToLocalStorage(updatedNotes);
+      setIsModalOpen(false);
+    }
   };
 
   const renderHeader = () => (
@@ -273,6 +313,20 @@ export default function CalendarView({ data }) {
               <FileText size={14} />
               <span>My Notes ({notes.length})</span>
             </button>
+          </div>
+
+          <div className="db-status-bar">
+            {db ? (
+              <span className="status-badge connected">
+                <span className="status-dot green"></span>
+                Realtime Synced
+              </span>
+            ) : (
+              <span className="status-badge local">
+                <span className="status-dot blue"></span>
+                Local Mode
+              </span>
+            )}
           </div>
 
           {sidebarTab === 'installs' ? (

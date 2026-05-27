@@ -12,6 +12,7 @@
   "dependencies": {
     "chart.js": "^4.5.1",
     "date-fns": "^4.2.1",
+    "firebase": "^12.13.0",
     "lucide-react": "^1.16.0",
     "papaparse": "^5.5.3",
     "react": "^19.2.6",
