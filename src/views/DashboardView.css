@@ -48,6 +48,96 @@
   margin-top: var(--spacing-md);
 }
 
+/* ─── Full-Width Historical Chart Section ───────────────── */
+.chart-section-full {
+  padding: var(--spacing-lg);
+}
+
+.chart-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.history-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-mint);
+  background: rgba(70, 223, 177, 0.08);
+  border: 1px solid rgba(70, 223, 177, 0.15);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mixed-chart-container-wide {
+  height: 400px;
+  width: 100%;
+  position: relative;
+}
+
+/* ─── Financial Impact Analysis ─────────────────────────── */
+.financial-section {
+  padding: var(--spacing-lg);
+}
+
+.financial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-md);
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.financial-subtitle {
+  font-size: 0.85rem;
+  margin-top: 2px;
+}
+
+.total-pipeline-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  background: linear-gradient(135deg, rgba(9, 209, 199, 0.06) 0%, rgba(128, 238, 152, 0.08) 100%);
+  border: 1px solid rgba(128, 238, 152, 0.12);
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+}
+
+.pipeline-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.pipeline-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #80EE98, #09D1C7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.financial-chart-container {
+  height: 340px;
+  width: 100%;
+  position: relative;
+}
+
+/* ─── Summaries Row ─────────────────────────────────────── */
+.dashboard-summaries-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-lg);
+}
+
 /* Insights Summary Card */
 .insights-card {
   padding: var(--spacing-lg);

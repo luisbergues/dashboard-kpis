@@ -25,7 +25,8 @@ export async function fetchAndParseData() {
       meetingPoints: [],
       topCostProjects: [],
       materialRequirements: [],
-      statusHistory: []
+      statusHistory: [],
+      weekLabels: { previous: 'Previous Week', current: 'Current Week' }
     };
 
     let currentSection = null;
@@ -48,6 +49,18 @@ export async function fetchAndParseData() {
         continue;
       } else if (rowString.includes('Week over Week Comparison')) {
         currentSection = 'weekOverWeek';
+        // The NEXT row is the header with date labels - parse it
+        if (data[i + 1]) {
+          const headerRow = data[i + 1];
+          const headerString = headerRow.join(',');
+          // Extract previous week label e.g. "Previous Week (June 1, 2026)"
+          const prevMatch = headerString.match(/Previous\s+Week\s*\(([^)]+)\)/i);
+          const currMatch = headerString.match(/Current\s+Week\s*\(([^)]+)\)/i);
+          parsedData.weekLabels = {
+            previous: prevMatch ? prevMatch[1].trim() : 'Previous Week',
+            current: currMatch ? currMatch[1].trim() : 'Current Week'
+          };
+        }
         i++; // skip header row
         continue;
       } else if (rowString.includes('Weekly Review & Insights')) {
