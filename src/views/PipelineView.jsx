@@ -67,7 +67,9 @@ export default function PipelineView({ data }) {
           <div className="no-results text-muted">No projects found.</div>
         ) : (
           projects.map((project, idx) => {
-            const onHoldNote = project.status.toUpperCase() === 'ON HOLD' ? getOnHoldNote(project.name) : null;
+            const onHoldNote = project.status.toUpperCase() === 'ON HOLD' 
+              ? (project.onHoldReason || getOnHoldNote(project.name)) 
+              : null;
             
             return (
               <div key={idx} className="project-card glass-card">

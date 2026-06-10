@@ -14,6 +14,7 @@ import {
 } from 'chart.js';
 import { Chart } from 'react-chartjs-2';
 import './DashboardView.css';
+import CostAnalysisView from './CostAnalysisView';
 
 ChartJS.register(
   LinearScale,
@@ -30,7 +31,7 @@ ChartJS.register(
 export default function DashboardView({ data }) {
   if (!data) return <div className="loading">Cargando Dashboard...</div>;
 
-  const { weekOverWeek, insights, meetingPoints } = data;
+  const { weekOverWeek, insights, meetingPoints, topCostProjects } = data;
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Prepare Chart Data

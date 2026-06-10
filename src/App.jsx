@@ -7,11 +7,13 @@ import CostAnalysisView from './views/CostAnalysisView'
 import MaterialsView from './views/MaterialsView'
 import CalendarView from './views/CalendarView'
 import LoginView from './views/LoginView'
+import MyProjectsView from './views/MyProjectsView'
 import { auth, db, onAuthStateChanged, ref, onValue } from './utils/firebase'
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [data, setData] = useState(null);
+  const [overrides, setOverrides] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
@@ -30,6 +32,10 @@ function App() {
       }
     }
     loadData();
+
+    // Set up auto-polling interval (every 30 seconds) to keep data fresh
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -59,6 +65,39 @@ function App() {
     return () => unsubscribeAuth();
   }, []);
 
+  useEffect(() => {
+    if (!db) return;
+    const overridesRef = ref(db, 'project_overrides');
+    const unsubscribeOverrides = onValue(overridesRef, (snapshot) => {
+      setOverrides(snapshot.val() || {});
+    });
+    return () => unsubscribeOverrides();
+  }, []);
+
+  const getMergedData = () => {
+    if (!data) return null;
+    if (Object.keys(overrides).length === 0) return data;
+
+    const mergedPriorityAnalysis = data.priorityAnalysis.map(p => {
+      const override = overrides[p.so];
+      if (override) {
+        return {
+          ...p,
+          status: override.status || p.status,
+          onHoldReason: override.onHoldReason || null
+        };
+      }
+      return p;
+    });
+
+    return {
+      ...data,
+      priorityAnalysis: mergedPriorityAnalysis
+    };
+  };
+
+  const mergedData = getMergedData();
+
   const renderView = () => {
     if (loading || authLoading) return <div className="loading-state">Loading application...</div>;
     if (error) return <div className="error-state">Error: {error}</div>;
@@ -68,12 +107,13 @@ function App() {
     }
 
     switch (activeTab) {
-      case 'dashboard': return <DashboardView data={data} />;
-      case 'calendar': return <CalendarView data={data} currentUser={currentUser} userProfile={userProfile} />;
-      case 'pipeline': return <PipelineView data={data} />;
-      case 'costs': return <CostAnalysisView data={data} />;
-      case 'materials': return <MaterialsView data={data} />;
-      default: return <DashboardView data={data} />;
+      case 'dashboard': return <DashboardView data={mergedData} />;
+      case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
+      case 'my-projects': return <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
+      case 'pipeline': return <PipelineView data={mergedData} />;
+      case 'costs': return <CostAnalysisView data={mergedData} />;
+      case 'materials': return <MaterialsView data={mergedData} />;
+      default: return <DashboardView data={mergedData} />;
     }
   };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User } from 'lucide-react';
+import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User, Briefcase } from 'lucide-react';
 import { auth, signOut } from '../utils/firebase';
 import './Navbar.css';
 
@@ -7,6 +7,7 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'calendar', label: 'Calendar', icon: CalendarDays },
+    ...(userProfile ? [{ id: 'my-projects', label: 'My Projects', icon: Briefcase }] : []),
     { id: 'pipeline', label: 'Pipeline', icon: ListTodo },
     { id: 'costs', label: 'Cost Analysis', icon: CircleDollarSign },
     { id: 'materials', label: 'Materials', icon: Hammer }

@@ -4,7 +4,9 @@ const CSV_URL = 'https://docs.google.com/spreadsheets/d/1qENXOvlEEY70LQ4i4EQBA0r
 
 export async function fetchAndParseData() {
   try {
-    const response = await fetch(CSV_URL);
+    // Append a unique timestamp to prevent browser and CDN caching
+    const cacheBuster = `&t=${new Date().getTime()}`;
+    const response = await fetch(`${CSV_URL}${cacheBuster}`);
     if (!response.ok) throw new Error('Failed to fetch CSV data');
     const csvText = await response.text();
 
