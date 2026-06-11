@@ -39,38 +39,51 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Save weekly snapshot to Firebase & load history
+  // Save weekly snapshots to Firebase & load history
+  // We save TWO snapshots per sheet update: one for 'previous week' and one for 'current week'
   useEffect(() => {
     if (!data || !db) return;
 
     const saveAndLoadHistory = async () => {
       try {
-        // Create a key from the current week label (sanitize for Firebase path)
-        const currentWeekLabel = data.weekLabels?.current || 'Unknown';
-        const weekKey = currentWeekLabel.replace(/[.#$/\[\]]/g, '_').replace(/\s+/g, '_');
+        const prevLabel = data.weekLabels?.previous || 'Previous';
+        const currLabel = data.weekLabels?.current || 'Current';
 
-        // Build the snapshot for this week
-        const snapshot = {
-          label: currentWeekLabel,
-          previousLabel: data.weekLabels?.previous || 'Previous',
-          savedAt: new Date().toISOString(),
-          metrics: {}
-        };
+        // Helper: sanitize label for Firebase key
+        const toKey = (label) => label.replace(/[.#$/\[\]]/g, '_').replace(/\s+/g, '_');
 
-        data.weekOverWeek.forEach(m => {
-          snapshot.metrics[m.metric] = {
-            previous: parseInt(m.previous, 10) || 0,
-            current: parseInt(m.current, 10) || 0,
-            variance: parseInt(m.variance, 10) || 0
+        // Save previous week snapshot (with 'previous' values)
+        const prevKey = toKey(prevLabel);
+        const prevRef = ref(db, `weekly_history/${prevKey}`);
+        const prevSnap = await get(prevRef);
+        if (!prevSnap.exists()) {
+          const prevSnapshot = {
+            label: prevLabel,
+            savedAt: new Date().toISOString(),
+            metrics: {}
           };
-        });
+          data.weekOverWeek.forEach(m => {
+            prevSnapshot.metrics[m.metric] = parseInt(m.previous, 10) || 0;
+          });
+          await set(prevRef, prevSnapshot);
+          console.log(`📊 Saved weekly snapshot for: ${prevLabel}`);
+        }
 
-        // Save to Firebase (only writes if data changed due to set semantics)
-        const weekRef = ref(db, `weekly_history/${weekKey}`);
-        const existingSnap = await get(weekRef);
-        if (!existingSnap.exists()) {
-          await set(weekRef, snapshot);
-          console.log(`📊 Saved weekly snapshot for: ${currentWeekLabel}`);
+        // Save current week snapshot (with 'current' values)
+        const currKey = toKey(currLabel);
+        const currRef = ref(db, `weekly_history/${currKey}`);
+        const currSnap = await get(currRef);
+        if (!currSnap.exists()) {
+          const currSnapshot = {
+            label: currLabel,
+            savedAt: new Date().toISOString(),
+            metrics: {}
+          };
+          data.weekOverWeek.forEach(m => {
+            currSnapshot.metrics[m.metric] = parseInt(m.current, 10) || 0;
+          });
+          await set(currRef, currSnapshot);
+          console.log(`📊 Saved weekly snapshot for: ${currLabel}`);
         }
 
         // Load all historical snapshots
@@ -78,13 +91,12 @@ function App() {
         const historySnap = await get(historyRef);
         if (historySnap.exists()) {
           const allWeeks = historySnap.val();
-          // Convert to array, sort by date (try to parse the label), keep last 10
           const weeksArray = Object.entries(allWeeks).map(([key, val]) => ({
             key,
             ...val
           }));
 
-          // Sort chronologically by trying to parse the label date
+          // Sort chronologically by parsing the label date
           weeksArray.sort((a, b) => {
             const dateA = new Date(a.label);
             const dateB = new Date(b.label);

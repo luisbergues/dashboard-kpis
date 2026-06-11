@@ -26,7 +26,11 @@ export async function fetchAndParseData() {
       topCostProjects: [],
       materialRequirements: [],
       statusHistory: [],
-      weekLabels: { previous: 'Previous Week', current: 'Current Week' }
+      weekLabels: { previous: 'Previous Week', current: 'Current Week' },
+      financialImpact: {
+        description: '',
+        rows: []
+      }
     };
 
     let currentSection = null;
@@ -68,6 +72,14 @@ export async function fetchAndParseData() {
         continue;
       } else if (rowString.includes('Meeting Talking Points')) {
         currentSection = 'meetingPoints';
+        continue;
+      } else if (rowString.includes('Financial Impact Analysis')) {
+        currentSection = 'financialImpact';
+        // Next row is the description text
+        if (data[i + 1]) {
+          parsedData.financialImpact.description = data[i + 1].join('').trim();
+        }
+        i++; // skip description row
         continue;
       } else if (rowString.includes('Top Active Projects by Cost')) {
         currentSection = 'topCostProjects';
@@ -133,6 +145,15 @@ export async function fetchAndParseData() {
       else if (currentSection === 'meetingPoints') {
         if (row[1] && row[1].startsWith('-')) {
           parsedData.meetingPoints.push(row[1]);
+        }
+      }
+      else if (currentSection === 'financialImpact') {
+        // Parse rows like: ,ON HOLD,"$170,195.00",,,,,,, or ,Status,Value
+        if (row[1] && row[1] !== 'Status' && row[2] && row[2].includes('$')) {
+          parsedData.financialImpact.rows.push({
+            status: row[1].trim(),
+            value: row[2].trim()
+          });
         }
       }
       else if (currentSection === 'topCostProjects') {

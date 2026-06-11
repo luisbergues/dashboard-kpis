@@ -12,7 +12,7 @@ import {
   LineController,
   BarController
 } from 'chart.js';
-import { Chart, Bar } from 'react-chartjs-2';
+import { Chart } from 'react-chartjs-2';
 import './DashboardView.css';
 
 ChartJS.register(
@@ -44,14 +44,14 @@ const STACKED_METRICS = Object.keys(METRIC_COLORS);
 export default function DashboardView({ data, weeklyHistory = [] }) {
   if (!data) return <div className="loading">Cargando Dashboard...</div>;
 
-  const { weekOverWeek, insights, meetingPoints, topCostProjects, weekLabels } = data;
+  const { weekOverWeek, insights, meetingPoints, topCostProjects, weekLabels, financialImpact } = data;
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // ─── Build Historical Chart (up to 10 weeks) ─────────────────────────────
   const historicalChartData = useMemo(() => {
     // If we have history from Firebase, use it for multi-bar chart
     if (weeklyHistory.length > 0) {
-      // Each entry in weeklyHistory has: label, metrics: { 'Total Active Projects': { current: N }, ... }
+      // Each entry in weeklyHistory has: label, metrics: { 'Total Active Projects': N, ... }
       const labels = weeklyHistory.map(w => {
         // Shorten label: "JUNE 8, 2026" -> "Jun 8"
         const parts = w.label.match(/([A-Za-z]+)\s+(\d+)/);
@@ -68,7 +68,10 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
       datasets.push({
         type: 'line',
         label: 'Total Active Projects',
-        data: weeklyHistory.map(w => w.metrics?.['Total Active Projects']?.current ?? 0),
+        data: weeklyHistory.map(w => {
+          const v = w.metrics?.['Total Active Projects'];
+          return typeof v === 'object' ? (v?.current ?? 0) : (v ?? 0);
+        }),
         borderColor: '#FFFFFF',
         backgroundColor: '#FFFFFF',
         borderWidth: 3,
@@ -86,7 +89,10 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
         datasets.push({
           type: 'bar',
           label: metric,
-          data: weeklyHistory.map(w => w.metrics?.[metric]?.current ?? 0),
+          data: weeklyHistory.map(w => {
+            const v = w.metrics?.[metric];
+            return typeof v === 'object' ? (v?.current ?? 0) : (v ?? 0);
+          }),
           backgroundColor: METRIC_COLORS[metric],
           stack: 'Stack 0',
         });
@@ -173,71 +179,22 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
     }
   };
 
-  // ─── Financial Impact Analysis ──────────────────────────────────────────
+  // ─── Financial Impact Analysis (from Sheet) ─────────────────────────────
   const processCost = (costStr) => parseFloat(costStr.replace(/[^0-9.-]+/g, ""));
+  const fiRows = financialImpact?.rows || [];
+  const fiDescription = financialImpact?.description || '';
 
-  const financialChartData = useMemo(() => ({
-    labels: (topCostProjects || []).map(p => {
-      const name = p.name.split(':')[0];
-      return name.length > 18 ? name.substring(0, 16) + '…' : name;
-    }),
-    datasets: [
-      {
-        label: 'Project Cost ($)',
-        data: (topCostProjects || []).map(p => processCost(p.cost)),
-        backgroundColor: function(context) {
-          const chart = context.chart;
-          const {ctx, chartArea} = chart;
-          if (!chartArea) return '#09D1C7';
-          const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-          gradient.addColorStop(0, '#09D1C7');
-          gradient.addColorStop(1, '#80EE98');
-          return gradient;
-        },
-        borderRadius: 6,
-        borderWidth: 0,
-      }
-    ]
-  }), [topCostProjects]);
+  // Extract key values for display
+  const fiOnHold = fiRows.find(r => r.status === 'ON HOLD');
+  const fiInProgress = fiRows.find(r => r.status === 'In Progress');
+  const fiTotal = fiRows.find(r => r.status === 'Total');
+  const fiDelayedRisk = fiRows.find(r => r.status.includes('Delayed Risk'));
 
-  const financialChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: 'rgba(11, 21, 32, 0.95)',
-        titleColor: '#80EE98',
-        bodyColor: '#fff',
-        borderColor: 'rgba(255,255,255,0.1)',
-        borderWidth: 1,
-        padding: 12,
-        callbacks: {
-          label: function(context) {
-            let label = context.dataset.label || '';
-            if (label) label += ': ';
-            if (context.parsed.y !== null) {
-              label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
-            }
-            return label;
-          }
-        }
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-        ticks: { color: '#64748B', callback: value => '$' + (value / 1000).toFixed(0) + 'k' }
-      },
-      x: {
-        grid: { display: false, drawBorder: false },
-        ticks: { color: '#94A3B8', maxRotation: 45, minRotation: 45, font: { size: 10 } }
-      }
-    }
+  const formatCurrency = (str) => {
+    if (!str) return '$0';
+    const num = processCost(str);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num);
   };
-
-  const totalPipelineValue = (topCostProjects || []).reduce((sum, p) => sum + processCost(p.cost), 0);
 
   // ─── Subtitle with real dates from sheet ───────────────────────────────
   const subtitleText = `${weekLabels?.current || 'Current Week'} vs ${weekLabels?.previous || 'Previous Week'}`;
@@ -326,8 +283,8 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
         </div>
       </section>
 
-      {/* Financial Impact Analysis */}
-      {topCostProjects && topCostProjects.length > 0 && (
+      {/* Financial Impact Analysis (from Sheet) */}
+      {fiRows.length > 0 && (
         <section className="glass-card financial-section">
           <div className="financial-header">
             <div>
@@ -335,15 +292,44 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
                 <DollarSign className="text-neon-green" size={20} />
                 Financial Impact Analysis
               </h3>
-              <p className="text-muted financial-subtitle">Top active projects by pipeline value</p>
+              {fiDescription && <p className="text-muted financial-subtitle">{fiDescription}</p>}
             </div>
-            <div className="total-pipeline-badge">
-              <span className="pipeline-label">Total Pipeline</span>
-              <span className="pipeline-value">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(totalPipelineValue)}</span>
-            </div>
+            {fiTotal && (
+              <div className="total-pipeline-badge">
+                <span className="pipeline-label">Total Pipeline</span>
+                <span className="pipeline-value">{formatCurrency(fiTotal.value)}</span>
+              </div>
+            )}
           </div>
-          <div className="financial-chart-container">
-            <Bar data={financialChartData} options={financialChartOptions} />
+          <div className="financial-cards-row">
+            {fiOnHold && (
+              <div className="fi-card fi-card-hold">
+                <span className="fi-card-label">ON HOLD Value</span>
+                <span className="fi-card-value fi-hold">{formatCurrency(fiOnHold.value)}</span>
+                <span className="fi-card-note">At-risk revenue</span>
+              </div>
+            )}
+            {fiInProgress && (
+              <div className="fi-card fi-card-progress">
+                <span className="fi-card-label">In Progress Value</span>
+                <span className="fi-card-value fi-progress">{formatCurrency(fiInProgress.value)}</span>
+                <span className="fi-card-note">Active revenue</span>
+              </div>
+            )}
+            {fiDelayedRisk && (
+              <div className="fi-card fi-card-risk">
+                <span className="fi-card-label">50% Delayed Risk</span>
+                <span className="fi-card-value fi-risk">{formatCurrency(fiDelayedRisk.value)}</span>
+                <span className="fi-card-note">Potential delay cost</span>
+              </div>
+            )}
+            {fiTotal && (
+              <div className="fi-card fi-card-total">
+                <span className="fi-card-label">Total Pipeline</span>
+                <span className="fi-card-value fi-total">{formatCurrency(fiTotal.value)}</span>
+                <span className="fi-card-note">Combined value</span>
+              </div>
+            )}
           </div>
         </section>
       )}
