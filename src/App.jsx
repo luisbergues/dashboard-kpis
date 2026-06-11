@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { fetchAndParseData } from './utils/sheetParser'
+import { checkDbSizeAndArchive } from './utils/archiveHelpers'
 import Navbar from './components/Navbar'
 import DashboardView from './views/DashboardView'
 import PipelineView from './views/PipelineView'
@@ -27,6 +28,7 @@ function App() {
       try {
         const parsedData = await fetchAndParseData();
         setData(parsedData);
+        checkDbSizeAndArchive().catch(console.error);
       } catch (err) {
         setError(err.message);
       } finally {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, ref, set, onValue, get, child } from '../utils/firebase';
+import { saveEngineeringCheck } from '../utils/engineeringCheck';
 import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';
 import { 
@@ -50,6 +51,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [projectStages, setProjectStages] = useState({});
   const [projectOverrides, setProjectOverrides] = useState({});
   const [projectHistory, setProjectHistory] = useState({});
+  const [engineeringChecks, setEngineeringChecks] = useState({});
   const [loading, setLoading] = useState(true);
 
   // Hold Modal State
@@ -75,6 +77,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       const localStages = {};
       const localOverrides = {};
       const localHistory = {};
+      const localEngineeringChecks = {};
       
       myProjects.forEach(p => {
         try {
@@ -86,15 +89,20 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
           
           const savedHistory = localStorage.getItem(`project_history_${p.so}`);
           localHistory[p.so] = savedHistory ? JSON.parse(savedHistory) : [];
+
+          const savedEngCheck = localStorage.getItem(`engineering_check_${p.so}`);
+          localEngineeringChecks[p.so] = savedEngCheck ? JSON.parse(savedEngCheck) : {};
         } catch (e) {
           localStages[p.so] = Array(STAGES.length).fill(false);
           localOverrides[p.so] = null;
           localHistory[p.so] = [];
+          localEngineeringChecks[p.so] = {};
         }
       });
       setProjectStages(localStages);
       setProjectOverrides(localOverrides);
       setProjectHistory(localHistory);
+      setEngineeringChecks(localEngineeringChecks);
       setLoading(false);
       return;
     }
@@ -125,12 +133,34 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       setLoading(false);
     });
 
+    // Load Engineering Checks
+    const engChecksRef = ref(db, 'engineering_checks');
+    const unsubscribeEngChecks = onValue(engChecksRef, (snapshot) => {
+      const dbData = snapshot.val() || {};
+      setEngineeringChecks(dbData);
+    });
+
     return () => {
       unsubscribeStages();
       unsubscribeOverrides();
       unsubscribeHistory();
+      unsubscribeEngChecks();
     };
   }, [currentUser, userProfile]);
+
+  const handleEngineeringStart = async (so) => {
+    const currentCheck = engineeringChecks[so] || {};
+    const updatedCheck = { ...currentCheck, started: new Date().toISOString() };
+    setEngineeringChecks(prev => ({ ...prev, [so]: updatedCheck }));
+    await saveEngineeringCheck(so, updatedCheck);
+  };
+
+  const handleEngineeringFinish = async (so) => {
+    const currentCheck = engineeringChecks[so] || {};
+    const updatedCheck = { ...currentCheck, finished: new Date().toISOString() };
+    setEngineeringChecks(prev => ({ ...prev, [so]: updatedCheck }));
+    await saveEngineeringCheck(so, updatedCheck);
+  };
 
   const toggleStage = async (so, stageIndex) => {
     const currentProgress = projectStages[so] ? [...projectStages[so]] : Array(STAGES.length).fill(false);
@@ -379,6 +409,28 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       currentY += 10;
     });
 
+    // Add Engineering Checks to PDF
+    const engCheck = engineeringChecks[project.so];
+    if (engCheck && (engCheck.started || engCheck.finished)) {
+      currentY += 5;
+      doc.setFont('Helvetica', 'bold');
+      doc.setTextColor(18, 33, 48);
+      doc.setFontSize(12);
+      doc.text(language === 'es' ? 'Tiempos de Ingeniería' : 'Engineering Times', 15, currentY);
+      currentY += 6;
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(80, 80, 80);
+      if (engCheck.started) {
+        doc.text(`Start: ${new Date(engCheck.started).toLocaleString()}`, 15, currentY);
+        currentY += 5;
+      }
+      if (engCheck.finished) {
+        doc.text(`Finish: ${new Date(engCheck.finished).toLocaleString()}`, 15, currentY);
+        currentY += 5;
+      }
+    }
+
     // --- Section 2: Historial de Pausas (Holds Log) ---
     currentY += 10;
     doc.setTextColor(18, 33, 48);
@@ -578,6 +630,29 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                       </div>
                     );
                   })}
+                </div>
+
+                <div className="engineering-checks-controls">
+                  <div className="eng-check-header">
+                    <span className="eng-check-title">{t('myProjects.engineeringCheck', 'Engineering Time')}</span>
+                  </div>
+                  <div className="eng-check-buttons">
+                    <button 
+                      onClick={() => handleEngineeringStart(project.so)}
+                      className={`btn-sm ${engineeringChecks[project.so]?.started ? 'btn-secondary active-check' : 'btn-primary'}`}
+                    >
+                      <Clock size={14} />
+                      {engineeringChecks[project.so]?.started ? new Date(engineeringChecks[project.so].started).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Start'}
+                    </button>
+                    <button 
+                      onClick={() => handleEngineeringFinish(project.so)}
+                      className={`btn-sm ${engineeringChecks[project.so]?.finished ? 'btn-secondary active-check' : 'btn-secondary'}`}
+                      disabled={!engineeringChecks[project.so]?.started}
+                    >
+                      <CheckCircle2 size={14} />
+                      {engineeringChecks[project.so]?.finished ? new Date(engineeringChecks[project.so].finished).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Finish'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="card-footer-actions">

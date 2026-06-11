@@ -337,3 +337,52 @@
     gap: 16px;
   }
 }
+
+/* Engineering Checks Controls */
+.engineering-checks-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(138, 43, 226, 0.05); /* subtle purple for engineering */
+  border: 1px solid rgba(138, 43, 226, 0.15);
+  border-radius: var(--radius-md);
+}
+
+.eng-check-header {
+  display: flex;
+  align-items: center;
+}
+
+.eng-check-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-purple);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.eng-check-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.eng-check-buttons .btn-sm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  padding: 6px 12px;
+}
+
+.active-check {
+  background: rgba(138, 43, 226, 0.2) !important;
+  color: var(--color-purple) !important;
+  border-color: rgba(138, 43, 226, 0.4) !important;
+}
+
+.active-check svg {
+  color: var(--color-purple);
+}

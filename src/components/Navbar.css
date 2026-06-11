@@ -196,7 +196,7 @@
   justify-content: space-between;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(230, 95, 76, 0.25);
+  box-shadow: 0 4px 12px rgba(9, 209, 199, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -258,8 +258,8 @@
 }
 
 .lang-dropdown-item.active {
-  background: rgba(231, 111, 81, 0.12);
-  color: #FF8F6B;
+  background: rgba(9, 209, 199, 0.12);
+  color: var(--color-cyan);
   font-weight: 600;
 }
 
