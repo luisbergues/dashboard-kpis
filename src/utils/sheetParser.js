@@ -2,6 +2,32 @@ import Papa from 'papaparse';
 
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/1qENXOvlEEY70LQ4i4EQBA0rGpuDr9L1sQIPtEL-Rm1I/export?format=csv';
 
+// Helper function to map header titles to column indices
+const createHeaderMap = (row) => {
+  const map = {};
+  row.forEach((cell, index) => {
+    const cleanCell = cell.trim().toLowerCase();
+    if (cleanCell) {
+      // Map exact name
+      map[cleanCell] = index;
+      // Also map simplified name for partial matching
+      const simpleName = cleanCell.replace(/[^a-z0-9]/g, '');
+      if (simpleName) {
+        map[simpleName] = index;
+      }
+    }
+  });
+  return map;
+};
+
+// Helper function to get an index safely, falling back to a default
+const getIdx = (map, keys, fallback) => {
+  for (const key of keys) {
+    if (map[key] !== undefined) return map[key];
+  }
+  return fallback;
+};
+
 export async function fetchAndParseData() {
   try {
     // Append a unique timestamp to prevent browser and CDN caching
@@ -34,6 +60,7 @@ export async function fetchAndParseData() {
     };
 
     let currentSection = null;
+    let headers = {};
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
@@ -45,16 +72,19 @@ export async function fetchAndParseData() {
       // Detect Section Headers
       if (rowString.includes('Priority Analysis (Action Required)')) {
         currentSection = 'priorityAnalysis';
-        i++; // skip header row (SO#,NAME...) next line
+        if (data[i + 1]) headers = createHeaderMap(data[i + 1]);
+        i++; // skip header row
         continue;
       } else if (rowString.includes('ON HOLD Projects - Detailed Notes')) {
         currentSection = 'onHoldNotes';
+        if (data[i + 1]) headers = createHeaderMap(data[i + 1]);
         i++; // skip header row
         continue;
       } else if (rowString.includes('Week over Week Comparison')) {
         currentSection = 'weekOverWeek';
         // The NEXT row is the header with date labels - parse it
         if (data[i + 1]) {
+          headers = createHeaderMap(data[i + 1]);
           const headerRow = data[i + 1];
           const headerString = headerRow.join(',');
           // Extract previous week label e.g. "Previous Week (June 1, 2026)"
@@ -83,53 +113,71 @@ export async function fetchAndParseData() {
         continue;
       } else if (rowString.includes('Top Active Projects by Cost')) {
         currentSection = 'topCostProjects';
+        if (data[i + 1]) headers = createHeaderMap(data[i + 1]);
         i++; // skip header row
         continue;
       } else if (rowString.includes('Active Projects Material Requirements')) {
         currentSection = 'materialRequirements';
+        if (data[i + 1]) headers = createHeaderMap(data[i + 1]);
         i++; // skip header row
         continue;
       } else if (rowString.includes('Status History') && rowString.includes('SO#')) {
         currentSection = 'statusHistory';
-        continue; // The header was this row, but wait, the title is usually above.
+        headers = createHeaderMap(row);
+        continue; 
       }
 
-      // Check if we hit a Status History title
-      if (row.includes('Status History') && row.includes('SO#')) {
-        currentSection = 'statusHistory';
-        continue;
-      }
-
-      // If we are in a section, parse rows
+      // If we are in a section, parse rows dynamically
       if (currentSection === 'priorityAnalysis') {
         if (rowString.includes('ON HOLD Projects') || rowString.includes('Week over Week')) {
             // we hit next section accidentally, though handled above
-        } else if (row[1] && row[1] !== 'SO#') { // valid row
-           parsedData.priorityAnalysis.push({
-             so: row[1],
-             name: row[2],
-             install: row[3],
-             eng: row[4],
-             status: row[5]
-           });
+        } else {
+           const soIdx = getIdx(headers, ['so#', 'so'], 1);
+           const nameIdx = getIdx(headers, ['name', 'projectname'], 2);
+           const installIdx = getIdx(headers, ['install', 'installdate'], 3);
+           const engIdx = getIdx(headers, ['eng', 'engineering'], 4);
+           const statusIdx = getIdx(headers, ['status'], 5);
+
+           if (row[soIdx] && row[soIdx].toUpperCase() !== 'SO#') {
+             parsedData.priorityAnalysis.push({
+               so: row[soIdx],
+               name: row[nameIdx],
+               install: row[installIdx],
+               eng: row[engIdx],
+               status: row[statusIdx]
+             });
+           }
         }
       } 
       else if (currentSection === 'onHoldNotes') {
-        if (row[1] && row[1] !== 'Designer & Email') {
+        const designerIdx = getIdx(headers, ['designeremail', 'designer'], 1);
+        const projectIdx = getIdx(headers, ['projectname', 'project'], 2);
+        const notesIdx = getIdx(headers, ['onholdnotes', 'notes'], 3);
+
+        if (row[designerIdx] && !row[designerIdx].includes('Designer & Email')) {
           parsedData.onHoldNotes.push({
-            designer: row[1],
-            project: row[2],
-            notes: row[3]
+            designer: row[designerIdx],
+            project: row[projectIdx],
+            notes: row[notesIdx]
           });
         }
       }
       else if (currentSection === 'weekOverWeek') {
-        if (row[1] && row[1] !== 'Metric') {
+        const metricIdx = getIdx(headers, ['metric'], 1);
+        // Find previous and current columns based on partial matching since they include dates
+        let prevIdx = 5, currIdx = 7, varIdx = 9;
+        Object.keys(headers).forEach(k => {
+          if (k.includes('previous')) prevIdx = headers[k];
+          if (k.includes('current')) currIdx = headers[k];
+          if (k.includes('variance')) varIdx = headers[k];
+        });
+
+        if (row[metricIdx] && row[metricIdx].toLowerCase() !== 'metric') {
           parsedData.weekOverWeek.push({
-            metric: row[1],
-            previous: row[5],
-            current: row[7],
-            variance: row[9]
+            metric: row[metricIdx],
+            previous: row[prevIdx],
+            current: row[currIdx],
+            variance: row[varIdx]
           });
         }
       }
@@ -143,50 +191,74 @@ export async function fetchAndParseData() {
         }
       }
       else if (currentSection === 'meetingPoints') {
-        if (row[1] && row[1].startsWith('-')) {
-          parsedData.meetingPoints.push(row[1]);
+        // Fallback to checking any cell in the row since meeting points might be in column 1 or 2
+        const pointCell = row.find(cell => cell && cell.trim().startsWith('-'));
+        if (pointCell) {
+          parsedData.meetingPoints.push(pointCell);
         }
       }
       else if (currentSection === 'financialImpact') {
         // Parse rows like: ,ON HOLD,"$170,195.00",,,,,,, or ,Status,Value
-        if (row[1] && row[1] !== 'Status' && row[2] && row[2].includes('$')) {
+        const statusIdx = 1;
+        const valueIdx = 2;
+        if (row[statusIdx] && row[statusIdx] !== 'Status' && row[valueIdx] && row[valueIdx].includes('$')) {
           parsedData.financialImpact.rows.push({
-            status: row[1].trim(),
-            value: row[2].trim()
+            status: row[statusIdx].trim(),
+            value: row[valueIdx].trim()
           });
         }
       }
       else if (currentSection === 'topCostProjects') {
-        if (row[1] && row[1] !== 'Project Name') {
-          // find cost in the row
-          const cost = row.find(cell => cell.includes('$'));
+        const nameIdx = getIdx(headers, ['projectname', 'project'], 1);
+        
+        if (row[nameIdx] && row[nameIdx].toLowerCase() !== 'project name') {
+          // cost might not be in a specific header if it changes, let's keep the fallback
+          let cost = row.find(cell => cell.includes('$'));
+          if (!cost) {
+             const costIdx = getIdx(headers, ['totalcost', 'cost'], 2);
+             cost = row[costIdx];
+          }
           parsedData.topCostProjects.push({
-            name: row[1],
+            name: row[nameIdx],
             cost: cost || '0'
           });
         }
       }
       else if (currentSection === 'materialRequirements') {
-        if (row[1] && row[1] !== 'SO#') {
+        const soIdx = getIdx(headers, ['so#', 'so'], 1);
+        const nameIdx = getIdx(headers, ['name', 'projectname'], 2);
+        const thermIdx = getIdx(headers, ['thermofoilrequirements', 'thermofoil'], 3);
+        const noHolesIdx = getIdx(headers, ['noholesdoors', 'noholes'], 4);
+        const dovetailIdx = getIdx(headers, ['dovetaildrawers', 'dovetail'], 5);
+        const elementIdx = getIdx(headers, ['elementdoors', 'element'], 6);
+        const installIdx = getIdx(headers, ['installdate', 'install'], 7);
+
+        if (row[soIdx] && row[soIdx].toUpperCase() !== 'SO#') {
           parsedData.materialRequirements.push({
-            so: row[1],
-            name: row[2],
-            thermofoil: row[3],
-            noHoles: row[4],
-            dovetail: row[5],
-            element: row[6],
-            installDate: row[7]
+            so: row[soIdx],
+            name: row[nameIdx],
+            thermofoil: row[thermIdx],
+            noHoles: row[noHolesIdx],
+            dovetail: row[dovetailIdx],
+            element: row[elementIdx],
+            installDate: row[installIdx]
           });
         }
       }
       else if (currentSection === 'statusHistory') {
-        if (row[1] && row[1] !== 'SO#') {
+        const soIdx = getIdx(headers, ['so#', 'so'], 1);
+        const nameIdx = getIdx(headers, ['name', 'projectname'], 2);
+        const statusIdx = getIdx(headers, ['status'], 3);
+        const dateIdx = getIdx(headers, ['statusdate', 'date'], 4);
+        const histIdx = getIdx(headers, ['history', 'notes'], 5);
+
+        if (row[soIdx] && row[soIdx].toUpperCase() !== 'SO#') {
           parsedData.statusHistory.push({
-            so: row[1],
-            name: row[2],
-            status: row[3],
-            statusDate: row[4],
-            history: row[5]
+            so: row[soIdx],
+            name: row[nameIdx],
+            status: row[statusIdx],
+            statusDate: row[dateIdx],
+            history: row[histIdx]
           });
         }
       }

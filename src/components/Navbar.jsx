@@ -109,7 +109,15 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
           </div>
           <button 
             className="nav-btn signout-btn" 
-            onClick={() => auth && signOut(auth)}
+            onClick={async () => {
+              if (auth) {
+                try {
+                  await signOut(auth);
+                } catch (error) {
+                  alert(t('common.error') + ': ' + error.message);
+                }
+              }
+            }}
             title={t('common.signOut')}
           >
             <LogOut size={18} className="nav-icon" />

@@ -47,7 +47,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
   
   if (!data) return <div className="loading">{t('common.cargandoDashboard')}</div>;
 
-  const { weekOverWeek, insights, meetingPoints, topCostProjects, weekLabels, financialImpact } = data;
+  const { weekOverWeek = [], insights = {}, meetingPoints = [], topCostProjects = [], weekLabels = {}, financialImpact = { rows: [] } } = data;
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const getMetricLabel = (metricName) => {

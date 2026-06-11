@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'JL Closets Engineering Dashboard',
-        short_name: 'JL Eng KPI',
+        name: 'dashboard-kpis',
+        short_name: 'dashboard-kpis',
         description: 'Engineering Weekly KPI Dashboard',
         theme_color: '#0B1520',
         background_color: '#0B1520',

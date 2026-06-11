@@ -8,6 +8,7 @@ import MaterialsView from './views/MaterialsView'
 import CalendarView from './views/CalendarView'
 import LoginView from './views/LoginView'
 import MyProjectsView from './views/MyProjectsView'
+import ErrorBoundary from './components/ErrorBoundary'
 import { auth, db, onAuthStateChanged, ref, onValue, set, get, child } from './utils/firebase'
 
 function App() {
@@ -34,8 +35,10 @@ function App() {
     }
     loadData();
 
-    // Set up auto-polling interval (every 30 seconds) to keep data fresh
-    const interval = setInterval(loadData, 30000);
+    // Set up auto-polling interval (every 30 seconds) to keep data fresh, only if tab is active
+    const interval = setInterval(() => {
+      if (!document.hidden) loadData();
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -204,7 +207,9 @@ function App() {
         />
       )}
       <main className="main-content">
-        {renderView()}
+        <ErrorBoundary>
+          {renderView()}
+        </ErrorBoundary>
       </main>
     </div>
   )
