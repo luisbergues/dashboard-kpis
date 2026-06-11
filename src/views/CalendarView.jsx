@@ -3,6 +3,8 @@ import {
   format, addMonths, subMonths, startOfMonth, endOfMonth, 
   startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, parse 
 } from 'date-fns';
+import { es, enUS } from 'date-fns/locale';
+import { useLanguage } from '../utils/LanguageContext';
 import { 
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, 
   Plus, Trash2, X, FileText, ClipboardList 
@@ -11,7 +13,9 @@ import './CalendarView.css';
 import { db, ref, set, remove, onValue } from '../utils/firebase';
 
 export default function CalendarView({ data, currentUser, userProfile }) {
+  const { t, language } = useLanguage();
   if (!data) return null;
+
 
   const { priorityAnalysis } = data;
   
@@ -195,7 +199,9 @@ export default function CalendarView({ data, currentUser, userProfile }) {
   const renderHeader = () => (
     <div className="calendar-header">
       <button onClick={prevMonth} className="cal-nav-btn"><ChevronLeft /></button>
-      <h2 className="cal-month-title">{format(currentMonth, 'MMMM yyyy')}</h2>
+      <h2 className="cal-month-title" style={{ textTransform: 'capitalize' }}>
+        {format(currentMonth, 'MMMM yyyy', { locale: language === 'es' ? es : enUS })}
+      </h2>
       <button onClick={nextMonth} className="cal-nav-btn"><ChevronRight /></button>
     </div>
   );
@@ -205,8 +211,8 @@ export default function CalendarView({ data, currentUser, userProfile }) {
     const startDate = startOfWeek(currentMonth);
     for (let i = 0; i < 7; i++) {
       days.push(
-        <div className="cal-day-name" key={i}>
-          {format(addDays(startDate, i), 'EEE')}
+        <div className="cal-day-name" key={i} style={{ textTransform: 'capitalize' }}>
+          {format(addDays(startDate, i), 'EEE', { locale: language === 'es' ? es : enUS })}
         </div>
       );
     }
@@ -285,8 +291,8 @@ export default function CalendarView({ data, currentUser, userProfile }) {
     <div className="calendar-view animate-fade-in">
       <header className="view-header">
         <div className="view-header-title">
-          <h1 className="page-title">Installation Calendar</h1>
-          <p className="text-muted">Upcoming installations and custom project notes</p>
+          <h1 className="page-title">{t('calendar.title')}</h1>
+          <p className="text-muted">{t('calendar.subtitle')}</p>
         </div>
         <div className="view-header-actions">
           <label className="toggle-switch-container">
@@ -297,11 +303,11 @@ export default function CalendarView({ data, currentUser, userProfile }) {
               className="toggle-checkbox"
             />
             <div className="toggle-switch"></div>
-            <span className="toggle-label">Show My Projects Only</span>
+            <span className="toggle-label">{t('calendar.myProjectsOnly')}</span>
           </label>
           <button className="btn-primary" onClick={handleAddNoteClick}>
             <Plus size={16} />
-            <span>Add Calendar Note</span>
+            <span>{t('calendar.addNote')}</span>
           </button>
         </div>
       </header>
@@ -320,14 +326,14 @@ export default function CalendarView({ data, currentUser, userProfile }) {
               onClick={() => setSidebarTab('installs')}
             >
               <CalendarIcon size={14} />
-              <span>Installs</span>
+              <span>{t('calendar.installsTab')}</span>
             </button>
             <button 
               className={`sidebar-tab-btn ${sidebarTab === 'notes' ? 'active' : ''}`}
               onClick={() => setSidebarTab('notes')}
             >
               <FileText size={14} />
-              <span>My Notes ({notes.length})</span>
+              <span>{t('calendar.notesTab')} ({notes.length})</span>
             </button>
           </div>
 
@@ -335,12 +341,12 @@ export default function CalendarView({ data, currentUser, userProfile }) {
             {db ? (
               <span className="status-badge connected">
                 <span className="status-dot green"></span>
-                Realtime Synced
+                {language === 'es' ? 'Sincronizado' : 'Realtime Synced'}
               </span>
             ) : (
               <span className="status-badge local">
                 <span className="status-dot blue"></span>
-                Local Mode
+                {language === 'es' ? 'Modo Local' : 'Local Mode'}
               </span>
             )}
           </div>
@@ -350,7 +356,9 @@ export default function CalendarView({ data, currentUser, userProfile }) {
               {projectsWithDates.map((p, idx) => (
                 <div key={idx} className="upcoming-item">
                   <div className="upcoming-date">
-                    <span className="u-month">{format(p.dateObj, 'MMM')}</span>
+                    <span className="u-month" style={{ textTransform: 'capitalize' }}>
+                      {format(p.dateObj, 'MMM', { locale: language === 'es' ? es : enUS })}
+                    </span>
                     <span className="u-day">{format(p.dateObj, 'dd')}</span>
                   </div>
                   <div className="upcoming-info">
@@ -361,7 +369,9 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                 </div>
               ))}
               {projectsWithDates.length === 0 && (
-                <p className="text-muted text-center mt-lg">No upcoming installations.</p>
+                <p className="text-muted text-center mt-lg">
+                  {language === 'es' ? 'Sin instalaciones próximas.' : 'No upcoming installations.'}
+                </p>
               )}
             </div>
           ) : (
@@ -376,7 +386,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                     <div key={idx} className="sidebar-note-item" onClick={() => handleEditNote(n)}>
                       <div className="sidebar-note-header">
                         <span className="sidebar-note-date">
-                          {format(noteDate, 'MMM dd, yyyy')}
+                          {format(noteDate, 'MMM dd, yyyy', { locale: language === 'es' ? es : enUS })}
                         </span>
                         {n.so && (
                           <span className="sidebar-note-badge" title={linkedProj?.name}>
@@ -391,9 +401,9 @@ export default function CalendarView({ data, currentUser, userProfile }) {
               {notes.length === 0 && (
                 <div className="empty-notes-state">
                   <ClipboardList size={32} className="text-muted" />
-                  <p className="text-muted">No custom notes yet.</p>
+                  <p className="text-muted">{t('calendar.noNotes')}</p>
                   <button className="btn-secondary btn-sm mt-md" onClick={() => handleCellClick(new Date())}>
-                    Create First Note
+                    {language === 'es' ? 'Crear Primera Nota' : 'Create First Note'}
                   </button>
                 </div>
               )}
@@ -408,7 +418,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">
-                {selectedNote ? 'Edit Calendar Note' : 'Add Calendar Note'}
+                {selectedNote ? t('calendar.editNote') : t('calendar.addNote')}
               </h3>
               <button className="modal-close-btn" onClick={() => setIsModalOpen(false)}>
                 <X size={18} />
@@ -416,7 +426,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
             </div>
             <form onSubmit={handleSaveNote} className="modal-form">
               <div className="form-group">
-                <label className="form-label">Date</label>
+                <label className="form-label">{language === 'es' ? 'Fecha' : 'Date'}</label>
                 <input 
                   type="date" 
                   value={selectedDate}
@@ -427,13 +437,13 @@ export default function CalendarView({ data, currentUser, userProfile }) {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Link to Current Project (Optional)</label>
+                <label className="form-label">{t('calendar.linkProject')}</label>
                 <select 
                   value={linkedSo} 
                   onChange={(e) => setLinkedSo(e.target.value)}
                   className="form-select"
                 >
-                  <option value="">-- No Link / General Note --</option>
+                  <option value="">{t('calendar.selectProject')}</option>
                   {allProjects.map(proj => (
                     <option key={proj.so} value={proj.so}>
                       #{proj.so} - {proj.name} ({proj.status})
@@ -443,11 +453,11 @@ export default function CalendarView({ data, currentUser, userProfile }) {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Note Details</label>
+                <label className="form-label">{t('calendar.noteLabel')}</label>
                 <textarea 
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
-                  placeholder="What would you like to note for this day?"
+                  placeholder={t('calendar.notePlaceholder')}
                   className="form-textarea"
                   rows={4}
                   required
@@ -462,7 +472,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                     onClick={() => handleDeleteNote(selectedNote.id)}
                   >
                     <Trash2 size={16} />
-                    <span>Delete</span>
+                    <span>{t('calendar.deleteBtn')}</span>
                   </button>
                 )}
                 <div className="form-actions-right">
@@ -471,10 +481,10 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                     className="btn-secondary"
                     onClick={() => setIsModalOpen(false)}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button type="submit" className="btn-primary">
-                    Save Note
+                    {t('common.save')}
                   </button>
                 </div>
               </div>
@@ -485,3 +495,4 @@ export default function CalendarView({ data, currentUser, userProfile }) {
     </div>
   );
 }
+

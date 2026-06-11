@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Clock, CheckCircle, AlertTriangle, ChevronLeft, ChevronRight, ListTodo, DollarSign, TrendingUp } from 'lucide-react';
+import { useLanguage } from '../utils/LanguageContext';
 import {
   Chart as ChartJS,
   LinearScale,
@@ -42,10 +43,30 @@ const METRIC_COLORS = {
 const STACKED_METRICS = Object.keys(METRIC_COLORS);
 
 export default function DashboardView({ data, weeklyHistory = [] }) {
-  if (!data) return <div className="loading">Cargando Dashboard...</div>;
+  const { t, language } = useLanguage();
+  
+  if (!data) return <div className="loading">{t('common.cargandoDashboard')}</div>;
 
   const { weekOverWeek, insights, meetingPoints, topCostProjects, weekLabels, financialImpact } = data;
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  const getMetricLabel = (metricName) => {
+    if (language === 'es') {
+      switch (metricName) {
+        case 'Completed Projects': return 'Proyectos Completados';
+        case 'ON HOLD': return 'EN PAUSA (HOLD)';
+        case 'Check': return 'Check';
+        case 'Review': return 'Revisión';
+        case 'Nesting': return 'Nesting';
+        case 'Engineering': return 'Ingeniería';
+        case 'Check Eng': return 'Check Ing.';
+        case 'Paperwork': return 'Trámites (Paperwork)';
+        case 'Total Active Projects': return 'Proyectos Activos';
+        default: return metricName;
+      }
+    }
+    return metricName;
+  };
 
   // ─── Build Historical Chart (up to 10 weeks) ─────────────────────────────
   const historicalChartData = useMemo(() => {
@@ -67,7 +88,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
       // Line: Total Active Projects
       datasets.push({
         type: 'line',
-        label: 'Total Active Projects',
+        label: getMetricLabel('Total Active Projects'),
         data: weeklyHistory.map(w => {
           const v = w.metrics?.['Total Active Projects'];
           return typeof v === 'object' ? (v?.current ?? 0) : (v ?? 0);
@@ -88,7 +109,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
       STACKED_METRICS.forEach(metric => {
         datasets.push({
           type: 'bar',
-          label: metric,
+          label: getMetricLabel(metric),
           data: weeklyHistory.map(w => {
             const v = w.metrics?.[metric];
             return typeof v === 'object' ? (v?.current ?? 0) : (v ?? 0);
@@ -107,15 +128,15 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
       return item ? [parseInt(item.previous, 10) || 0, parseInt(item.current, 10) || 0] : [0, 0];
     };
 
-    const prevLabel = weekLabels?.previous || 'Previous Week';
-    const currLabel = weekLabels?.current || 'Current Week';
+    const prevLabel = weekLabels?.previous || (language === 'es' ? 'Semana Anterior' : 'Previous Week');
+    const currLabel = weekLabels?.current || (language === 'es' ? 'Semana Actual' : 'Current Week');
 
     return {
       labels: [prevLabel, currLabel],
       datasets: [
         {
           type: 'line',
-          label: 'Total Active Projects',
+          label: getMetricLabel('Total Active Projects'),
           data: getMetricData('Total Active Projects'),
           borderColor: '#FFFFFF',
           backgroundColor: '#FFFFFF',
@@ -130,14 +151,15 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
         },
         ...STACKED_METRICS.map(metric => ({
           type: 'bar',
-          label: metric,
+          label: getMetricLabel(metric),
           data: getMetricData(metric),
           backgroundColor: METRIC_COLORS[metric],
           stack: 'Stack 0',
         }))
       ]
     };
-  }, [weekOverWeek, weekLabels, weeklyHistory]);
+  }, [weekOverWeek, weekLabels, weeklyHistory, language]);
+
 
   const chartOptions = {
     responsive: true,
@@ -197,7 +219,9 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
   };
 
   // ─── Subtitle with real dates from sheet ───────────────────────────────
-  const subtitleText = `${weekLabels?.current || 'Current Week'} vs ${weekLabels?.previous || 'Previous Week'}`;
+  const subtitleText = language === 'es' 
+    ? `${weekLabels?.current || 'Semana Actual'} vs ${weekLabels?.previous || 'Semana Anterior'}`
+    : `${weekLabels?.current || 'Current Week'} vs ${weekLabels?.previous || 'Previous Week'}`;
 
   // ─── Action Plan / Key Takeaways ───────────────────────────────────────
   const rawActionPoints = insights.actionPlan ? insights.actionPlan.split('•').map(p => p.trim()).filter(Boolean) : [];
@@ -260,10 +284,21 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
     return 'card-status-default';
   };
 
+  const getStatusLabel = (status) => {
+    if (!status) return '';
+    const s = status.toUpperCase();
+    if (s.includes('HOLD')) return language === 'es' ? 'EN PAUSA' : 'ON HOLD';
+    if (s.includes('CHECK')) return 'Check';
+    if (s.includes('REVIEW')) return language === 'es' ? 'Revisión' : 'Review';
+    if (s.includes('ENG')) return language === 'es' ? 'Ingeniería' : 'Engineering';
+    if (s.includes('NEST')) return 'Nesting';
+    return status;
+  };
+
   return (
     <div className="dashboard-view animate-fade-in">
       <header className="dashboard-header">
-        <h1 className="page-title">Weekly KPI Dashboard</h1>
+        <h1 className="page-title">{t('dashboard.title')}</h1>
         <p className="page-subtitle text-muted">{subtitleText}</p>
       </header>
 
@@ -272,10 +307,10 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
         <div className="chart-section-header">
           <h3 className="section-title">
             <TrendingUp className="text-mint" size={20} />
-            Week over Week Comparison
+            {t('dashboard.wowTitle')}
           </h3>
           <span className="history-badge">
-            {weeklyHistory.length > 0 ? `${weeklyHistory.length} weeks tracked` : 'Current data'}
+            {weeklyHistory.length > 0 ? `${weeklyHistory.length} ${t('dashboard.trackedWeeks')}` : t('dashboard.currentData')}
           </span>
         </div>
         <div className="mixed-chart-container-wide">
@@ -290,13 +325,13 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
             <div>
               <h3 className="section-title">
                 <DollarSign className="text-neon-green" size={20} />
-                Financial Impact Analysis
+                {t('dashboard.financialTitle')}
               </h3>
               {fiDescription && <p className="text-muted financial-subtitle">{fiDescription}</p>}
             </div>
             {fiTotal && (
               <div className="total-pipeline-badge">
-                <span className="pipeline-label">Total Pipeline</span>
+                <span className="pipeline-label">{t('dashboard.totalPipeline')}</span>
                 <span className="pipeline-value">{formatCurrency(fiTotal.value)}</span>
               </div>
             )}
@@ -304,30 +339,30 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
           <div className="financial-cards-row">
             {fiOnHold && (
               <div className="fi-card fi-card-hold">
-                <span className="fi-card-label">ON HOLD Value</span>
+                <span className="fi-card-label">{t('dashboard.onHoldValue')}</span>
                 <span className="fi-card-value fi-hold">{formatCurrency(fiOnHold.value)}</span>
-                <span className="fi-card-note">At-risk revenue</span>
+                <span className="fi-card-note">{t('dashboard.atRiskNote')}</span>
               </div>
             )}
             {fiInProgress && (
               <div className="fi-card fi-card-progress">
-                <span className="fi-card-label">In Progress Value</span>
+                <span className="fi-card-label">{t('dashboard.inProgressValue')}</span>
                 <span className="fi-card-value fi-progress">{formatCurrency(fiInProgress.value)}</span>
-                <span className="fi-card-note">Active revenue</span>
+                <span className="fi-card-note">{t('dashboard.activeNote')}</span>
               </div>
             )}
             {fiDelayedRisk && (
               <div className="fi-card fi-card-risk">
-                <span className="fi-card-label">50% Delayed Risk</span>
+                <span className="fi-card-label">{t('dashboard.delayedRiskValue')}</span>
                 <span className="fi-card-value fi-risk">{formatCurrency(fiDelayedRisk.value)}</span>
-                <span className="fi-card-note">Potential delay cost</span>
+                <span className="fi-card-note">{t('dashboard.delayNote')}</span>
               </div>
             )}
             {fiTotal && (
               <div className="fi-card fi-card-total">
-                <span className="fi-card-label">Total Pipeline</span>
+                <span className="fi-card-label">{t('dashboard.totalPipeline')}</span>
                 <span className="fi-card-value fi-total">{formatCurrency(fiTotal.value)}</span>
-                <span className="fi-card-note">Combined value</span>
+                <span className="fi-card-note">{t('dashboard.combinedNote')}</span>
               </div>
             )}
           </div>
@@ -340,7 +375,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
           <div className="summary-block">
             <h3 className="section-title">
               <Clock className="text-mint" size={20} />
-              Executive Summary
+              {t('dashboard.execSummary')}
             </h3>
             <p className="insight-text">{insights.executive}</p>
           </div>
@@ -348,7 +383,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
           <div className="summary-block mt-lg">
             <h3 className="section-title">
               <CheckCircle className="text-neon-green" size={20} />
-              Weekly Summary
+              {t('dashboard.weeklySummary')}
             </h3>
             <p className="insight-text">{insights.weekly}</p>
           </div>
@@ -361,9 +396,9 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
           <div className="carousel-title-area">
             <h3 className="section-title">
               <AlertTriangle className="text-yellow" size={20} />
-              Action Plan & Priority Projects
+              {t('dashboard.actionPlan')}
             </h3>
-            <span className="subtitle-tag">Immediate Attention Required</span>
+            <span className="subtitle-tag">{t('dashboard.immediateAttention')}</span>
           </div>
           {totalSlides > 1 && (
             <div className="carousel-controls">
@@ -382,18 +417,18 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
 
         <div className="carousel-content">
           {actionProjects.length === 0 ? (
-            <p className="text-muted">No high priority projects requiring action.</p>
+            <p className="text-muted">{t('dashboard.noPriority')}</p>
           ) : (
             <div className="projects-carousel-grid">
               {activeProjects.map((project, idx) => (
                 <div key={idx} className={`project-carousel-card ${getStatusColorClass(project.status)}`}>
                   <div className="proj-card-header">
                     <span className="proj-so">#{project.so}</span>
-                    <span className={`proj-status-badge ${getStatusColorClass(project.status)}`}>{project.status}</span>
+                    <span className={`proj-status-badge ${getStatusColorClass(project.status)}`}>{getStatusLabel(project.status)}</span>
                   </div>
                   <h4 className="proj-name" title={project.name}>{project.name}</h4>
                   <div className="proj-details">
-                    <span className="details-label">Install Date:</span>
+                    <span className="details-label">{t('common.installDate')}:</span>
                     <span className="details-value">{project.install}</span>
                   </div>
                   {project.notes && (
@@ -411,7 +446,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
           <div className="carousel-takeaways">
             <h4 className="takeaways-title">
               <ListTodo size={16} className="text-neon-green" />
-              Key Takeaways & Strategic Actions
+              {t('dashboard.keyTakeaways')}
             </h4>
             <div className="takeaways-grid">
               {actionTakeaways.map((takeaway, index) => (
@@ -427,7 +462,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
       
       {/* Meeting Talking Points */}
       <section className="glass-card meeting-card full-width">
-        <h3 className="section-title text-gradient">Meeting Talking Points</h3>
+        <h3 className="section-title text-gradient">{t('dashboard.meetingPoints')}</h3>
         <ul className="meeting-list">
           {meetingPoints.map((point, idx) => (
             <li key={idx}>{point.replace('- ', '')}</li>
@@ -437,3 +472,4 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
     </div>
   );
 }
+

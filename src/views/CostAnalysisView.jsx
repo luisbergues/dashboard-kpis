@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../utils/LanguageContext';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -21,6 +22,7 @@ ChartJS.register(
 );
 
 export default function CostAnalysisView({ data }) {
+  const { t, language } = useLanguage();
   if (!data) return null;
 
   const { topCostProjects } = data;
@@ -34,7 +36,7 @@ export default function CostAnalysisView({ data }) {
     labels: topCostProjects.map(p => p.name.split(':')[0]), // Use short names
     datasets: [
       {
-        label: 'Project Cost ($)',
+        label: language === 'es' ? 'Costo del Proyecto ($)' : 'Project Cost ($)',
         data: topCostProjects.map(p => processCost(p.cost)),
         backgroundColor: function(context) {
           const chart = context.chart;
@@ -117,12 +119,12 @@ export default function CostAnalysisView({ data }) {
     <div className="costs-view animate-fade-in">
       <header className="view-header">
         <div>
-          <h1 className="page-title">Cost Analysis</h1>
-          <p className="text-muted">Top active projects by pipeline value</p>
+          <h1 className="page-title">{t('costs.title')}</h1>
+          <p className="text-muted">{t('costs.subtitle')}</p>
         </div>
         
         <div className="total-value-card glass-card">
-          <span className="text-muted">Total Pipeline Value</span>
+          <span className="text-muted">{t('costs.totalPipeline')}</span>
           <h2>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalValue)}</h2>
         </div>
       </header>
@@ -133,3 +135,4 @@ export default function CostAnalysisView({ data }) {
     </div>
   );
 }
+

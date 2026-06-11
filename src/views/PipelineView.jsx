@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Search, AlertCircle, Calendar } from 'lucide-react';
+import { useLanguage } from '../utils/LanguageContext';
 import './PipelineView.css';
 
 export default function PipelineView({ data }) {
+  const { t, language } = useLanguage();
   if (!data) return null;
 
   const [filter, setFilter] = useState('ALL');
@@ -28,6 +30,31 @@ export default function PipelineView({ data }) {
     return 'status-default';
   };
 
+  const getStatusLabel = (status) => {
+    if (!status) return '';
+    const s = status.toUpperCase();
+    if (s.includes('HOLD')) return language === 'es' ? 'EN PAUSA' : 'ON HOLD';
+    if (s.includes('CHECK')) return 'Check';
+    if (s.includes('REVIEW')) return language === 'es' ? 'Revisión' : 'Review';
+    if (s.includes('ENG')) return language === 'es' ? 'Ingeniería' : 'Engineering';
+    if (s.includes('NEST')) return 'Nesting';
+    return status;
+  };
+
+  const getFilterLabel = (filterVal) => {
+    if (language === 'es') {
+      switch (filterVal) {
+        case 'ALL': return 'TODOS';
+        case 'ON HOLD': return 'EN PAUSA';
+        case 'CHECK': return 'CHECK';
+        case 'REVIEW': return 'REVISIÓN';
+        case 'ENGINEERING': return 'INGENIERÍA';
+        default: return filterVal;
+      }
+    }
+    return filterVal;
+  };
+
   const getOnHoldNote = (projectName) => {
     // try to match part of the name
     const note = onHoldNotes.find(n => projectName.includes(n.project) || n.project.includes(projectName));
@@ -37,13 +64,13 @@ export default function PipelineView({ data }) {
   return (
     <div className="pipeline-view animate-fade-in">
       <header className="view-header">
-        <h1 className="page-title">Project Pipeline</h1>
+        <h1 className="page-title">{t('pipeline.title')}</h1>
         <div className="controls">
           <div className="search-bar glass-card">
             <Search size={18} className="text-muted" />
             <input 
               type="text" 
-              placeholder="Search by SO#, Name or ENG..." 
+              placeholder={t('pipeline.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -55,7 +82,7 @@ export default function PipelineView({ data }) {
                 className={`chip ${filter === f ? 'active' : ''}`}
                 onClick={() => setFilter(f)}
               >
-                {f}
+                {getFilterLabel(f)}
               </button>
             ))}
           </div>
@@ -64,7 +91,7 @@ export default function PipelineView({ data }) {
 
       <div className="project-list">
         {projects.length === 0 ? (
-          <div className="no-results text-muted">No projects found.</div>
+          <div className="no-results text-muted">{t('pipeline.noProjects')}</div>
         ) : (
           projects.map((project, idx) => {
             const onHoldNote = project.status.toUpperCase() === 'ON HOLD' 
@@ -89,7 +116,7 @@ export default function PipelineView({ data }) {
                 
                 <div className="project-side">
                   <span className={`status-badge ${getStatusColor(project.status)}`}>
-                    {project.status}
+                    {getStatusLabel(project.status)}
                   </span>
                 </div>
 
@@ -107,3 +134,4 @@ export default function PipelineView({ data }) {
     </div>
   );
 }
+

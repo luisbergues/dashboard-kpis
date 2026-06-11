@@ -8,10 +8,12 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword 
 } from '../utils/firebase';
+import { useLanguage } from '../utils/LanguageContext';
 import { Mail, Lock, User, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import './LoginView.css';
 
 export default function LoginView({ data }) {
+  const { t, language } = useLanguage();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,7 +49,7 @@ export default function LoginView({ data }) {
     setLoading(true);
 
     if (isSignUp && !designerName) {
-      setError('Please select your designer name to link your profile.');
+      setError(t('login.validationName'));
       setLoading(false);
       return;
     }
@@ -75,27 +77,39 @@ export default function LoginView({ data }) {
     } catch (err) {
       console.error(err);
       
-      // Translate common Firebase Auth errors to Spanish
-      let friendlyMessage = 'Error en la autenticación. Por favor, verifica tus datos.';
+      // Translate common Firebase Auth errors
+      let friendlyMessage = language === 'es'
+        ? 'Error en la autenticación. Por favor, verifica tus datos.'
+        : 'Authentication error. Please check your credentials.';
       
       if (err.code) {
         switch (err.code) {
           case 'auth/email-already-in-use':
-            friendlyMessage = 'Este correo electrónico ya está registrado. Haz clic en "Sign In" abajo para iniciar sesión.';
+            friendlyMessage = language === 'es'
+              ? 'Este correo electrónico ya está registrado. Haz clic en "Ingresar" abajo para iniciar sesión.'
+              : 'This email address is already registered. Click "Sign In" below to log in.';
             break;
           case 'auth/invalid-email':
-            friendlyMessage = 'El formato del correo electrónico no es válido.';
+            friendlyMessage = language === 'es'
+              ? 'El formato del correo electrónico no es válido.'
+              : 'The email address format is invalid.';
             break;
           case 'auth/weak-password':
-            friendlyMessage = 'La contraseña es muy débil. Debe tener al menos 6 caracteres.';
+            friendlyMessage = language === 'es'
+              ? 'La contraseña es muy débil. Debe tener al menos 6 caracteres.'
+              : 'The password is too weak. It must be at least 6 characters long.';
             break;
           case 'auth/user-not-found':
           case 'auth/wrong-password':
           case 'auth/invalid-credential':
-            friendlyMessage = 'Correo o contraseña incorrectos. Por favor, inténtalo de nuevo.';
+            friendlyMessage = language === 'es'
+              ? 'Correo o contraseña incorrectos. Por favor, inténtalo de nuevo.'
+              : 'Incorrect email or password. Please try again.';
             break;
           case 'auth/too-many-requests':
-            friendlyMessage = 'Demasiados intentos fallidos. Tu cuenta ha sido bloqueada temporalmente.';
+            friendlyMessage = language === 'es'
+              ? 'Demasiados intentos fallidos. Tu cuenta ha sido bloqueada temporalmente.'
+              : 'Too many failed attempts. Your account has been temporarily locked.';
             break;
           default:
             friendlyMessage = err.message || friendlyMessage;
@@ -118,10 +132,10 @@ export default function LoginView({ data }) {
             <span className="brand-logo">JL</span>
           </div>
           <h2 className="login-title">
-            {isSignUp ? 'Create an Account' : 'Welcome Back'}
+            {isSignUp ? t('login.titleSignUp') : t('login.titleSignIn')}
           </h2>
           <p className="login-subtitle">
-            {isSignUp ? 'Sign up to access your personalized projects' : 'Sign in to your engineering dashboard'}
+            {isSignUp ? t('login.subtitleSignUp') : t('login.subtitleSignIn')}
           </p>
         </div>
 
@@ -135,7 +149,7 @@ export default function LoginView({ data }) {
         <form onSubmit={handleSubmit} className="login-form">
           {isSignUp && (
             <div className="form-group">
-              <label className="form-label">Link Designer Profile</label>
+              <label className="form-label">{t('login.linkDesigner')}</label>
               <div className="input-wrapper">
                 <User size={18} className="input-icon" />
                 <select
@@ -144,7 +158,7 @@ export default function LoginView({ data }) {
                   className="form-input form-select has-icon"
                   required={isSignUp}
                 >
-                  <option value="">-- Select Your Name --</option>
+                  <option value="">{t('login.selectName')}</option>
                   {designers.map(name => (
                     <option key={name} value={name}>{name}</option>
                   ))}
@@ -154,7 +168,7 @@ export default function LoginView({ data }) {
           )}
 
           <div className="form-group">
-            <label className="form-label">Email Address</label>
+            <label className="form-label">{t('login.email')}</label>
             <div className="input-wrapper">
               <Mail size={18} className="input-icon" />
               <input
@@ -169,7 +183,7 @@ export default function LoginView({ data }) {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Password</label>
+            <label className="form-label">{t('login.password')}</label>
             <div className="input-wrapper">
               <Lock size={18} className="input-icon" />
               <input
@@ -189,7 +203,7 @@ export default function LoginView({ data }) {
               <Loader2 className="spinner" size={20} />
             ) : (
               <>
-                <span>{isSignUp ? 'Sign Up' : 'Sign In'}</span>
+                <span>{isSignUp ? t('login.btnSignUp') : t('login.btnSignIn')}</span>
                 <ArrowRight size={18} />
               </>
             )}
@@ -198,7 +212,7 @@ export default function LoginView({ data }) {
 
         <div className="login-footer">
           <p className="text-muted">
-            {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+            {isSignUp ? t('login.hasAccount') : t('login.noAccount')}
             <button 
               className="btn-link"
               onClick={() => {
@@ -206,7 +220,7 @@ export default function LoginView({ data }) {
                 setError(null);
               }}
             >
-              {isSignUp ? 'Sign In' : 'Sign Up'}
+              {isSignUp ? t('login.btnSignIn') : t('login.btnSignUp')}
             </button>
           </p>
         </div>
@@ -214,3 +228,4 @@ export default function LoginView({ data }) {
     </div>
   );
 }
+

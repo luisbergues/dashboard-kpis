@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, ref, set, onValue, get, child } from '../utils/firebase';
 import { jsPDF } from 'jspdf';
+import { useLanguage } from '../utils/LanguageContext';
 import { 
   Briefcase, Calendar, CheckCircle2, Circle, Clock, 
   AlertCircle, Download, ToggleLeft, ToggleRight, X, Info
@@ -16,7 +17,33 @@ const STAGES = [
   { id: 'install', label: 'Install' }
 ];
 
+const getStageLabel = (stageId, language) => {
+  if (language === 'es') {
+    switch (stageId) {
+      case 'ingenieria': return 'Ingeniería';
+      case 'check1': return 'Check';
+      case 'paperwork': return 'Paperwork';
+      case 'check2': return 'Check';
+      case 'nesting': return 'Nesting';
+      case 'install': return 'Install';
+      default: return stageId;
+    }
+  } else {
+    switch (stageId) {
+      case 'ingenieria': return 'Engineering';
+      case 'check1': return 'Check';
+      case 'paperwork': return 'Paperwork';
+      case 'check2': return 'Check';
+      case 'nesting': return 'Nesting';
+      case 'install': return 'Install';
+      default: return stageId;
+    }
+  }
+};
+
+
 export default function MyProjectsView({ data, currentUser, userProfile }) {
+  const { t, language } = useLanguage();
   if (!data) return null;
 
   const { priorityAnalysis, onHoldNotes } = data;
@@ -256,6 +283,17 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     const history = projectHistory[project.so] || [];
     const stages = projectStages[project.so] || Array(STAGES.length).fill(false);
 
+    const getStatusLabelPdf = (status) => {
+      if (!status) return '';
+      const s = status.toUpperCase();
+      if (s.includes('HOLD')) return language === 'es' ? 'EN PAUSA (HOLD)' : 'ON HOLD';
+      if (s.includes('CHECK')) return 'Check';
+      if (s.includes('REVIEW')) return language === 'es' ? 'Revisión' : 'Review';
+      if (s.includes('ENG')) return language === 'es' ? 'Ingeniería' : 'Engineering';
+      if (s.includes('NEST')) return 'Nesting';
+      return status;
+    };
+
     // Header styling
     doc.setFillColor(18, 33, 48); // Deep blue matching var(--bg-surface)
     doc.rect(0, 0, 210, 45, 'F');
@@ -268,10 +306,10 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(14);
     doc.setFont('Helvetica', 'normal');
-    doc.text(`Timeline de Proyecto - SO #${project.so}`, 15, 30);
+    doc.text(`${t('myProjects.pdfTitle')} - SO #${project.so}`, 15, 30);
     doc.setFontSize(10);
     doc.setTextColor(170, 170, 170);
-    doc.text(`Generado el: ${new Date().toLocaleDateString()} a las ${new Date().toLocaleTimeString()}`, 15, 38);
+    doc.text(`${t('myProjects.pdfGenerated')}: ${new Date().toLocaleDateString()} ${t('myProjects.pdfAt')} ${new Date().toLocaleTimeString()}`, 15, 38);
 
     // Project metadata block
     doc.setFillColor(245, 247, 250);
@@ -282,31 +320,31 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     doc.setTextColor(18, 33, 48);
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(11);
-    doc.text('Proyecto:', 20, 60);
+    doc.text(t('myProjects.pdfProject'), 20, 60);
     doc.setFont('Helvetica', 'normal');
     doc.text(project.name, 45, 60);
 
     doc.setFont('Helvetica', 'bold');
-    doc.text('Ingeniero:', 20, 67);
+    doc.text(t('myProjects.pdfEngineer'), 20, 67);
     doc.setFont('Helvetica', 'normal');
-    doc.text(project.eng || 'No asignado', 45, 67);
+    doc.text(project.eng || (language === 'es' ? 'No asignado' : 'Unassigned'), 45, 67);
 
     doc.setFont('Helvetica', 'bold');
-    doc.text('Instalación:', 20, 74);
+    doc.text(t('myProjects.pdfInstall'), 20, 74);
     doc.setFont('Helvetica', 'normal');
-    doc.text(project.install || 'No asignada', 45, 74);
+    doc.text(project.install || (language === 'es' ? 'No asignada' : 'Unassigned'), 45, 74);
 
     doc.setFont('Helvetica', 'bold');
     const currentStatus = projectOverrides[project.so]?.status || project.status;
-    doc.text('Estado Actual:', 110, 67);
+    doc.text(t('myProjects.pdfStatus'), 110, 67);
     doc.setFont('Helvetica', 'normal');
-    doc.text(currentStatus, 140, 67);
+    doc.text(getStatusLabelPdf(currentStatus), 140, 67);
 
     // --- Section 1: Progress of Stages ---
     doc.setTextColor(18, 33, 48);
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('1. Progreso de Etapas', 15, 95);
+    doc.text(t('myProjects.pdfSecProgress'), 15, 95);
 
     // Line separator
     doc.setDrawColor(9, 209, 199); // Cyan
@@ -319,7 +357,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       const isCompleted = stageData && stageData.completed;
       const dateText = isCompleted && stageData.timestamp 
         ? new Date(stageData.timestamp).toLocaleString()
-        : 'Pendiente';
+        : t('myProjects.pdfPending');
 
       // Draw bullets
       doc.setFillColor(isCompleted ? 70 : 200, isCompleted ? 223 : 200, isCompleted ? 177 : 200);
@@ -329,7 +367,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       doc.setFont('Helvetica', isCompleted ? 'bold' : 'normal');
       doc.setTextColor(isCompleted ? 18 : 120, isCompleted ? 33 : 120, isCompleted ? 48 : 120);
       doc.setFontSize(11);
-      doc.text(stage.label, 30, currentY);
+      doc.text(getStageLabel(stage.id, language), 30, currentY);
 
       // Draw timestamp
       doc.setFont('Helvetica', 'normal');
@@ -345,7 +383,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     doc.setTextColor(18, 33, 48);
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('2. Historial de Pausas (Hold Periods)', 15, currentY);
+    doc.text(t('myProjects.pdfSecHolds'), 15, currentY);
 
     // Line separator
     currentY += 3;
@@ -382,21 +420,21 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       doc.setFont('Helvetica', 'italic');
       doc.setTextColor(120, 120, 120);
       doc.setFontSize(10);
-      doc.text('No se registraron periodos de pausa (Hold) en este proyecto.', 15, currentY);
+      doc.text(t('myProjects.pdfNoHolds'), 15, currentY);
     } else {
       holdPeriods.forEach((hold, index) => {
         const startStr = new Date(hold.start).toLocaleDateString();
         const startTime = new Date(hold.start).toLocaleTimeString();
-        const endStr = hold.end ? new Date(hold.end).toLocaleDateString() : 'Activo (Presente)';
+        const endStr = hold.end ? new Date(hold.end).toLocaleDateString() : t('myProjects.pdfHoldActive');
         const endTime = hold.end ? new Date(hold.end).toLocaleTimeString() : '';
         
         let durationText = '';
         if (hold.end) {
           const diffTime = Math.abs(new Date(hold.end) - new Date(hold.start));
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          durationText = `(Duración: ${diffDays} día${diffDays !== 1 ? 's' : ''})`;
+          durationText = `(${t('myProjects.pdfHoldDuration')} ${diffDays} ${diffDays !== 1 ? t('myProjects.pdfHoldDays') : t('myProjects.pdfHoldDay')})`;
         } else {
-          durationText = '(En curso)';
+          durationText = t('myProjects.pdfHoldInCourse');
         }
 
         // Draw a light red panel for each hold period
@@ -408,14 +446,14 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
         doc.setTextColor(255, 46, 147);
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(11);
-        doc.text(`Pausa #${index + 1} ${durationText}`, 20, currentY + 1);
+        doc.text(`${t('myProjects.pdfHoldTitle')} #${index + 1} ${durationText}`, 20, currentY + 1);
 
         doc.setFont('Helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
         doc.setFontSize(10);
-        doc.text(`Desde: ${startStr} ${startTime}   Hasta: ${endStr} ${endTime}`, 20, currentY + 7);
+        doc.text(`${t('myProjects.pdfHoldFrom')} ${startStr} ${startTime}   ${t('myProjects.pdfHoldTo')} ${endStr} ${endTime}`, 20, currentY + 7);
         
-        const wrappedReason = doc.splitTextToSize(`Motivo: ${hold.reason || 'No especificado'}`, 170);
+        const wrappedReason = doc.splitTextToSize(`${t('myProjects.pdfHoldReason')} ${hold.reason || (language === 'es' ? 'No especificado' : 'Unspecified')}`, 170);
         doc.text(wrappedReason, 20, currentY + 13);
 
         currentY += 28;
@@ -441,21 +479,21 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     <div className="my-projects-view animate-fade-in">
       <header className="view-header">
         <div className="view-header-title">
-          <h1 className="page-title">Mis Proyectos</h1>
+          <h1 className="page-title">{t('myProjects.title')}</h1>
           <p className="text-muted">
-            Gestiona las etapas de diseño y producción de tus proyectos asignados
+            {t('myProjects.subtitle')}
           </p>
         </div>
       </header>
 
       {loading ? (
-        <div className="loading-state">Cargando etapas de proyectos...</div>
+        <div className="loading-state">{t('myProjects.loading')}</div>
       ) : myProjects.length === 0 ? (
         <div className="empty-projects glass-card">
           <Briefcase size={48} className="text-muted" />
-          <h3>No tienes proyectos asignados</h3>
+          <h3>{t('myProjects.emptyTitle')}</h3>
           <p className="text-muted">
-            Actualmente no hay proyectos asignados a tu perfil ({userProfile?.designerName}).
+            {t('myProjects.emptySubtitle')} ({userProfile?.designerName}).
           </p>
         </div>
       ) : (
@@ -476,12 +514,12 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                   </div>
                   <div className="header-status-controls">
                     <span className={`status-badge-inline ${currentStatus.toLowerCase().replace(' ', '-')}`}>
-                      {currentStatus}
+                      {getStatusLabelPdf(currentStatus)}
                     </span>
                     <button 
                       onClick={() => handleHoldToggle(project.so, currentStatus)}
                       className={`btn-hold-toggle ${currentStatus === 'ON HOLD' ? 'active-hold' : ''}`}
-                      title={currentStatus === 'ON HOLD' ? 'Liberar pausa' : 'Pausar proyecto (On Hold)'}
+                      title={currentStatus === 'ON HOLD' ? t('myProjects.releaseHold') : t('myProjects.pauseProject')}
                     >
                       {currentStatus === 'ON HOLD' ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
                       <span>On Hold</span>
@@ -492,20 +530,20 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                 {currentStatus === 'ON HOLD' && currentReason && (
                   <div className="hold-reason-banner animate-fade-in">
                     <Info size={16} />
-                    <p><strong>Motivo del Hold:</strong> {currentReason}</p>
+                    <p><strong>{t('myProjects.holdReasonLabel')}</strong> {currentReason}</p>
                   </div>
                 )}
 
                 <div className="project-dates">
                   <div className="date-item">
                     <Calendar size={14} className="text-muted" />
-                    <span>Instalación: {project.install || 'Sin fecha'}</span>
+                    <span>{t('common.installDate')}: {project.install || (language === 'es' ? 'Sin fecha' : 'No date')}</span>
                   </div>
                 </div>
 
                 <div className="progress-section">
                   <div className="progress-meta">
-                    <span className="progress-label">Progreso de Etapas</span>
+                    <span className="progress-label">{t('myProjects.stagesProgress')}</span>
                     <span className="progress-percent">{percent}%</span>
                   </div>
                   <div className="progress-bar-container">
@@ -525,7 +563,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                         key={stage.id} 
                         className={`stage-step ${isCompleted ? 'completed' : ''}`}
                         onClick={() => toggleStage(project.so, idx)}
-                        title={`Click para marcar como ${isCompleted ? 'pendiente' : 'completada'}`}
+                        title={language === 'es' ? `Clic para marcar como ${isCompleted ? 'pendiente' : 'completada'}` : `Click to mark as ${isCompleted ? 'pending' : 'completed'}`}
                       >
                         <div className="stage-connector-line"></div>
                         <div className="stage-icon-container">
@@ -535,7 +573,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                             <Circle size={20} className="icon-pending" />
                           )}
                         </div>
-                        <span className="stage-step-label">{stage.label}</span>
+                        <span className="stage-step-label">{getStageLabel(stage.id, language)}</span>
                       </div>
                     );
                   })}
@@ -547,7 +585,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                     className="btn-secondary btn-sm btn-download-pdf"
                   >
                     <Download size={14} />
-                    <span>Descargar Timeline PDF</span>
+                    <span>{t('myProjects.downloadPdf')}</span>
                   </button>
                 </div>
               </div>
@@ -561,18 +599,18 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
         <div className="modal-overlay" onClick={() => setIsHoldModalOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Pausar Proyecto (On Hold)</h3>
+              <h3 className="modal-title">{t('myProjects.modalHoldTitle')}</h3>
               <button className="modal-close-btn" onClick={() => setIsHoldModalOpen(false)}>
                 <X size={18} />
               </button>
             </div>
             <form onSubmit={submitHold} className="modal-form">
               <div className="form-group">
-                <label className="form-label">Motivo de la Pausa (On Hold)</label>
+                <label className="form-label">{t('myProjects.modalHoldReasonLabel')}</label>
                 <textarea 
                   value={holdReason}
                   onChange={(e) => setHoldReason(e.target.value)}
-                  placeholder="Describe detalladamente por qué se está pausando el proyecto..."
+                  placeholder={t('myProjects.modalHoldPlaceholder')}
                   className="form-textarea"
                   rows={4}
                   required
@@ -586,10 +624,10 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                     className="btn-secondary"
                     onClick={() => setIsHoldModalOpen(false)}
                   >
-                    Cancelar
+                    {t('common.cancel')}
                   </button>
                   <button type="submit" className="btn-primary">
-                    Poner On Hold
+                    {t('myProjects.modalHoldSubmit')}
                   </button>
                 </div>
               </div>
@@ -600,3 +638,4 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     </div>
   );
 }
+
