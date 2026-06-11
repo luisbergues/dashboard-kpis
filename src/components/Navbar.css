@@ -182,11 +182,11 @@
 
 .lang-selector-btn {
   width: 100%;
-  background: #E76F51; /* Coral Orange match user UI screenshot */
-  color: #FFFFFF;
+  background: rgba(9, 209, 199, 0.1); /* Same as user avatar background */
+  color: var(--color-cyan);
   border: none;
   padding: 10px 16px;
-  border-radius: var(--radius-lg); /* Capsule */
+  border-radius: var(--radius-md); /* Rectangular pill similar to nav buttons */
   font-family: 'Outfit', sans-serif;
   font-size: 0.85rem;
   font-weight: 700;
