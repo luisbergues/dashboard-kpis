@@ -278,25 +278,26 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     }
   };
 
+  const getStatusLabelPdf = (status) => {
+    if (!status) return '';
+    const s = status.toUpperCase();
+    if (s.includes('HOLD')) return language === 'es' ? 'EN PAUSA (HOLD)' : 'ON HOLD';
+    if (s.includes('CHECK')) return 'Check';
+    if (s.includes('REVIEW')) return language === 'es' ? 'Revisión' : 'Review';
+    if (s.includes('ENG')) return language === 'es' ? 'Ingeniería' : 'Engineering';
+    if (s.includes('NEST')) return 'Nesting';
+    return status;
+  };
+
   const generatePDF = (project) => {
     const doc = new jsPDF();
     const history = projectHistory[project.so] || [];
     const stages = projectStages[project.so] || Array(STAGES.length).fill(false);
 
-    const getStatusLabelPdf = (status) => {
-      if (!status) return '';
-      const s = status.toUpperCase();
-      if (s.includes('HOLD')) return language === 'es' ? 'EN PAUSA (HOLD)' : 'ON HOLD';
-      if (s.includes('CHECK')) return 'Check';
-      if (s.includes('REVIEW')) return language === 'es' ? 'Revisión' : 'Review';
-      if (s.includes('ENG')) return language === 'es' ? 'Ingeniería' : 'Engineering';
-      if (s.includes('NEST')) return 'Nesting';
-      return status;
-    };
-
     // Header styling
     doc.setFillColor(18, 33, 48); // Deep blue matching var(--bg-surface)
     doc.rect(0, 0, 210, 45, 'F');
+
 
     doc.setTextColor(70, 223, 177); // Mint color
     doc.setFont('Helvetica', 'bold');
