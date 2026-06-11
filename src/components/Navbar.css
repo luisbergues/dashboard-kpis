@@ -201,9 +201,8 @@
 }
 
 .lang-selector-btn:hover {
-  background: #ff5e36;
-  box-shadow: 0 6px 16px rgba(230, 95, 76, 0.4);
-  transform: translateY(-1px);
+  background: rgba(9, 209, 199, 0.25); /* Slightly stronger, less translucent */
+  box-shadow: 0 6px 16px rgba(9, 209, 199, 0.4); /* Enhanced shadow matching tone */
 }
 
 .lang-selector-btn:active {
