@@ -75,18 +75,30 @@ export function calculateAverageValidationTime(engineeringChecks) {
 }
 
 /**
- * Extracts and groups CAD errors per designer from on-hold notes
+ * Extracts and groups File Requests per designer from on-hold notes
+ * Calculates percentage based on their total active projects.
  * Keywords scanned: CAD, measure, KCD, file, drawing, inconsistent, error, etc.
  * @param {Array} onHoldNotes - list of { designer, project, notes }
- * @returns {Object} { errorCounts: { designerName: number }, totalCADErrors: number }
+ * @param {Array} projects - priorityAnalysis list to count total active projects
+ * @returns {Object} { designerStats: { designerName: { requests, total, percentage } }, totalRequests }
  */
-export function calculateCADErrors(onHoldNotes) {
+export function calculateFileRequestsPercentage(onHoldNotes, projects = []) {
   const result = {
-    errorCounts: {},
-    totalCADErrors: 0
+    designerStats: {},
+    totalRequests: 0
   };
 
   if (!Array.isArray(onHoldNotes)) return result;
+
+  // First, count total active projects per designer
+  projects.forEach(p => {
+    if (!p.eng) return;
+    let designer = p.eng.trim();
+    if (!result.designerStats[designer]) {
+      result.designerStats[designer] = { requests: 0, total: 0, percentage: 0 };
+    }
+    result.designerStats[designer].total += 1;
+  });
 
   const cadKeywords = [
     'cad', 'kcd', 'measure', 'file', 'drawing', 'inconsistent', 'error', 
@@ -97,19 +109,33 @@ export function calculateCADErrors(onHoldNotes) {
     if (!note || !note.notes) return;
     
     const notesLower = note.notes.toLowerCase();
-    const isCADError = cadKeywords.some(keyword => notesLower.includes(keyword));
+    const isFileRequest = cadKeywords.some(keyword => notesLower.includes(keyword));
 
-    if (isCADError) {
-      // Extract designer name (clean up emails/newlines)
+    if (isFileRequest) {
       let designer = 'Unassigned';
       if (note.designer) {
         designer = note.designer.split('\n')[0].split('<')[0].replace(/[^a-zA-Z\s]/g, '').trim();
-        // default fallback if string cleaning makes it empty
         if (!designer) designer = note.designer.trim();
       }
 
-      result.errorCounts[designer] = (result.errorCounts[designer] || 0) + 1;
-      result.totalCADErrors++;
+      // Try to map to existing designer if names slightly mismatch (simple fallback)
+      let matchedDesigner = Object.keys(result.designerStats).find(d => d.toLowerCase() === designer.toLowerCase()) || designer;
+
+      if (!result.designerStats[matchedDesigner]) {
+        result.designerStats[matchedDesigner] = { requests: 0, total: 0, percentage: 0 };
+      }
+
+      result.designerStats[matchedDesigner].requests += 1;
+      result.totalRequests += 1;
+    }
+  });
+
+  // Calculate percentages
+  Object.values(result.designerStats).forEach(stats => {
+    if (stats.total > 0) {
+      stats.percentage = parseFloat(((stats.requests / stats.total) * 100).toFixed(1));
+    } else {
+      stats.percentage = stats.requests > 0 ? 100 : 0; // If they have requests but no active projects
     }
   });
 
@@ -434,5 +460,96 @@ export function getUpcomingDeadlines(projects) {
   });
 
   return deadlines.sort((a, b) => a.daysLeft - b.daysLeft);
+}
+
+/**
+ * Calculates total time spent ON HOLD per designer, separating "finals" into a general bucket.
+ * @param {Object} projectHistory - map of SO# -> list of history events
+ * @param {Array} projects - priorityAnalysis list to map SO# to designer
+ * @param {Array} onHoldNotes - current on hold notes from sheet (for current active holds without history reason)
+ * @returns {Object} { labels: [], data: [], finalsTimeDays: number }
+ */
+export function calculateOnHoldTimeByDesigner(projectHistory, projects = [], onHoldNotes = []) {
+  const designerTime = {};
+  let finalsTimeMs = 0;
+
+  // Map SO# to Designer
+  const projectToDesigner = {};
+  projects.forEach(p => {
+    projectToDesigner[p.so] = p.eng ? p.eng.trim() : 'Unassigned';
+  });
+
+  // Helper to check if reason is 'finals'
+  const isFinals = (reason) => {
+    if (!reason) return false;
+    const lower = reason.toLowerCase();
+    return lower.includes('final') || lower.includes('finals');
+  };
+
+  // Helper to get current sheet note
+  const getSheetNote = (so, name) => {
+    const note = onHoldNotes.find(n => n.project.includes(so) || name.includes(n.project));
+    return note ? note.notes : '';
+  };
+
+  const now = new Date().getTime();
+
+  projects.forEach(p => {
+    const designer = projectToDesigner[p.so];
+    const history = projectHistory[p.so] || [];
+    let activeHold = null;
+
+    history.forEach(event => {
+      if (event.type === 'status_change') {
+        if (event.status === 'ON HOLD') {
+          activeHold = {
+            start: new Date(event.timestamp).getTime(),
+            reason: event.reason || ''
+          };
+        } else if (activeHold && event.status === 'ACTIVE') {
+          const end = new Date(event.timestamp).getTime();
+          const duration = end - activeHold.start;
+          if (duration > 0) {
+            if (isFinals(activeHold.reason)) {
+              finalsTimeMs += duration;
+            } else {
+              designerTime[designer] = (designerTime[designer] || 0) + duration;
+            }
+          }
+          activeHold = null;
+        }
+      }
+    });
+
+    // If currently on hold
+    if (activeHold) {
+      const duration = now - activeHold.start;
+      if (duration > 0) {
+        // Try history reason first, fallback to sheet note
+        const reason = activeHold.reason || getSheetNote(p.so, p.name);
+        if (isFinals(reason)) {
+          finalsTimeMs += duration;
+        } else {
+          designerTime[designer] = (designerTime[designer] || 0) + duration;
+        }
+      }
+    } else if (p.status?.toUpperCase() === 'ON HOLD' && history.length === 0) {
+      // If the project is on hold in the sheet but has no history, we can't reliably know when it started.
+      // But we could guess it started when install date was missed, or just ignore since we lack start time.
+    }
+  });
+
+  // Convert MS to Days
+  const msToDays = (ms) => parseFloat((ms / (1000 * 60 * 60 * 24)).toFixed(1));
+
+  const sortedDesigners = Object.keys(designerTime).sort((a, b) => designerTime[b] - designerTime[a]);
+  const labels = sortedDesigners;
+  const data = sortedDesigners.map(d => msToDays(designerTime[d]));
+
+  return {
+    labels,
+    data,
+    finalsTimeDays: msToDays(finalsTimeMs)
+  };
 }
 
