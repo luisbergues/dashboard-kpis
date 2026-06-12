@@ -52,7 +52,7 @@ const METRIC_COLORS = {
 
 const STACKED_METRICS = Object.keys(METRIC_COLORS);
 
-export default function DashboardView({ data, weeklyHistory = [], filters = {} }) {
+export default function DashboardView({ data, weeklyHistory = [] }) {
   const { t, language } = useLanguage();
   
   if (!data) {
@@ -72,15 +72,7 @@ export default function DashboardView({ data, weeklyHistory = [], filters = {} }
   const { weekOverWeek = [], insights = {}, meetingPoints = [], topCostProjects = [], weekLabels = {}, financialImpact = { rows: [] } } = data;
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // ─── Filter Data ─────────────────────────────────────────────────────────
-  let filteredProjects = data.priorityAnalysis || [];
-  if (filters.location && filters.location !== 'ALL') {
-    filteredProjects = filteredProjects.filter(p => getProjectLocation(p) === filters.location);
-  }
-  if (filters.designer && filters.designer !== 'ALL') {
-    filteredProjects = filteredProjects.filter(p => p.eng === filters.designer);
-  }
-  // Date range filtering would be more complex, keeping it simple for now.
+  const filteredProjects = data.priorityAnalysis || [];
 
   // ─── Calculate New KPIs ──────────────────────────────────────────────────
   const activeCount = filteredProjects.length;

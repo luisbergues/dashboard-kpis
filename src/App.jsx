@@ -4,7 +4,6 @@ import { fetchAndParseData } from './utils/sheetParser'
 import { getCachedData, setCachedData, isCacheFresh } from './utils/dbCache'
 import { checkDbSizeAndArchive } from './utils/archiveHelpers'
 import Navbar from './components/Navbar'
-import GlobalFilterBar from './components/GlobalFilterBar'
 import DashboardView from './views/DashboardView'
 import PipelineView from './views/PipelineView'
 import CostAnalysisView from './views/CostAnalysisView'
@@ -24,12 +23,6 @@ function App() {
   const [userProfile, setUserProfile] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [weeklyHistory, setWeeklyHistory] = useState([]);
-  
-  const [filters, setFilters] = useState({
-    dateRange: 'ALL',
-    location: 'ALL',
-    designer: 'ALL'
-  });
 
   const { data, isLoading: loading, error } = useQuery({
     queryKey: ['dashboardData'],
@@ -212,35 +205,25 @@ function App() {
     }
 
     switch (activeTab) {
-      case 'dashboard': return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} filters={filters} />;
-      case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} filters={filters} />;
-      case 'my-projects': return <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} filters={filters} />;
-      case 'pipeline': return <PipelineView data={mergedData} filters={filters} />;
-      case 'costs': return <CostAnalysisView data={mergedData} filters={filters} />;
-      case 'materials': return <MaterialsView data={mergedData} filters={filters} />;
-      case 'quality': return <DesignQualityView data={mergedData} filters={filters} />;
-      default: return <DashboardView data={mergedData} filters={filters} />;
+      case 'dashboard': return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
+      case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
+      case 'my-projects': return <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
+      case 'pipeline': return <PipelineView data={mergedData} />;
+      case 'costs': return <CostAnalysisView data={mergedData} />;
+      case 'materials': return <MaterialsView data={mergedData} />;
+      case 'quality': return <DesignQualityView data={mergedData} />;
+      default: return <DashboardView data={mergedData} />;
     }
   };
 
   return (
     <div className="app-container">
       {(!loading && !authLoading && currentUser) && (
-        <>
-          <Navbar 
-            activeTab={activeTab} 
-            setActiveTab={setActiveTab} 
-            userProfile={userProfile}
-          />
-          {activeTab !== 'calendar' && activeTab !== 'my-projects' && (
-            <GlobalFilterBar 
-              filters={filters} 
-              onChange={setFilters} 
-              projects={mergedData?.priorityAnalysis || []} 
-              onHoldNotes={mergedData?.onHoldNotes || []} 
-            />
-          )}
-        </>
+        <Navbar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          userProfile={userProfile}
+        />
       )}
       <main className="main-content">
         <ErrorBoundary>
