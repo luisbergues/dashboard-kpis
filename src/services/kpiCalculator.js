@@ -297,10 +297,10 @@ export function getProjectLocation(project) {
  * Calculates weighted average time per stage based on project price
  * @param {Object} projectStages - map of SO# -> stage array [{completed, timestamp}]
  * @param {Array} projects - priorityAnalysis
- * @param {Object} engineeringChecks - map of SO# -> {started, finished}
+ * @param {Object} projectHistory - map of SO# -> list of history events
  * @returns {Array} List of { stageLabel, averageHours, isExternal }
  */
-export function calculatePersonalStageAverages(projectStages, projects, engineeringChecks) {
+export function calculatePersonalStageAverages(projectStages, projects, projectHistory) {
   const STAGES_CONFIG = [
     { id: 'ingenieria', label: 'Engineering', isExternal: false },
     { id: 'check1', label: 'Check 1', isExternal: true },
@@ -314,44 +314,58 @@ export function calculatePersonalStageAverages(projectStages, projects, engineer
 
   projects.forEach(p => {
     const price = parseCurrency(p.totalAmt) || 1; // fallback weight of 1 if no price
-    const stages = projectStages[p.so];
-    if (!stages) return;
-
-    // 0: Engineering
-    const engCheck = engineeringChecks[p.so];
-    let engFinishTime = null;
-    if (engCheck?.started && engCheck?.finished) {
-      const start = new Date(engCheck.started);
-      const finish = new Date(engCheck.finished);
-      if (!isNaN(start) && !isNaN(finish) && finish >= start) {
-        const hours = (finish - start) / (1000 * 60 * 60);
-        stageTotals[0].totalWeightedHours += (hours * price);
-        stageTotals[0].totalWeight += price;
-        engFinishTime = finish;
-      }
-    }
-
-    // Previous milestone timestamp
-    let prevTime = engFinishTime;
-
-    // 1 to 5: Check 1 to Install
-    for (let i = 1; i < STAGES_CONFIG.length; i++) {
-      const stageData = stages[i];
-      if (stageData && stageData.completed && stageData.timestamp && prevTime) {
-        const currTime = new Date(stageData.timestamp);
-        if (!isNaN(currTime) && currTime >= prevTime) {
-          const hours = (currTime - prevTime) / (1000 * 60 * 60);
-          stageTotals[i].totalWeightedHours += (hours * price);
-          stageTotals[i].totalWeight += price;
+    const history = (projectHistory && projectHistory[p.so]) || [];
+    
+    // Find earliest timestamp for each key status in the drive history
+    const milestones = {};
+    history.forEach(event => {
+      if (event.type === 'status_change') {
+        const st = (event.status || '').toUpperCase();
+        const d = new Date(event.timestamp);
+        if (!isNaN(d)) {
+          if (!milestones[st] || d < milestones[st]) {
+            milestones[st] = d;
+          }
         }
-        prevTime = currTime; // Advance the milestone
-      } else if (stageData && stageData.completed && stageData.timestamp) {
-        // If we have a completed timestamp but no prevTime, we can't reliably measure duration.
-        // Just update prevTime so subsequent stages can be measured from here.
-        const currTime = new Date(stageData.timestamp);
-        if (!isNaN(currTime)) prevTime = currTime;
+      }
+    });
+
+    const getDuration = (startStatus, endStatus) => {
+      const start = milestones[startStatus];
+      const end = milestones[endStatus];
+      if (start && end && end >= start) {
+        return (end - start) / (1000 * 60 * 60);
+      }
+      return 0;
+    };
+
+    const durations = {
+      ingenieria: getDuration('ENGINEERING', 'CHECK'),
+      check1: getDuration('CHECK', 'PAPERWORK'),
+      paperwork: getDuration('PAPERWORK', 'NESTING'),
+      nesting: getDuration('NESTING', 'INSTALL'),
+      install: 0
+    };
+
+    // Calculate check2 using the specific dashboard checkboxes (same logic as avg validation time)
+    let check2Hours = 0;
+    const stages = projectStages && projectStages[p.so];
+    if (stages && stages[2]?.completed && stages[2]?.timestamp && stages[3]?.completed && stages[3]?.timestamp) {
+      const sStart = new Date(stages[2].timestamp);
+      const sEnd = new Date(stages[3].timestamp);
+      if (!isNaN(sStart) && !isNaN(sEnd) && sEnd >= sStart) {
+        check2Hours = (sEnd - sStart) / (1000 * 60 * 60);
       }
     }
+    durations['check2'] = check2Hours;
+
+    STAGES_CONFIG.forEach((stage, i) => {
+      const hours = durations[stage.id];
+      if (hours > 0 && hours < 5000) { // Filter out invalid/massive durations
+        stageTotals[i].totalWeightedHours += (hours * price);
+        stageTotals[i].totalWeight += price;
+      }
+    });
   });
 
   return stageTotals.map(s => ({
@@ -551,5 +565,45 @@ export function calculateOnHoldTimeByDesigner(projectHistory, projects = [], onH
     data,
     finalsTimeDays: msToDays(finalsTimeMs)
   };
+}
+
+/**
+ * Calculates global validation time: average time between Paperwork completed (entering Check 2)
+ * and Check 2 completed (entering Nesting).
+ * @param {Object} projectStages - map of SO# -> stage array
+ * @param {Array} projects - array of all active/recent projects
+ * @returns {number} Average time in hours, rounded to 1 decimal place
+ */
+export function calculateGlobalValidationTime(projectStages, projects = []) {
+  if (!projectStages || Object.keys(projectStages).length === 0) return 0.0;
+  
+  let totalHours = 0;
+  let count = 0;
+
+  projects.forEach(p => {
+    const stages = projectStages[p.so];
+    if (!stages) return;
+
+    // Stage 2 is Paperwork (when completed, it enters Check 2)
+    // Stage 3 is Check 2 (when completed, it enters Nesting)
+    const paperwork = stages[2];
+    const check2 = stages[3];
+
+    if (paperwork?.completed && paperwork?.timestamp && check2?.completed && check2?.timestamp) {
+      const start = new Date(paperwork.timestamp);
+      const end = new Date(check2.timestamp);
+
+      if (!isNaN(start) && !isNaN(end) && end >= start) {
+        const diffHours = (end - start) / (1000 * 60 * 60);
+        if (diffHours > 0 && diffHours < 1000) { // arbitrary sanity check to avoid negative/massive values
+          totalHours += diffHours;
+          count++;
+        }
+      }
+    }
+  });
+
+  if (count === 0) return 0.0;
+  return parseFloat((totalHours / count).toFixed(1));
 }
 

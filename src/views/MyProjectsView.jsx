@@ -96,7 +96,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   });
 
   // Calculate analytics
-  const stageAverages = calculatePersonalStageAverages(projectStages, myProjectsRaw, engineeringChecks);
+  const stageAverages = calculatePersonalStageAverages(projectStages, myProjectsRaw, projectHistory);
   const monthlyData = calculateMonthlyCompletions(projectStages, myProjectsRaw);
   const upcomingDeadlines = getUpcomingDeadlines(myProjectsRaw);
 

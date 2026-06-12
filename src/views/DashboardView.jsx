@@ -22,8 +22,10 @@ import {
   calculateBudgetDeviation, 
   calculateAverageValidationTime, 
   predictBottlenecks, 
-  getProjectLocation 
+  getProjectLocation,
+  calculateGlobalValidationTime
 } from '../services/kpiCalculator';
+import { db, ref, onValue } from '../utils/firebase';
 import './DashboardView.css';
 
 ChartJS.register(
@@ -71,6 +73,16 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
 
   const { weekOverWeek = [], insights = {}, meetingPoints = [], topCostProjects = [], weekLabels = {}, financialImpact = { rows: [] } } = data;
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [projectStages, setProjectStages] = useState({});
+
+  React.useEffect(() => {
+    if (!db) return;
+    const stagesRef = ref(db, 'project_stages');
+    const unsubscribe = onValue(stagesRef, (snapshot) => {
+      setProjectStages(snapshot.val() || {});
+    });
+    return () => unsubscribe();
+  }, []);
 
   const filteredProjects = data.priorityAnalysis || [];
 
@@ -84,11 +96,8 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
   const holdValueStr = financialImpact?.rows?.find(r => r.status === 'ON HOLD')?.value || '$0';
   const budgetDeviation = calculateBudgetDeviation(holdValueStr, totalValueStr);
   
-  // Dummy engineering checks map for now as it's not present in sheet parser directly
-  const dummyEngChecks = {
-    '1': { started: '2026-06-10T10:00:00Z', finished: '2026-06-10T14:30:00Z' } // 4.5 hours
-  };
-  const avgValidationTime = calculateAverageValidationTime(dummyEngChecks);
+  // Calculate Avg Validation Time (Check 2 to Nesting) using real stage progress from Firebase
+  const avgValidationTime = calculateGlobalValidationTime(projectStages, filteredProjects);
   
   const bottleneckAlerts = predictBottlenecks(filteredProjects);
 
