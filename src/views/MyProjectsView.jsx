@@ -5,9 +5,16 @@ import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';
 import { 
   Briefcase, Calendar, CheckCircle2, Circle, Clock, 
-  AlertCircle, Download, ToggleLeft, ToggleRight, X, Info
+  AlertCircle, Download, ToggleLeft, ToggleRight, X, Info,
+  ChevronDown, ChevronUp, ArrowUpDown, TrendingUp
 } from 'lucide-react';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend } from 'chart.js';
+import { Bar, Line } from 'react-chartjs-2';
+import { calculatePersonalStageAverages, calculateMonthlyCompletions, getUpcomingDeadlines } from '../services/kpiCalculator';
+import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import './MyProjectsView.css';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, ChartTooltip, Legend);
 
 const STAGES = [
   { id: 'ingenieria', label: 'Ingeniería' },
@@ -59,6 +66,11 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [activeProjectSo, setActiveProjectSo] = useState(null);
   const [holdReason, setHoldReason] = useState('');
 
+  // Analytics & Sorting State
+  const [showAnalytics, setShowAnalytics] = useState(true);
+  const [sortBy, setSortBy] = useState(null); // 'date' | 'so'
+  const [sortDesc, setSortDesc] = useState(true);
+
   const getOnHoldNote = (projectName) => {
     if (!onHoldNotes) return null;
     const note = onHoldNotes.find(n => projectName.includes(n.project) || n.project.includes(projectName));
@@ -66,9 +78,58 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   };
 
   // Filter projects where eng matches the logged in designer
-  const myProjects = priorityAnalysis.filter(p => {
+  const myProjectsRaw = priorityAnalysis.filter(p => {
     return userProfile && p.eng && p.eng.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
   });
+
+  const myProjects = [...myProjectsRaw].sort((a, b) => {
+    if (!sortBy) return 0;
+    if (sortBy === 'so') {
+      return sortDesc ? b.so - a.so : a.so - b.so;
+    }
+    if (sortBy === 'date') {
+      const dateA = new Date(a.install).getTime() || 0;
+      const dateB = new Date(b.install).getTime() || 0;
+      return sortDesc ? dateB - dateA : dateA - dateB;
+    }
+    return 0;
+  });
+
+  // Calculate analytics
+  const stageAverages = calculatePersonalStageAverages(projectStages, myProjectsRaw, engineeringChecks);
+  const monthlyData = calculateMonthlyCompletions(projectStages, myProjectsRaw);
+  const upcomingDeadlines = getUpcomingDeadlines(myProjectsRaw);
+
+  const stageAveragesChartData = {
+    labels: stageAverages.map(s => s.label),
+    datasets: [{
+      label: 'Avg Hours',
+      data: stageAverages.map(s => s.averageHours),
+      backgroundColor: stageAverages.map(s => s.isExternal ? 'rgba(255, 255, 255, 0.2)' : '#09D1C7'),
+      borderRadius: 4
+    }]
+  };
+
+  const lineOptions = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top', labels: { color: '#94A3B8' } } },
+    scales: {
+      x: { ticks: { color: '#94A3B8' }, grid: { display: false } },
+      y: { ticks: { color: '#94A3B8', precision: 0 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+    }
+  };
+
+  const barOptions = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { 
+      legend: { display: false },
+      tooltip: { callbacks: { label: (ctx) => `${ctx.raw} Hours` } }
+    },
+    scales: {
+      x: { ticks: { color: '#94A3B8', font: {size: 10} }, grid: { display: false } },
+      y: { ticks: { color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+    }
+  };
 
   // Listen to stage progress, overrides, and history in Realtime Database
   useEffect(() => {
@@ -538,6 +599,90 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
           </p>
         </div>
       </header>
+
+      {/* Analytics Section */}
+      {!loading && myProjectsRaw.length > 0 && (
+        <section className="personal-analytics-section glass-card mb-xl">
+          <div className="analytics-header" onClick={() => setShowAnalytics(!showAnalytics)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showAnalytics ? '16px' : '0' }}>
+            <h2 className="section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <TrendingUp size={20} className="text-neon-cyan" />
+              My Analytics Dashboard
+            </h2>
+            {showAnalytics ? <ChevronUp size={20} className="text-muted" /> : <ChevronDown size={20} className="text-muted" />}
+          </div>
+          
+          {showAnalytics && (
+            <div className="analytics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 300px', gap: '24px' }}>
+              <SectionErrorBoundary title="Stage Averages Error">
+                <div className="analytics-card">
+                  <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: '#94A3B8', marginBottom: '12px' }}>Avg Time per Stage (Weighted by Size)</h4>
+                  <div style={{ height: '220px' }}>
+                    <Bar data={stageAveragesChartData} options={barOptions} />
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '8px', textAlign: 'center' }}>* Gray bars indicate external stages</p>
+                </div>
+              </SectionErrorBoundary>
+
+              <SectionErrorBoundary title="Monthly Output Error">
+                <div className="analytics-card">
+                  <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: '#94A3B8', marginBottom: '12px' }}>Projects Completed (Monthly)</h4>
+                  <div style={{ height: '220px' }}>
+                    {monthlyData.labels.length > 0 ? (
+                      <Line data={monthlyData} options={lineOptions} />
+                    ) : (
+                      <div className="text-muted" style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>No completed projects yet</div>
+                    )}
+                  </div>
+                </div>
+              </SectionErrorBoundary>
+
+              <SectionErrorBoundary title="Deadlines Error">
+                <div className="analytics-card deadlines-card" style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', overflowY: 'auto', maxHeight: '260px' }}>
+                  <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: '#94A3B8', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertCircle size={16} className="text-yellow" />
+                    Upcoming Install Deadlines
+                  </h4>
+                  {upcomingDeadlines.length === 0 ? (
+                    <p className="text-muted" style={{ fontSize: '0.85rem' }}>No critical deadlines in the next 14 days.</p>
+                  ) : (
+                    <div className="deadlines-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {upcomingDeadlines.map(d => (
+                        <div key={d.so} className="deadline-item" style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '6px', borderLeft: d.daysLeft <= 3 ? '3px solid var(--color-pink)' : '3px solid #FFE600' }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fff' }}>#{d.so} {d.name.split(':')[0]}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>{d.date}</span>
+                            <span className={d.daysLeft <= 3 ? 'text-danger' : 'text-yellow'}>{d.daysLeft} days left</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </SectionErrorBoundary>
+            </div>
+          )}
+        </section>
+      )}
+
+      <div className="projects-list-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <h2 className="section-title" style={{ margin: 0 }}>Active Projects</h2>
+        <div className="sort-controls" style={{ display: 'flex', gap: '8px' }}>
+          <button 
+            className={`btn-sm ${sortBy === 'so' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => { setSortBy('so'); setSortDesc(!sortDesc); }}
+            title="Sort by SO Number"
+          >
+            <ArrowUpDown size={14} /> SO#
+          </button>
+          <button 
+            className={`btn-sm ${sortBy === 'date' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => { setSortBy('date'); setSortDesc(!sortDesc); }}
+            title="Sort by Install Date"
+          >
+            <Calendar size={14} /> Date
+          </button>
+        </div>
+      </div>
 
       {loading ? (
         <div className="loading-state">{t('myProjects.loading')}</div>

@@ -261,9 +261,178 @@ export function getProjectLocation(project) {
   if (nameLower.includes('boca') || nameLower.includes('raton')) return 'Boca Raton';
   if (nameLower.includes('naples')) return 'Naples';
   
-  // Stable hash based on SO#
+// Stable hash based on SO#
   const soNum = parseInt(project.so, 10) || 0;
   const locations = ['Miami', 'Boca Raton', 'Naples'];
   return locations[soNum % locations.length];
+}
+
+/**
+ * Calculates weighted average time per stage based on project price
+ * @param {Object} projectStages - map of SO# -> stage array [{completed, timestamp}]
+ * @param {Array} projects - priorityAnalysis
+ * @param {Object} engineeringChecks - map of SO# -> {started, finished}
+ * @returns {Array} List of { stageLabel, averageHours, isExternal }
+ */
+export function calculatePersonalStageAverages(projectStages, projects, engineeringChecks) {
+  const STAGES_CONFIG = [
+    { id: 'ingenieria', label: 'Engineering', isExternal: false },
+    { id: 'check1', label: 'Check 1', isExternal: true },
+    { id: 'paperwork', label: 'Paperwork', isExternal: false },
+    { id: 'check2', label: 'Check 2 (Paperwork)', isExternal: true },
+    { id: 'nesting', label: 'Nesting', isExternal: false },
+    { id: 'install', label: 'Install', isExternal: true }
+  ];
+
+  const stageTotals = STAGES_CONFIG.map(s => ({ ...s, totalWeightedHours: 0, totalWeight: 0 }));
+
+  projects.forEach(p => {
+    const price = parseCurrency(p.totalAmt) || 1; // fallback weight of 1 if no price
+    const stages = projectStages[p.so];
+    if (!stages) return;
+
+    // 0: Engineering
+    const engCheck = engineeringChecks[p.so];
+    let engFinishTime = null;
+    if (engCheck?.started && engCheck?.finished) {
+      const start = new Date(engCheck.started);
+      const finish = new Date(engCheck.finished);
+      if (!isNaN(start) && !isNaN(finish) && finish >= start) {
+        const hours = (finish - start) / (1000 * 60 * 60);
+        stageTotals[0].totalWeightedHours += (hours * price);
+        stageTotals[0].totalWeight += price;
+        engFinishTime = finish;
+      }
+    }
+
+    // Previous milestone timestamp
+    let prevTime = engFinishTime;
+
+    // 1 to 5: Check 1 to Install
+    for (let i = 1; i < STAGES_CONFIG.length; i++) {
+      const stageData = stages[i];
+      if (stageData && stageData.completed && stageData.timestamp && prevTime) {
+        const currTime = new Date(stageData.timestamp);
+        if (!isNaN(currTime) && currTime >= prevTime) {
+          const hours = (currTime - prevTime) / (1000 * 60 * 60);
+          stageTotals[i].totalWeightedHours += (hours * price);
+          stageTotals[i].totalWeight += price;
+        }
+        prevTime = currTime; // Advance the milestone
+      } else if (stageData && stageData.completed && stageData.timestamp) {
+        // If we have a completed timestamp but no prevTime, we can't reliably measure duration.
+        // Just update prevTime so subsequent stages can be measured from here.
+        const currTime = new Date(stageData.timestamp);
+        if (!isNaN(currTime)) prevTime = currTime;
+      }
+    }
+  });
+
+  return stageTotals.map(s => ({
+    label: s.label,
+    isExternal: s.isExternal,
+    averageHours: s.totalWeight > 0 ? parseFloat((s.totalWeightedHours / s.totalWeight).toFixed(1)) : 0
+  }));
+}
+
+/**
+ * Groups completed projects by month for Check 2 and Nesting
+ * @param {Object} projectStages - map of SO# -> stage array
+ * @returns {Object} { labels: ['Jan', ...], datasets: [{label: 'Check 2', data: []}, {label: 'Nesting', data: []}] }
+ */
+export function calculateMonthlyCompletions(projectStages, myProjects = []) {
+  const monthsData = {};
+
+  const myProjectSos = new Set(myProjects.map(p => p.so));
+
+  Object.entries(projectStages).forEach(([so, stages]) => {
+    // Only count projects belonging to this engineer
+    if (!myProjectSos.has(so)) return;
+
+    // Index 3 is Check 2 (Paperwork)
+    const check2 = stages[3];
+    if (check2 && check2.completed && check2.timestamp) {
+      const d = new Date(check2.timestamp);
+      if (!isNaN(d)) {
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        monthsData[monthKey] = monthsData[monthKey] || { check2: 0, nesting: 0 };
+        monthsData[monthKey].check2++;
+      }
+    }
+
+    // Index 4 is Nesting
+    const nesting = stages[4];
+    if (nesting && nesting.completed && nesting.timestamp) {
+      const d = new Date(nesting.timestamp);
+      if (!isNaN(d)) {
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        monthsData[monthKey] = monthsData[monthKey] || { check2: 0, nesting: 0 };
+        monthsData[monthKey].nesting++;
+      }
+    }
+  });
+
+  const sortedKeys = Object.keys(monthsData).sort();
+  const labels = sortedKeys.map(k => {
+    const [y, m] = k.split('-');
+    const date = new Date(y, parseInt(m) - 1, 1);
+    return date.toLocaleString('default', { month: 'short' });
+  });
+
+  const check2Data = sortedKeys.map(k => monthsData[k].check2);
+  const nestingData = sortedKeys.map(k => monthsData[k].nesting);
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: 'Paperwork Checked',
+        data: check2Data,
+        borderColor: '#09D1C7',
+        backgroundColor: 'rgba(9, 209, 199, 0.1)',
+        tension: 0.4,
+        fill: true
+      },
+      {
+        label: 'Nesting Completed',
+        data: nestingData,
+        borderColor: '#FF2E93',
+        backgroundColor: 'rgba(255, 46, 147, 0.1)',
+        tension: 0.4,
+        fill: true
+      }
+    ]
+  };
+}
+
+/**
+ * Gets upcoming critical deadlines for an engineer
+ * @param {Array} projects 
+ * @returns {Array} List of projects with upcoming install dates (<= 14 days)
+ */
+export function getUpcomingDeadlines(projects) {
+  const today = new Date();
+  const warningWindow = 14 * 24 * 60 * 60 * 1000;
+
+  const deadlines = [];
+  projects.forEach(p => {
+    if (p.install) {
+      const instDate = new Date(p.install);
+      if (!isNaN(instDate) && instDate >= today) {
+        const diff = instDate.getTime() - today.getTime();
+        if (diff <= warningWindow) {
+          const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+          deadlines.push({
+            so: p.so,
+            name: p.name,
+            daysLeft,
+            date: p.install
+          });
+        }
+      }
+    }
+  });
+
+  return deadlines.sort((a, b) => a.daysLeft - b.daysLeft);
 }
 

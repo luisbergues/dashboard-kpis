@@ -175,18 +175,24 @@ function App() {
 
   const getMergedData = () => {
     if (!data) return null;
-    if (Object.keys(overrides).length === 0) return data;
 
     const mergedPriorityAnalysis = data.priorityAnalysis.map(p => {
       const override = overrides[p.so];
+      const costData = data.topCostProjects?.find(cp => cp.name === p.name);
+      
+      let status = p.status;
+      let onHoldReason = null;
       if (override) {
-        return {
-          ...p,
-          status: override.status || p.status,
-          onHoldReason: override.onHoldReason || null
-        };
+        status = override.status || p.status;
+        onHoldReason = override.onHoldReason || null;
       }
-      return p;
+      
+      return {
+        ...p,
+        status,
+        onHoldReason,
+        totalAmt: costData ? costData.cost : '$0'
+      };
     });
 
     return {
