@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User, Briefcase, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User, Briefcase, ChevronDown, Award } from 'lucide-react';
 import { auth, signOut } from '../utils/firebase';
 import { useLanguage } from '../utils/LanguageContext';
 import './Navbar.css';
@@ -14,7 +14,8 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
     ...(userProfile ? [{ id: 'my-projects', label: t('navbar.myProjects'), icon: Briefcase }] : []),
     { id: 'pipeline', label: t('navbar.pipeline'), icon: ListTodo },
     { id: 'costs', label: t('navbar.costs'), icon: CircleDollarSign },
-    { id: 'materials', label: t('navbar.materials'), icon: Hammer }
+    { id: 'materials', label: t('navbar.materials'), icon: Hammer },
+    { id: 'quality', label: language === 'es' ? 'Calidad' : 'Quality', icon: Award }
   ];
 
   const languages = [

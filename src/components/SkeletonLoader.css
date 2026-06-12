@@ -1,0 +1,161 @@
+/* Skeleton Shimmer Keyframes */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-card,
+.skeleton-line,
+.skeleton-circle,
+.skeleton-bar,
+.skeleton-cell {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(255, 255, 255, 0.08) 37%,
+    rgba(255, 255, 255, 0.03) 63%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite linear;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Cards Skeletons ─── */
+.skeleton-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--spacing-md);
+  width: 100%;
+}
+
+.skeleton-card {
+  padding: 20px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.01);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 120px;
+}
+
+.skeleton-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.skeleton-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.skeleton-line {
+  height: 14px;
+  width: 100%;
+}
+
+.skeleton-line.medium {
+  width: 70%;
+  height: 18px;
+}
+
+.skeleton-line.short {
+  width: 40%;
+}
+
+.skeleton-line.micro {
+  width: 20%;
+}
+
+/* ─── Chart Skeletons ─── */
+.skeleton-chart-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.01);
+  border-radius: var(--radius-md);
+  height: 100%;
+  min-height: 300px;
+}
+
+.skeleton-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.skeleton-chart-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  flex: 1;
+  gap: var(--spacing-md);
+  height: 200px;
+  padding-top: var(--spacing-md);
+}
+
+.skeleton-bar {
+  width: 12%;
+  min-width: 20px;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+}
+
+.skeleton-bar.h-lg {
+  height: 85%;
+}
+
+.skeleton-bar.h-md {
+  height: 60%;
+}
+
+.skeleton-bar.h-sm {
+  height: 35%;
+}
+
+/* ─── Table Skeletons ─── */
+.skeleton-table-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--spacing-lg);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.01);
+  border-radius: var(--radius-md);
+  width: 100%;
+}
+
+.skeleton-table-row {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.skeleton-table-row.header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.skeleton-cell {
+  height: 16px;
+  flex: 1;
+}
+
+.skeleton-cell.text.short {
+  flex: 0.6;
+}
+
+.skeleton-cell.badge {
+  flex: 0.3;
+  max-width: 80px;
+  border-radius: var(--radius-full);
+}

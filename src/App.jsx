@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { fetchAndParseData } from './utils/sheetParser'
+import { getCachedData, setCachedData, isCacheFresh } from './utils/dbCache'
 import { checkDbSizeAndArchive } from './utils/archiveHelpers'
 import Navbar from './components/Navbar'
+import GlobalFilterBar from './components/GlobalFilterBar'
 import DashboardView from './views/DashboardView'
 import PipelineView from './views/PipelineView'
 import CostAnalysisView from './views/CostAnalysisView'
@@ -9,40 +12,54 @@ import MaterialsView from './views/MaterialsView'
 import CalendarView from './views/CalendarView'
 import LoginView from './views/LoginView'
 import MyProjectsView from './views/MyProjectsView'
+import DesignQualityView from './views/DesignQualityView'
 import ErrorBoundary from './components/ErrorBoundary'
+import ToastNotifications from './components/ToastNotifications'
 import { auth, db, onAuthStateChanged, ref, onValue, set, get, child } from './utils/firebase'
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [data, setData] = useState(null);
   const [overrides, setOverrides] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [weeklyHistory, setWeeklyHistory] = useState([]);
+  
+  const [filters, setFilters] = useState({
+    dateRange: 'ALL',
+    location: 'ALL',
+    designer: 'ALL'
+  });
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const parsedData = await fetchAndParseData();
-        setData(parsedData);
-        checkDbSizeAndArchive().catch(console.error);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const { data, isLoading: loading, error } = useQuery({
+    queryKey: ['dashboardData'],
+    queryFn: async () => {
+      const cached = await getCachedData();
+      let dataToReturn = null;
+      
+      if (cached && isCacheFresh(cached.timestamp)) {
+        dataToReturn = cached.parsedData;
+        // Trigger background refresh if we want, but React Query handles staleTime
+      } else {
+        try {
+          const parsedData = await fetchAndParseData();
+          await setCachedData(parsedData);
+          checkDbSizeAndArchive().catch(console.error);
+          dataToReturn = parsedData;
+        } catch (err) {
+          if (cached) {
+            console.warn('Fallback to expired cache due to fetch error', err);
+            dataToReturn = cached.parsedData;
+          } else {
+            throw err;
+          }
+        }
       }
-    }
-    loadData();
-
-    // Set up auto-polling interval (every 30 seconds) to keep data fresh, only if tab is active
-    const interval = setInterval(() => {
-      if (!document.hidden) loadData();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
+      return dataToReturn;
+    },
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
+  });
 
   // Save weekly snapshots to Firebase & load history
   // We save TWO snapshots per sheet update: one for 'previous week' and one for 'current week'
@@ -189,30 +206,42 @@ function App() {
     }
 
     switch (activeTab) {
-      case 'dashboard': return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
-      case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
-      case 'my-projects': return <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
-      case 'pipeline': return <PipelineView data={mergedData} />;
-      case 'costs': return <CostAnalysisView data={mergedData} />;
-      case 'materials': return <MaterialsView data={mergedData} />;
-      default: return <DashboardView data={mergedData} />;
+      case 'dashboard': return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} filters={filters} />;
+      case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} filters={filters} />;
+      case 'my-projects': return <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} filters={filters} />;
+      case 'pipeline': return <PipelineView data={mergedData} filters={filters} />;
+      case 'costs': return <CostAnalysisView data={mergedData} filters={filters} />;
+      case 'materials': return <MaterialsView data={mergedData} filters={filters} />;
+      case 'quality': return <DesignQualityView data={mergedData} filters={filters} />;
+      default: return <DashboardView data={mergedData} filters={filters} />;
     }
   };
 
   return (
     <div className="app-container">
       {(!loading && !authLoading && currentUser) && (
-        <Navbar 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
-          userProfile={userProfile}
-        />
+        <>
+          <Navbar 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab} 
+            userProfile={userProfile}
+          />
+          {activeTab !== 'calendar' && activeTab !== 'my-projects' && (
+            <GlobalFilterBar 
+              filters={filters} 
+              onChange={setFilters} 
+              projects={mergedData?.priorityAnalysis || []} 
+              onHoldNotes={mergedData?.onHoldNotes || []} 
+            />
+          )}
+        </>
       )}
       <main className="main-content">
         <ErrorBoundary>
           {renderView()}
         </ErrorBoundary>
       </main>
+      <ToastNotifications />
     </div>
   )
 }

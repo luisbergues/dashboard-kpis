@@ -1,0 +1,139 @@
+.global-filter-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-lg);
+  background: rgba(18, 33, 48, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  top: 10px;
+  z-index: 100;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.filter-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.filters-inputs-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.filter-input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
+  min-width: 160px;
+  height: 38px;
+  transition: all 0.3s ease;
+}
+
+.filter-input-group:focus-within,
+.filter-input-group:hover {
+  border-color: var(--color-cyan);
+  background: rgba(9, 209, 199, 0.04);
+  box-shadow: 0 0 10px rgba(9, 209, 199, 0.1);
+}
+
+.input-icon {
+  color: var(--text-muted);
+  margin-right: 8px;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.filter-select {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  width: 100%;
+  height: 100%;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  padding-right: 15px;
+}
+
+.filter-select option {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  padding: 10px;
+}
+
+.btn-reset-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 46, 147, 0.08);
+  border: 1px solid rgba(255, 46, 147, 0.2);
+  color: var(--color-pink);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  height: 38px;
+  transition: all 0.2s ease;
+}
+
+.btn-reset-filters:hover {
+  background: rgba(255, 46, 147, 0.15);
+  border-color: var(--color-pink);
+  transform: translateY(-1px);
+}
+
+.btn-reset-filters:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 767px) {
+  .global-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    position: static; /* Disable sticky on mobile to save vertical space */
+    padding: 15px;
+    gap: var(--spacing-sm);
+  }
+
+  .filters-inputs-row {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .filter-input-group {
+    width: 100%;
+  }
+
+  .btn-reset-filters {
+    justify-content: center;
+    width: 100%;
+  }
+}
