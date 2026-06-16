@@ -64,8 +64,8 @@ function App() {
         const prevLabel = data.weekLabels?.previous || 'Previous';
         const currLabel = data.weekLabels?.current || 'Current';
 
-        // Helper: sanitize label for Firebase key
-        const toKey = (label) => label.replace(/[.#$/\[\]]/g, '_').replace(/\s+/g, '_');
+        // Helper: sanitize label for Firebase key (convert to lowercase for case-insensitivity)
+        const toKey = (label) => label.toLowerCase().replace(/[.#$/\[\]]/g, '_').replace(/\s+/g, '_');
 
         // Save previous week snapshot (with 'previous' values)
         const prevKey = toKey(prevLabel);
@@ -119,8 +119,36 @@ function App() {
             return a.key.localeCompare(b.key);
           });
 
+          // Deduplicate by normalized label to ensure unique weeks
+          const uniqueWeeks = [];
+          const seenLabels = new Set();
+          for (const week of weeksArray) {
+            const normalizedLabel = week.label.toLowerCase().trim();
+            if (!seenLabels.has(normalizedLabel)) {
+              seenLabels.add(normalizedLabel);
+              uniqueWeeks.push(week);
+            } else {
+              const existingIndex = uniqueWeeks.findIndex(w => w.label.toLowerCase().trim() === normalizedLabel);
+              const existingWeek = uniqueWeeks[existingIndex];
+              const existingHasNested = existingWeek.metrics && Object.values(existingWeek.metrics).some(v => typeof v === 'object' && v !== null);
+              const currentHasNested = week.metrics && Object.values(week.metrics).some(v => typeof v === 'object' && v !== null);
+              
+              // Replace existing if it has nested objects (old format) but the current one has clean numbers
+              if (existingHasNested && !currentHasNested) {
+                uniqueWeeks[existingIndex] = week;
+              } else if (!existingHasNested && !currentHasNested) {
+                // If both are clean, keep the newer one based on savedAt
+                const existingTime = new Date(existingWeek.savedAt || 0).getTime();
+                const currentTime = new Date(week.savedAt || 0).getTime();
+                if (currentTime > existingTime) {
+                  uniqueWeeks[existingIndex] = week;
+                }
+              }
+            }
+          }
+
           // Keep only last 10
-          setWeeklyHistory(weeksArray.slice(-10));
+          setWeeklyHistory(uniqueWeeks.slice(-10));
         }
       } catch (err) {
         console.error('Error managing weekly history:', err);
