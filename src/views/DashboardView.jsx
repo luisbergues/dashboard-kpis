@@ -11,7 +11,8 @@ import {
   Legend,
   Tooltip,
   LineController,
-  BarController
+  BarController,
+  Filler
 } from 'chart.js';
 import { Chart } from 'react-chartjs-2';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
@@ -37,7 +38,8 @@ ChartJS.register(
   Legend,
   Tooltip,
   LineController,
-  BarController
+  BarController,
+  Filler
 );
 
 // Metric colors used across historical bars

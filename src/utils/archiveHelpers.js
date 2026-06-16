@@ -6,9 +6,14 @@ import { collection, doc, setDoc } from 'firebase/firestore';
 // 1 GB limit
 const DB_SIZE_LIMIT_BYTES = 1073741824; 
 
+let hasWarnedNotInitialized = false;
+
 export async function checkDbSizeAndArchive() {
   if (!db || !backupDb) {
-    console.warn('⚠️ Archiving skipped: Primary or Backup DB not initialized.');
+    if (!hasWarnedNotInitialized) {
+      console.warn('⚠️ Archiving skipped: Primary or Backup DB not initialized.');
+      hasWarnedNotInitialized = true;
+    }
     return;
   }
 

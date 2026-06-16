@@ -8,13 +8,13 @@ import {
   AlertCircle, Download, ToggleLeft, ToggleRight, X, Info,
   ChevronDown, ChevronUp, ArrowUpDown, TrendingUp
 } from 'lucide-react';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend } from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
 import { calculatePersonalStageAverages, calculateMonthlyCompletions, getUpcomingDeadlines } from '../services/kpiCalculator';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import './MyProjectsView.css';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, ChartTooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, ChartTooltip, Legend, Filler);
 
 const STAGES = [
   { id: 'ingenieria', label: 'Ingeniería' },
