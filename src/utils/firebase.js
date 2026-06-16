@@ -45,8 +45,8 @@ if (isConfigured) {
     auth = null;
   }
 } else {
-  console.warn('⚠️ Firebase credentials not fully configured in .env.local. Operating in Local Storage Mode.');
-  initError = 'Credentials not fully configured in .env.local';
+  console.warn('⚠️ Firebase credentials not fully configured in environment variables (.env.local or hosting provider dashboard). Operating in Local Storage Mode.');
+  initError = 'Credentials not fully configured in environment variables';
 }
 
 // Export database reference and RTDB methods

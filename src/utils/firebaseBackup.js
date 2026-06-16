@@ -26,7 +26,7 @@ if (backupConfig.apiKey && backupConfig.projectId) {
     console.error('❌ Failed to initialize Backup Firestore:', error);
   }
 } else {
-  console.warn('⚠️ Backup Firebase credentials not fully configured in .env.local');
+  console.warn('⚠️ Backup Firebase credentials not fully configured in environment variables (.env.local or hosting provider dashboard).');
 }
 
 export { backupDb, backupApp };

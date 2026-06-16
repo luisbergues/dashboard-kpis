@@ -1,32 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Bell, X, AlertCircle, CheckCircle } from 'lucide-react';
 import './ToastNotifications.css';
 
-const MOCK_ALERTS = [
-  { type: 'warning', text: 'Project #90210 has been put ON HOLD.' },
-  { type: 'success', text: 'Engineering check completed for Project #88214.' },
-  { type: 'info', text: 'New project assigned to Miami team.' },
-  { type: 'error', text: 'High priority bottleneck detected: 4 installations tomorrow.' }
-];
-
-export default function ToastNotifications() {
+/**
+ * ToastNotifications - Displays real-time notifications based on actual app data.
+ * Receives an optional `alerts` prop (array of { type, text }) from the parent.
+ * No mock data — only real events are shown.
+ */
+export default function ToastNotifications({ alerts = [] }) {
   const [toasts, setToasts] = useState([]);
+  const shownIds = useRef(new Set());
 
   useEffect(() => {
-    // Simulate WebSocket connection and incoming messages
-    const interval = setInterval(() => {
-      const randomAlert = MOCK_ALERTS[Math.floor(Math.random() * MOCK_ALERTS.length)];
-      const id = Date.now();
-      setToasts(prev => [...prev, { id, ...randomAlert }]);
+    if (!alerts || alerts.length === 0) return;
 
-      // Auto-remove after 5 seconds
+    alerts.forEach((alert) => {
+      // Create a stable ID based on the alert content to avoid duplicates
+      const stableId = `${alert.type}_${alert.text}`;
+      if (shownIds.current.has(stableId)) return;
+
+      shownIds.current.add(stableId);
+      const id = Date.now() + Math.random();
+      setToasts(prev => [...prev, { id, ...alert }]);
+
+      // Auto-remove after 6 seconds
       setTimeout(() => {
         setToasts(prev => prev.filter(t => t.id !== id));
-      }, 5000);
-    }, 45000); // Every 45 seconds mock a notification
-
-    return () => clearInterval(interval);
-  }, []);
+      }, 6000);
+    });
+  }, [alerts]);
 
   const dismissToast = (id) => {
     setToasts(prev => prev.filter(t => t.id !== id));
@@ -40,6 +42,8 @@ export default function ToastNotifications() {
       default: return <Bell size={18} className="text-mint" />;
     }
   };
+
+  if (toasts.length === 0) return null;
 
   return (
     <div className="toast-container">

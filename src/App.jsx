@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchAndParseData } from './utils/sheetParser'
 import { getCachedData, setCachedData, isCacheFresh } from './utils/dbCache'
@@ -196,6 +196,44 @@ function App() {
 
   const mergedData = getMergedData();
 
+  // Build real-time alerts from actual project data
+  const realAlerts = useMemo(() => {
+    if (!mergedData) return [];
+    const alerts = [];
+    const projects = mergedData.priorityAnalysis || [];
+
+    // Warn about every project currently ON HOLD
+    const onHoldProjects = projects.filter(p => p.status === 'ON HOLD');
+    onHoldProjects.forEach(p => {
+      const reason = p.onHoldReason ? ` — ${p.onHoldReason}` : '';
+      alerts.push({
+        type: 'warning',
+        text: `SO #${p.so} "${p.name.split(':')[0].trim()}" está ON HOLD${reason}`
+      });
+    });
+
+    // Warn about installations in the next 3 days
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const in3Days = new Date(today);
+    in3Days.setDate(today.getDate() + 3);
+    const urgentInstalls = projects.filter(p => {
+      if (!p.install || p.status === 'ON HOLD') return false;
+      const d = new Date(p.install);
+      return !isNaN(d) && d >= today && d <= in3Days;
+    });
+    urgentInstalls.forEach(p => {
+      const d = new Date(p.install);
+      const daysLeft = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+      alerts.push({
+        type: daysLeft === 0 ? 'error' : 'info',
+        text: `SO #${p.so} tiene instalación ${daysLeft === 0 ? 'HOY' : `en ${daysLeft} día${daysLeft > 1 ? 's' : ''}`}: ${p.name.split(':')[0].trim()}`
+      });
+    });
+
+    return alerts;
+  }, [mergedData]);
+
   const renderView = () => {
     if (loading || authLoading) return <div className="loading-state">Loading application...</div>;
     if (error) return <div className="error-state">Error: {error}</div>;
@@ -230,7 +268,7 @@ function App() {
           {renderView()}
         </ErrorBoundary>
       </main>
-      <ToastNotifications />
+      <ToastNotifications alerts={realAlerts} />
     </div>
   )
 }
