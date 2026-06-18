@@ -5,7 +5,7 @@ import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';
 import { 
   Briefcase, Calendar, CheckCircle2, Circle, Clock, 
-  AlertCircle, Download, ToggleLeft, ToggleRight, X, Info,
+  AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag,
   ChevronDown, ChevronUp, ArrowUpDown, TrendingUp
 } from 'lucide-react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
@@ -60,6 +60,10 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [projectHistory, setProjectHistory] = useState({});
   const [engineeringChecks, setEngineeringChecks] = useState({});
   const [loading, setLoading] = useState(true);
+
+  // Project Notes State
+  const [projectNotes, setProjectNotes] = useState({});
+  const [noteInputs, setNoteInputs] = useState({}); // { [so]: { text: '', priority: false } }
 
   // Hold Modal State
   const [isHoldModalOpen, setIsHoldModalOpen] = useState(false);
@@ -139,6 +143,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       const localOverrides = {};
       const localHistory = {};
       const localEngineeringChecks = {};
+      const localNotes = {};
       
       myProjects.forEach(p => {
         try {
@@ -153,17 +158,22 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
           const savedEngCheck = localStorage.getItem(`engineering_check_${p.so}`);
           localEngineeringChecks[p.so] = savedEngCheck ? JSON.parse(savedEngCheck) : {};
+
+          const savedNotes = localStorage.getItem(`project_notes_${p.so}`);
+          localNotes[p.so] = savedNotes ? JSON.parse(savedNotes) : [];
         } catch (e) {
           localStages[p.so] = Array(STAGES.length).fill(false);
           localOverrides[p.so] = null;
           localHistory[p.so] = [];
           localEngineeringChecks[p.so] = {};
+          localNotes[p.so] = [];
         }
       });
       setProjectStages(localStages);
       setProjectOverrides(localOverrides);
       setProjectHistory(localHistory);
       setEngineeringChecks(localEngineeringChecks);
+      setProjectNotes(localNotes);
       setLoading(false);
       return;
     }
@@ -201,11 +211,19 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       setEngineeringChecks(dbData);
     });
 
+    // Load Project Notes
+    const notesRef = ref(db, 'project_notes');
+    const unsubscribeNotes = onValue(notesRef, (snapshot) => {
+      const dbData = snapshot.val() || {};
+      setProjectNotes(dbData);
+    });
+
     return () => {
       unsubscribeStages();
       unsubscribeOverrides();
       unsubscribeHistory();
       unsubscribeEngChecks();
+      unsubscribeNotes();
     };
   }, [currentUser, userProfile]);
 
@@ -366,6 +384,49 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       } catch (err) {
         console.error('Failed to release hold on localStorage:', err);
       }
+    }
+  };
+
+  const handleAddNote = async (so) => {
+    const input = noteInputs[so];
+    if (!input || !input.text?.trim()) return;
+
+    const newNote = {
+      id: Date.now().toString(),
+      text: input.text.trim(),
+      priority: input.priority || false,
+      createdAt: new Date().toISOString()
+    };
+
+    const currentNotes = projectNotes[so] ? [...projectNotes[so]] : [];
+    currentNotes.unshift(newNote);
+
+    if (db && currentUser) {
+      try {
+        await set(ref(db, `project_notes/${so}`), currentNotes);
+      } catch (err) {
+        console.error('Failed to save note to Firebase:', err);
+      }
+    } else {
+      localStorage.setItem(`project_notes_${so}`, JSON.stringify(currentNotes));
+      setProjectNotes(prev => ({ ...prev, [so]: currentNotes }));
+    }
+
+    setNoteInputs(prev => ({ ...prev, [so]: { text: '', priority: false } }));
+  };
+
+  const handleDeleteNote = async (so, noteId) => {
+    const currentNotes = (projectNotes[so] || []).filter(n => n.id !== noteId);
+
+    if (db && currentUser) {
+      try {
+        await set(ref(db, `project_notes/${so}`), currentNotes.length > 0 ? currentNotes : null);
+      } catch (err) {
+        console.error('Failed to delete note from Firebase:', err);
+      }
+    } else {
+      localStorage.setItem(`project_notes_${so}`, JSON.stringify(currentNotes));
+      setProjectNotes(prev => ({ ...prev, [so]: currentNotes }));
     }
   };
 
@@ -705,109 +766,201 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
             return (
               <div key={project.so} className="project-card glass-card">
-                <div className="card-header-main">
-                  <div>
-                    <span className="project-so">SO #{project.so}</span>
-                    <h3 className="project-name-title">{project.name}</h3>
-                  </div>
-                  <div className="header-status-controls">
-                    <span className={`status-badge-inline ${currentStatus.toLowerCase().replace(' ', '-')}`}>
-                      {getStatusLabelPdf(currentStatus)}
-                    </span>
-                    <button 
-                      onClick={() => handleHoldToggle(project.so, currentStatus)}
-                      className={`btn-hold-toggle ${currentStatus === 'ON HOLD' ? 'active-hold' : ''}`}
-                      title={currentStatus === 'ON HOLD' ? t('myProjects.releaseHold') : t('myProjects.pauseProject')}
-                    >
-                      {currentStatus === 'ON HOLD' ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
-                      <span>On Hold</span>
-                    </button>
-                  </div>
-                </div>
-
-                {currentStatus === 'ON HOLD' && currentReason && (
-                  <div className="hold-reason-banner animate-fade-in">
-                    <Info size={16} />
-                    <p><strong>{t('myProjects.holdReasonLabel')}</strong> {currentReason}</p>
-                  </div>
-                )}
-
-                <div className="project-dates">
-                  <div className="date-item">
-                    <Calendar size={14} className="text-muted" />
-                    <span>{t('common.installDate')}: {project.install || (language === 'es' ? 'Sin fecha' : 'No date')}</span>
-                  </div>
-                </div>
-
-                <div className="progress-section">
-                  <div className="progress-meta">
-                    <span className="progress-label">{t('myProjects.stagesProgress')}</span>
-                    <span className="progress-percent">{percent}%</span>
-                  </div>
-                  <div className="progress-bar-container">
-                    <div 
-                      className="progress-bar-fill" 
-                      style={{ width: `${percent}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="stages-timeline">
-                  {STAGES.map((stage, idx) => {
-                    const stageData = progress[idx];
-                    const isCompleted = stageData && stageData.completed;
-                    return (
-                      <div 
-                        key={stage.id} 
-                        className={`stage-step ${isCompleted ? 'completed' : ''}`}
-                        onClick={() => toggleStage(project.so, idx)}
-                        title={language === 'es' ? `Clic para marcar como ${isCompleted ? 'pendiente' : 'completada'}` : `Click to mark as ${isCompleted ? 'pending' : 'completed'}`}
-                      >
-                        <div className="stage-connector-line"></div>
-                        <div className="stage-icon-container">
-                          {isCompleted ? (
-                            <CheckCircle2 size={20} className="icon-completed" />
-                          ) : (
-                            <Circle size={20} className="icon-pending" />
-                          )}
-                        </div>
-                        <span className="stage-step-label">{getStageLabel(stage.id, language)}</span>
+                <div className="project-card-layout">
+                  <div className="project-card-main">
+                    <div className="card-header-main">
+                      <div>
+                        <span className="project-so">SO #{project.so}</span>
+                        <h3 className="project-name-title">{project.name}</h3>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="header-status-controls">
+                        <span className={`status-badge-inline ${currentStatus.toLowerCase().replace(' ', '-')}`}>
+                          {getStatusLabelPdf(currentStatus)}
+                        </span>
+                        <button 
+                          onClick={() => handleHoldToggle(project.so, currentStatus)}
+                          className={`btn-hold-toggle ${currentStatus === 'ON HOLD' ? 'active-hold' : ''}`}
+                          title={currentStatus === 'ON HOLD' ? t('myProjects.releaseHold') : t('myProjects.pauseProject')}
+                        >
+                          {currentStatus === 'ON HOLD' ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                          <span>On Hold</span>
+                        </button>
+                      </div>
+                    </div>
 
-                <div className="engineering-checks-controls">
-                  <div className="eng-check-header">
-                    <span className="eng-check-title">{t('myProjects.engineeringCheck', 'Engineering Time')}</span>
-                  </div>
-                  <div className="eng-check-buttons">
-                    <button 
-                      onClick={() => handleEngineeringStart(project.so)}
-                      className={`btn-sm ${engineeringChecks[project.so]?.started ? 'btn-secondary active-check' : 'btn-primary'}`}
-                    >
-                      <Clock size={14} />
-                      {engineeringChecks[project.so]?.started ? new Date(engineeringChecks[project.so].started).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Start'}
-                    </button>
-                    <button 
-                      onClick={() => handleEngineeringFinish(project.so)}
-                      className={`btn-sm ${engineeringChecks[project.so]?.finished ? 'btn-secondary active-check' : 'btn-secondary'}`}
-                      disabled={!engineeringChecks[project.so]?.started}
-                    >
-                      <CheckCircle2 size={14} />
-                      {engineeringChecks[project.so]?.finished ? new Date(engineeringChecks[project.so].finished).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Finish'}
-                    </button>
-                  </div>
-                </div>
+                    {currentStatus === 'ON HOLD' && currentReason && (
+                      <div className="hold-reason-banner animate-fade-in">
+                        <Info size={16} />
+                        <p><strong>{t('myProjects.holdReasonLabel')}</strong> {currentReason}</p>
+                      </div>
+                    )}
 
-                <div className="card-footer-actions">
-                  <button 
-                    onClick={() => generatePDF(project)}
-                    className="btn-secondary btn-sm btn-download-pdf"
-                  >
-                    <Download size={14} />
-                    <span>{t('myProjects.downloadPdf')}</span>
-                  </button>
+                    <div className="project-dates">
+                      <div className="date-item">
+                        <Calendar size={14} className="text-muted" />
+                        <span>{t('common.installDate')}: {project.install || (language === 'es' ? 'Sin fecha' : 'No date')}</span>
+                      </div>
+                    </div>
+
+                    <div className="progress-section">
+                      <div className="progress-meta">
+                        <span className="progress-label">{t('myProjects.stagesProgress')}</span>
+                        <span className="progress-percent">{percent}%</span>
+                      </div>
+                      <div className="progress-bar-container">
+                        <div 
+                          className="progress-bar-fill" 
+                          style={{ width: `${percent}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div className="stages-timeline">
+                      {STAGES.map((stage, idx) => {
+                        const stageData = progress[idx];
+                        const isCompleted = stageData && stageData.completed;
+                        return (
+                          <div 
+                            key={stage.id} 
+                            className={`stage-step ${isCompleted ? 'completed' : ''}`}
+                            onClick={() => toggleStage(project.so, idx)}
+                            title={language === 'es' ? `Clic para marcar como ${isCompleted ? 'pendiente' : 'completada'}` : `Click to mark as ${isCompleted ? 'pending' : 'completed'}`}
+                          >
+                            <div className="stage-connector-line"></div>
+                            <div className="stage-icon-container">
+                              {isCompleted ? (
+                                <CheckCircle2 size={20} className="icon-completed" />
+                              ) : (
+                                <Circle size={20} className="icon-pending" />
+                              )}
+                            </div>
+                            <span className="stage-step-label">{getStageLabel(stage.id, language)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="engineering-checks-controls">
+                      <div className="eng-check-header">
+                        <span className="eng-check-title">{t('myProjects.engineeringCheck', 'Engineering Time')}</span>
+                      </div>
+                      <div className="eng-check-buttons">
+                        <button 
+                          onClick={() => handleEngineeringStart(project.so)}
+                          className={`btn-sm ${engineeringChecks[project.so]?.started ? 'btn-secondary active-check' : 'btn-primary'}`}
+                        >
+                          <Clock size={14} />
+                          {engineeringChecks[project.so]?.started ? new Date(engineeringChecks[project.so].started).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Start'}
+                        </button>
+                        <button 
+                          onClick={() => handleEngineeringFinish(project.so)}
+                          className={`btn-sm ${engineeringChecks[project.so]?.finished ? 'btn-secondary active-check' : 'btn-secondary'}`}
+                          disabled={!engineeringChecks[project.so]?.started}
+                        >
+                          <CheckCircle2 size={14} />
+                          {engineeringChecks[project.so]?.finished ? new Date(engineeringChecks[project.so].finished).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Finish'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="card-footer-actions">
+                      <button 
+                        onClick={() => generatePDF(project)}
+                        className="btn-secondary btn-sm btn-download-pdf"
+                      >
+                        <Download size={14} />
+                        <span>{t('myProjects.downloadPdf')}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ─── Notes Panel ───────────────────────────── */}
+                  <div className="project-notes-panel">
+                    <div className="notes-panel-header">
+                      <span className="notes-panel-title">
+                        <StickyNote size={14} />
+                        {language === 'es' ? 'Notas' : 'Notes'}
+                      </span>
+                      {(projectNotes[project.so] || []).length > 0 && (
+                        <span className="notes-panel-count">{(projectNotes[project.so] || []).length}</span>
+                      )}
+                    </div>
+
+                    <div className="add-note-form">
+                      <textarea
+                        className="note-input"
+                        placeholder={language === 'es' ? 'Agregar nota...' : 'Add note...'}
+                        value={noteInputs[project.so]?.text || ''}
+                        onChange={(e) => setNoteInputs(prev => ({
+                          ...prev,
+                          [project.so]: { ...prev[project.so], text: e.target.value }
+                        }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleAddNote(project.so);
+                          }
+                        }}
+                        rows={2}
+                      />
+                      <div className="note-actions-row">
+                        <button
+                          type="button"
+                          className={`priority-toggle ${noteInputs[project.so]?.priority ? 'is-priority' : 'not-priority'}`}
+                          onClick={() => setNoteInputs(prev => ({
+                            ...prev,
+                            [project.so]: { ...prev[project.so], priority: !prev[project.so]?.priority }
+                          }))}
+                        >
+                          <Flag size={12} />
+                          {noteInputs[project.so]?.priority 
+                            ? (language === 'es' ? 'Prioritaria' : 'Priority')
+                            : (language === 'es' ? 'Normal' : 'Normal')}
+                        </button>
+                        <button
+                          className="btn-add-note"
+                          onClick={() => handleAddNote(project.so)}
+                          disabled={!noteInputs[project.so]?.text?.trim()}
+                        >
+                          <Plus size={14} />
+                          {language === 'es' ? 'Agregar' : 'Add'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {(projectNotes[project.so] || []).length === 0 ? (
+                      <div className="notes-empty">
+                        {language === 'es' ? 'Sin notas aún' : 'No notes yet'}
+                      </div>
+                    ) : (
+                      <div className="notes-list">
+                        {(projectNotes[project.so] || []).map(note => (
+                          <div key={note.id} className="note-item">
+                            <div className="note-item-header">
+                              <span className={`note-priority-tag ${note.priority ? 'priority' : 'normal'}`}>
+                                {note.priority 
+                                  ? (language === 'es' ? '⚑ Prioritaria' : '⚑ Priority')
+                                  : (language === 'es' ? 'Normal' : 'Normal')}
+                              </span>
+                              <button
+                                className="note-delete-btn"
+                                onClick={() => handleDeleteNote(project.so, note.id)}
+                                title={language === 'es' ? 'Eliminar nota' : 'Delete note'}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                            <div className="note-item-text">{note.text}</div>
+                            <div className="note-item-date">
+                              {new Date(note.createdAt).toLocaleDateString(language === 'es' ? 'es-AR' : 'en-US', {
+                                day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
