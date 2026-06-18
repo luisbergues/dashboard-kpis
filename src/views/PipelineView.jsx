@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Search, AlertCircle, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, AlertCircle, Calendar, StickyNote, Flag } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
+import { db, ref, onValue } from '../utils/firebase';
 import './PipelineView.css';
 
 export default function PipelineView({ data }) {
@@ -9,6 +10,17 @@ export default function PipelineView({ data }) {
 
   const [filter, setFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  const [projectNotes, setProjectNotes] = useState({});
+
+  // Listen for project notes from Firebase in real-time
+  useEffect(() => {
+    if (!db) return;
+    const notesRef = ref(db, 'project_notes');
+    const unsubscribe = onValue(notesRef, (snapshot) => {
+      setProjectNotes(snapshot.val() || {});
+    });
+    return () => unsubscribe();
+  }, []);
 
   const { priorityAnalysis, onHoldNotes } = data;
 
@@ -124,6 +136,35 @@ export default function PipelineView({ data }) {
                   <div className="on-hold-alert">
                     <AlertCircle size={16} />
                     <p>{onHoldNote}</p>
+                  </div>
+                )}
+
+                {/* Project Notes (from My Projects) */}
+                {(projectNotes[project.so] || []).length > 0 && (
+                  <div className="pipeline-notes-section">
+                    <div className="pipeline-notes-header">
+                      <StickyNote size={13} />
+                      <span>{language === 'es' ? 'Notas' : 'Notes'} ({(projectNotes[project.so] || []).length})</span>
+                    </div>
+                    <div className="pipeline-notes-list">
+                      {(projectNotes[project.so] || []).map(note => (
+                        <div key={note.id} className={`pipeline-note-item ${note.priority ? 'priority' : 'normal'}`}>
+                          <div className="pipeline-note-top">
+                            <span className={`pipeline-note-tag ${note.priority ? 'priority' : 'normal'}`}>
+                              {note.priority
+                                ? (language === 'es' ? '⚑ Prioritaria' : '⚑ Priority')
+                                : (language === 'es' ? 'Normal' : 'Normal')}
+                            </span>
+                            <span className="pipeline-note-date">
+                              {new Date(note.createdAt).toLocaleDateString(language === 'es' ? 'es-AR' : 'en-US', {
+                                day: 'numeric', month: 'short'
+                              })}
+                            </span>
+                          </div>
+                          <p className="pipeline-note-text">{note.text}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

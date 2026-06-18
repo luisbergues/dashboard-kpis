@@ -209,3 +209,91 @@
   background: var(--card-bg);
   border-radius: var(--radius-md);
 }
+
+/* ─── Pipeline Notes Section ────────────────────────── */
+.pipeline-notes-section {
+  width: 100%;
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 10px;
+}
+
+.pipeline-notes-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.pipeline-notes-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pipeline-note-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  flex: 1 1 260px;
+  max-width: 400px;
+  transition: background 0.2s;
+}
+
+.pipeline-note-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.pipeline-note-item.priority {
+  border-left: 3px solid #FF3B30;
+}
+
+.pipeline-note-item.normal {
+  border-left: 3px solid var(--color-cyan);
+}
+
+.pipeline-note-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.pipeline-note-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 7px;
+  border-radius: 6px;
+}
+
+.pipeline-note-tag.priority {
+  background: rgba(255, 59, 48, 0.14);
+  color: #FF3B30;
+}
+
+.pipeline-note-tag.normal {
+  background: rgba(9, 209, 199, 0.1);
+  color: var(--color-cyan);
+}
+
+.pipeline-note-date {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.pipeline-note-text {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin: 0;
+  word-break: break-word;
+}
+
