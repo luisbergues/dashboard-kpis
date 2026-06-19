@@ -253,24 +253,6 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                   </span>
                 </div>
 
-                {/* Progress Mini Timeline */}
-                <div className="pipeline-stages-timeline" style={{ width: '100%', gridColumn: 'span 2', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px', marginBottom: '16px', padding: '10px 14px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', position: 'relative' }}>
-                  <div className="timeline-track-bg" style={{ position: 'absolute', left: '30px', right: '30px', height: '2px', backgroundColor: 'rgba(255,255,255,0.05)', zIndex: 1 }}></div>
-                  <div className="timeline-track-fill" style={{ position: 'absolute', left: '30px', width: `calc(${percent}% - 60px)`, height: '2px', backgroundColor: '#09D1C7', zIndex: 1, transition: 'width 0.4s ease' }}></div>
-                  {STAGES.map((stage, idx) => {
-                    const stageData = progress[idx];
-                    const isCompleted = stageData && stageData.completed;
-                    return (
-                      <div key={stage.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, position: 'relative', flex: 1 }}>
-                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: isCompleted ? '#09D1C7' : '#1e293b', border: isCompleted ? '2px solid #80EE98' : '2px solid #475569', boxShadow: isCompleted ? '0 0 8px #80EE98' : 'none', transition: 'all 0.3s ease' }}></div>
-                        <span style={{ fontSize: '0.65rem', color: isCompleted ? '#fff' : '#64748B', fontWeight: isCompleted ? '600' : '500', marginTop: '4px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                          {getStageLabel(stage.id, language)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
                 {onHoldNote && (
                   <div className="on-hold-alert">
                     <AlertCircle size={16} />
@@ -278,32 +260,59 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                   </div>
                 )}
 
-                {/* Engineering Check Controls */}
+                {/* Engineering Check Controls & Direct Comment */}
                 <div className="pipeline-eng-check-controls">
                   <div className="pipeline-eng-check-header">
                     <span className="pipeline-eng-check-title">{t('myProjects.engineeringCheck', 'Engineering Time')}</span>
                   </div>
-                  <div className="pipeline-eng-check-buttons">
-                    <button 
-                      onClick={() => handleEngineeringStart(project.so)}
-                      className={`btn-sm ${engineeringChecks[project.so]?.started ? 'btn-secondary active-check' : 'btn-primary'}`}
-                    >
-                      <Clock size={14} />
-                      {engineeringChecks[project.so]?.started ? new Date(engineeringChecks[project.so].started).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Start'}
-                    </button>
-                    <button 
-                      onClick={() => handleEngineeringFinish(project.so)}
-                      className={`btn-sm ${engineeringChecks[project.so]?.finished ? 'btn-secondary active-check' : 'btn-secondary'}`}
-                      disabled={!engineeringChecks[project.so]?.started}
-                    >
-                      <CheckCircle2 size={14} />
-                      {engineeringChecks[project.so]?.finished ? new Date(engineeringChecks[project.so].finished).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Finish'}
-                    </button>
-                    {engineeringChecks[project.so]?.user && (
-                      <span className="eng-check-user">
-                        ({engineeringChecks[project.so].user})
-                      </span>
-                    )}
+                  <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
+                    <div className="pipeline-eng-check-buttons" style={{ flexShrink: 0 }}>
+                      <button 
+                        onClick={() => handleEngineeringStart(project.so)}
+                        className={`btn-sm ${engineeringChecks[project.so]?.started ? 'btn-secondary active-check' : 'btn-primary'}`}
+                      >
+                        <Clock size={14} />
+                        {engineeringChecks[project.so]?.started ? new Date(engineeringChecks[project.so].started).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Start'}
+                      </button>
+                      <button 
+                        onClick={() => handleEngineeringFinish(project.so)}
+                        className={`btn-sm ${engineeringChecks[project.so]?.finished ? 'btn-secondary active-check' : 'btn-secondary'}`}
+                        disabled={!engineeringChecks[project.so]?.started}
+                      >
+                        <CheckCircle2 size={14} />
+                        {engineeringChecks[project.so]?.finished ? new Date(engineeringChecks[project.so].finished).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Finish'}
+                      </button>
+                      {engineeringChecks[project.so]?.user && (
+                        <span className="eng-check-user">
+                          ({engineeringChecks[project.so].user})
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Comment Area to the right of Start/Finish buttons */}
+                    <div style={{ display: 'flex', flex: 1, minWidth: '320px', height: '32px', gap: '8px' }}>
+                      <input 
+                        type="text"
+                        placeholder={language === 'es' ? 'Escribe un comentario...' : 'Write a comment...'}
+                        value={newNoteTexts[project.so] || ''}
+                        onChange={(e) => setNewNoteTexts(prev => ({ ...prev, [project.so]: e.target.value }))}
+                        style={{ flex: 2, padding: '4px 12px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', fontSize: '0.8rem', height: '100%' }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleAddNote(project.so, project.eng);
+                          }
+                        }}
+                      />
+                      <button 
+                        onClick={() => handleAddNote(project.so, project.eng)}
+                        disabled={!(newNoteTexts[project.so] || '').trim()}
+                        className="btn-sm btn-primary"
+                        style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.8rem', padding: '0' }}
+                      >
+                        <Plus size={12} />
+                        {language === 'es' ? 'Comentar' : 'Comment'}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -341,31 +350,6 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                       ))}
                     </div>
                   )}
-
-                  {/* Add Note directly from Pipeline */}
-                  <div className="pipeline-add-note" style={{ display: 'flex', gap: '8px', marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
-                    <input 
-                      type="text"
-                      placeholder={language === 'es' ? 'Escribe un comentario...' : 'Write a comment...'}
-                      value={newNoteTexts[project.so] || ''}
-                      onChange={(e) => setNewNoteTexts(prev => ({ ...prev, [project.so]: e.target.value }))}
-                      style={{ flex: 1, padding: '6px 12px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', fontSize: '0.85rem' }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleAddNote(project.so, project.eng);
-                        }
-                      }}
-                    />
-                    <button 
-                      onClick={() => handleAddNote(project.so, project.eng)}
-                      disabled={!(newNoteTexts[project.so] || '').trim()}
-                      className="btn-sm btn-primary"
-                      style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                    >
-                      <Plus size={12} />
-                      {language === 'es' ? 'Comentar' : 'Comment'}
-                    </button>
-                  </div>
                 </div>
               </div>
             );
