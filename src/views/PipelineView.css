@@ -297,3 +297,47 @@
   word-break: break-word;
 }
 
+/* ─── Engineering Checks Section ────────────────────────── */
+.pipeline-eng-check-controls {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pipeline-eng-check-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pipeline-eng-check-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-purple);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pipeline-eng-check-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.eng-check-user {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-left: 4px;
+}
+
+.active-check {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}

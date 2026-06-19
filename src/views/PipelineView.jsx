@@ -1,26 +1,61 @@
 import React, { useState, useEffect } from 'react';
-import { Search, AlertCircle, Calendar, StickyNote, Flag } from 'lucide-react';
+import { Search, AlertCircle, Calendar, StickyNote, Flag, Clock, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
-import { db, ref, onValue } from '../utils/firebase';
+import { db, ref, onValue, set } from '../utils/firebase';
+import { saveEngineeringCheck } from '../utils/engineeringCheck';
 import './PipelineView.css';
 
-export default function PipelineView({ data }) {
+export default function PipelineView({ data, currentUser, userProfile }) {
   const { t, language } = useLanguage();
   if (!data) return null;
 
   const [filter, setFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [projectNotes, setProjectNotes] = useState({});
+  const [engineeringChecks, setEngineeringChecks] = useState({});
 
-  // Listen for project notes from Firebase in real-time
+  // Listen for project notes and engineering checks from Firebase in real-time
   useEffect(() => {
     if (!db) return;
     const notesRef = ref(db, 'project_notes');
-    const unsubscribe = onValue(notesRef, (snapshot) => {
+    const unsubscribeNotes = onValue(notesRef, (snapshot) => {
       setProjectNotes(snapshot.val() || {});
     });
-    return () => unsubscribe();
+
+    const engChecksRef = ref(db, 'engineering_checks');
+    const unsubscribeEngChecks = onValue(engChecksRef, (snapshot) => {
+      setEngineeringChecks(snapshot.val() || {});
+    });
+
+    return () => {
+      unsubscribeNotes();
+      unsubscribeEngChecks();
+    };
   }, []);
+
+  const handleEngineeringStart = async (so) => {
+    const currentCheck = engineeringChecks[so] || {};
+    const userName = userProfile?.designerName || currentUser?.email || 'Unknown User';
+    const updatedCheck = { 
+      ...currentCheck, 
+      started: new Date().toISOString(),
+      user: userName
+    };
+    setEngineeringChecks(prev => ({ ...prev, [so]: updatedCheck }));
+    await saveEngineeringCheck(so, updatedCheck);
+  };
+
+  const handleEngineeringFinish = async (so) => {
+    const currentCheck = engineeringChecks[so] || {};
+    const userName = userProfile?.designerName || currentUser?.email || 'Unknown User';
+    const updatedCheck = { 
+      ...currentCheck, 
+      finished: new Date().toISOString(),
+      user: userName
+    };
+    setEngineeringChecks(prev => ({ ...prev, [so]: updatedCheck }));
+    await saveEngineeringCheck(so, updatedCheck);
+  };
 
   const { priorityAnalysis, onHoldNotes } = data;
 
@@ -138,6 +173,35 @@ export default function PipelineView({ data }) {
                     <p>{onHoldNote}</p>
                   </div>
                 )}
+
+                {/* Engineering Check Controls */}
+                <div className="pipeline-eng-check-controls">
+                  <div className="pipeline-eng-check-header">
+                    <span className="pipeline-eng-check-title">{t('myProjects.engineeringCheck', 'Engineering Time')}</span>
+                  </div>
+                  <div className="pipeline-eng-check-buttons">
+                    <button 
+                      onClick={() => handleEngineeringStart(project.so)}
+                      className={`btn-sm ${engineeringChecks[project.so]?.started ? 'btn-secondary active-check' : 'btn-primary'}`}
+                    >
+                      <Clock size={14} />
+                      {engineeringChecks[project.so]?.started ? new Date(engineeringChecks[project.so].started).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Start'}
+                    </button>
+                    <button 
+                      onClick={() => handleEngineeringFinish(project.so)}
+                      className={`btn-sm ${engineeringChecks[project.so]?.finished ? 'btn-secondary active-check' : 'btn-secondary'}`}
+                      disabled={!engineeringChecks[project.so]?.started}
+                    >
+                      <CheckCircle2 size={14} />
+                      {engineeringChecks[project.so]?.finished ? new Date(engineeringChecks[project.so].finished).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Finish'}
+                    </button>
+                    {engineeringChecks[project.so]?.user && (
+                      <span className="eng-check-user">
+                        ({engineeringChecks[project.so].user})
+                      </span>
+                    )}
+                  </div>
+                </div>
 
                 {/* Project Notes (from My Projects) */}
                 {(projectNotes[project.so] || []).length > 0 && (

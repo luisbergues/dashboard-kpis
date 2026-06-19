@@ -246,19 +246,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     };
   }, [currentUser, userProfile]);
 
-  const handleEngineeringStart = async (so) => {
-    const currentCheck = engineeringChecks[so] || {};
-    const updatedCheck = { ...currentCheck, started: new Date().toISOString() };
-    setEngineeringChecks(prev => ({ ...prev, [so]: updatedCheck }));
-    await saveEngineeringCheck(so, updatedCheck);
-  };
-
-  const handleEngineeringFinish = async (so) => {
-    const currentCheck = engineeringChecks[so] || {};
-    const updatedCheck = { ...currentCheck, finished: new Date().toISOString() };
-    setEngineeringChecks(prev => ({ ...prev, [so]: updatedCheck }));
-    await saveEngineeringCheck(so, updatedCheck);
-  };
+  // Removed: handleEngineeringStart and handleEngineeringFinish moved to PipelineView
 
   const toggleStage = async (so, stageIndex) => {
     const currentProgress = projectStages[so] ? [...projectStages[so]] : Array(STAGES.length).fill(false);
@@ -607,6 +595,14 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       doc.setTextColor(18, 33, 48);
       doc.setFontSize(12);
       doc.text(language === 'es' ? 'Tiempos de Ingeniería' : 'Engineering Times', 15, currentY);
+      
+      if (engCheck.user) {
+        doc.setFont('Helvetica', 'italic');
+        doc.setFontSize(9);
+        doc.setTextColor(120, 120, 120);
+        doc.text(`(${language === 'es' ? 'Por' : 'By'}: ${engCheck.user})`, 75, currentY);
+      }
+
       currentY += 6;
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(10);
@@ -916,28 +912,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                       })}
                     </div>
 
-                    <div className="engineering-checks-controls">
-                      <div className="eng-check-header">
-                        <span className="eng-check-title">{t('myProjects.engineeringCheck', 'Engineering Time')}</span>
-                      </div>
-                      <div className="eng-check-buttons">
-                        <button 
-                          onClick={() => handleEngineeringStart(project.so)}
-                          className={`btn-sm ${engineeringChecks[project.so]?.started ? 'btn-secondary active-check' : 'btn-primary'}`}
-                        >
-                          <Clock size={14} />
-                          {engineeringChecks[project.so]?.started ? new Date(engineeringChecks[project.so].started).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Start'}
-                        </button>
-                        <button 
-                          onClick={() => handleEngineeringFinish(project.so)}
-                          className={`btn-sm ${engineeringChecks[project.so]?.finished ? 'btn-secondary active-check' : 'btn-secondary'}`}
-                          disabled={!engineeringChecks[project.so]?.started}
-                        >
-                          <CheckCircle2 size={14} />
-                          {engineeringChecks[project.so]?.finished ? new Date(engineeringChecks[project.so].finished).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Finish'}
-                        </button>
-                      </div>
-                    </div>
+                    {/* Removed Engineering Check Controls (Moved to PipelineView) */}
 
                     <div className="card-footer-actions">
                       <button 

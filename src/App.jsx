@@ -274,7 +274,7 @@ function App() {
       case 'dashboard': return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
       case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
       case 'my-projects': return <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
-      case 'pipeline': return <PipelineView data={mergedData} />;
+      case 'pipeline': return <PipelineView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
       case 'costs': return <CostAnalysisView data={mergedData} />;
       case 'materials': return <MaterialsView data={mergedData} />;
       case 'quality': return <DesignQualityView data={mergedData} />;
