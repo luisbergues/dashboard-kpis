@@ -52,10 +52,10 @@ export default function PipelineView({ data, currentUser, userProfile }) {
   const [newNoteTexts, setNewNoteTexts] = useState({});
   const [nestingChecks, setNestingChecks] = useState({});
   const [commentPriorities, setCommentPriorities] = useState({});
-  const [collapsedProjects, setCollapsedProjects] = useState({});
+  const [expandedProjects, setExpandedProjects] = useState({});
 
   const toggleCollapse = (so) => {
-    setCollapsedProjects(prev => ({ ...prev, [so]: !prev[so] }));
+    setExpandedProjects(prev => ({ ...prev, [so]: !prev[so] }));
   };
 
   // Listen for project notes, engineering checks, collaborators, stages, and nesting checks from Firebase in real-time
@@ -266,7 +266,7 @@ export default function PipelineView({ data, currentUser, userProfile }) {
             const progress = projectStages[project.so] || Array(STAGES.length).fill(false);
             const percent = Math.round((progress.filter(s => s && s.completed).length / STAGES.length) * 100);
 
-            const isCollapsed = collapsedProjects[project.so];
+            const isCollapsed = !expandedProjects[project.so];
 
             return (
               <div key={idx} className="project-card glass-card" style={{ paddingBottom: isCollapsed ? '12px' : '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>

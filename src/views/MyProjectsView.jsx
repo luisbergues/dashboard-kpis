@@ -80,10 +80,10 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [showAnalytics, setShowAnalytics] = useState(true);
   const [sortBy, setSortBy] = useState(null); // 'date' | 'so'
   const [sortDesc, setSortDesc] = useState(true);
-  const [collapsedProjects, setCollapsedProjects] = useState({});
+  const [expandedProjects, setExpandedProjects] = useState({});
 
   const toggleCollapse = (so) => {
-    setCollapsedProjects(prev => ({ ...prev, [so]: !prev[so] }));
+    setExpandedProjects(prev => ({ ...prev, [so]: !prev[so] }));
   };
 
   const getOnHoldNote = (projectName) => {
@@ -259,66 +259,6 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [qaType, setQAType] = useState(''); // 'engineering', 'ess_ip', 'final'
   const [qaChecks, setQAChecks] = useState({});
 
-  const CHECKLISTS = {
-    engineering: [
-      "Las alturas de los módulos (Unit heights) coinciden con la hoja de 32mm Panel Height.",
-      "Los estantes fijos (Fixed shelves) coinciden con la hoja de 32mm Panel Height cuando hay fondo (backing) o puertas en el módulo.",
-      "Los Fillers son de 5 ⅝”. (No colocar fillers en esquineros).",
-      "La altura del techo permite que el clóset encaje con al menos 2 ½” de holgura (clearance) entre el módulo y el techo.",
-      "Verificar correctamente el uso de estantes fijos vs. ajustables (si la cota en KCD atraviesa el estante, es ajustable).",
-      "Confirmar que existe un mínimo de 40” de espacio de colgado para las barras (rods). Si es menor, dejar una nota.",
-      "Las luces/márgenes (reveals) de puertas y cajones deben ser de 1/2”.",
-      "Las puertas de Thermofoil o de vidrio se ven correctas en los planos.",
-      "Doble chequeo de alturas y anchos de todos los cajones y tolvas (hampers) según la guía de medidas.",
-      "Las encimeras (countertops) tienen el voladizo (overhang) correcto: ¾” para profundidad de ¾” y 1” para profundidad de 1 ½”.",
-      "CRÍTICO: Las encimeras deben tener siempre un estante inferior fijo como soporte.",
-      "Los puentes (bridges) deben dejar al menos 24” de espacio libre.",
-      "Verificar las dimensiones de los accesorios y cómo encajan en los módulos.",
-      "Confirmar que los tiradores/manijas (handles) son compatibles con las puertas elegidas.",
-      "Si dos módulos de diferente profundidad comparten un lateral, el panel compartido va en el módulo más profundo.",
-      "Los gabinetes no deben superar las 42” de ancho ni las 16” de profundidad.",
-      "No dejar módulos con dimensiones de precisión absurda (ej. fracciones de 1/16'').",
-      "No colocar módulos dentro de otros módulos (si aplica).",
-      "Utilizar simetría donde el diseño lo permita.",
-      "Respetar estrictamente la medida de módulo solicitada por el diseñador (si dejó nota).",
-      "Los gabinetes para zapatos tienen el ancho específico previsto.",
-      "La cantidad total de estantes coincide con los planos firmados.",
-      "Confirmar apertura de cajones: ¡No deben golpear puertas o paredes al abrir! Si lo hacen, documentarlo y avisar al diseñador.",
-      "Las medidas generales (Ancho x Alto x Profundidad) en KCD coinciden con los planos firmados por el diseñador.",
-      "Si hay un espejo sobre un bloque de cajones, el módulo necesita fondo (backing).",
-      "Los gabinetes superiores que no llegan al suelo deben tener fondo (backing).",
-      "Los bloques de cajones (drawer banks) NO deben tener spanners ni fondo (backing).",
-      "La altura de los bloques de cajones no debe superar las 42”.",
-      "El archivo de ingeniería consume la misma cantidad de material que el archivo del diseñador.",
-      "Revisión de cantos (Edgebanding): asegurar que el interior (crudo) del material no sea visible (especial atención en islas, gabinetes superiores y partes inferiores/superiores/laterales).",
-      "Chequear perforación custom para los módulos con espejos (hutch units).",
-      "Incluir notas de estantes esquineros en los planos, vistas y renders.",
-      "Incluir notas de Wide Edgebanding en las vistas.",
-      "Incluir notas si hay diferentes rodapiés (KICK) en las vistas y renders.",
-      "Verificar cambios: listarlos y consultarlos con el diseñador por mail o reunión. (Si hay pendientes, iterar el proceso)."
-    ],
-    ess_ip: [
-      "Verificar nombre, dirección y teléfono del cliente.",
-      "Revisar cuartos y colores. (Ser extremadamente específico si hay múltiples colores en la orden).",
-      "Verificar estilos de puertas y cajones que requieran pedido externo (dovetails, thermofoils, etc.).",
-      "Revisar tamaño de cajones y asegurar que el pedido de partes coincida con el pedido de la habitación (Cantidad, Apertura, Tamaño de caja).",
-      "Verificar tamaño, color y cantidad de barras (rods) y a qué cuarto pertenecen.",
-      "Agregar notas necesarias para el taller en la sección Miscellaneous (ej. cortes especiales/notching, paneles dobles, perforaciones custom, encimeras, espejos, ruteo para luces, fillers especiales)."
-    ],
-    final: [
-      "La portada del Installer Packet coincide exactamente con la información en Zoho.",
-      "Validación final de colores y materiales.",
-      "Control cruzado de accesorios (revisar hojas/presupuestos de accesorios, órdenes de cambio, contratos y confirmar artículos pagados).",
-      "Verificar la cantidad total de cajones y barras.",
-      "Los planos se ven precisos e incluyen todos los dibujos y vistas 3D a color.",
-      "Todas las dimensiones y notas son claras y legibles en los planos.",
-      "Para gabinetes cerrados, incluir dibujos y 3D con y sin puertas (a veces 3 vistas si hay cajones ocultos).",
-      "Los dibujos coinciden al 100% con los planos firmados por el cliente.",
-      "El encabezado del dibujo tiene el nombre del proyecto y la información correcta.",
-      "Enviar una copia de los planos finales al diseñador."
-    ]
-  };
-
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
 
   const toggleStage = async (so, stageIndex) => {
@@ -345,7 +285,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
         setQAType(type);
         setHasScrolledToBottom(false); // Reset scroll state
         const initialChecks = {};
-        CHECKLISTS[type].forEach((_, index) => {
+        const list = t(`myProjects.checklists.${type}`) || [];
+        list.forEach((_, index) => {
           initialChecks[index] = false;
         });
         setQAChecks(initialChecks);
@@ -985,7 +926,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
             const overridden = projectOverrides[project.so];
             const currentStatus = overridden ? overridden.status : project.status;
             const currentReason = overridden ? overridden.onHoldReason : getOnHoldNote(project.name);
-            const isCollapsed = collapsedProjects[project.so];
+            const isCollapsed = !expandedProjects[project.so];
 
             return (
               <div key={project.so} className="project-card glass-card" style={{ paddingBottom: isCollapsed ? '12px' : '24px' }}>
@@ -996,26 +937,28 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                         <span className="project-so">SO #{project.so}</span>
                         <h3 className="project-name-title" style={{ margin: 0 }}>{project.name}</h3>
                       </div>
-                      <div className="header-status-controls" onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className={`status-badge-inline ${currentStatus.toLowerCase().replace(' ', '-')}`}>
-                          {getStatusLabelPdf(currentStatus)}
-                        </span>
-                        <button 
-                          onClick={() => handleHoldToggle(project.so, currentStatus)}
-                          className={`btn-hold-toggle ${currentStatus === 'ON HOLD' ? 'active-hold' : ''}`}
-                          title={currentStatus === 'ON HOLD' ? t('myProjects.releaseHold') : t('myProjects.pauseProject')}
-                        >
-                          {currentStatus === 'ON HOLD' ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
-                          <span>On Hold</span>
-                        </button>
-                        <button
-                          onClick={() => handleOpenCollabModal(project.so)}
-                          className="btn-hold-toggle collab-btn"
-                          title={language === 'es' ? 'Colaboradores' : 'Collaborators'}
-                        >
-                          <Users size={16} />
-                          <span>{(projectCollaborators[project.so] || []).length}</span>
-                        </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="header-status-controls" onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className={`status-badge-inline ${currentStatus.toLowerCase().replace(' ', '-')}`}>
+                            {getStatusLabelPdf(currentStatus)}
+                          </span>
+                          <button 
+                            onClick={() => handleHoldToggle(project.so, currentStatus)}
+                            className={`btn-hold-toggle ${currentStatus === 'ON HOLD' ? 'active-hold' : ''}`}
+                            title={currentStatus === 'ON HOLD' ? t('myProjects.releaseHold') : t('myProjects.pauseProject')}
+                          >
+                            {currentStatus === 'ON HOLD' ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                            <span>On Hold</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenCollabModal(project.so)}
+                            className="btn-hold-toggle collab-btn"
+                            title={language === 'es' ? 'Colaboradores' : 'Collaborators'}
+                          >
+                            <Users size={16} />
+                            <span>{(projectCollaborators[project.so] || []).length}</span>
+                          </button>
+                        </div>
                         <span style={{ color: '#64748B', marginLeft: '8px', fontSize: '0.85rem' }}>{isCollapsed ? '▼' : '▲'}</span>
                       </div>
                     </div>
@@ -1317,7 +1260,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                 onScroll={handleScroll}
                 style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px', maxHeight: '350px', overflowY: 'auto', paddingRight: '8px', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '12px', background: 'rgba(0,0,0,0.1)' }}
               >
-                {CHECKLISTS[qaType].map((item, idx) => (
+                {(t(`myProjects.checklists.${qaType}`) || []).map((item, idx) => (
                   <label key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', color: '#fff', fontSize: '0.92rem', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}
                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}>
