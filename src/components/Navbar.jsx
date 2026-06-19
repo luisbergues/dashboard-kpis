@@ -15,7 +15,7 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
     { id: 'pipeline', label: t('navbar.pipeline'), icon: ListTodo },
     { id: 'costs', label: t('navbar.costs'), icon: CircleDollarSign },
     { id: 'materials', label: t('navbar.materials'), icon: Hammer },
-    { id: 'quality', label: language === 'es' ? 'Calidad' : 'Quality', icon: Award }
+    { id: 'quality', label: language === 'es' ? 'Team Stats' : 'Team Stats', icon: Award }
   ];
 
   const languages = [

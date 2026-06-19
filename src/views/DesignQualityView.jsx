@@ -27,7 +27,7 @@ export default function DesignQualityView() {
   }, []);
 
   if (loading) {
-    return <div className="loading-state text-muted" style={{ padding: '24px', color: '#94A3B8' }}>Loading Quality & Performance KPIs...</div>;
+    return <div className="loading-state text-muted" style={{ padding: '24px', color: '#94A3B8' }}>Loading Team Stats...</div>;
   }
 
   if (error) {
@@ -39,7 +39,7 @@ export default function DesignQualityView() {
   return (
     <div className="design-quality-view animate-fade-in" style={{ padding: '24px' }}>
       <header className="dashboard-header" style={{ marginBottom: '24px' }}>
-        <h1 className="page-title" style={{ fontSize: '1.75rem', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>Design Quality & Performance</h1>
+        <h1 className="page-title" style={{ fontSize: '1.75rem', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>Team Stats</h1>
         <p className="page-subtitle text-muted" style={{ color: '#94A3B8' }}>KPI Distribution Analysis</p>
       </header>
 
@@ -77,30 +77,35 @@ export default function DesignQualityView() {
           </div>
 
           <div className="glass-card" style={{ marginBottom: '24px' }}>
-            <h3 style={{ color: '#fff', marginBottom: '16px', fontSize: '1.25rem', fontWeight: 600 }}>KPI Distribution Analysis</h3>
-            {analysisText && (
-              <p style={{ color: '#94A3B8', lineHeight: '1.6', marginBottom: '24px', fontSize: '0.95rem' }}>
-                {analysisText}
-              </p>
-            )}
-
-            <div style={{ maxWidth: '400px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)', overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: '#fff' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                    <th style={{ padding: '12px 16px', color: '#80EE98', fontWeight: 600 }}>Engineer</th>
-                    <th style={{ padding: '12px 16px', color: '#80EE98', fontWeight: 600 }}>% of Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {kpiData.map((row, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '12px 16px' }}>{row.engineer}</td>
-                      <td style={{ padding: '12px 16px', fontWeight: 'bold', color: '#09D1C7' }}>{row.percent.toFixed(1)}%</td>
+            <h3 style={{ color: '#fff', marginBottom: '20px', fontSize: '1.25rem', fontWeight: 600 }}>KPI Distribution Analysis</h3>
+            
+            <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+              <div style={{ width: '320px', flexShrink: 0, borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: '#fff' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                      <th style={{ padding: '12px 16px', color: '#80EE98', fontWeight: 600 }}>Engineer</th>
+                      <th style={{ padding: '12px 16px', color: '#80EE98', fontWeight: 600 }}>% of Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {kpiData.map((row, index) => (
+                      <tr key={index} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <td style={{ padding: '12px 16px' }}>{row.engineer}</td>
+                        <td style={{ padding: '12px 16px', fontWeight: 'bold', color: '#09D1C7' }}>{row.percent.toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {analysisText && (
+                <div style={{ flex: 1, minWidth: '280px', display: 'flex', alignItems: 'center' }}>
+                  <p style={{ color: '#94A3B8', lineHeight: '1.7', fontSize: '1rem', margin: 0 }}>
+                    {analysisText}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </>
