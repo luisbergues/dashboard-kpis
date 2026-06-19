@@ -80,23 +80,34 @@ export default function DesignQualityView() {
             <h3 style={{ color: '#fff', marginBottom: '20px', fontSize: '1.25rem', fontWeight: 600 }}>KPI Distribution Analysis</h3>
             
             <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-              <div style={{ width: '320px', flexShrink: 0, borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: '#fff' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                      <th style={{ padding: '12px 16px', color: '#80EE98', fontWeight: 600 }}>Engineer</th>
-                      <th style={{ padding: '12px 16px', color: '#80EE98', fontWeight: 600 }}>% of Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {kpiData.map((row, index) => (
-                      <tr key={index} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td style={{ padding: '12px 16px' }}>{row.engineer}</td>
-                        <td style={{ padding: '12px 16px', fontWeight: 'bold', color: '#09D1C7' }}>{row.percent.toFixed(1)}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div style={{ width: '380px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {kpiData.map((row, index) => {
+                  let barColor = 'linear-gradient(90deg, #09D1C7, #80EE98)'; // Default Mint/Cyan gradient
+                  let labelColor = '#09D1C7';
+                  let warningBadge = null;
+
+                  if (row.percent < 10) {
+                    barColor = 'linear-gradient(90deg, #FFE600, #FFAA00)'; // Yellow
+                    labelColor = '#FFE600';
+                    warningBadge = <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(255,230,0,0.1)', color: '#FFE600', marginLeft: '8px' }}>&lt; 10% Low</span>;
+                  } else if (row.percent > 30) {
+                    barColor = 'linear-gradient(90deg, #FF9500, #FF5E00)'; // Orange
+                    labelColor = '#FF9500';
+                    warningBadge = <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(255,149,0,0.1)', color: '#FF9500', marginLeft: '8px' }}>&gt; 30% High</span>;
+                  }
+
+                  return (
+                    <div key={index} style={{ color: '#fff' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.9rem', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 500 }}>{row.engineer}{warningBadge}</span>
+                        <span style={{ fontWeight: 'bold', color: labelColor }}>{row.percent.toFixed(1)}%</span>
+                      </div>
+                      <div style={{ height: '8px', width: '100%', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${row.percent}%`, background: barColor, borderRadius: '4px', transition: 'width 0.5s ease-out' }}></div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {analysisText && (

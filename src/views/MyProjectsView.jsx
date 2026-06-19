@@ -314,6 +314,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     ]
   };
 
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+
   const toggleStage = async (so, stageIndex) => {
     const currentProgress = projectStages[so] ? [...projectStages[so]] : Array(STAGES.length).fill(false);
     const wasCompleted = !!(currentProgress[stageIndex] && currentProgress[stageIndex].completed);
@@ -336,7 +338,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       if (type) {
         setQAPendingAction({ so, stageIndex });
         setQAType(type);
-        // Initialize all checkboxes for this type to false
+        setHasScrolledToBottom(false); // Reset scroll state
         const initialChecks = {};
         CHECKLISTS[type].forEach((_, index) => {
           initialChecks[index] = false;
@@ -350,13 +352,19 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     await executeStageToggle(so, stageIndex, !wasCompleted);
   };
 
+  const handleScroll = (e) => {
+    const target = e.target;
+    // Check if user scrolled to the bottom (within 10 pixels margin of error)
+    if (target.scrollHeight - target.scrollTop <= target.clientHeight + 10) {
+      setHasScrolledToBottom(true);
+    }
+  };
+
   const handleQASubmit = async (e) => {
     e.preventDefault();
-    const totalCount = CHECKLISTS[qaType].length;
-    const answeredCount = Object.values(qaChecks).filter(Boolean).length;
 
-    if (answeredCount !== totalCount) {
-      alert(language === 'es' ? 'Debes validar todos los puntos de control antes de avanzar.' : 'You must validate all checklist items before proceeding.');
+    if (!hasScrolledToBottom) {
+      alert(language === 'es' ? 'Debes leer el checklist hasta el final para poder habilitar la aprobación.' : 'You must read the checklist to the bottom to enable approval.');
       return;
     }
 
@@ -388,6 +396,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     setIsQAModalOpen(false);
     setQAPendingAction(null);
     setQAType('');
+    setHasScrolledToBottom(false);
   };
 
   const executeStageToggle = async (so, stageIndex, shouldComplete) => {
@@ -1286,7 +1295,10 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                   : 'Complete all mandatory validations before moving this project stage forward.'}
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px', maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
+              <div 
+                onScroll={handleScroll}
+                style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px', maxHeight: '350px', overflowY: 'auto', paddingRight: '8px', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '12px', background: 'rgba(0,0,0,0.1)' }}
+              >
                 {CHECKLISTS[qaType].map((item, idx) => (
                   <label key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', color: '#fff', fontSize: '0.92rem', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}
                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
@@ -1304,8 +1316,10 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
               <div className="form-actions" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '16px' }}>
                 <div className="form-actions-right" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                  <span className="text-muted" style={{ fontSize: '0.85rem', marginRight: 'auto' }}>
-                    {Object.values(qaChecks).filter(Boolean).length} / {CHECKLISTS[qaType].length} {language === 'es' ? 'completados' : 'completed'}
+                  <span className="text-muted" style={{ fontSize: '0.82rem', marginRight: 'auto' }}>
+                    {!hasScrolledToBottom 
+                      ? (language === 'es' ? '⬇️ Desplázate al final para habilitar' : '⬇️ Scroll to bottom to enable')
+                      : (language === 'es' ? '✅ Leído. Puedes aprobar' : '✅ Read. Ready to approve')}
                   </span>
                   <button 
                     type="button" 
@@ -1318,15 +1332,15 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                   <button 
                     type="submit" 
                     className="btn-primary"
-                    disabled={Object.values(qaChecks).filter(Boolean).length !== CHECKLISTS[qaType].length}
+                    disabled={!hasScrolledToBottom}
                     style={{ 
                       padding: '10px 16px', 
                       borderRadius: '8px', 
-                      background: (Object.values(qaChecks).filter(Boolean).length === CHECKLISTS[qaType].length) ? 'var(--color-cyan)' : 'rgba(255,255,255,0.05)', 
-                      color: (Object.values(qaChecks).filter(Boolean).length === CHECKLISTS[qaType].length) ? '#0B1520' : '#64748B',
+                      background: hasScrolledToBottom ? 'var(--color-cyan)' : 'rgba(255,255,255,0.05)', 
+                      color: hasScrolledToBottom ? '#0B1520' : '#64748B',
                       border: 'none',
                       fontWeight: 'bold',
-                      cursor: (Object.values(qaChecks).filter(Boolean).length === CHECKLISTS[qaType].length) ? 'pointer' : 'not-allowed'
+                      cursor: hasScrolledToBottom ? 'pointer' : 'not-allowed'
                     }}
                   >
                     {language === 'es' ? 'Aprobar Pase' : 'Approve Release'}
