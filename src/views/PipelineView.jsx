@@ -1,9 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { Search, AlertCircle, Calendar, StickyNote, Flag, Clock, CheckCircle2 } from 'lucide-react';
+import { Search, AlertCircle, Calendar, StickyNote, Flag, Clock, CheckCircle2, Users, Plus, Circle } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import { db, ref, onValue, set } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
 import './PipelineView.css';
+
+const STAGES = [
+  { id: 'ingenieria', label: 'Ingeniería' },
+  { id: 'check1', label: 'Check' },
+  { id: 'paperwork', label: 'Paperwork' },
+  { id: 'check2', label: 'Check' },
+  { id: 'nesting', label: 'Nesting' },
+  { id: 'install', label: 'Install' }
+];
+
+const getStageLabel = (stageId, language) => {
+  if (language === 'es') {
+    switch (stageId) {
+      case 'ingenieria': return 'Ingeniería';
+      case 'check1': return 'Check';
+      case 'paperwork': return 'Paperwork';
+      case 'check2': return 'Check';
+      case 'nesting': return 'Nesting';
+      case 'install': return 'Install';
+      default: return stageId;
+    }
+  } else {
+    switch (stageId) {
+      case 'ingenieria': return 'Engineering';
+      case 'check1': return 'Check 1';
+      case 'paperwork': return 'Paperwork';
+      case 'check2': return 'Check 2';
+      case 'nesting': return 'Nesting';
+      case 'install': return 'Install';
+      default: return stageId;
+    }
+  }
+};
+
 
 export default function PipelineView({ data, currentUser, userProfile }) {
   const { t, language } = useLanguage();
@@ -13,8 +47,11 @@ export default function PipelineView({ data, currentUser, userProfile }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [projectNotes, setProjectNotes] = useState({});
   const [engineeringChecks, setEngineeringChecks] = useState({});
+  const [projectCollaborators, setProjectCollaborators] = useState({});
+  const [projectStages, setProjectStages] = useState({});
+  const [newNoteTexts, setNewNoteTexts] = useState({});
 
-  // Listen for project notes and engineering checks from Firebase in real-time
+  // Listen for project notes, engineering checks, collaborators, and stages from Firebase in real-time
   useEffect(() => {
     if (!db) return;
     const notesRef = ref(db, 'project_notes');
@@ -27,11 +64,50 @@ export default function PipelineView({ data, currentUser, userProfile }) {
       setEngineeringChecks(snapshot.val() || {});
     });
 
+    const collabsRef = ref(db, 'project_collaborators');
+    const unsubscribeCollabs = onValue(collabsRef, (snapshot) => {
+      setProjectCollaborators(snapshot.val() || {});
+    });
+
+    const stagesRef = ref(db, 'project_stages');
+    const unsubscribeStages = onValue(stagesRef, (snapshot) => {
+      setProjectStages(snapshot.val() || {});
+    });
+
     return () => {
       unsubscribeNotes();
       unsubscribeEngChecks();
+      unsubscribeCollabs();
+      unsubscribeStages();
     };
   }, []);
+
+  const handleAddNote = async (so, engName) => {
+    const text = newNoteTexts[so];
+    if (!text || !text.trim()) return;
+
+    const userName = userProfile?.designerName || currentUser?.displayName || currentUser?.email || 'Unknown User';
+
+    const newNote = {
+      id: Date.now().toString(),
+      text: text.trim(),
+      priority: false,
+      createdAt: new Date().toISOString(),
+      createdBy: userName
+    };
+
+    const currentNotes = projectNotes[so] ? [...projectNotes[so]] : [];
+    currentNotes.unshift(newNote);
+
+    if (db) {
+      try {
+        await set(ref(db, `project_notes/${so}`), currentNotes);
+        setNewNoteTexts(prev => ({ ...prev, [so]: '' }));
+      } catch (err) {
+        console.error('Failed to save note to Firebase:', err);
+      }
+    }
+  };
 
   const handleEngineeringStart = async (so) => {
     const currentCheck = engineeringChecks[so] || {};
@@ -145,6 +221,9 @@ export default function PipelineView({ data, currentUser, userProfile }) {
               ? (project.onHoldReason || getOnHoldNote(project.name)) 
               : null;
             
+            const progress = projectStages[project.so] || Array(STAGES.length).fill(false);
+            const percent = Math.round((progress.filter(s => s && s.completed).length / STAGES.length) * 100);
+
             return (
               <div key={idx} className="project-card glass-card">
                 <div className="project-main">
@@ -158,6 +237,13 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                     <span className="meta-item eng-badge">
                       ENG: {project.eng}
                     </span>
+                    {projectCollaborators[project.so] && projectCollaborators[project.so].length > 0 && (
+                      <span className="meta-item collabs-badge" style={{ backgroundColor: 'rgba(9, 209, 199, 0.08)', border: '1px solid rgba(9, 209, 199, 0.15)', color: '#09D1C7', padding: '2px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Users size={14} />
+                        {language === 'es' ? 'Colab: ' : 'Collabs: '}
+                        {projectCollaborators[project.so].join(', ')}
+                      </span>
+                    )}
                   </div>
                 </div>
                 
@@ -165,6 +251,24 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                   <span className={`status-badge ${getStatusColor(project.status)}`}>
                     {getStatusLabel(project.status)}
                   </span>
+                </div>
+
+                {/* Progress Mini Timeline */}
+                <div className="pipeline-stages-timeline" style={{ width: '100%', gridColumn: 'span 2', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px', marginBottom: '16px', padding: '10px 14px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', position: 'relative' }}>
+                  <div className="timeline-track-bg" style={{ position: 'absolute', left: '30px', right: '30px', height: '2px', backgroundColor: 'rgba(255,255,255,0.05)', zIndex: 1 }}></div>
+                  <div className="timeline-track-fill" style={{ position: 'absolute', left: '30px', width: `calc(${percent}% - 60px)`, height: '2px', backgroundColor: '#09D1C7', zIndex: 1, transition: 'width 0.4s ease' }}></div>
+                  {STAGES.map((stage, idx) => {
+                    const stageData = progress[idx];
+                    const isCompleted = stageData && stageData.completed;
+                    return (
+                      <div key={stage.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, position: 'relative', flex: 1 }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: isCompleted ? '#09D1C7' : '#1e293b', border: isCompleted ? '2px solid #80EE98' : '2px solid #475569', boxShadow: isCompleted ? '0 0 8px #80EE98' : 'none', transition: 'all 0.3s ease' }}></div>
+                        <span style={{ fontSize: '0.65rem', color: isCompleted ? '#fff' : '#64748B', fontWeight: isCompleted ? '600' : '500', marginTop: '4px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          {getStageLabel(stage.id, language)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {onHoldNote && (
@@ -203,13 +307,15 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                   </div>
                 </div>
 
-                {/* Project Notes (from My Projects) */}
-                {(projectNotes[project.so] || []).length > 0 && (
-                  <div className="pipeline-notes-section">
-                    <div className="pipeline-notes-header">
-                      <StickyNote size={13} />
-                      <span>{language === 'es' ? 'Notas' : 'Notes'} ({(projectNotes[project.so] || []).length})</span>
-                    </div>
+                {/* Project Notes Section */}
+                <div className="pipeline-notes-section">
+                  <div className="pipeline-notes-header">
+                    <StickyNote size={13} />
+                    <span>{language === 'es' ? 'Notas' : 'Notes'} ({(projectNotes[project.so] || []).length})</span>
+                  </div>
+                  
+                  {/* Notes List */}
+                  {(projectNotes[project.so] || []).length > 0 && (
                     <div className="pipeline-notes-list">
                       {(projectNotes[project.so] || []).map(note => (
                         <div key={note.id} className={`pipeline-note-item ${note.priority ? 'priority' : 'normal'}`}>
@@ -219,6 +325,11 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                                 ? (language === 'es' ? '⚑ Prioritaria' : '⚑ Priority')
                                 : (language === 'es' ? 'Normal' : 'Normal')}
                             </span>
+                            {note.createdBy && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
+                              <span className="pipeline-note-author" style={{ fontSize: '0.72rem', color: '#09D1C7', marginLeft: '6px', fontWeight: 'bold' }}>
+                                | By {note.createdBy}
+                              </span>
+                            )}
                             <span className="pipeline-note-date">
                               {new Date(note.createdAt).toLocaleDateString(language === 'es' ? 'es-AR' : 'en-US', {
                                 day: 'numeric', month: 'short'
@@ -229,8 +340,33 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                         </div>
                       ))}
                     </div>
+                  )}
+
+                  {/* Add Note directly from Pipeline */}
+                  <div className="pipeline-add-note" style={{ display: 'flex', gap: '8px', marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
+                    <input 
+                      type="text"
+                      placeholder={language === 'es' ? 'Escribe un comentario...' : 'Write a comment...'}
+                      value={newNoteTexts[project.so] || ''}
+                      onChange={(e) => setNewNoteTexts(prev => ({ ...prev, [project.so]: e.target.value }))}
+                      style={{ flex: 1, padding: '6px 12px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', fontSize: '0.85rem' }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleAddNote(project.so, project.eng);
+                        }
+                      }}
+                    />
+                    <button 
+                      onClick={() => handleAddNote(project.so, project.eng)}
+                      disabled={!(newNoteTexts[project.so] || '').trim()}
+                      className="btn-sm btn-primary"
+                      style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                    >
+                      <Plus size={12} />
+                      {language === 'es' ? 'Comentar' : 'Comment'}
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
             );
           })

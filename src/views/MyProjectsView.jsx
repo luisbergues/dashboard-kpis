@@ -549,11 +549,13 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     const input = noteInputs[so];
     if (!input || !input.text?.trim()) return;
 
+    const userName = userProfile?.designerName || currentUser?.displayName || currentUser?.email || 'Unknown User';
     const newNote = {
       id: Date.now().toString(),
       text: input.text.trim(),
       priority: input.priority || false,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      createdBy: userName
     };
 
     const currentNotes = projectNotes[so] ? [...projectNotes[so]] : [];
@@ -1144,6 +1146,11 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                                   ? (language === 'es' ? '⚑ Prioritaria' : '⚑ Priority')
                                   : (language === 'es' ? 'Normal' : 'Normal')}
                               </span>
+                              {note.createdBy && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
+                                <span className="note-author" style={{ fontSize: '0.72rem', color: '#09D1C7', marginLeft: '6px', fontWeight: 'bold' }}>
+                                  | By {note.createdBy}
+                                </span>
+                              )}
                               <button
                                 className="note-delete-btn"
                                 onClick={() => handleDeleteNote(project.so, note.id)}

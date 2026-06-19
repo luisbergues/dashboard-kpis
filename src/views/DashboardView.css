@@ -598,3 +598,85 @@
 .text-mint { color: var(--color-mint); }
 .text-yellow { color: var(--color-yellow); }
 .mt-lg { margin-top: var(--spacing-lg); }
+
+/* Split action plan sectors & small cards */
+.action-plan-split-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  width: 100%;
+}
+
+.action-plan-sector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sector-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 4px;
+}
+
+.sector-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.bg-yellow {
+  background-color: var(--color-yellow);
+  box-shadow: 0 0 8px var(--color-yellow);
+}
+
+.bg-mint {
+  background-color: var(--color-mint);
+  box-shadow: 0 0 8px var(--color-mint);
+}
+
+/* Smaller project cards (approx. 30% reduction) */
+.projects-carousel-grid.small-cards {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.project-carousel-card.small-card {
+  padding: 10px;
+  gap: 8px;
+  border-radius: 6px;
+}
+
+.project-carousel-card.small-card .proj-name {
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.project-carousel-card.small-card .proj-details {
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  margin-top: 2px;
+}
+
+.project-carousel-card.small-card .proj-notes {
+  font-size: 0.68rem;
+  padding: 4px 6px;
+  margin-top: 2px;
+}
+
+.project-carousel-card.small-card .proj-so {
+  font-size: 0.72rem;
+  padding: 1px 4px;
+}
+
+.project-carousel-card.small-card .proj-status-badge {
+  font-size: 0.68rem;
+  padding: 1px 6px;
+}
+

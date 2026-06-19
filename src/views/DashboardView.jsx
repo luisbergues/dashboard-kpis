@@ -494,7 +494,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
         </section>
       </div>
 
-      {/* Action Plan Carousel */}
+      {/* Action Plan Sector Split */}
       <SectionErrorBoundary title="Action Plan Error">
         <section className="glass-card action-plan-carousel-card">
           <div className="carousel-header">
@@ -505,44 +505,78 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
               </h3>
               <span className="subtitle-tag">{t('dashboard.immediateAttention')}</span>
             </div>
-            {totalSlides > 1 && (
-              <div className="carousel-controls">
-                <button onClick={handlePrevSlide} className="carousel-btn" aria-label="Previous Page">
-                  <ChevronLeft size={18} />
-                </button>
-                <span className="carousel-page-indicator">
-                  {currentSlide + 1} / {totalSlides}
-                </span>
-                <button onClick={handleNextSlide} className="carousel-btn" aria-label="Next Page">
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="carousel-content">
             {actionProjects.length === 0 ? (
               <p className="text-muted">{t('dashboard.noPriority')}</p>
             ) : (
-              <div className="projects-carousel-grid">
-                {activeProjects.map((project, idx) => (
-                  <div key={idx} className={`project-carousel-card ${getStatusColorClass(project.status)}`}>
-                    <div className="proj-card-header">
-                      <span className="proj-so">#{project.so}</span>
-                      <span className={`proj-status-badge ${getStatusColorClass(project.status)}`}>{getStatusLabel(project.status)}</span>
-                    </div>
-                    <h4 className="proj-name" title={project.name}>{project.name}</h4>
-                    <div className="proj-details">
-                      <span className="details-label">{t('common.installDate')}:</span>
-                      <span className="details-value">{project.install}</span>
-                    </div>
-                    {project.notes && (
-                      <div className="proj-notes" title={project.notes}>
-                        {project.notes}
-                      </div>
+              <div className="action-plan-split-container">
+                {/* Sector 1: ON HOLD */}
+                <div className="action-plan-sector">
+                  <h4 className="sector-heading text-yellow">
+                    <span className="sector-dot bg-yellow"></span>
+                    {language === 'es' ? 'Proyectos En Pausa (On Hold)' : 'On Hold Projects'} ({actionProjects.filter(p => p.status.toUpperCase().includes('HOLD') || p.status.toUpperCase().includes('PAUSA')).length})
+                  </h4>
+                  <div className="projects-carousel-grid small-cards">
+                    {actionProjects
+                      .filter(p => p.status.toUpperCase().includes('HOLD') || p.status.toUpperCase().includes('PAUSA'))
+                      .map((project, idx) => (
+                        <div key={idx} className={`project-carousel-card small-card ${getStatusColorClass(project.status)}`}>
+                          <div className="proj-card-header">
+                            <span className="proj-so">#{project.so}</span>
+                            <span className={`proj-status-badge ${getStatusColorClass(project.status)}`}>{getStatusLabel(project.status)}</span>
+                          </div>
+                          <h4 className="proj-name" title={project.name}>{project.name}</h4>
+                          <div className="proj-details">
+                            <span className="details-label">{t('common.installDate')}:</span>
+                            <span className="details-value">{project.install}</span>
+                          </div>
+                          {project.notes && (
+                            <div className="proj-notes" title={project.notes}>
+                              {project.notes}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    {actionProjects.filter(p => p.status.toUpperCase().includes('HOLD') || p.status.toUpperCase().includes('PAUSA')).length === 0 && (
+                      <p className="text-muted" style={{ fontSize: '0.85rem' }}>{language === 'es' ? 'No hay proyectos en pausa' : 'No projects on hold'}</p>
                     )}
                   </div>
-                ))}
+                </div>
+
+                {/* Sector 2: ACTIVOS */}
+                <div className="action-plan-sector">
+                  <h4 className="sector-heading text-mint">
+                    <span className="sector-dot bg-mint"></span>
+                    {language === 'es' ? 'Proyectos Activos' : 'Active Projects'} ({actionProjects.filter(p => !p.status.toUpperCase().includes('HOLD') && !p.status.toUpperCase().includes('PAUSA')).length})
+                  </h4>
+                  <div className="projects-carousel-grid small-cards">
+                    {actionProjects
+                      .filter(p => !p.status.toUpperCase().includes('HOLD') && !p.status.toUpperCase().includes('PAUSA'))
+                      .map((project, idx) => (
+                        <div key={idx} className={`project-carousel-card small-card ${getStatusColorClass(project.status)}`}>
+                          <div className="proj-card-header">
+                            <span className="proj-so">#{project.so}</span>
+                            <span className={`proj-status-badge ${getStatusColorClass(project.status)}`}>{getStatusLabel(project.status)}</span>
+                          </div>
+                          <h4 className="proj-name" title={project.name}>{project.name}</h4>
+                          <div className="proj-details">
+                            <span className="details-label">{t('common.installDate')}:</span>
+                            <span className="details-value">{project.install}</span>
+                          </div>
+                          {project.notes && (
+                            <div className="proj-notes" title={project.notes}>
+                              {project.notes}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    {actionProjects.filter(p => !p.status.toUpperCase().includes('HOLD') && !p.status.toUpperCase().includes('PAUSA')).length === 0 && (
+                      <p className="text-muted" style={{ fontSize: '0.85rem' }}>{language === 'es' ? 'No hay proyectos activos prioritarios' : 'No active priority projects'}</p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
