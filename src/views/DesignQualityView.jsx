@@ -1,187 +1,110 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { Award, AlertTriangle, Clock } from 'lucide-react';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip as ChartTooltip, Legend } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
-import { useLanguage } from '../utils/LanguageContext';
-import { db, ref, onValue } from '../utils/firebase';
-import { calculateFileRequestsPercentage, calculateOnHoldTimeByDesigner } from '../services/kpiCalculator';
-import SectionErrorBoundary from '../components/SectionErrorBoundary';
+import React, { useState, useEffect } from 'react';
+import { fetchAndParseQualityData } from '../utils/sheetParser';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, ChartTooltip, Legend);
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+};
 
-export default function DesignQualityView({ data }) {
-  const { t } = useLanguage();
-  const [projectHistory, setProjectHistory] = useState({});
+export default function DesignQualityView() {
+  const [data, setData] = useState({ kpiData: [], analysisText: '' });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!db) return;
-    const historyRef = ref(db, 'project_history');
-    const unsubscribe = onValue(historyRef, (snapshot) => {
-      setProjectHistory(snapshot.val() || {});
-    });
-    return () => unsubscribe();
+    async function loadData() {
+      try {
+        setLoading(true);
+        const parsed = await fetchAndParseQualityData();
+        setData(parsed);
+      } catch (err) {
+        console.error('Error fetching quality data:', err);
+        setError('Error loading quality data. Ensure the Google Sheet is accessible.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
   }, []);
 
-  const { onHoldNotes = [], priorityAnalysis = [] } = data || {};
+  if (loading) {
+    return <div className="loading-state text-muted" style={{ padding: '24px', color: '#94A3B8' }}>Loading Quality & Performance KPIs...</div>;
+  }
 
-  const { designerStats, totalRequests } = useMemo(() => calculateFileRequestsPercentage(onHoldNotes, priorityAnalysis), [onHoldNotes, priorityAnalysis]);
-  const onHoldStats = useMemo(() => calculateOnHoldTimeByDesigner(projectHistory, priorityAnalysis, onHoldNotes), [projectHistory, priorityAnalysis, onHoldNotes]);
+  if (error) {
+    return <div className="error-state text-danger" style={{ padding: '24px', color: '#FF2E93' }}>{error}</div>;
+  }
 
-  const chartData = useMemo(() => {
-    // Sort designers by percentage
-    const sortedEntries = Object.entries(designerStats).sort((a, b) => b[1].percentage - a[1].percentage);
-    const labels = sortedEntries.map(e => e[0]);
-    const datasetData = sortedEntries.map(e => e[1].percentage);
-
-    return {
-      labels,
-      datasets: [
-        {
-          label: '% of Projects Delayed',
-          data: datasetData,
-          backgroundColor: '#FF2E93', // Theme pink
-          borderRadius: 4,
-        }
-      ]
-    };
-  }, [designerStats]);
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false
-      },
-      tooltip: {
-        backgroundColor: 'rgba(11, 21, 32, 0.95)',
-        titleColor: '#80EE98',
-        bodyColor: '#fff',
-        borderColor: 'rgba(255,255,255,0.1)',
-        borderWidth: 1,
-        padding: 12,
-        callbacks: {
-          label: (context) => {
-            const designer = context.label;
-            const stats = designerStats[designer];
-            if (!stats) return `${context.raw}%`;
-            return `${context.raw}% (${stats.requests} requests out of ${stats.total} projects)`;
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        grid: { display: false, drawBorder: false },
-        ticks: { color: '#94A3B8', font: { size: 11 } }
-      },
-      y: {
-        beginAtZero: true,
-        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-        ticks: { 
-          color: '#64748B', 
-          callback: function(value) { return value + "%"; }
-        }
-      }
-    }
-  };
-
-  const holdTimeChartData = useMemo(() => {
-    return {
-      labels: onHoldStats.labels,
-      datasets: [
-        {
-          label: 'Days on Hold',
-          data: onHoldStats.data,
-          backgroundColor: '#09D1C7', // Theme cyan
-          borderRadius: 4,
-        }
-      ]
-    };
-  }, [onHoldStats]);
-
-  const holdTimeOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: 'rgba(11, 21, 32, 0.95)',
-        titleColor: '#09D1C7',
-        bodyColor: '#fff',
-        borderColor: 'rgba(255,255,255,0.1)',
-        borderWidth: 1,
-        padding: 12,
-        callbacks: {
-          label: (context) => `${context.raw} Days`
-        }
-      }
-    },
-    scales: {
-      x: { grid: { display: false, drawBorder: false }, ticks: { color: '#94A3B8', font: { size: 11 } } },
-      y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false }, ticks: { color: '#64748B' } }
-    }
-  };
+  const { kpiData, analysisText } = data;
 
   return (
     <div className="design-quality-view animate-fade-in" style={{ padding: '24px' }}>
       <header className="dashboard-header" style={{ marginBottom: '24px' }}>
         <h1 className="page-title" style={{ fontSize: '1.75rem', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>Design Quality & Performance</h1>
-        <p className="page-subtitle text-muted" style={{ color: '#94A3B8' }}>Tracking file requests and validation times</p>
+        <p className="page-subtitle text-muted" style={{ color: '#94A3B8' }}>KPI Distribution Analysis</p>
       </header>
 
-      <section className="kpi-metrics-row mb-xl" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <div className="glass-card kpi-card" style={{ padding: '20px', borderRadius: '12px', background: 'rgba(11, 21, 32, 0.6)', border: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', flexDirection: 'column' }}>
-          <span className="kpi-label" style={{ color: '#94A3B8', fontSize: '0.85rem', marginBottom: '8px' }}>Total File Requests</span>
-          <span className="kpi-value text-danger" style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FF2E93' }}>{totalRequests}</span>
+      {kpiData.length === 0 ? (
+        <div className="glass-card text-muted" style={{ padding: '24px', color: '#94A3B8' }}>
+          No data found in the spreadsheet tab.
         </div>
-        <div className="glass-card kpi-card" style={{ padding: '20px', borderRadius: '12px', background: 'rgba(11, 21, 32, 0.6)', border: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', flexDirection: 'column' }}>
-          <span className="kpi-label" style={{ color: '#94A3B8', fontSize: '0.85rem', marginBottom: '8px' }}>Global "Finals" Hold Time</span>
-          <span className="kpi-value" style={{ fontSize: '1.5rem', fontWeight: 700, color: '#09D1C7' }}>{onHoldStats.finalsTimeDays} Days</span>
-        </div>
-      </section>
+      ) : (
+        <>
+          <div className="glass-card" style={{ marginBottom: '24px', overflowX: 'auto', padding: '0' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: '#fff' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                  <th style={{ padding: '16px', color: '#80EE98', fontWeight: 600 }}>Engineer</th>
+                  <th style={{ padding: '16px', color: '#80EE98', fontWeight: 600 }}>Own Points</th>
+                  <th style={{ padding: '16px', color: '#80EE98', fontWeight: 600 }}>Revision Points</th>
+                  <th style={{ padding: '16px', color: '#80EE98', fontWeight: 600 }}>Nesting Points</th>
+                  <th style={{ padding: '16px', color: '#80EE98', fontWeight: 600 }}>Total KPI</th>
+                </tr>
+              </thead>
+              <tbody>
+                {kpiData.map((row, index) => (
+                  <tr key={index} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }} 
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                    <td style={{ padding: '16px' }}>{row.engineer}</td>
+                    <td style={{ padding: '16px', color: '#94A3B8' }}>{formatCurrency(row.ownPoints)}</td>
+                    <td style={{ padding: '16px', color: '#94A3B8' }}>{formatCurrency(row.revisionPoints)}</td>
+                    <td style={{ padding: '16px', color: '#94A3B8' }}>{formatCurrency(row.nestingPoints)}</td>
+                    <td style={{ padding: '16px', fontWeight: 'bold', color: '#09D1C7' }}>{formatCurrency(row.totalKPI)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-        <SectionErrorBoundary title="Quality Chart Error">
-        <section className="glass-card chart-section-full" style={{ padding: '20px', borderRadius: '12px', background: 'rgba(11, 21, 32, 0.6)', border: '1px solid rgba(255, 255, 255, 0.05)', height: '400px' }}>
-          <div className="chart-section-header" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h3 className="section-title" style={{ margin: 0, color: '#fff', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <AlertTriangle className="text-yellow" size={20} style={{ color: '#FFE600' }} />
-              % of Delayed Projects (File Requests) by Designer
-            </h3>
-          </div>
-          <div className="mixed-chart-container-wide" style={{ height: '320px', marginTop: '16px' }}>
-            {Object.keys(designerStats).length === 0 ? (
-              <div className="text-muted" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94A3B8' }}>
-                No file requests detected.
-              </div>
-            ) : (
-              <Bar data={chartData} options={chartOptions} />
+          <div className="glass-card" style={{ marginBottom: '24px' }}>
+            <h3 style={{ color: '#fff', marginBottom: '16px', fontSize: '1.25rem', fontWeight: 600 }}>KPI Distribution Analysis</h3>
+            {analysisText && (
+              <p style={{ color: '#94A3B8', lineHeight: '1.6', marginBottom: '24px', fontSize: '0.95rem' }}>
+                {analysisText}
+              </p>
             )}
-          </div>
-        </section>
-      </SectionErrorBoundary>
 
-      <SectionErrorBoundary title="Hold Time Chart Error">
-        <section className="glass-card chart-section-full" style={{ padding: '20px', borderRadius: '12px', background: 'rgba(11, 21, 32, 0.6)', border: '1px solid rgba(255, 255, 255, 0.05)', height: '400px' }}>
-          <div className="chart-section-header" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h3 className="section-title" style={{ margin: 0, color: '#fff', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Clock className="text-cyan" size={20} style={{ color: '#09D1C7' }} />
-              Total Time on Hold by Designer
-            </h3>
+            <div style={{ maxWidth: '400px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: '#fff' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                    <th style={{ padding: '12px 16px', color: '#80EE98', fontWeight: 600 }}>Engineer</th>
+                    <th style={{ padding: '12px 16px', color: '#80EE98', fontWeight: 600 }}>% of Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {kpiData.map((row, index) => (
+                    <tr key={index} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '12px 16px' }}>{row.engineer}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 'bold', color: '#09D1C7' }}>{row.percent.toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div className="mixed-chart-container-wide" style={{ height: '320px', marginTop: '16px' }}>
-            {onHoldStats.labels.length === 0 ? (
-              <div className="text-muted" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94A3B8' }}>
-                No active hold times.
-              </div>
-            ) : (
-              <Bar data={holdTimeChartData} options={holdTimeOptions} />
-            )}
-          </div>
-        </section>
-      </SectionErrorBoundary>
-      </div>
+        </>
+      )}
     </div>
   );
 }

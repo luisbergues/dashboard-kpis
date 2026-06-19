@@ -1,6 +1,7 @@
 import Papa from 'papaparse';
 
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/1qENXOvlEEY70LQ4i4EQBA0rGpuDr9L1sQIPtEL-Rm1I/export?format=csv';
+const QUALITY_CSV_URL = 'https://docs.google.com/spreadsheets/d/1qENXOvlEEY70LQ4i4EQBA0rGpuDr9L1sQIPtEL-Rm1I/export?format=csv&gid=1762634268';
 
 // Helper function to map header titles to column indices
 const createHeaderMap = (row) => {
@@ -271,3 +272,113 @@ export async function fetchAndParseData() {
     throw error;
   }
 }
+
+export async function fetchAndParseQualityData() {
+  try {
+    const cacheBuster = `&t=${new Date().getTime()}`;
+    const response = await fetch(`${QUALITY_CSV_URL}${cacheBuster}`);
+    if (!response.ok) throw new Error('Failed to fetch Quality CSV data');
+    const csvText = await response.text();
+
+    const { data } = Papa.parse(csvText, { skipEmptyLines: false });
+
+    const result = {
+      kpiData: [],
+      analysisText: ''
+    };
+
+    let readingTable = false;
+    let readingAnalysis = false;
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rowString = row.join('').trim();
+      if (!rowString) continue;
+
+      // Detect start of Engineer Table
+      if (rowString.toLowerCase().includes('engineer') && rowString.toLowerCase().includes('own points')) {
+        readingTable = true;
+        readingAnalysis = false;
+        continue;
+      }
+
+      // Detect KPI Distribution Analysis section
+      if (rowString.toLowerCase().includes('kpi distribution analysis')) {
+        readingTable = false;
+        readingAnalysis = true;
+        continue;
+      }
+
+      if (readingTable) {
+        // If we hit the total row (SO.TEAM or similar), or empty rows, or another header
+        if (row[0].toLowerCase().includes('team') || row[0].toLowerCase().includes('total') || row[0] === '') {
+          readingTable = false;
+          continue;
+        }
+
+        const engineer = row[0]?.trim();
+        const ownPoints = parseFloat(row[1]?.replace(/[^0-9.-]+/g, "")) || 0;
+        const revisionPoints = parseFloat(row[2]?.replace(/[^0-9.-]+/g, "")) || 0;
+        const nestingPoints = parseFloat(row[3]?.replace(/[^0-9.-]+/g, "")) || 0;
+        const totalKPI = parseFloat(row[4]?.replace(/[^0-9.-]+/g, "")) || 0;
+        // Parse % of total which is likely in column index 5 (6th col) or we look at the second table.
+        // We can get it from the secondary table or directly if it's there
+        const percent = parseFloat(row[5]?.replace(/[^0-9.-]+/g, "")) || 0;
+
+        if (engineer) {
+          result.kpiData.push({
+            engineer,
+            ownPoints,
+            revisionPoints,
+            nestingPoints,
+            totalKPI,
+            percent: percent || 0
+          });
+        }
+      } else if (readingAnalysis) {
+        // Find the paragraph text (Analysis corresponding to...)
+        // Typically it is a long text in one of the cells
+        const fullRowText = row.join(' ').trim();
+        if (fullRowText.toLowerCase().includes('analysis corresponding to')) {
+          result.analysisText = fullRowText;
+          readingAnalysis = false; // We got the main text, stop reading analysis text
+        }
+      }
+    }
+
+    // Secondary table lookup for percentages if they were not in the first table
+    // Sometimes in the sheet they are placed elsewhere. Let's make sure each engineer has a percentage.
+    if (result.kpiData.length > 0) {
+      let readingPercentTable = false;
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        const rowString = row.join('').trim();
+        
+        if (rowString.toLowerCase().includes('engineer') && rowString.toLowerCase().includes('% of total')) {
+          readingPercentTable = true;
+          continue;
+        }
+
+        if (readingPercentTable) {
+          if (!row[0] || row[0].toLowerCase().includes('total') || row[0] === '') {
+            readingPercentTable = false;
+            continue;
+          }
+          const engName = row[0].trim();
+          const pct = parseFloat(row[1]?.replace(/[^0-9.-]+/g, "")) || 0;
+
+          const existing = result.kpiData.find(e => e.engineer.toLowerCase() === engName.toLowerCase());
+          if (existing) {
+            existing.percent = pct;
+          }
+        }
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error parsing Quality sheet:', error);
+    throw error;
+  }
+}
+
