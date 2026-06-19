@@ -300,7 +300,7 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                 {/* Check, Nesting & Comment Isolated Sections */}
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch', flexWrap: 'wrap', width: '100%', marginTop: '12px' }}>
                   {/* Card 1: Engineering Check Controls */}
-                  <div className="pipeline-eng-check-controls" style={{ flex: '1 0 auto', margin: 0 }}>
+                  <div className="pipeline-eng-check-controls" style={{ flex: '1 1 calc(25% - 8px)', minWidth: '180px', margin: 0 }}>
                     <div className="pipeline-eng-check-header">
                       <span className="pipeline-eng-check-title">{t('myProjects.engineeringCheck', 'Engineering Time')}</span>
                     </div>
@@ -329,7 +329,7 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                   </div>
 
                   {/* Card 2: Nesting Controls */}
-                  <div className="pipeline-eng-check-controls" style={{ flex: '1 0 auto', margin: 0, borderColor: 'rgba(138, 43, 226, 0.15)' }}>
+                  <div className="pipeline-eng-check-controls" style={{ flex: '1 1 calc(25% - 8px)', minWidth: '180px', margin: 0, borderColor: 'rgba(138, 43, 226, 0.15)' }}>
                     <div className="pipeline-eng-check-header">
                       <span className="pipeline-eng-check-title" style={{ color: '#8A2BE2' }}>Nesting Time</span>
                     </div>
@@ -359,7 +359,7 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                   </div>
 
                   {/* Card 3: Comment Controls (Isolated window) */}
-                  <div className="pipeline-eng-check-controls" style={{ flex: 1.5, minWidth: '320px', margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div className="pipeline-eng-check-controls" style={{ flex: '2 1 calc(50% - 8px)', minWidth: '320px', margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <div className="pipeline-eng-check-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span className="pipeline-eng-check-title" style={{ color: '#09D1C7' }}>
                         {language === 'es' ? 'Agregar Comentario' : 'Add Comment'}
