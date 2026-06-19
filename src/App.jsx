@@ -16,7 +16,9 @@ import ToastNotifications from './components/ToastNotifications'
 import { auth, db, onAuthStateChanged, ref, onValue, set, get, child } from './utils/firebase'
 
 function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('active_tab') || 'dashboard';
+  });
   const [overrides, setOverrides] = useState({});
   const [currentUser, setCurrentUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
@@ -192,6 +194,10 @@ function App() {
     });
     return () => unsubscribeOverrides();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('active_tab', activeTab);
+  }, [activeTab]);
 
   const getMergedData = () => {
     if (!data) return null;

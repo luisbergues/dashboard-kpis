@@ -374,10 +374,6 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
           <h1 className="page-title">{t('dashboard.title')}</h1>
           <p className="page-subtitle text-muted">{subtitleText}</p>
         </div>
-        <button onClick={handleExportCSV} className="btn-export-csv" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', cursor: 'pointer', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}>
-          <Download size={16} />
-          {language === 'es' ? 'Exportar CSV' : 'Export CSV'}
-        </button>
       </header>
 
       {/* New KPIs Row */}

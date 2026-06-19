@@ -59,6 +59,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [projectOverrides, setProjectOverrides] = useState({});
   const [projectHistory, setProjectHistory] = useState({});
   const [engineeringChecks, setEngineeringChecks] = useState({});
+  const [nestingChecks, setNestingChecks] = useState({});
   const [loading, setLoading] = useState(true);
 
   // Project Notes State
@@ -155,6 +156,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       const localHistory = {};
       const localEngineeringChecks = {};
       const localNotes = {};
+      const localCollabs = {};
+      const localNestingChecks = {};
       
       myProjects.forEach(p => {
         try {
@@ -175,6 +178,9 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
           const savedCollabs = localStorage.getItem(`project_collabs_${p.so}`);
           localCollabs[p.so] = savedCollabs ? JSON.parse(savedCollabs) : [];
+
+          const savedNestingCheck = localStorage.getItem(`nesting_check_${p.so}`);
+          localNestingChecks[p.so] = savedNestingCheck ? JSON.parse(savedNestingCheck) : {};
         } catch (e) {
           localStages[p.so] = Array(STAGES.length).fill(false);
           localOverrides[p.so] = null;
@@ -182,12 +188,14 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
           localEngineeringChecks[p.so] = {};
           localNotes[p.so] = [];
           localCollabs[p.so] = [];
+          localNestingChecks[p.so] = {};
         }
       });
       setProjectStages(localStages);
       setProjectOverrides(localOverrides);
       setProjectHistory(localHistory);
       setEngineeringChecks(localEngineeringChecks);
+      setNestingChecks(localNestingChecks);
       setProjectNotes(localNotes);
       setProjectCollaborators(localCollabs);
       setLoading(false);
@@ -227,6 +235,13 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       setEngineeringChecks(dbData);
     });
 
+    // Load Nesting Checks
+    const nestingChecksRef = ref(db, 'nesting_checks');
+    const unsubscribeNestingChecks = onValue(nestingChecksRef, (snapshot) => {
+      const dbData = snapshot.val() || {};
+      setNestingChecks(dbData);
+    });
+
     // Load Project Notes
     const notesRef = ref(db, 'project_notes');
     const unsubscribeNotes = onValue(notesRef, (snapshot) => {
@@ -246,6 +261,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       unsubscribeOverrides();
       unsubscribeHistory();
       unsubscribeEngChecks();
+      unsubscribeNestingChecks();
       unsubscribeNotes();
       unsubscribeCollabs();
     };
@@ -716,8 +732,42 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       }
     }
 
+    // Add Nesting Checks to PDF
+    const nestingCheck = nestingChecks[project.so];
+    if (nestingCheck && (nestingCheck.started || nestingCheck.finished)) {
+      currentY += 5;
+      doc.setFont('Helvetica', 'bold');
+      doc.setTextColor(18, 33, 48);
+      doc.setFontSize(12);
+      doc.text(language === 'es' ? 'Tiempos de Nesting' : 'Nesting Times', 15, currentY);
+      
+      if (nestingCheck.user) {
+        doc.setFont('Helvetica', 'italic');
+        doc.setFontSize(9);
+        doc.setTextColor(120, 120, 120);
+        doc.text(`(${language === 'es' ? 'Por' : 'By'}: ${nestingCheck.user})`, 75, currentY);
+      }
+
+      currentY += 6;
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(80, 80, 80);
+      if (nestingCheck.started) {
+        doc.text(`Start: ${new Date(nestingCheck.started).toLocaleString()}`, 15, currentY);
+        currentY += 5;
+      }
+      if (nestingCheck.finished) {
+        doc.text(`Finish: ${new Date(nestingCheck.finished).toLocaleString()}`, 15, currentY);
+        currentY += 5;
+      }
+    }
+
     // --- Section 2: Historial de Pausas (Holds Log) ---
     currentY += 10;
+    if (currentY > 250) {
+      doc.addPage();
+      currentY = 20;
+    }
     doc.setTextColor(18, 33, 48);
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(14);
@@ -801,6 +851,55 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
           doc.addPage();
           currentY = 20;
         }
+      });
+    }
+
+    // --- Section 3: Notas del Proyecto (Project Notes) ---
+    const notes = projectNotes[project.so] || [];
+    if (notes.length > 0) {
+      currentY += 15;
+      
+      if (currentY > 250) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setTextColor(18, 33, 48);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text(language === 'es' ? '3. Notas del Proyecto' : '3. Project Notes', 15, currentY);
+
+      // Line separator
+      currentY += 3;
+      doc.setDrawColor(9, 209, 199); // Cyan
+      doc.line(15, currentY, 195, currentY);
+      currentY += 10;
+
+      notes.forEach((note, index) => {
+        if (currentY > 240) {
+          doc.addPage();
+          currentY = 20;
+        }
+
+        const dateStr = new Date(note.createdAt).toLocaleString(language === 'es' ? 'es-AR' : 'en-US');
+        const authorStr = note.createdBy ? ` | By: ${note.createdBy}` : '';
+        const priorityTag = note.priority ? (language === 'es' ? ' [PRIORITARIA]' : ' [PRIORITY]') : '';
+
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(18, 33, 48);
+        doc.text(`${dateStr}${authorStr}${priorityTag}`, 15, currentY);
+
+        currentY += 5;
+
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(60, 60, 60);
+
+        const wrappedText = doc.splitTextToSize(note.text, 180);
+        doc.text(wrappedText, 15, currentY);
+
+        currentY += (wrappedText.length * 5) + 5;
       });
     }
 
