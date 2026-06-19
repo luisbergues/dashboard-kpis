@@ -248,22 +248,164 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
   // Removed: handleEngineeringStart and handleEngineeringFinish moved to PipelineView
 
+  // QA CNC Checklist Modal State
+  const [isQAModalOpen, setIsQAModalOpen] = useState(false);
+  const [qaPendingAction, setQAPendingAction] = useState(null); // { so, stageIndex }
+  const [qaType, setQAType] = useState(''); // 'engineering', 'ess_ip', 'final'
+  const [qaChecks, setQAChecks] = useState({});
+
+  const CHECKLISTS = {
+    engineering: [
+      "Las alturas de los módulos (Unit heights) coinciden con la hoja de 32mm Panel Height.",
+      "Los estantes fijos (Fixed shelves) coinciden con la hoja de 32mm Panel Height cuando hay fondo (backing) o puertas en el módulo.",
+      "Los Fillers son de 5 ⅝”. (No colocar fillers en esquineros).",
+      "La altura del techo permite que el clóset encaje con al menos 2 ½” de holgura (clearance) entre el módulo y el techo.",
+      "Verificar correctamente el uso de estantes fijos vs. ajustables (si la cota en KCD atraviesa el estante, es ajustable).",
+      "Confirmar que existe un mínimo de 40” de espacio de colgado para las barras (rods). Si es menor, dejar una nota.",
+      "Las luces/márgenes (reveals) de puertas y cajones deben ser de 1/2”.",
+      "Las puertas de Thermofoil o de vidrio se ven correctas en los planos.",
+      "Doble chequeo de alturas y anchos de todos los cajones y tolvas (hampers) según la guía de medidas.",
+      "Las encimeras (countertops) tienen el voladizo (overhang) correcto: ¾” para profundidad de ¾” y 1” para profundidad de 1 ½”.",
+      "CRÍTICO: Las encimeras deben tener siempre un estante inferior fijo como soporte.",
+      "Los puentes (bridges) deben dejar al menos 24” de espacio libre.",
+      "Verificar las dimensiones de los accesorios y cómo encajan en los módulos.",
+      "Confirmar que los tiradores/manijas (handles) son compatibles con las puertas elegidas.",
+      "Si dos módulos de diferente profundidad comparten un lateral, el panel compartido va en el módulo más profundo.",
+      "Los gabinetes no deben superar las 42” de ancho ni las 16” de profundidad.",
+      "No dejar módulos con dimensiones de precisión absurda (ej. fracciones de 1/16'').",
+      "No colocar módulos dentro de otros módulos (si aplica).",
+      "Utilizar simetría donde el diseño lo permita.",
+      "Respetar estrictamente la medida de módulo solicitada por el diseñador (si dejó nota).",
+      "Los gabinetes para zapatos tienen el ancho específico previsto.",
+      "La cantidad total de estantes coincide con los planos firmados.",
+      "Confirmar apertura de cajones: ¡No deben golpear puertas o paredes al abrir! Si lo hacen, documentarlo y avisar al diseñador.",
+      "Las medidas generales (Ancho x Alto x Profundidad) en KCD coinciden con los planos firmados por el diseñador.",
+      "Si hay un espejo sobre un bloque de cajones, el módulo necesita fondo (backing).",
+      "Los gabinetes superiores que no llegan al suelo deben tener fondo (backing).",
+      "Los bloques de cajones (drawer banks) NO deben tener spanners ni fondo (backing).",
+      "La altura de los bloques de cajones no debe superar las 42”.",
+      "El archivo de ingeniería consume la misma cantidad de material que el archivo del diseñador.",
+      "Revisión de cantos (Edgebanding): asegurar que el interior (crudo) del material no sea visible (especial atención en islas, gabinetes superiores y partes inferiores/superiores/laterales).",
+      "Chequear perforación custom para los módulos con espejos (hutch units).",
+      "Incluir notas de estantes esquineros en los planos, vistas y renders.",
+      "Incluir notas de Wide Edgebanding en las vistas.",
+      "Incluir notas si hay diferentes rodapiés (KICK) en las vistas y renders.",
+      "Verificar cambios: listarlos y consultarlos con el diseñador por mail o reunión. (Si hay pendientes, iterar el proceso)."
+    ],
+    ess_ip: [
+      "Verificar nombre, dirección y teléfono del cliente.",
+      "Revisar cuartos y colores. (Ser extremadamente específico si hay múltiples colores en la orden).",
+      "Verificar estilos de puertas y cajones que requieran pedido externo (dovetails, thermofoils, etc.).",
+      "Revisar tamaño de cajones y asegurar que el pedido de partes coincida con el pedido de la habitación (Cantidad, Apertura, Tamaño de caja).",
+      "Verificar tamaño, color y cantidad de barras (rods) y a qué cuarto pertenecen.",
+      "Agregar notas necesarias para el taller en la sección Miscellaneous (ej. cortes especiales/notching, paneles dobles, perforaciones custom, encimeras, espejos, ruteo para luces, fillers especiales)."
+    ],
+    final: [
+      "La portada del Installer Packet coincide exactamente con la información en Zoho.",
+      "Validación final de colores y materiales.",
+      "Control cruzado de accesorios (revisar hojas/presupuestos de accesorios, órdenes de cambio, contratos y confirmar artículos pagados).",
+      "Verificar la cantidad total de cajones y barras.",
+      "Los planos se ven precisos e incluyen todos los dibujos y vistas 3D a color.",
+      "Todas las dimensiones y notas son claras y legibles en los planos.",
+      "Para gabinetes cerrados, incluir dibujos y 3D con y sin puertas (a veces 3 vistas si hay cajones ocultos).",
+      "Los dibujos coinciden al 100% con los planos firmados por el cliente.",
+      "El encabezado del dibujo tiene el nombre del proyecto y la información correcta.",
+      "Enviar una copia de los planos finales al diseñador."
+    ]
+  };
+
   const toggleStage = async (so, stageIndex) => {
     const currentProgress = projectStages[so] ? [...projectStages[so]] : Array(STAGES.length).fill(false);
     const wasCompleted = !!(currentProgress[stageIndex] && currentProgress[stageIndex].completed);
-    
+
+    // If making the stage completed (toggling to true)
+    if (!wasCompleted) {
+      let type = '';
+      // Map stages: 
+      // index 0 (Ingeniería) & index 1 (Check 1) & index 3 (Check 2) -> engineering
+      // index 2 (Paperwork) -> ess_ip
+      // index 4 (Nesting) & index 5 (Install) -> final
+      if (stageIndex === 0 || stageIndex === 1 || stageIndex === 3) {
+        type = 'engineering';
+      } else if (stageIndex === 2) {
+        type = 'ess_ip';
+      } else if (stageIndex === 4 || stageIndex === 5) {
+        type = 'final';
+      }
+
+      if (type) {
+        setQAPendingAction({ so, stageIndex });
+        setQAType(type);
+        // Initialize all checkboxes for this type to false
+        const initialChecks = {};
+        CHECKLISTS[type].forEach((_, index) => {
+          initialChecks[index] = false;
+        });
+        setQAChecks(initialChecks);
+        setIsQAModalOpen(true);
+        return; // Wait for modal submission
+      }
+    }
+
+    await executeStageToggle(so, stageIndex, !wasCompleted);
+  };
+
+  const handleQASubmit = async (e) => {
+    e.preventDefault();
+    const totalCount = CHECKLISTS[qaType].length;
+    const answeredCount = Object.values(qaChecks).filter(Boolean).length;
+
+    if (answeredCount !== totalCount) {
+      alert(language === 'es' ? 'Debes validar todos los puntos de control antes de avanzar.' : 'You must validate all checklist items before proceeding.');
+      return;
+    }
+
+    if (qaPendingAction) {
+      const { so, stageIndex } = qaPendingAction;
+      const timestamp = new Date().toISOString();
+      const userName = userProfile?.designerName || currentUser?.email || 'Unknown User';
+
+      const qaLog = {
+        checkedBy: userName,
+        timestamp,
+        type: qaType,
+        checks: qaChecks
+      };
+
+      if (db && currentUser) {
+        try {
+          await set(ref(db, `project_qa_checklist/${so}/${STAGES[stageIndex].id}`), qaLog);
+        } catch (err) {
+          console.error('Failed to save QA log to Firebase:', err);
+        }
+      } else {
+        localStorage.setItem(`project_qa_${so}_${STAGES[stageIndex].id}`, JSON.stringify(qaLog));
+      }
+
+      await executeStageToggle(so, stageIndex, true);
+    }
+
+    setIsQAModalOpen(false);
+    setQAPendingAction(null);
+    setQAType('');
+  };
+
+  const executeStageToggle = async (so, stageIndex, shouldComplete) => {
+    const currentProgress = projectStages[so] ? [...projectStages[so]] : Array(STAGES.length).fill(false);
     const timestamp = new Date().toISOString();
+    
     currentProgress[stageIndex] = {
-      completed: !wasCompleted,
-      timestamp: !wasCompleted ? timestamp : null
+      completed: shouldComplete,
+      timestamp: shouldComplete ? timestamp : null
     };
 
     // Prepare history event
     const historyEvent = {
       type: 'stage_changed',
       stage: STAGES[stageIndex].label,
-      completed: !wasCompleted,
-      timestamp: timestamp
+      completed: shouldComplete,
+      timestamp: timestamp,
+      user: userProfile?.designerName || currentUser?.email || 'Unknown User'
     };
 
     const updatedStages = {
@@ -1119,6 +1261,78 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      {/* QA Checklist Modal for Nesting/Install */}
+      {isQAModalOpen && qaType && (
+        <div className="modal-overlay" onClick={() => { setIsQAModalOpen(false); setQAPendingAction(null); setQAType(''); }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '650px', width: '90%' }}>
+            <div className="modal-header" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '16px' }}>
+              <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#80EE98' }}>
+                <CheckCircle2 size={20} />
+                {qaType === 'engineering' && (language === 'es' ? '🛠️ 1. Checklist de Ingeniería' : '🛠️ 1. Engineering Checklist')}
+                {qaType === 'ess_ip' && (language === 'es' ? '📄 2. Checklist Eng Shop Sheet (ESS) / Installer Packet (IP)' : '📄 2. Eng Shop Sheet (ESS) / Installer Packet (IP)')}
+                {qaType === 'final' && (language === 'es' ? '🏁 3. Final Checklist' : '🏁 3. Final Checklist')}
+              </h3>
+              <button className="modal-close-btn" onClick={() => { setIsQAModalOpen(false); setQAPendingAction(null); setQAType(''); }}>
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleQASubmit} className="modal-form" style={{ paddingTop: '20px' }}>
+              <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '20px', lineHeight: '1.5' }}>
+                {language === 'es' 
+                  ? 'Completa todas las validaciones obligatorias antes de avanzar la etapa del proyecto.' 
+                  : 'Complete all mandatory validations before moving this project stage forward.'}
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px', maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
+                {CHECKLISTS[qaType].map((item, idx) => (
+                  <label key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', color: '#fff', fontSize: '0.92rem', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}
+                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}>
+                    <input 
+                      type="checkbox" 
+                      checked={!!qaChecks[idx]}
+                      onChange={(e) => setQAChecks(prev => ({ ...prev, [idx]: e.target.checked }))}
+                      style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: '#09D1C7', flexShrink: 0 }}
+                    />
+                    <span style={{ lineHeight: '1.4' }}>{item}</span>
+                  </label>
+                ))}
+              </div>
+
+              <div className="form-actions" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '16px' }}>
+                <div className="form-actions-right" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                  <span className="text-muted" style={{ fontSize: '0.85rem', marginRight: 'auto' }}>
+                    {Object.values(qaChecks).filter(Boolean).length} / {CHECKLISTS[qaType].length} {language === 'es' ? 'completados' : 'completed'}
+                  </span>
+                  <button 
+                    type="button" 
+                    className="btn-secondary"
+                    onClick={() => { setIsQAModalOpen(false); setQAPendingAction(null); setQAType(''); }}
+                    style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#94A3B8', cursor: 'pointer' }}
+                  >
+                    {t('common.cancel')}
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn-primary"
+                    disabled={Object.values(qaChecks).filter(Boolean).length !== CHECKLISTS[qaType].length}
+                    style={{ 
+                      padding: '10px 16px', 
+                      borderRadius: '8px', 
+                      background: (Object.values(qaChecks).filter(Boolean).length === CHECKLISTS[qaType].length) ? 'var(--color-cyan)' : 'rgba(255,255,255,0.05)', 
+                      color: (Object.values(qaChecks).filter(Boolean).length === CHECKLISTS[qaType].length) ? '#0B1520' : '#64748B',
+                      border: 'none',
+                      fontWeight: 'bold',
+                      cursor: (Object.values(qaChecks).filter(Boolean).length === CHECKLISTS[qaType].length) ? 'pointer' : 'not-allowed'
+                    }}
+                  >
+                    {language === 'es' ? 'Aprobar Pase' : 'Approve Release'}
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}
