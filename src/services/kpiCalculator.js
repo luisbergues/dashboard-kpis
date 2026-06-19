@@ -300,72 +300,70 @@ export function getProjectLocation(project) {
  * @param {Object} projectHistory - map of SO# -> list of history events
  * @returns {Array} List of { stageLabel, averageHours, isExternal }
  */
-export function calculatePersonalStageAverages(projectStages, projects, projectHistory) {
+export function calculatePersonalStageAverages(projectStages, projects, projectHistory, engineeringChecks = {}, statusHistory = []) {
   const STAGES_CONFIG = [
-    { id: 'ingenieria', label: 'Engineering', isExternal: false },
-    { id: 'check1', label: 'Check 1', isExternal: true },
-    { id: 'paperwork', label: 'Paperwork', isExternal: false },
-    { id: 'check2', label: 'Check 2 (Paperwork)', isExternal: true },
-    { id: 'nesting', label: 'Nesting', isExternal: false },
-    { id: 'install', label: 'Install', isExternal: true }
+    { id: 'check1',   label: 'Engineering Check', isExternal: true },
+    { id: 'paperwork',label: 'Paperwork',         isExternal: false },
+    { id: 'check2',   label: 'Paperwork Check',   isExternal: true },
+    { id: 'nesting',  label: 'Nesting',           isExternal: false },
+    { id: 'install',  label: 'Install',           isExternal: true }
   ];
 
   const stageTotals = STAGES_CONFIG.map(s => ({ ...s, totalWeightedHours: 0, totalWeight: 0 }));
 
   projects.forEach(p => {
     const price = parseCurrency(p.totalAmt) || 1; // fallback weight of 1 if no price
-    const history = (projectHistory && projectHistory[p.so]) || [];
     
-    // Find earliest timestamp for each key status in the drive history
-    const milestones = {};
-    history.forEach(event => {
-      if (event.type === 'status_change') {
-        const st = (event.status || '').toUpperCase();
-        const d = new Date(event.timestamp);
-        if (!isNaN(d)) {
-          if (!milestones[st] || d < milestones[st]) {
-            milestones[st] = d;
-          }
-        }
-      }
-    });
-
-    const getDuration = (startStatus, endStatus) => {
-      const start = milestones[startStatus];
-      const end = milestones[endStatus];
-      if (start && end && end >= start) {
-        return (end - start) / (1000 * 60 * 60);
-      }
-      return 0;
-    };
-
     const durations = {
-      ingenieria: getDuration('ENGINEERING', 'CHECK'),
-      check1: getDuration('CHECK', 'PAPERWORK'),
-      paperwork: getDuration('PAPERWORK', 'NESTING'),
-      nesting: getDuration('NESTING', 'INSTALL'),
+      ingenieria: 0,
+      check1: 0,
+      paperwork: 0,
+      check2: 0,
+      nesting: 0,
       install: 0
     };
 
-    // Calculate check2 using the specific dashboard checkboxes (same logic as avg validation time)
-    let check2Hours = 0;
-    const stages = projectStages && projectStages[p.so];
-    if (stages && stages[2]?.completed && stages[2]?.timestamp && stages[3]?.completed && stages[3]?.timestamp) {
-      const sStart = new Date(stages[2].timestamp);
-      const sEnd = new Date(stages[3].timestamp);
-      if (!isNaN(sStart) && !isNaN(sEnd) && sEnd >= sStart) {
-        check2Hours = (sEnd - sStart) / (1000 * 60 * 60);
+    // Engineering Check → mapped to Check 1
+    const engCheck = engineeringChecks[p.so];
+    if (engCheck && engCheck.started && engCheck.finished) {
+      const eStart = new Date(engCheck.started);
+      const eEnd = new Date(engCheck.finished);
+      if (!isNaN(eStart) && !isNaN(eEnd) && eEnd >= eStart) {
+        durations['check1'] = (eEnd - eStart) / (1000 * 60 * 60);
       }
     }
-    durations['check2'] = check2Hours;
 
-    STAGES_CONFIG.forEach((stage, i) => {
-      const hours = durations[stage.id];
-      if (hours > 0 && hours < 5000) { // Filter out invalid/massive durations
-        stageTotals[i].totalWeightedHours += (hours * price);
-        stageTotals[i].totalWeight += price;
-      }
-    });
+    const stages = projectStages && projectStages[p.so];
+    if (stages) {
+      const getStageDuration = (idx1, idx2) => {
+        if (stages[idx1]?.completed && stages[idx1]?.timestamp && stages[idx2]?.completed && stages[idx2]?.timestamp) {
+           const t1 = new Date(stages[idx1].timestamp);
+           const t2 = new Date(stages[idx2].timestamp);
+           if (!isNaN(t1) && !isNaN(t2) && t2 >= t1) {
+             return (t2 - t1) / (1000 * 60 * 60);
+           }
+        }
+        return 0;
+      };
+
+      // Paperwork: between Engineering (stage[0]) and Paperwork completed (stage[2])
+      durations['paperwork'] = getStageDuration(0, 2);
+
+      // Check 2 (Paperwork Check): between Paperwork completed (stage[2]) and Check 2 completed (stage[3])
+      durations['check2'] = getStageDuration(2, 3);
+
+      // Nesting: between Check 2 completed (stage[3]) and Nesting completed (stage[4])
+      durations['nesting'] = getStageDuration(3, 4);
+    }
+
+      // Assign weighted hours for existing stages (now without ingenieria)
+      STAGES_CONFIG.forEach((stage, i) => {
+        const hours = durations[stage.id];
+        if (hours > 0 && hours < 5000) { // Filter out invalid/massive durations
+          stageTotals[i].totalWeightedHours += (hours * price);
+          stageTotals[i].totalWeight += price;
+        }
+      });
   });
 
   return stageTotals.map(s => ({
@@ -389,27 +387,30 @@ export function calculateMonthlyCompletions(projectStages, myProjects = []) {
     // Only count projects belonging to this engineer
     if (!myProjectSos.has(so)) return;
 
-    // Index 3 is Check 2 (Paperwork)
-    const check2 = stages[3];
-    if (check2 && check2.completed && check2.timestamp) {
-      const d = new Date(check2.timestamp);
-      if (!isNaN(d)) {
-        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        monthsData[monthKey] = monthsData[monthKey] || { check2: 0, nesting: 0 };
-        monthsData[monthKey].check2++;
+    // Helper to process a stage and increment its monthly count
+    const processStage = (stageObj, stageKey) => {
+      if (stageObj && stageObj.completed && stageObj.timestamp) {
+        const d = new Date(stageObj.timestamp);
+        if (!isNaN(d)) {
+          const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          if (!monthsData[monthKey]) {
+            monthsData[monthKey] = { eng: 0, nesting: 0, complete: 0 };
+          }
+          if (monthsData[monthKey][stageKey] !== undefined) {
+            monthsData[monthKey][stageKey]++;
+          }
+        }
       }
-    }
+    };
 
+    // Index 0 is Engineering
+    processStage(stages[0], 'eng');
+    
     // Index 4 is Nesting
-    const nesting = stages[4];
-    if (nesting && nesting.completed && nesting.timestamp) {
-      const d = new Date(nesting.timestamp);
-      if (!isNaN(d)) {
-        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        monthsData[monthKey] = monthsData[monthKey] || { check2: 0, nesting: 0 };
-        monthsData[monthKey].nesting++;
-      }
-    }
+    processStage(stages[4], 'nesting');
+
+    // Index 5 is Install (Complete)
+    processStage(stages[5], 'complete');
   });
 
   const sortedKeys = Object.keys(monthsData).sort();
@@ -419,15 +420,16 @@ export function calculateMonthlyCompletions(projectStages, myProjects = []) {
     return date.toLocaleString('default', { month: 'short' });
   });
 
-  const check2Data = sortedKeys.map(k => monthsData[k].check2);
+  const engData = sortedKeys.map(k => monthsData[k].eng);
   const nestingData = sortedKeys.map(k => monthsData[k].nesting);
+  const completeData = sortedKeys.map(k => monthsData[k].complete);
 
   return {
     labels,
     datasets: [
       {
-        label: 'Paperwork Checked',
-        data: check2Data,
+        label: 'Engineering Completed',
+        data: engData,
         borderColor: '#09D1C7',
         backgroundColor: 'rgba(9, 209, 199, 0.1)',
         tension: 0.4,
@@ -438,6 +440,14 @@ export function calculateMonthlyCompletions(projectStages, myProjects = []) {
         data: nestingData,
         borderColor: '#FF2E93',
         backgroundColor: 'rgba(255, 46, 147, 0.1)',
+        tension: 0.4,
+        fill: true
+      },
+      {
+        label: 'Fully Completed',
+        data: completeData,
+        borderColor: '#80EE98',
+        backgroundColor: 'rgba(128, 238, 152, 0.1)',
         tension: 0.4,
         fill: true
       }
