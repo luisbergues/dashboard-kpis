@@ -111,10 +111,33 @@ export default function DesignQualityView() {
               </div>
 
               {analysisText && (
-                <div style={{ flex: 1, minWidth: '280px', display: 'flex', alignItems: 'center' }}>
-                  <p style={{ color: '#94A3B8', lineHeight: '1.7', fontSize: '1rem', margin: 0 }}>
+                <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <p style={{ color: '#94A3B8', lineHeight: '1.7', fontSize: '0.95rem', margin: 0 }}>
                     {analysisText}
                   </p>
+                  <div style={{ marginTop: '12px', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)', background: 'rgba(255,255,255,0.01)' }}>
+                    <h5 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+                      {language === 'es' ? 'Guía de Distribución de Carga' : 'Workload Distribution Guide'}
+                    </h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.82rem', lineHeight: '1.4' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FFE600', marginTop: '4px', flexShrink: 0 }}></div>
+                        <span style={{ color: '#FFE600' }}>
+                          {language === 'es' 
+                            ? 'Alerta Amarilla (< 10%): Se le debe asignar más proyectos al ingeniero para balancear la carga.' 
+                            : 'Yellow Alert (< 10%): More projects should be assigned to the engineer to balance workload.'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FF9500', marginTop: '4px', flexShrink: 0 }}></div>
+                        <span style={{ color: '#FF9500' }}>
+                          {language === 'es' 
+                            ? 'Alerta Naranja (> 30%): Sobrecarga crítica. Se debe reducir la concentración de proyectos del ingeniero.' 
+                            : 'Orange Alert (> 30%): Critical overload. Reduce project concentration for this engineer.'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
