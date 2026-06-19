@@ -5,7 +5,7 @@ import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';
 import { 
   Briefcase, Calendar, CheckCircle2, Circle, Clock, 
-  AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag,
+  AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag, Users,
   ChevronDown, ChevronUp, ArrowUpDown, TrendingUp
 } from 'lucide-react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
@@ -69,6 +69,12 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [isHoldModalOpen, setIsHoldModalOpen] = useState(false);
   const [activeProjectSo, setActiveProjectSo] = useState(null);
   const [holdReason, setHoldReason] = useState('');
+
+  // Collaborators State
+  const [projectCollaborators, setProjectCollaborators] = useState({});
+  const [isCollabModalOpen, setIsCollabModalOpen] = useState(false);
+  const [activeCollabProjectSo, setActiveCollabProjectSo] = useState(null);
+  const [collabSearchTerm, setCollabSearchTerm] = useState('');
 
   // Analytics & Sorting State
   const [showAnalytics, setShowAnalytics] = useState(true);
@@ -161,12 +167,16 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
           const savedNotes = localStorage.getItem(`project_notes_${p.so}`);
           localNotes[p.so] = savedNotes ? JSON.parse(savedNotes) : [];
+
+          const savedCollabs = localStorage.getItem(`project_collabs_${p.so}`);
+          localCollabs[p.so] = savedCollabs ? JSON.parse(savedCollabs) : [];
         } catch (e) {
           localStages[p.so] = Array(STAGES.length).fill(false);
           localOverrides[p.so] = null;
           localHistory[p.so] = [];
           localEngineeringChecks[p.so] = {};
           localNotes[p.so] = [];
+          localCollabs[p.so] = [];
         }
       });
       setProjectStages(localStages);
@@ -174,6 +184,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       setProjectHistory(localHistory);
       setEngineeringChecks(localEngineeringChecks);
       setProjectNotes(localNotes);
+      setProjectCollaborators(localCollabs);
       setLoading(false);
       return;
     }
@@ -218,12 +229,20 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       setProjectNotes(dbData);
     });
 
+    // Load Project Collaborators
+    const collabsRef = ref(db, 'project_collaborators');
+    const unsubscribeCollabs = onValue(collabsRef, (snapshot) => {
+      const dbData = snapshot.val() || {};
+      setProjectCollaborators(dbData);
+    });
+
     return () => {
       unsubscribeStages();
       unsubscribeOverrides();
       unsubscribeHistory();
       unsubscribeEngChecks();
       unsubscribeNotes();
+      unsubscribeCollabs();
     };
   }, [currentUser, userProfile]);
 
@@ -427,6 +446,55 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     } else {
       localStorage.setItem(`project_notes_${so}`, JSON.stringify(currentNotes));
       setProjectNotes(prev => ({ ...prev, [so]: currentNotes }));
+    }
+  };
+
+  const handleOpenCollabModal = (so) => {
+    setActiveCollabProjectSo(so);
+    setCollabSearchTerm('');
+    setIsCollabModalOpen(true);
+  };
+
+  const handleAddCollab = async (e) => {
+    e.preventDefault();
+    if (!collabSearchTerm.trim() || !activeCollabProjectSo) return;
+    
+    const newName = collabSearchTerm.trim();
+    const current = projectCollaborators[activeCollabProjectSo] ? [...projectCollaborators[activeCollabProjectSo]] : [];
+    if (current.includes(newName)) {
+      setCollabSearchTerm('');
+      return; // Prevent duplicates
+    }
+    
+    current.push(newName);
+    
+    if (db && currentUser) {
+      try {
+        await set(ref(db, `project_collaborators/${activeCollabProjectSo}`), current);
+      } catch (err) {
+        console.error('Failed to add collab to Firebase:', err);
+      }
+    } else {
+      localStorage.setItem(`project_collabs_${activeCollabProjectSo}`, JSON.stringify(current));
+      setProjectCollaborators(prev => ({ ...prev, [activeCollabProjectSo]: current }));
+    }
+    
+    setCollabSearchTerm('');
+  };
+
+  const handleRemoveCollab = async (so, nameToRemove) => {
+    const current = projectCollaborators[so] ? [...projectCollaborators[so]] : [];
+    const updated = current.filter(n => n !== nameToRemove);
+    
+    if (db && currentUser) {
+      try {
+        await set(ref(db, `project_collaborators/${so}`), updated.length > 0 ? updated : null);
+      } catch (err) {
+        console.error('Failed to remove collab from Firebase:', err);
+      }
+    } else {
+      localStorage.setItem(`project_collabs_${so}`, JSON.stringify(updated));
+      setProjectCollaborators(prev => ({ ...prev, [so]: updated }));
     }
   };
 
@@ -785,6 +853,14 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                           {currentStatus === 'ON HOLD' ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
                           <span>On Hold</span>
                         </button>
+                        <button
+                          onClick={() => handleOpenCollabModal(project.so)}
+                          className="btn-hold-toggle collab-btn"
+                          title={language === 'es' ? 'Colaboradores' : 'Collaborators'}
+                        >
+                          <Users size={16} />
+                          <span>{(projectCollaborators[project.so] || []).length}</span>
+                        </button>
                       </div>
                     </div>
 
@@ -1006,6 +1082,65 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Collaborators Modal */}
+      {isCollabModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsCollabModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">{language === 'es' ? 'Colaboradores del Proyecto' : 'Project Collaborators'}</h3>
+              <button className="modal-close-btn" onClick={() => setIsCollabModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body" style={{ padding: '20px' }}>
+              <form onSubmit={handleAddCollab} className="collab-add-form" style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                <input 
+                  type="text"
+                  value={collabSearchTerm}
+                  onChange={(e) => setCollabSearchTerm(e.target.value)}
+                  placeholder={language === 'es' ? 'Nombre del colaborador...' : 'Collaborator name...'}
+                  className="form-input"
+                  style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.9rem' }}
+                />
+                <button type="submit" className="btn-primary" disabled={!collabSearchTerm.trim()} style={{ padding: '0 16px' }}>
+                  <Plus size={16} /> {language === 'es' ? 'Añadir' : 'Add'}
+                </button>
+              </form>
+              
+              <div className="collabs-list" style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                {(projectCollaborators[activeCollabProjectSo] || []).length === 0 ? (
+                  <p className="text-muted text-center" style={{ fontStyle: 'italic', padding: '20px 0' }}>
+                    {language === 'es' ? 'No hay colaboradores aún.' : 'No collaborators yet.'}
+                  </p>
+                ) : (
+                  <ul className="collab-items" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(projectCollaborators[activeCollabProjectSo] || []).map((collab, idx) => (
+                      <li key={idx} className="collab-item glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderRadius: '8px' }}>
+                        <div className="collab-info" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(9, 209, 199, 0.15)', color: 'var(--color-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Users size={16} />
+                          </div>
+                          <span style={{ fontWeight: '500', fontSize: '0.95rem' }}>{collab}</span>
+                        </div>
+                        <button 
+                          onClick={() => handleRemoveCollab(activeCollabProjectSo, collab)}
+                          title={language === 'es' ? 'Eliminar' : 'Remove'}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', transition: 'all 0.2s' }}
+                          onMouseOver={(e) => { e.currentTarget.style.color = '#FF3B30'; e.currentTarget.style.background = 'rgba(255,59,48,0.1)'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
