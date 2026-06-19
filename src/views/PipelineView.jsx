@@ -372,11 +372,11 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                         </div>
                       </div>
 
-                      {/* Card 3: Comment Controls (Isolated window) */}
+                      {/* Card 3: Note Controls (Isolated window) */}
                       <div className="pipeline-eng-check-controls" style={{ flex: '2 1 calc(50% - 8px)', minWidth: '320px', margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                         <div className="pipeline-eng-check-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span className="pipeline-eng-check-title" style={{ color: '#09D1C7' }}>
-                            {language === 'es' ? 'Agregar Comentario' : 'Add Comment'}
+                            {language === 'es' ? 'Agregar Nota' : 'Add Note'}
                           </span>
                           {/* Priority selector tag */}
                           <button 
@@ -405,7 +405,7 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                         <div style={{ display: 'flex', gap: '8px', height: '32px', alignItems: 'center' }}>
                           <input 
                             type="text"
-                            placeholder={language === 'es' ? 'Escribe un comentario...' : 'Write a comment...'}
+                            placeholder={language === 'es' ? 'Escribe una nota...' : 'Write a note...'}
                             value={newNoteTexts[project.so] || ''}
                             onChange={(e) => setNewNoteTexts(prev => ({ ...prev, [project.so]: e.target.value }))}
                             style={{ flex: 2.2, padding: '4px 12px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.8rem', height: '100%' }}
@@ -422,7 +422,7 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                             style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.8rem', padding: '0' }}
                           >
                             <Plus size={12} />
-                            {language === 'es' ? 'Comentar' : 'Comment'}
+                            {language === 'es' ? 'Agregar' : 'Add'}
                           </button>
                         </div>
                       </div>
