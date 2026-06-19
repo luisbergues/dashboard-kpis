@@ -260,13 +260,14 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                   </div>
                 )}
 
-                {/* Engineering Check Controls & Direct Comment */}
-                <div className="pipeline-eng-check-controls">
-                  <div className="pipeline-eng-check-header">
-                    <span className="pipeline-eng-check-title">{t('myProjects.engineeringCheck', 'Engineering Time')}</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
-                    <div className="pipeline-eng-check-buttons" style={{ flexShrink: 0 }}>
+                {/* Engineering Check & Comment Isolated Sections */}
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'stretch', flexWrap: 'wrap', width: '100%', marginTop: '12px' }}>
+                  {/* Card 1: Engineering Check Controls */}
+                  <div className="pipeline-eng-check-controls" style={{ flex: '0 0 auto', margin: 0 }}>
+                    <div className="pipeline-eng-check-header">
+                      <span className="pipeline-eng-check-title">{t('myProjects.engineeringCheck', 'Engineering Time')}</span>
+                    </div>
+                    <div className="pipeline-eng-check-buttons" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <button 
                         onClick={() => handleEngineeringStart(project.so)}
                         className={`btn-sm ${engineeringChecks[project.so]?.started ? 'btn-secondary active-check' : 'btn-primary'}`}
@@ -288,9 +289,16 @@ export default function PipelineView({ data, currentUser, userProfile }) {
                         </span>
                       )}
                     </div>
+                  </div>
 
-                    {/* Comment Area to the right of Start/Finish buttons */}
-                    <div style={{ display: 'flex', flex: 1, minWidth: '320px', height: '32px', gap: '8px' }}>
+                  {/* Card 2: Comment Controls (Isolated window) */}
+                  <div className="pipeline-eng-check-controls" style={{ flex: 1, minWidth: '320px', margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div className="pipeline-eng-check-header">
+                      <span className="pipeline-eng-check-title" style={{ color: '#09D1C7' }}>
+                        {language === 'es' ? 'Agregar Comentario' : 'Add Comment'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', height: '32px', alignItems: 'center' }}>
                       <input 
                         type="text"
                         placeholder={language === 'es' ? 'Escribe un comentario...' : 'Write a comment...'}
@@ -318,34 +326,45 @@ export default function PipelineView({ data, currentUser, userProfile }) {
 
                 {/* Project Notes Section */}
                 <div className="pipeline-notes-section">
-                  <div className="pipeline-notes-header">
-                    <StickyNote size={13} />
-                    <span>{language === 'es' ? 'Notas' : 'Notes'} ({(projectNotes[project.so] || []).length})</span>
+                  <div className="pipeline-notes-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <StickyNote size={13} />
+                      <span>{language === 'es' ? 'Notas' : 'Notes'}</span>
+                    </div>
+                    {(projectNotes[project.so] || []).length > 0 && (
+                      <span className="notes-panel-count" style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'rgba(9, 209, 199, 0.15)', color: '#09D1C7', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                        {(projectNotes[project.so] || []).length}
+                      </span>
+                    )}
                   </div>
                   
                   {/* Notes List */}
                   {(projectNotes[project.so] || []).length > 0 && (
-                    <div className="pipeline-notes-list">
+                    <div className="pipeline-notes-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
                       {(projectNotes[project.so] || []).map(note => (
-                        <div key={note.id} className={`pipeline-note-item ${note.priority ? 'priority' : 'normal'}`}>
-                          <div className="pipeline-note-top">
-                            <span className={`pipeline-note-tag ${note.priority ? 'priority' : 'normal'}`}>
-                              {note.priority
-                                ? (language === 'es' ? '⚑ Prioritaria' : '⚑ Priority')
-                                : (language === 'es' ? 'Normal' : 'Normal')}
-                            </span>
-                            {note.createdBy && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
-                              <span className="pipeline-note-author" style={{ fontSize: '0.72rem', color: '#09D1C7', marginLeft: '6px', fontWeight: 'bold' }}>
-                                | By {note.createdBy}
+                        <div key={note.id} className="note-item" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '4px', padding: '10px 12px', position: 'relative', display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: note.priority ? '3px solid #FF3B30' : '3px solid #09D1C7' }}>
+                          <div className="note-item-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span className="note-priority-tag" style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', padding: '2px 8px', borderRadius: '8px', background: note.priority ? 'rgba(255, 59, 48, 0.14)' : 'rgba(9, 209, 199, 0.15)', color: note.priority ? '#FF3B30' : '#09D1C7' }}>
+                                {note.priority
+                                  ? (language === 'es' ? '⚑ Prioritaria' : '⚑ Priority')
+                                  : (language === 'es' ? 'Normal' : 'Normal')}
                               </span>
-                            )}
-                            <span className="pipeline-note-date">
-                              {new Date(note.createdAt).toLocaleDateString(language === 'es' ? 'es-AR' : 'en-US', {
-                                day: 'numeric', month: 'short'
-                              })}
-                            </span>
+                              {note.createdBy && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
+                                <span className="note-author" style={{ fontSize: '0.72rem', color: '#09D1C7', fontWeight: 'bold' }}>
+                                  | By {note.createdBy}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <p className="pipeline-note-text">{note.text}</p>
+                          <div className="note-item-text" style={{ fontSize: '0.82rem', color: '#fff', lineHeight: '1.4', wordBreak: 'break-word' }}>
+                            {note.text}
+                          </div>
+                          <div className="note-item-date" style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '4px' }}>
+                            {new Date(note.createdAt).toLocaleString(language === 'es' ? 'es-AR' : 'en-US', {
+                              day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </div>
                         </div>
                       ))}
                     </div>
