@@ -1073,14 +1073,17 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
             </div>
             <div className="modal-body" style={{ padding: '20px' }}>
               <form onSubmit={handleAddCollab} className="collab-add-form" style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-                <input 
-                  type="text"
+                <select 
                   value={collabSearchTerm}
                   onChange={(e) => setCollabSearchTerm(e.target.value)}
-                  placeholder={language === 'es' ? 'Nombre del colaborador...' : 'Collaborator name...'}
                   className="form-input"
                   style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.9rem' }}
-                />
+                >
+                  <option value="" disabled>{language === 'es' ? 'Seleccionar ingeniero...' : 'Select engineer...'}</option>
+                  {['Jose', 'Joaquin', 'Julieta', 'Andres', 'Santiago', 'Luis'].map(name => (
+                    <option key={name} value={name} style={{ color: '#000' }}>{name}</option>
+                  ))}
+                </select>
                 <button type="submit" className="btn-primary" disabled={!collabSearchTerm.trim()} style={{ padding: '0 16px' }}>
                   <Plus size={16} /> {language === 'es' ? 'Añadir' : 'Add'}
                 </button>
