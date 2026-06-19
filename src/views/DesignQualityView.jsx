@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { fetchAndParseQualityData } from '../utils/sheetParser';
+import { useLanguage } from '../utils/LanguageContext';
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 };
 
 export default function DesignQualityView() {
+  const { language } = useLanguage();
   const [data, setData] = useState({ kpiData: [], analysisText: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
