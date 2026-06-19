@@ -327,9 +327,15 @@ export async function fetchAndParseQualityData() {
 
         // Validate that engineer is a real name (only letters and spaces, not a number, and not empty)
         const isNumeric = /^\d+$/.test(engineer.replace(/[\s,$.%]+/g, ''));
-        const isHeaderOrTotal = ['engineer', 'so.team', 'team', 'total', 'grand total'].some(kw => engineer.toLowerCase().includes(kw));
+        const isHeaderOrTotal = [
+          'engineer', 'so.team', 'team', 'total', 'grand total', 
+          'reviewer', 'multiplier', 'column', '•'
+        ].some(kw => engineer.toLowerCase().includes(kw));
+        
+        // Also reject names that start with a numbering like "3. " or "4. "
+        const isNumbering = /^\d+\.\s*/.test(engineer);
 
-        if (engineer && !isNumeric && !isHeaderOrTotal && engineer.length > 1) {
+        if (engineer && !isNumeric && !isHeaderOrTotal && !isNumbering && engineer.length > 1) {
           result.kpiData.push({
             engineer,
             ownPoints,
