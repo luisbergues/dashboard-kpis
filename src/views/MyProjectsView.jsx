@@ -80,6 +80,11 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [showAnalytics, setShowAnalytics] = useState(true);
   const [sortBy, setSortBy] = useState(null); // 'date' | 'so'
   const [sortDesc, setSortDesc] = useState(true);
+  const [collapsedProjects, setCollapsedProjects] = useState({});
+
+  const toggleCollapse = (so) => {
+    setCollapsedProjects(prev => ({ ...prev, [so]: !prev[so] }));
+  };
 
   const getOnHoldNote = (projectName) => {
     if (!onHoldNotes) return null;
@@ -980,17 +985,18 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
             const overridden = projectOverrides[project.so];
             const currentStatus = overridden ? overridden.status : project.status;
             const currentReason = overridden ? overridden.onHoldReason : getOnHoldNote(project.name);
+            const isCollapsed = collapsedProjects[project.so];
 
             return (
-              <div key={project.so} className="project-card glass-card">
+              <div key={project.so} className="project-card glass-card" style={{ paddingBottom: isCollapsed ? '12px' : '24px' }}>
                 <div className="project-card-layout">
                   <div className="project-card-main">
-                    <div className="card-header-main">
+                    <div className="card-header-main" onClick={() => toggleCollapse(project.so)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <span className="project-so">SO #{project.so}</span>
-                        <h3 className="project-name-title">{project.name}</h3>
+                        <h3 className="project-name-title" style={{ margin: 0 }}>{project.name}</h3>
                       </div>
-                      <div className="header-status-controls">
+                      <div className="header-status-controls" onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span className={`status-badge-inline ${currentStatus.toLowerCase().replace(' ', '-')}`}>
                           {getStatusLabelPdf(currentStatus)}
                         </span>
@@ -1010,166 +1016,171 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                           <Users size={16} />
                           <span>{(projectCollaborators[project.so] || []).length}</span>
                         </button>
+                        <span style={{ color: '#64748B', marginLeft: '8px', fontSize: '0.85rem' }}>{isCollapsed ? '▼' : '▲'}</span>
                       </div>
                     </div>
 
-                    {currentStatus === 'ON HOLD' && currentReason && (
-                      <div className="hold-reason-banner animate-fade-in">
-                        <Info size={16} />
-                        <p><strong>{t('myProjects.holdReasonLabel')}</strong> {currentReason}</p>
-                      </div>
-                    )}
-
-                    <div className="project-dates">
-                      <div className="date-item">
-                        <Calendar size={14} className="text-muted" />
-                        <span>{t('common.installDate')}: {project.install || (language === 'es' ? 'Sin fecha' : 'No date')}</span>
-                      </div>
-                    </div>
-
-                    <div className="progress-section">
-                      <div className="progress-meta">
-                        <span className="progress-label">{t('myProjects.stagesProgress')}</span>
-                        <span className="progress-percent">{percent}%</span>
-                      </div>
-                      <div className="progress-bar-container">
-                        <div 
-                          className="progress-bar-fill" 
-                          style={{ width: `${percent}%` }}
-                        ></div>
-                      </div>
-                    </div>
-
-                    <div className="stages-timeline">
-                      {STAGES.map((stage, idx) => {
-                        const stageData = progress[idx];
-                        const isCompleted = stageData && stageData.completed;
-                        return (
-                          <div 
-                            key={stage.id} 
-                            className={`stage-step ${isCompleted ? 'completed' : ''}`}
-                            onClick={() => toggleStage(project.so, idx)}
-                            title={language === 'es' ? `Clic para marcar como ${isCompleted ? 'pendiente' : 'completada'}` : `Click to mark as ${isCompleted ? 'pending' : 'completed'}`}
-                          >
-                            <div className="stage-connector-line"></div>
-                            <div className="stage-icon-container">
-                              {isCompleted ? (
-                                <CheckCircle2 size={20} className="icon-completed" />
-                              ) : (
-                                <Circle size={20} className="icon-pending" />
-                              )}
-                            </div>
-                            <span className="stage-step-label">{getStageLabel(stage.id, language)}</span>
+                    {!isCollapsed && (
+                      <>
+                        {currentStatus === 'ON HOLD' && currentReason && (
+                          <div className="hold-reason-banner animate-fade-in">
+                            <Info size={16} />
+                            <p><strong>{t('myProjects.holdReasonLabel')}</strong> {currentReason}</p>
                           </div>
-                        );
-                      })}
-                    </div>
+                        )}
 
-                    {/* Removed Engineering Check Controls (Moved to PipelineView) */}
+                        <div className="project-dates">
+                          <div className="date-item">
+                            <Calendar size={14} className="text-muted" />
+                            <span>{t('common.installDate')}: {project.install || (language === 'es' ? 'Sin fecha' : 'No date')}</span>
+                          </div>
+                        </div>
 
-                    <div className="card-footer-actions">
-                      <button 
-                        onClick={() => generatePDF(project)}
-                        className="btn-secondary btn-sm btn-download-pdf"
-                      >
-                        <Download size={14} />
-                        <span>{t('myProjects.downloadPdf')}</span>
-                      </button>
-                    </div>
+                        <div className="progress-section">
+                          <div className="progress-meta">
+                            <span className="progress-label">{t('myProjects.stagesProgress')}</span>
+                            <span className="progress-percent">{percent}%</span>
+                          </div>
+                          <div className="progress-bar-container">
+                            <div 
+                              className="progress-bar-fill" 
+                              style={{ width: `${percent}%` }}
+                            ></div>
+                          </div>
+                        </div>
+
+                        <div className="stages-timeline">
+                          {STAGES.map((stage, idx) => {
+                            const stageData = progress[idx];
+                            const isCompleted = stageData && stageData.completed;
+                            return (
+                              <div 
+                                key={stage.id} 
+                                className={`stage-step ${isCompleted ? 'completed' : ''}`}
+                                onClick={() => toggleStage(project.so, idx)}
+                                title={language === 'es' ? `Clic para marcar como ${isCompleted ? 'pendiente' : 'completada'}` : `Click to mark as ${isCompleted ? 'pending' : 'completed'}`}
+                              >
+                                <div className="stage-connector-line"></div>
+                                <div className="stage-icon-container">
+                                  {isCompleted ? (
+                                    <CheckCircle2 size={20} className="icon-completed" />
+                                  ) : (
+                                    <Circle size={20} className="icon-pending" />
+                                  )}
+                                </div>
+                                <span className="stage-step-label">{getStageLabel(stage.id, language)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="card-footer-actions">
+                          <button 
+                            onClick={() => generatePDF(project)}
+                            className="btn-secondary btn-sm btn-download-pdf"
+                          >
+                            <Download size={14} />
+                            <span>{t('myProjects.downloadPdf')}</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
 
-                  {/* ─── Notes Panel ───────────────────────────── */}
-                  <div className="project-notes-panel">
-                    <div className="notes-panel-header">
-                      <span className="notes-panel-title">
-                        <StickyNote size={14} />
-                        {language === 'es' ? 'Notas' : 'Notes'}
-                      </span>
-                      {(projectNotes[project.so] || []).length > 0 && (
-                        <span className="notes-panel-count">{(projectNotes[project.so] || []).length}</span>
+                  {!isCollapsed && (
+                    /* ─── Notes Panel ───────────────────────────── */
+                    <div className="project-notes-panel">
+                      <div className="notes-panel-header">
+                        <span className="notes-panel-title">
+                          <StickyNote size={14} />
+                          {language === 'es' ? 'Notas' : 'Notes'}
+                        </span>
+                        {(projectNotes[project.so] || []).length > 0 && (
+                          <span className="notes-panel-count">{(projectNotes[project.so] || []).length}</span>
+                        )}
+                      </div>
+
+                      <div className="add-note-form">
+                        <textarea
+                          className="note-input"
+                          placeholder={language === 'es' ? 'Agregar nota...' : 'Add note...'}
+                          value={noteInputs[project.so]?.text || ''}
+                          onChange={(e) => setNoteInputs(prev => ({
+                            ...prev,
+                            [project.so]: { ...prev[project.so], text: e.target.value }
+                          }))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleAddNote(project.so);
+                            }
+                          }}
+                          rows={2}
+                        />
+                        <div className="note-actions-row">
+                          <button
+                            type="button"
+                            className={`priority-toggle ${noteInputs[project.so]?.priority ? 'is-priority' : 'not-priority'}`}
+                            onClick={() => setNoteInputs(prev => ({
+                              ...prev,
+                              [project.so]: { ...prev[project.so], priority: !prev[project.so]?.priority }
+                            }))}
+                          >
+                            <Flag size={12} />
+                            {noteInputs[project.so]?.priority 
+                              ? (language === 'es' ? 'Prioritaria' : 'Priority')
+                              : (language === 'es' ? 'Normal' : 'Normal')}
+                          </button>
+                          <button
+                            className="btn-add-note"
+                            onClick={() => handleAddNote(project.so)}
+                            disabled={!noteInputs[project.so]?.text?.trim()}
+                          >
+                            <Plus size={14} />
+                            {language === 'es' ? 'Agregar' : 'Add'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {(projectNotes[project.so] || []).length === 0 ? (
+                        <div className="notes-empty">
+                          {language === 'es' ? 'Sin notas aún' : 'No notes yet'}
+                        </div>
+                      ) : (
+                        <div className="notes-list">
+                          {(projectNotes[project.so] || []).map(note => (
+                            <div key={note.id} className="note-item">
+                              <div className="note-item-header">
+                                <span className={`note-priority-tag ${note.priority ? 'priority' : 'normal'}`}>
+                                  {note.priority 
+                                    ? (language === 'es' ? '⚑ Prioritaria' : '⚑ Priority')
+                                    : (language === 'es' ? 'Normal' : 'Normal')}
+                                </span>
+                                {note.createdBy && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
+                                  <span className="note-author" style={{ fontSize: '0.72rem', color: '#09D1C7', marginLeft: '6px', fontWeight: 'bold' }}>
+                                    | By {note.createdBy}
+                                  </span>
+                                )}
+                                <button
+                                  className="note-delete-btn"
+                                  onClick={() => handleDeleteNote(project.so, note.id)}
+                                  title={language === 'es' ? 'Eliminar nota' : 'Delete note'}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                              <div className="note-item-text">{note.text}</div>
+                              <div className="note-item-date">
+                                {new Date(note.createdAt).toLocaleDateString(language === 'es' ? 'es-AR' : 'en-US', {
+                                  day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
-
-                    <div className="add-note-form">
-                      <textarea
-                        className="note-input"
-                        placeholder={language === 'es' ? 'Agregar nota...' : 'Add note...'}
-                        value={noteInputs[project.so]?.text || ''}
-                        onChange={(e) => setNoteInputs(prev => ({
-                          ...prev,
-                          [project.so]: { ...prev[project.so], text: e.target.value }
-                        }))}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleAddNote(project.so);
-                          }
-                        }}
-                        rows={2}
-                      />
-                      <div className="note-actions-row">
-                        <button
-                          type="button"
-                          className={`priority-toggle ${noteInputs[project.so]?.priority ? 'is-priority' : 'not-priority'}`}
-                          onClick={() => setNoteInputs(prev => ({
-                            ...prev,
-                            [project.so]: { ...prev[project.so], priority: !prev[project.so]?.priority }
-                          }))}
-                        >
-                          <Flag size={12} />
-                          {noteInputs[project.so]?.priority 
-                            ? (language === 'es' ? 'Prioritaria' : 'Priority')
-                            : (language === 'es' ? 'Normal' : 'Normal')}
-                        </button>
-                        <button
-                          className="btn-add-note"
-                          onClick={() => handleAddNote(project.so)}
-                          disabled={!noteInputs[project.so]?.text?.trim()}
-                        >
-                          <Plus size={14} />
-                          {language === 'es' ? 'Agregar' : 'Add'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {(projectNotes[project.so] || []).length === 0 ? (
-                      <div className="notes-empty">
-                        {language === 'es' ? 'Sin notas aún' : 'No notes yet'}
-                      </div>
-                    ) : (
-                      <div className="notes-list">
-                        {(projectNotes[project.so] || []).map(note => (
-                          <div key={note.id} className="note-item">
-                            <div className="note-item-header">
-                              <span className={`note-priority-tag ${note.priority ? 'priority' : 'normal'}`}>
-                                {note.priority 
-                                  ? (language === 'es' ? '⚑ Prioritaria' : '⚑ Priority')
-                                  : (language === 'es' ? 'Normal' : 'Normal')}
-                              </span>
-                              {note.createdBy && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
-                                <span className="note-author" style={{ fontSize: '0.72rem', color: '#09D1C7', marginLeft: '6px', fontWeight: 'bold' }}>
-                                  | By {note.createdBy}
-                                </span>
-                              )}
-                              <button
-                                className="note-delete-btn"
-                                onClick={() => handleDeleteNote(project.so, note.id)}
-                                title={language === 'es' ? 'Eliminar nota' : 'Delete note'}
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
-                            <div className="note-item-text">{note.text}</div>
-                            <div className="note-item-date">
-                              {new Date(note.createdAt).toLocaleDateString(language === 'es' ? 'es-AR' : 'en-US', {
-                                day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             );
