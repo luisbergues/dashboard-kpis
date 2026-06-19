@@ -1263,6 +1263,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
             </div>
           </div>
         </div>
+      )}
       {/* QA Checklist Modal for Nesting/Install */}
       {isQAModalOpen && qaType && (
         <div className="modal-overlay" onClick={() => { setIsQAModalOpen(false); setQAPendingAction(null); setQAType(''); }}>
