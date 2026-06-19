@@ -325,7 +325,11 @@ export async function fetchAndParseQualityData() {
         // We can get it from the secondary table or directly if it's there
         const percent = parseFloat(row[5]?.replace(/[^0-9.-]+/g, "")) || 0;
 
-        if (engineer) {
+        // Validate that engineer is a real name (only letters and spaces, not a number, and not empty)
+        const isNumeric = /^\d+$/.test(engineer.replace(/[\s,$.%]+/g, ''));
+        const isHeaderOrTotal = ['engineer', 'so.team', 'team', 'total', 'grand total'].some(kw => engineer.toLowerCase().includes(kw));
+
+        if (engineer && !isNumeric && !isHeaderOrTotal && engineer.length > 1) {
           result.kpiData.push({
             engineer,
             ownPoints,
