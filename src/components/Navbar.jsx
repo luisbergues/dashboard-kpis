@@ -13,7 +13,6 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
     { id: 'calendar', label: t('navbar.calendar'), icon: CalendarDays },
     ...(userProfile ? [{ id: 'my-projects', label: t('navbar.myProjects'), icon: Briefcase }] : []),
     { id: 'pipeline', label: t('navbar.pipeline'), icon: ListTodo },
-    { id: 'costs', label: t('navbar.costs'), icon: CircleDollarSign },
     { id: 'materials', label: t('navbar.materials'), icon: Hammer },
     { id: 'quality', label: language === 'es' ? 'Team Stats' : 'Team Stats', icon: Award }
   ];

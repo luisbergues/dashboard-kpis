@@ -6,7 +6,6 @@ import { checkDbSizeAndArchive } from './utils/archiveHelpers'
 import Navbar from './components/Navbar'
 import DashboardView from './views/DashboardView'
 import PipelineView from './views/PipelineView'
-import CostAnalysisView from './views/CostAnalysisView'
 import MaterialsView from './views/MaterialsView'
 import CalendarView from './views/CalendarView'
 import LoginView from './views/LoginView'
@@ -275,7 +274,6 @@ function App() {
       case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
       case 'my-projects': return <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
       case 'pipeline': return <PipelineView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
-      case 'costs': return <CostAnalysisView data={mergedData} />;
       case 'materials': return <MaterialsView data={mergedData} />;
       case 'quality': return <DesignQualityView data={mergedData} />;
       default: return <DashboardView data={mergedData} />;

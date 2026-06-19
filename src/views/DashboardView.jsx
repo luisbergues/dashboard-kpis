@@ -14,7 +14,7 @@ import {
   BarController,
   Filler
 } from 'chart.js';
-import { Chart } from 'react-chartjs-2';
+import { Chart, Bar } from 'react-chartjs-2';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { exportToCSV } from '../utils/csvExport';
@@ -575,6 +575,93 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
           ))}
         </ul>
       </section>
+
+      {/* Cost Analysis Section relocated from CostAnalysisView */}
+      {topCostProjects && topCostProjects.length > 0 && (
+        <SectionErrorBoundary title="Cost Analysis Error">
+          <section className="glass-card cost-analysis-dashboard full-width" style={{ marginTop: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <h3 className="section-title text-gradient" style={{ margin: 0 }}>{language === 'es' ? 'Análisis de Costos' : 'Cost Analysis'}</h3>
+                <p className="text-muted" style={{ fontSize: '0.875rem', marginTop: '4px' }}>
+                  {language === 'es' ? 'Proyectos activos principales por valor de pipeline' : 'Top active projects by pipeline value'}
+                </p>
+              </div>
+              <div className="total-value-card" style={{ padding: '8px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'right' }}>
+                <span className="text-muted" style={{ fontSize: '0.75rem', display: 'block' }}>
+                  {language === 'es' ? 'Valor Total del Pipeline' : 'Total Pipeline Value'}
+                </span>
+                <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#80EE98' }}>
+                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
+                    topCostProjects.reduce((sum, p) => sum + parseFloat(p.cost.replace(/[^0-9.-]+/g,"")), 0)
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ height: '350px', position: 'relative' }}>
+              <Bar 
+                data={{
+                  labels: topCostProjects.map(p => p.name.split(':')[0]),
+                  datasets: [
+                    {
+                      label: language === 'es' ? 'Costo del Proyecto ($)' : 'Project Cost ($)',
+                      data: topCostProjects.map(p => parseFloat(p.cost.replace(/[^0-9.-]+/g,""))),
+                      backgroundColor: 'rgba(9, 209, 199, 0.85)',
+                      hoverBackgroundColor: '#80EE98',
+                      borderRadius: 6,
+                      borderWidth: 0,
+                    }
+                  ]
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      backgroundColor: 'rgba(11, 21, 32, 0.95)',
+                      titleColor: '#80EE98',
+                      bodyColor: '#fff',
+                      borderColor: 'rgba(255,255,255,0.1)',
+                      borderWidth: 1,
+                      padding: 12,
+                      callbacks: {
+                        label: function(context) {
+                          let label = context.dataset.label || '';
+                          if (label) label += ': ';
+                          if (context.parsed.y !== null) {
+                            label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                          }
+                          return label;
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                      ticks: {
+                        color: '#64748B',
+                        callback: function(value) { return '$' + value / 1000 + 'k'; }
+                      }
+                    },
+                    x: {
+                      grid: { display: false },
+                      ticks: {
+                        color: '#94A3B8',
+                        maxRotation: 45,
+                        minRotation: 45
+                      }
+                    }
+                  }
+                }} 
+              />
+            </div>
+          </section>
+        </SectionErrorBoundary>
+      )}
     </div>
   );
 }
