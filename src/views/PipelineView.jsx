@@ -291,12 +291,16 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
             const isCollapsed = !expandedProjects[project.so];
 
             return (
-              <div id={`project-card-${project.so}`} key={idx} className="project-card glass-card" style={{ paddingBottom: isCollapsed ? '12px' : '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div className="project-header-row" onClick={() => toggleCollapse(project.so)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                  <div className="project-main" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div 
+                id={`project-card-${project.so}`} 
+                key={idx} 
+                className={`project-card glass-card ${isCollapsed ? 'collapsed' : 'expanded'}`}
+              >
+                <div className="project-header-row" onClick={() => toggleCollapse(project.so)}>
+                  <div className="project-main">
+                    <div className="project-title-container">
                       <div className="project-id">#{project.so}</div>
-                      <h3 className="project-name" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 'bold' }}>{project.name}</h3>
+                      <h3 className="project-name">{project.name}</h3>
                     </div>
                     <div className="project-meta">
                       <span className="meta-item">
@@ -307,7 +311,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                         ENG: {project.eng}
                       </span>
                       {projectCollaborators[project.so] && projectCollaborators[project.so].length > 0 && (
-                        <span className="meta-item collabs-badge" style={{ backgroundColor: 'rgba(9, 209, 199, 0.08)', border: '1px solid rgba(9, 209, 199, 0.15)', color: '#09D1C7', padding: '2px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <span className="meta-item collabs-badge">
                           <Users size={14} />
                           {language === 'es' ? 'Colab: ' : 'Collabs: '}
                           {projectCollaborators[project.so].join(', ')}
@@ -316,11 +320,11 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                     </div>
                   </div>
                   
-                  <div className="project-side" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className="project-side">
                     <span className={`status-badge ${getStatusColor(project.status)}`}>
                       {getStatusLabel(project.status)}
                     </span>
-                    <span style={{ color: '#64748B', transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(-90deg)' : 'none', fontSize: '0.85rem' }}>▼</span>
+                    <span className="chevron-icon">▼</span>
                   </div>
                 </div>
 
@@ -334,13 +338,13 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                     )}
 
                     {/* Check, Nesting & Comment Isolated Sections */}
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch', flexWrap: 'wrap', width: '100%', marginTop: '4px' }}>
+                    <div className="pipeline-row-grid">
                       {/* Card 1: Engineering Check Controls */}
-                      <div className="pipeline-eng-check-controls" style={{ flex: '1 1 calc(25% - 8px)', minWidth: '180px', margin: 0 }}>
+                      <div className="pipeline-eng-check-controls card-eng">
                         <div className="pipeline-eng-check-header">
                           <span className="pipeline-eng-check-title">{t('myProjects.engineeringCheck', 'Engineering Time')}</span>
                         </div>
-                        <div className="pipeline-eng-check-buttons" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div className="pipeline-eng-check-buttons">
                           <button 
                             onClick={() => handleEngineeringStart(project.so)}
                             className={`btn-sm ${engineeringChecks[project.so]?.started ? 'btn-secondary active-check' : 'btn-primary'}`}
@@ -357,7 +361,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                             {engineeringChecks[project.so]?.finished ? new Date(engineeringChecks[project.so].finished).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Finish'}
                           </button>
                           {engineeringChecks[project.so]?.user && (
-                            <span className="eng-check-user" style={{ fontSize: '0.7rem' }}>
+                            <span className="eng-check-user">
                               ({engineeringChecks[project.so].user})
                             </span>
                           )}
@@ -365,15 +369,14 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                       </div>
 
                       {/* Card 2: Nesting Controls */}
-                      <div className="pipeline-eng-check-controls" style={{ flex: '1 1 calc(25% - 8px)', minWidth: '180px', margin: 0, borderColor: 'rgba(138, 43, 226, 0.15)' }}>
+                      <div className="pipeline-eng-check-controls card-nesting">
                         <div className="pipeline-eng-check-header">
-                          <span className="pipeline-eng-check-title" style={{ color: '#8A2BE2' }}>Nesting Time</span>
+                          <span className="pipeline-eng-check-title">Nesting Time</span>
                         </div>
-                        <div className="pipeline-eng-check-buttons" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div className="pipeline-eng-check-buttons">
                           <button 
                             onClick={() => handleNestingStart(project.so)}
-                            className={`btn-sm ${nestingChecks[project.so]?.started ? 'btn-secondary active-check' : 'btn-primary'}`}
-                            style={{ background: nestingChecks[project.so]?.started ? 'rgba(255,255,255,0.05)' : '#8A2BE2', borderColor: '#8A2BE2' }}
+                            className={`btn-sm ${nestingChecks[project.so]?.started ? 'btn-secondary active-check nesting-started' : 'btn-primary nesting-start-btn'}`}
                           >
                             <Clock size={14} />
                             {nestingChecks[project.so]?.started ? new Date(nestingChecks[project.so].started).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Start'}
@@ -387,35 +390,22 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                             {nestingChecks[project.so]?.finished ? new Date(nestingChecks[project.so].finished).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Finish'}
                           </button>
                           {nestingChecks[project.so]?.user && (
-                            <span className="eng-check-user" style={{ fontSize: '0.7rem' }}>
+                            <span className="eng-check-user">
                               ({nestingChecks[project.so].user})
                             </span>
                           )}
                         </div>
                       </div>
 
-                      {/* Card 3: Note Controls (Isolated window) */}
-                      <div className="pipeline-eng-check-controls" style={{ flex: '2 1 calc(50% - 8px)', minWidth: '320px', margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <div className="pipeline-eng-check-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span className="pipeline-eng-check-title" style={{ color: '#09D1C7' }}>
+                      {/* Card 3: Note Controls */}
+                      <div className="pipeline-eng-check-controls card-notes-input">
+                        <div className="pipeline-notes-input-header">
+                          <span className="pipeline-notes-input-title">
                             {language === 'es' ? 'Agregar Nota' : 'Add Note'}
                           </span>
-                          {/* Priority selector tag */}
                           <button 
                             onClick={() => setCommentPriorities(prev => ({ ...prev, [project.so]: !prev[project.so] }))}
-                            style={{
-                              background: commentPriorities[project.so] ? 'rgba(255, 59, 48, 0.15)' : 'rgba(255,255,255,0.05)',
-                              border: commentPriorities[project.so] ? '1px solid #FF3B30' : '1px solid rgba(255,255,255,0.1)',
-                              color: commentPriorities[project.so] ? '#FF3B30' : '#94A3B8',
-                              fontSize: '0.65rem',
-                              fontWeight: 'bold',
-                              padding: '2px 8px',
-                              borderRadius: '12px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
+                            className={`pipeline-priority-toggle ${commentPriorities[project.so] ? 'is-priority' : 'not-priority'}`}
                           >
                             <Flag size={10} />
                             {commentPriorities[project.so] 
@@ -424,13 +414,13 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                             }
                           </button>
                         </div>
-                        <div style={{ display: 'flex', gap: '8px', height: '32px', alignItems: 'center' }}>
+                        <div className="pipeline-note-input-row">
                           <input 
                             type="text"
                             placeholder={language === 'es' ? 'Escribe una nota...' : 'Write a note...'}
                             value={newNoteTexts[project.so] || ''}
                             onChange={(e) => setNewNoteTexts(prev => ({ ...prev, [project.so]: e.target.value }))}
-                            style={{ flex: 2.2, padding: '4px 12px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.8rem', height: '100%' }}
+                            className="pipeline-note-input-field"
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
                                 handleAddNote(project.so, project.eng, commentPriorities[project.so]);
@@ -440,8 +430,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                           <button 
                             onClick={() => handleAddNote(project.so, project.eng, commentPriorities[project.so])}
                             disabled={!(newNoteTexts[project.so] || '').trim()}
-                            className="btn-sm btn-primary"
-                            style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.8rem', padding: '0' }}
+                            className="btn-sm btn-primary pipeline-add-note-btn"
                           >
                             <Plus size={12} />
                             {language === 'es' ? 'Agregar' : 'Add'}
@@ -452,13 +441,13 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
 
                     {/* Project Notes Section */}
                     <div className="pipeline-notes-section">
-                      <div className="pipeline-notes-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div className="pipeline-notes-header">
+                        <div className="notes-header-left">
                           <StickyNote size={13} />
                           <span>{language === 'es' ? 'Notas' : 'Notes'}</span>
                         </div>
                         {(projectNotes[project.so] || []).length > 0 && (
-                          <span className="notes-panel-count" style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'rgba(9, 209, 199, 0.15)', color: '#09D1C7', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                          <span className="pipeline-notes-panel-count">
                             {(projectNotes[project.so] || []).length}
                           </span>
                         )}
@@ -466,27 +455,27 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                       
                       {/* Notes List */}
                       {(projectNotes[project.so] || []).length > 0 && (
-                        <div className="pipeline-notes-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+                        <div className="pipeline-notes-list-wrapper">
                           {(projectNotes[project.so] || []).map(note => (
-                            <div key={note.id} className="note-item" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '4px', padding: '10px 12px', position: 'relative', display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: note.priority ? '3px solid #FF3B30' : '3px solid #09D1C7' }}>
-                              <div className="note-item-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span className="note-priority-tag" style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', padding: '2px 8px', borderRadius: '8px', background: note.priority ? 'rgba(255, 59, 48, 0.14)' : 'rgba(9, 209, 199, 0.15)', color: note.priority ? '#FF3B30' : '#09D1C7' }}>
+                            <div key={note.id} className={`pipeline-note-item-card ${note.priority ? 'priority' : 'normal'}`}>
+                              <div className="pipeline-note-item-header">
+                                <div className="note-tags-left">
+                                  <span className={`pipeline-note-priority-badge ${note.priority ? 'priority' : 'normal'}`}>
                                     {note.priority
                                       ? (language === 'es' ? '⚑ Prioritaria' : '⚑ Priority')
                                       : (language === 'es' ? 'Normal' : 'Normal')}
                                   </span>
                                   {note.createdBy && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
-                                    <span className="note-author" style={{ fontSize: '0.72rem', color: '#09D1C7', fontWeight: 'bold' }}>
+                                    <span className="pipeline-note-author">
                                       | By {note.createdBy}
                                     </span>
                                   )}
                                 </div>
                               </div>
-                              <div className="note-item-text" style={{ fontSize: '0.82rem', color: '#fff', lineHeight: '1.4', wordBreak: 'break-word' }}>
+                              <div className="pipeline-note-card-text">
                                 {note.text}
                               </div>
-                              <div className="note-item-date" style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '4px' }}>
+                              <div className="pipeline-note-card-date">
                                 {new Date(note.createdAt).toLocaleString(language === 'es' ? 'es-AR' : 'en-US', {
                                   day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
                                 })}

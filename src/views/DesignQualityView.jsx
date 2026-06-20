@@ -82,7 +82,7 @@ export default function DesignQualityView() {
             <h3 style={{ color: '#fff', marginBottom: '20px', fontSize: '1.25rem', fontWeight: 600 }}>KPI Distribution Analysis</h3>
             
             <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-              <div style={{ width: '380px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ width: '100%', maxWidth: '380px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {kpiData.map((row, index) => {
                   let barColor = 'linear-gradient(90deg, #09D1C7, #80EE98)'; // Default Mint/Cyan gradient
                   let labelColor = '#09D1C7';

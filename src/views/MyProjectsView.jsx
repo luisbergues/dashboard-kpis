@@ -93,9 +93,13 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     return note ? note.notes : null;
   };
 
-  // Filter projects where eng matches the logged in designer
+  // Filter projects where eng matches the logged in designer (bypass if role is administrative or admin)
   const myProjectsRaw = priorityAnalysis.filter(p => {
-    return userProfile && p.eng && p.eng.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
+    if (!userProfile) return false;
+    if (userProfile.role === 'administrative' || userProfile.role === 'admin') {
+      return true;
+    }
+    return p.eng && p.eng.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
   });
 
   const myProjects = [...myProjectsRaw].sort((a, b) => {
@@ -935,7 +939,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
           </div>
           
           {showAnalytics && (
-            <div className="analytics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 300px', gap: '24px' }}>
+            <div className="projects-analytics-grid">
               <SectionErrorBoundary title="Stage Averages Error">
                 <div className="analytics-card">
                   <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: '#94A3B8', marginBottom: '12px' }}>Avg Time per Stage (Weighted by Size)</h4>

@@ -42,8 +42,8 @@
   font-weight: 600;
   color: var(--color-cyan);
   background: rgba(9, 209, 199, 0.1);
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  border-radius: 100px;
 }
 
 .project-name-title {
@@ -62,8 +62,8 @@
 .status-badge-inline {
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
+  padding: 4px 12px;
+  border-radius: 100px;
   text-transform: uppercase;
   border: 1px solid transparent;
 }
@@ -188,16 +188,16 @@
 }
 
 .progress-bar-container {
-  height: 6px;
+  height: 8px;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
+  border-radius: 100px;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--color-cyan), var(--color-mint));
-  border-radius: 10px;
+  border-radius: 100px;
   transition: width 0.4s ease;
   box-shadow: 0 0 8px var(--color-mint);
 }
@@ -347,7 +347,7 @@
   padding: var(--spacing-sm) var(--spacing-md);
   background: rgba(138, 43, 226, 0.05); /* subtle purple for engineering */
   border: 1px solid rgba(138, 43, 226, 0.15);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
 }
 
 .eng-check-header {
@@ -649,5 +649,30 @@
     padding-left: 0;
     border-top: 1px solid var(--card-border);
     padding-top: 16px;
+  }
+}
+
+/* Projects Analytics Grid */
+.projects-analytics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 300px;
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .projects-analytics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .deadlines-card {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 767px) {
+  .projects-analytics-grid {
+    grid-template-columns: 1fr;
+  }
+  .deadlines-card {
+    grid-column: span 1;
   }
 }

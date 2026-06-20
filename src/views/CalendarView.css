@@ -728,3 +728,78 @@
 .toggle-checkbox:checked ~ .toggle-label {
   color: var(--color-cyan);
 }
+
+/* Mobile status dots and circular grid cells */
+@media (max-width: 767px) {
+  .cal-cell {
+    min-height: 52px;
+    height: 52px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm); /* Make cells circular */
+  }
+
+  .cal-date-num {
+    align-self: center;
+    font-size: 0.8rem;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+
+  .cal-events {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 3px;
+    width: 100%;
+    margin-top: 2px;
+    overflow: visible;
+  }
+
+  /* Render events as circular status dots */
+  .cal-event {
+    width: 6px;
+    height: 6px;
+    min-width: 6px;
+    min-height: 6px;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    border: none !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    display: inline-block;
+  }
+
+  /* Hide textual metadata on mobile dots */
+  .cal-event-time, 
+  .cal-event-title, 
+  .cal-event-so, 
+  .cal-note-icon {
+    display: none !important;
+  }
+
+  /* Dot status color overrides */
+  .cal-note-event {
+    background: var(--color-cyan) !important;
+  }
+  .cal-status-hold {
+    background: var(--color-yellow) !important;
+  }
+  .cal-status-check {
+    background: var(--color-mint) !important;
+  }
+  .cal-status-review {
+    background: var(--color-cyan) !important;
+  }
+  .cal-status-eng {
+    background: var(--color-purple) !important;
+  }
+  .cal-status-default {
+    background: var(--text-muted) !important;
+  }
+}
+

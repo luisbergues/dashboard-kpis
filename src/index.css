@@ -48,7 +48,7 @@
 
 body {
   font-family: 'Inter', sans-serif;
-  background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-surface) 100%);
+  background: var(--bg-surface);
   color: var(--text-primary);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
@@ -61,13 +61,11 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.02em;
 }
 
-/* Glassmorphism Card */
+/* Glassmorphism Card -> Solid rounded card panels */
 .glass-card {
   background: var(--card-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--card-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
   transition: all 0.3s ease;
 }
@@ -75,7 +73,7 @@ h1, h2, h3, h4, h5, h6 {
 .glass-card:hover {
   background: var(--card-hover);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 /* Base App Layout */
@@ -88,7 +86,8 @@ h1, h2, h3, h4, h5, h6 {
 .main-content {
   flex: 1;
   padding: var(--spacing-lg);
-  padding-bottom: 80px; /* Space for mobile bottom nav */
+  padding-top: 80px; /* Space for mobile top header */
+  padding-bottom: 90px; /* Space for mobile bottom nav */
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
@@ -99,7 +98,7 @@ h1, h2, h3, h4, h5, h6 {
     flex-direction: row;
   }
   .main-content {
-    padding-bottom: var(--spacing-lg); /* Reset for desktop */
+    padding: var(--spacing-lg); /* Reset spacing for desktop */
     margin-left: 240px; /* Space for desktop sidebar */
   }
 }
