@@ -13,7 +13,7 @@
 @media (min-width: 1024px) {
   .calendar-layout {
     flex-direction: row;
-    align-items: flex-start;
+    align-items: stretch;
   }
   .calendar-container {
     flex: 1;
@@ -21,6 +21,8 @@
   .calendar-sidebar {
     width: 320px;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -207,40 +209,77 @@
   max-height: 500px;
   overflow-y: auto;
   padding-right: 8px;
+  min-height: 0;
+}
+
+/* Custom distinct scrollbar for sidebar lists */
+.upcoming-list::-webkit-scrollbar,
+.sidebar-notes-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.upcoming-list::-webkit-scrollbar-track,
+.sidebar-notes-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.01);
+  border-radius: 3px;
+}
+
+.upcoming-list::-webkit-scrollbar-thumb,
+.sidebar-notes-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.upcoming-list::-webkit-scrollbar-thumb:hover,
+.sidebar-notes-list::-webkit-scrollbar-thumb:hover {
+  background: var(--color-cyan);
 }
 
 .upcoming-item {
   display: flex;
   align-items: stretch;
-  gap: 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: var(--radius-sm);
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
   overflow: hidden;
-  padding-right: 12px;
+  padding-right: 14px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  min-height: 72px;
+}
+
+.upcoming-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .upcoming-date {
   background: rgba(255, 255, 255, 0.05);
-  padding: 12px;
+  width: 64px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 60px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--card-border);
 }
 
 .u-month {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
   text-transform: uppercase;
   font-weight: 600;
+  letter-spacing: 0.05em;
 }
 
 .u-day {
-  font-size: 1.2rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--color-mint);
-  line-height: 1;
+  line-height: 1.1;
 }
 
 .upcoming-info {
@@ -253,20 +292,21 @@
 }
 
 .u-name {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-primary);
+  line-height: 1.3;
 }
 
 .u-meta {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
 }
 
 .u-status {
-  width: 4px;
+  width: 6px;
   border-radius: 4px;
-  margin: 8px 0;
+  margin: 12px 0;
 }
 
 /* Sidebar Tabs */
@@ -314,24 +354,27 @@
   max-height: 500px;
   overflow-y: auto;
   padding-right: 8px;
+  min-height: 0;
 }
 
 .sidebar-note-item {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--card-border);
-  border-radius: var(--radius-sm);
-  padding: 12px;
+  border-radius: 12px;
+  padding: 14px 16px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .sidebar-note-item:hover {
   background: rgba(21, 145, 155, 0.08);
   border-color: rgba(9, 209, 199, 0.3);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .sidebar-note-header {
@@ -341,26 +384,26 @@
 }
 
 .sidebar-note-date {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-muted);
 }
 
 .sidebar-note-badge {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
   background: rgba(9, 209, 199, 0.15);
   color: var(--color-cyan);
-  padding: 2px 6px;
+  padding: 2px 8px;
   border-radius: 4px;
-  max-width: 120px;
+  max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .sidebar-note-text {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--text-primary);
   line-height: 1.4;
   white-space: pre-wrap;
