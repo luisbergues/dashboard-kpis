@@ -1,22 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap');
 
 :root {
-  /* Dark space background gradient colors */
-  --bg-deep: #0B1520;
-  --bg-surface: #122130;
+  /* Dark solid backgrounds */
+  --bg-deep: #0A0A0C;
+  --bg-surface: #0F0F12;
   
-  /* Cards with glassmorphism */
-  --card-bg: rgba(21, 145, 155, 0.08);
-  --card-border: rgba(255, 255, 255, 0.07);
-  --card-hover: rgba(21, 145, 155, 0.15);
+  /* Solid dark cards */
+  --card-bg: #1C1C22;
+  --card-border: #26272C;
+  --card-hover: #202128;
   
-  /* Palette from reference */
-  --color-neon-green: #80EE98;
-  --color-mint: #46DFB1;
-  --color-cyan: #09D1C7;
-  --color-teal: #15919B;
-  --color-dark-teal: #0C6478;
-  --color-navy: #213A58;
+  /* Electric Blue Palette */
+  --color-neon-green: #007AFF; /* Active highlights (Electric Blue) */
+  --color-mint: #10B981;       /* Emerald/Mint checks & success */
+  --color-cyan: #3B82F6;       /* Accent blue */
+  --color-teal: #1D4ED8;       /* Primary CTA blue */
+  --color-dark-teal: #1E3A8A;
+  --color-navy: #25262B;
   
   /* Accents */
   --color-pink: #FF2E93;
@@ -34,10 +34,10 @@
   --spacing-lg: 1.5rem;
   --spacing-xl: 2rem;
   
-  /* Radii */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  /* Radii - Súper redondeados */
+  --radius-sm: 100px;  /* Pills for buttons, inputs, tabs, chips */
+  --radius-md: 20px;   /* Minor sections */
+  --radius-lg: 28px;   /* Large cards and layout wrapper */
 }
 
 * {

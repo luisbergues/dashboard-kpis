@@ -24,6 +24,7 @@ function App() {
   const [userProfile, setUserProfile] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [weeklyHistory, setWeeklyHistory] = useState([]);
+  const [focusedProjectSo, setFocusedProjectSo] = useState(null);
 
   const { data, isLoading: loading, error } = useQuery({
     queryKey: ['dashboardData'],
@@ -231,27 +232,33 @@ function App() {
 
   // Build real-time alerts from actual project data
   const realAlerts = useMemo(() => {
-    if (!mergedData) return [];
+    if (!mergedData || !userProfile?.designerName) return [];
     const alerts = [];
     const projects = mergedData.priorityAnalysis || [];
+    const myDesignerName = userProfile.designerName.trim().toLowerCase();
 
-    // Warn about every project currently ON HOLD
-    const onHoldProjects = projects.filter(p => p.status === 'ON HOLD');
+    // Warn about every project currently ON HOLD under this user's name
+    const onHoldProjects = projects.filter(p => {
+      return p.status === 'ON HOLD' && p.eng && p.eng.trim().toLowerCase() === myDesignerName;
+    });
     onHoldProjects.forEach(p => {
       const reason = p.onHoldReason ? ` — ${p.onHoldReason}` : '';
       alerts.push({
+        so: p.so,
         type: 'warning',
         text: `SO #${p.so} "${p.name.split(':')[0].trim()}" está ON HOLD${reason}`
       });
     });
 
-    // Warn about installations in the next 3 days
+    // Warn about installations in the next 3 days under this user's name
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const in3Days = new Date(today);
     in3Days.setDate(today.getDate() + 3);
     const urgentInstalls = projects.filter(p => {
       if (!p.install || p.status === 'ON HOLD') return false;
+      const belongsToMe = p.eng && p.eng.trim().toLowerCase() === myDesignerName;
+      if (!belongsToMe) return false;
       const d = new Date(p.install);
       return !isNaN(d) && d >= today && d <= in3Days;
     });
@@ -259,13 +266,14 @@ function App() {
       const d = new Date(p.install);
       const daysLeft = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
       alerts.push({
+        so: p.so,
         type: daysLeft === 0 ? 'error' : 'info',
         text: `SO #${p.so} tiene instalación ${daysLeft === 0 ? 'HOY' : `en ${daysLeft} día${daysLeft > 1 ? 's' : ''}`}: ${p.name.split(':')[0].trim()}`
       });
     });
 
     return alerts;
-  }, [mergedData]);
+  }, [mergedData, userProfile]);
 
   const renderView = () => {
     if (loading || authLoading) return <div className="loading-state">Loading application...</div>;
@@ -279,7 +287,7 @@ function App() {
       case 'dashboard': return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
       case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
       case 'my-projects': return <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
-      case 'pipeline': return <PipelineView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
+      case 'pipeline': return <PipelineView data={mergedData} currentUser={currentUser} userProfile={userProfile} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} />;
       case 'materials': return <MaterialsView data={mergedData} />;
       case 'quality': return <DesignQualityView data={mergedData} />;
       default: return <DashboardView data={mergedData} />;
@@ -300,7 +308,13 @@ function App() {
           {renderView()}
         </ErrorBoundary>
       </main>
-      <ToastNotifications alerts={realAlerts} />
+      <ToastNotifications 
+        alerts={realAlerts} 
+        onClickAlert={(so) => {
+          setFocusedProjectSo(so);
+          setActiveTab('pipeline');
+        }} 
+      />
     </div>
   )
 }

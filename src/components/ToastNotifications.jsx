@@ -7,7 +7,7 @@ import './ToastNotifications.css';
  * Receives an optional `alerts` prop (array of { type, text }) from the parent.
  * No mock data — only real events are shown.
  */
-export default function ToastNotifications({ alerts = [] }) {
+export default function ToastNotifications({ alerts = [], onClickAlert }) {
   const [toasts, setToasts] = useState([]);
   const shownIds = useRef(new Set());
 
@@ -48,10 +48,25 @@ export default function ToastNotifications({ alerts = [] }) {
   return (
     <div className="toast-container">
       {toasts.map(toast => (
-        <div key={toast.id} className={`toast-notification toast-${toast.type}`}>
+        <div 
+          key={toast.id} 
+          className={`toast-notification toast-${toast.type}`}
+          onClick={() => {
+            if (toast.so && onClickAlert) {
+              onClickAlert(toast.so);
+            }
+          }}
+          style={toast.so ? { cursor: 'pointer' } : {}}
+        >
           <div className="toast-icon">{getIcon(toast.type)}</div>
           <div className="toast-content">{toast.text}</div>
-          <button className="toast-close" onClick={() => dismissToast(toast.id)}>
+          <button 
+            className="toast-close" 
+            onClick={(e) => {
+              e.stopPropagation();
+              dismissToast(toast.id);
+            }}
+          >
             <X size={14} />
           </button>
         </div>

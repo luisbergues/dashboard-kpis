@@ -39,7 +39,7 @@ const getStageLabel = (stageId, language) => {
 };
 
 
-export default function PipelineView({ data, currentUser, userProfile }) {
+export default function PipelineView({ data, currentUser, userProfile, focusedProjectSo, clearFocusedProjectSo }) {
   const { t, language } = useLanguage();
   if (!data) return null;
 
@@ -94,6 +94,28 @@ export default function PipelineView({ data, currentUser, userProfile }) {
       unsubscribeNesting();
     };
   }, []);
+
+  // Expand and scroll to focused project if redirected from a notification
+  useEffect(() => {
+    if (focusedProjectSo) {
+      setExpandedProjects(prev => ({ ...prev, [focusedProjectSo]: true }));
+      
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`project-card-${focusedProjectSo}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('focused-glow');
+          setTimeout(() => {
+            element.classList.remove('focused-glow');
+          }, 3000);
+        }
+        if (clearFocusedProjectSo) {
+          clearFocusedProjectSo();
+        }
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [focusedProjectSo, clearFocusedProjectSo]);
 
   const handleAddNote = async (so, engName, isPriority = false) => {
     const text = newNoteTexts[so];
@@ -269,7 +291,7 @@ export default function PipelineView({ data, currentUser, userProfile }) {
             const isCollapsed = !expandedProjects[project.so];
 
             return (
-              <div key={idx} className="project-card glass-card" style={{ paddingBottom: isCollapsed ? '12px' : '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div id={`project-card-${project.so}`} key={idx} className="project-card glass-card" style={{ paddingBottom: isCollapsed ? '12px' : '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div className="project-header-row" onClick={() => toggleCollapse(project.so)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                   <div className="project-main" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
