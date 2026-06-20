@@ -98,8 +98,8 @@
 .cal-cell {
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.03);
-  border-radius: var(--radius-sm);
-  min-height: 100px;
+  border-radius: 12px;
+  min-height: 76px;
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -739,7 +739,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border-radius: var(--radius-sm); /* Make cells circular */
+    border-radius: 8px; /* Make cells rounded rectangles */
   }
 
   .cal-date-num {

@@ -51,7 +51,7 @@ export default function DesignQualityView() {
         </div>
       ) : (
         <>
-          <div className="glass-card" style={{ marginBottom: '24px', overflowX: 'auto', padding: '0' }}>
+          <div className="glass-card" style={{ marginBottom: '24px', overflowX: 'auto', padding: '0 0 16px 0' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: '#fff' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
