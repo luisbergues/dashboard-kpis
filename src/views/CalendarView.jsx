@@ -250,8 +250,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
             <div className="cal-events">
               {dayProjects.map((p, idx) => (
                 <div key={idx} className={`cal-event ${getStatusColor(p.status)}`} title={`${p.name} - ${p.status}`}>
-                  <span className="cal-event-time">{p.so}</span>
-                  <span className="cal-event-title">{p.name.split(':')[0]}</span>
+                  <span className="cal-event-title">#{p.so}</span>
                 </div>
               ))}
               {dayNotes.map((n, idx) => {

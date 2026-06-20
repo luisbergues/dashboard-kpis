@@ -99,7 +99,7 @@ h1, h2, h3, h4, h5, h6 {
   }
   .main-content {
     padding: var(--spacing-lg); /* Reset spacing for desktop */
-    margin-left: 240px; /* Space for desktop sidebar */
+    margin-left: 264px; /* Space for desktop sidebar (240px width + 12px left offset + 12px margin gap) */
   }
 }
 
