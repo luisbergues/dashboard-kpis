@@ -55,6 +55,46 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   if (!data) return null;
 
   const { priorityAnalysis, onHoldNotes } = data;
+
+  const DEFAULT_DESIGNERS = ['Joaquin', 'Jose', 'Luis', 'Santiago', 'Julieta', 'Andres', 'Delfina', 'Josema'];
+  const [allowedDesigners, setAllowedDesigners] = useState(DEFAULT_DESIGNERS);
+  const [designersList, setDesignersList] = useState([]);
+
+  // Fetch allowed designers from Firebase
+  useEffect(() => {
+    if (!db) return;
+    const designersRef = ref(db, 'allowed_designers');
+    const unsubscribe = onValue(designersRef, (snapshot) => {
+      const dbVal = snapshot.val();
+      if (dbVal) {
+        let namesArray = [];
+        if (Array.isArray(dbVal)) {
+          namesArray = dbVal.filter(Boolean);
+        } else if (typeof dbVal === 'object') {
+          namesArray = Object.values(dbVal).filter(Boolean);
+        }
+        setAllowedDesigners(namesArray);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Merge spreadsheet designers and allowed/Firebase designers
+  useEffect(() => {
+    const uniqueEngs = new Set();
+    allowedDesigners.forEach(name => {
+      if (name && name.trim() !== '') uniqueEngs.add(name.trim());
+    });
+    if (priorityAnalysis) {
+      priorityAnalysis.forEach(p => {
+        if (p.eng && p.eng.trim() !== '') {
+          uniqueEngs.add(p.eng.trim());
+        }
+      });
+    }
+    setDesignersList(Array.from(uniqueEngs).sort());
+  }, [priorityAnalysis, allowedDesigners]);
+
   const [projectStages, setProjectStages] = useState({});
   const [projectOverrides, setProjectOverrides] = useState({});
   const [projectHistory, setProjectHistory] = useState({});
@@ -93,14 +133,16 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     return note ? note.notes : null;
   };
 
-  // Filter projects where eng matches the logged in designer (bypass if role is administrative or admin)
+  // Filter projects where eng matches the logged in designer (bypass if role is administrative, admin, or engineer_nester)
   const myProjectsRaw = priorityAnalysis.filter(p => {
     if (!userProfile) return false;
-    if (userProfile.role === 'administrative' || userProfile.role === 'admin') {
+    if (userProfile.role === 'administrative' || userProfile.role === 'admin' || userProfile.role === 'engineer_nester') {
       return true;
     }
     return p.eng && p.eng.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
   });
+
+  const isAdmin = userProfile && (userProfile.role === 'administrative' || userProfile.role === 'admin');
 
   const myProjects = [...myProjectsRaw].sort((a, b) => {
     if (!sortBy) return 0;
@@ -512,6 +554,9 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   };
 
   const handleAddNote = async (so) => {
+    if (userProfile && (userProfile.role === 'administrative' || userProfile.role === 'admin')) {
+      return;
+    }
     const input = noteInputs[so];
     if (!input || !input.text?.trim()) return;
 
@@ -542,6 +587,9 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   };
 
   const handleDeleteNote = async (so, noteId) => {
+    if (userProfile && (userProfile.role === 'administrative' || userProfile.role === 'admin')) {
+      return;
+    }
     const currentNotes = (projectNotes[so] || []).filter(n => n.id !== noteId);
 
     if (db && currentUser) {
@@ -1146,47 +1194,49 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                         )}
                       </div>
 
-                      <div className="add-note-form">
-                        <textarea
-                          className="note-input"
-                          placeholder={language === 'es' ? 'Agregar nota...' : 'Add note...'}
-                          value={noteInputs[project.so]?.text || ''}
-                          onChange={(e) => setNoteInputs(prev => ({
-                            ...prev,
-                            [project.so]: { ...prev[project.so], text: e.target.value }
-                          }))}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              handleAddNote(project.so);
-                            }
-                          }}
-                          rows={2}
-                        />
-                        <div className="note-actions-row">
-                          <button
-                            type="button"
-                            className={`priority-toggle ${noteInputs[project.so]?.priority ? 'is-priority' : 'not-priority'}`}
-                            onClick={() => setNoteInputs(prev => ({
+                      {!isAdmin && (
+                        <div className="add-note-form">
+                          <textarea
+                            className="note-input"
+                            placeholder={language === 'es' ? 'Agregar nota...' : 'Add note...'}
+                            value={noteInputs[project.so]?.text || ''}
+                            onChange={(e) => setNoteInputs(prev => ({
                               ...prev,
-                              [project.so]: { ...prev[project.so], priority: !prev[project.so]?.priority }
+                              [project.so]: { ...prev[project.so], text: e.target.value }
                             }))}
-                          >
-                            <Flag size={12} />
-                            {noteInputs[project.so]?.priority 
-                              ? (language === 'es' ? 'Prioritaria' : 'Priority')
-                              : (language === 'es' ? 'Normal' : 'Normal')}
-                          </button>
-                          <button
-                            className="btn-add-note"
-                            onClick={() => handleAddNote(project.so)}
-                            disabled={!noteInputs[project.so]?.text?.trim()}
-                          >
-                            <Plus size={14} />
-                            {language === 'es' ? 'Agregar' : 'Add'}
-                          </button>
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleAddNote(project.so);
+                              }
+                            }}
+                            rows={2}
+                          />
+                          <div className="note-actions-row">
+                            <button
+                              type="button"
+                              className={`priority-toggle ${noteInputs[project.so]?.priority ? 'is-priority' : 'not-priority'}`}
+                              onClick={() => setNoteInputs(prev => ({
+                                ...prev,
+                                [project.so]: { ...prev[project.so], priority: !prev[project.so]?.priority }
+                              }))}
+                            >
+                              <Flag size={12} />
+                              {noteInputs[project.so]?.priority 
+                                ? (language === 'es' ? 'Prioritaria' : 'Priority')
+                                : (language === 'es' ? 'Normal' : 'Normal')}
+                            </button>
+                            <button
+                              className="btn-add-note"
+                              onClick={() => handleAddNote(project.so)}
+                              disabled={!noteInputs[project.so]?.text?.trim()}
+                            >
+                              <Plus size={14} />
+                              {language === 'es' ? 'Agregar' : 'Add'}
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {(projectNotes[project.so] || []).length === 0 ? (
                         <div className="notes-empty">
@@ -1202,18 +1252,20 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                                     ? (language === 'es' ? '⚑ Prioritaria' : '⚑ Priority')
                                     : (language === 'es' ? 'Normal' : 'Normal')}
                                 </span>
-                                {note.createdBy && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
+                                {note.createdBy && project.eng && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
                                   <span className="note-author" style={{ fontSize: '0.72rem', color: '#09D1C7', marginLeft: '6px', fontWeight: 'bold' }}>
                                     | By {note.createdBy}
                                   </span>
                                 )}
-                                <button
-                                  className="note-delete-btn"
-                                  onClick={() => handleDeleteNote(project.so, note.id)}
-                                  title={language === 'es' ? 'Eliminar nota' : 'Delete note'}
-                                >
-                                  <Trash2 size={13} />
-                                </button>
+                                {!isAdmin && (
+                                  <button
+                                    className="note-delete-btn"
+                                    onClick={() => handleDeleteNote(project.so, note.id)}
+                                    title={language === 'es' ? 'Eliminar nota' : 'Delete note'}
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
                               </div>
                               <div className="note-item-text">{note.text}</div>
                               <div className="note-item-date">
@@ -1295,7 +1347,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                   style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.9rem' }}
                 >
                   <option value="" disabled>{language === 'es' ? 'Seleccionar ingeniero...' : 'Select engineer...'}</option>
-                  {['Jose', 'Joaquin', 'Julieta', 'Andres', 'Santiago', 'Luis'].map(name => (
+                  {designersList.map(name => (
                     <option key={name} value={name} style={{ color: '#000' }}>{name}</option>
                   ))}
                 </select>

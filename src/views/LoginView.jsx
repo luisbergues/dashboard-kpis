@@ -4,6 +4,8 @@ import {
   db, 
   ref, 
   set, 
+  get,
+  onValue,
   initError,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword 
@@ -11,6 +13,8 @@ import {
 import { useLanguage } from '../utils/LanguageContext';
 import { Mail, Lock, User, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import './LoginView.css';
+
+const DEFAULT_DESIGNERS = ['Joaquin', 'Jose', 'Luis', 'Santiago', 'Julieta', 'Andres', 'Delfina', 'Josema'];
 
 export default function LoginView({ data }) {
   const { t, language } = useLanguage();
@@ -21,6 +25,7 @@ export default function LoginView({ data }) {
   
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [allowedDesigners, setAllowedDesigners] = useState(DEFAULT_DESIGNERS);
   const [designers, setDesigners] = useState([]);
 
   useEffect(() => {
@@ -29,19 +34,59 @@ export default function LoginView({ data }) {
     }
   }, []);
 
+  // Real-time listener for allowed designers list in Firebase
   useEffect(() => {
+    if (!db) return;
+
+    const designersRef = ref(db, 'allowed_designers');
+    const unsubscribe = onValue(designersRef, (snapshot) => {
+      const dbVal = snapshot.val();
+      if (dbVal) {
+        let namesArray = [];
+        if (Array.isArray(dbVal)) {
+          namesArray = dbVal.filter(Boolean);
+        } else if (typeof dbVal === 'object') {
+          namesArray = Object.values(dbVal).filter(Boolean);
+        }
+        setAllowedDesigners(namesArray);
+      } else {
+        // Initialize Firebase with the default names if the path is empty
+        try {
+          set(ref(db, 'allowed_designers'), DEFAULT_DESIGNERS);
+        } catch (err) {
+          console.error('Failed to initialize allowed_designers in Firebase:', err);
+        }
+        setAllowedDesigners(DEFAULT_DESIGNERS);
+      }
+    }, (error) => {
+      console.error('Firebase allowed_designers listener error:', error);
+    });
+
+    return () => unsubscribe();
+  }, [db]);
+
+  // Merge predefined/Firebase allowed designers with active spreadsheet designers
+  useEffect(() => {
+    const uniqueEngs = new Set();
+    
+    // Add names from Firebase (or fallback defaults)
+    allowedDesigners.forEach(name => {
+      if (name && name.trim() !== '') {
+        uniqueEngs.add(name.trim());
+      }
+    });
+
+    // Add names dynamically active in sheets
     if (data && data.priorityAnalysis) {
-      // Extract unique designers from priorityAnalysis
-      // Looks at the 'eng' field
-      const uniqueEngs = new Set();
       data.priorityAnalysis.forEach(p => {
         if (p.eng && p.eng.trim() !== '') {
           uniqueEngs.add(p.eng.trim());
         }
       });
-      setDesigners(Array.from(uniqueEngs).sort());
     }
-  }, [data]);
+
+    setDesigners(Array.from(uniqueEngs).sort());
+  }, [data, allowedDesigners]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

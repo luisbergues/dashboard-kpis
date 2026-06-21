@@ -465,7 +465,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                                       ? (language === 'es' ? '⚑ Prioritaria' : '⚑ Priority')
                                       : (language === 'es' ? 'Normal' : 'Normal')}
                                   </span>
-                                  {note.createdBy && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
+                                  {note.createdBy && project.eng && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
                                     <span className="pipeline-note-author">
                                       | By {note.createdBy}
                                     </span>

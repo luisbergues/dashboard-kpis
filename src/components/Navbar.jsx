@@ -83,6 +83,9 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
     if (userProfile?.role === 'administrative') {
       return language === 'es' ? 'Administrativo' : 'Administrative';
     }
+    if (userProfile?.role === 'engineer_nester') {
+      return language === 'es' ? 'Ingeniero - Nester' : 'Engineer - Nester';
+    }
     return language === 'es' ? 'Ingeniero' : 'Engineering';
   };
 
@@ -251,6 +254,7 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
                 >
                   <option value="engineer">{language === 'es' ? 'Ingeniero (Engineer)' : 'Engineer'}</option>
                   <option value="administrative">{language === 'es' ? 'Administrativo (Administrative)' : 'Administrative'}</option>
+                  <option value="engineer_nester">{language === 'es' ? 'Ingeniero - Nester (Engineer - Nester)' : 'Engineer - Nester'}</option>
                 </select>
               </div>
               <div className="modal-actions">
