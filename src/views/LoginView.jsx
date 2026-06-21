@@ -27,6 +27,19 @@ export default function LoginView({ data }) {
   const [loading, setLoading] = useState(false);
   const [allowedDesigners, setAllowedDesigners] = useState(DEFAULT_DESIGNERS);
   const [designers, setDesigners] = useState([]);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e) => {
+    const { clientX, clientY, currentTarget } = e;
+    const { left, top, width, height } = currentTarget.getBoundingClientRect();
+    const x = ((clientX - left) / width - 0.5) * 50;
+    const y = ((clientY - top) / height - 0.5) * 50;
+    setMousePos({ x, y });
+  };
+
+  const handleMouseLeave = () => {
+    setMousePos({ x: 0, y: 0 });
+  };
 
   useEffect(() => {
     if (!auth && initError) {
@@ -171,103 +184,135 @@ export default function LoginView({ data }) {
 
   return (
     <div className="login-view animate-fade-in">
-      <div className="login-container glass-card">
-        <div className="login-header">
-          <div className="login-brand">
-            <span className="brand-logo">JL</span>
-          </div>
-          <h2 className="login-title">
-            {isSignUp ? t('login.titleSignUp') : t('login.titleSignIn')}
-          </h2>
-          <p className="login-subtitle">
-            {isSignUp ? t('login.subtitleSignUp') : t('login.subtitleSignIn')}
+      <div 
+        className="login-visual-panel"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
+        <div 
+          className="glow-blob glow-blue"
+          style={{
+            transform: `translate(${mousePos.x * 0.4}px, ${mousePos.y * 0.4}px)`
+          }}
+        />
+        <div 
+          className="glow-blob glow-mint"
+          style={{
+            transform: `translate(${mousePos.x * -0.3}px, ${mousePos.y * -0.3}px) scale(1.2)`
+          }}
+        />
+        <div className="grain-overlay" />
+        
+        <div className="visual-content">
+          <div className="brand-logo-large">JL</div>
+          <h1 className="visual-title">JL Engineering</h1>
+          <p className="visual-subtitle">
+            {language === 'es' 
+              ? 'Panel de Control y Gestión de Proyectos' 
+              : 'Control & Project Management Dashboard'}
           </p>
         </div>
+      </div>
 
-        {error && (
-          <div className="login-error animate-fade-in">
-            <AlertCircle size={18} />
-            <span>{error}</span>
+      <div className="login-form-panel">
+        <div className="login-container glass-card">
+          <div className="login-header">
+            <div className="login-brand">
+              <span className="brand-logo">JL</span>
+            </div>
+            <h2 className="login-title">
+              {isSignUp ? t('login.titleSignUp') : t('login.titleSignIn')}
+            </h2>
+            <p className="login-subtitle">
+              {isSignUp ? t('login.subtitleSignUp') : t('login.subtitleSignIn')}
+            </p>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="login-form">
-          {isSignUp && (
-            <div className="form-group">
-              <label className="form-label">{t('login.linkDesigner')}</label>
-              <div className="input-wrapper">
-                <User size={18} className="input-icon" />
-                <select
-                  value={designerName}
-                  onChange={(e) => setDesignerName(e.target.value)}
-                  className="form-input form-select has-icon"
-                  required={isSignUp}
-                >
-                  <option value="">{t('login.selectName')}</option>
-                  {designers.map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </div>
+          {error && (
+            <div className="login-error animate-fade-in">
+              <AlertCircle size={18} />
+              <span>{error}</span>
             </div>
           )}
 
-          <div className="form-group">
-            <label className="form-label">{t('login.email')}</label>
-            <div className="input-wrapper">
-              <Mail size={18} className="input-icon" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="form-input has-icon"
-                placeholder="you@example.com"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">{t('login.password')}</label>
-            <div className="input-wrapper">
-              <Lock size={18} className="input-icon" />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="form-input has-icon"
-                placeholder="••••••••"
-                required
-                minLength={6}
-              />
-            </div>
-          </div>
-
-          <button type="submit" className="btn-primary login-btn" disabled={loading}>
-            {loading ? (
-              <Loader2 className="spinner" size={20} />
-            ) : (
-              <>
-                <span>{isSignUp ? t('login.btnSignUp') : t('login.btnSignIn')}</span>
-                <ArrowRight size={18} />
-              </>
+          <form onSubmit={handleSubmit} className="login-form">
+            {isSignUp && (
+              <div className="form-group">
+                <label className="form-label">{t('login.linkDesigner')}</label>
+                <div className="input-wrapper">
+                  <User size={18} className="input-icon" />
+                  <select
+                    value={designerName}
+                    onChange={(e) => setDesignerName(e.target.value)}
+                    className="form-input form-select has-icon"
+                    required={isSignUp}
+                  >
+                    <option value="">{t('login.selectName')}</option>
+                    {designers.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             )}
-          </button>
-        </form>
 
-        <div className="login-footer">
-          <p className="text-muted">
-            {isSignUp ? t('login.hasAccount') : t('login.noAccount')}
-            <button 
-              className="btn-link"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setError(null);
-              }}
-            >
-              {isSignUp ? t('login.btnSignIn') : t('login.btnSignUp')}
+            <div className="form-group">
+              <label className="form-label">{t('login.email')}</label>
+              <div className="input-wrapper">
+                <Mail size={18} className="input-icon" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="form-input has-icon"
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">{t('login.password')}</label>
+              <div className="input-wrapper">
+                <Lock size={18} className="input-icon" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="form-input has-icon"
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="btn-primary login-btn" disabled={loading}>
+              {loading ? (
+                <Loader2 className="spinner" size={20} />
+              ) : (
+                <>
+                  <span>{isSignUp ? t('login.btnSignUp') : t('login.btnSignIn')}</span>
+                  <ArrowRight size={18} />
+                </>
+              )}
             </button>
-          </p>
+          </form>
+
+          <div className="login-footer">
+            <p className="text-muted">
+              {isSignUp ? t('login.hasAccount') : t('login.noAccount')}
+              <button 
+                className="btn-link"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setError(null);
+                }}
+              >
+                {isSignUp ? t('login.btnSignIn') : t('login.btnSignUp')}
+              </button>
+            </p>
+          </div>
         </div>
       </div>
     </div>
