@@ -10,7 +10,7 @@
   z-index: 100;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   border-top: 1px solid var(--card-border);
-  background: #0F0F12; /* Solid dark background */
+  background: var(--bg-surface); /* Solid dark background */
   padding: var(--spacing-sm) var(--spacing-md);
   margin: 0;
 }
@@ -70,7 +70,7 @@
     border-radius: var(--radius-lg);
     border: 1px solid var(--card-border);
     padding: var(--spacing-xl) var(--spacing-md);
-    background: #0A0A0C; /* Solid deeper sidebar */
+    background: var(--bg-deep); /* Solid deeper sidebar */
   }
 
   .nav-brand {
@@ -322,7 +322,7 @@
     left: 0;
     right: 0;
     height: 60px;
-    background: #0F0F12;
+    background: var(--bg-surface);
     border-bottom: 1px solid var(--card-border);
     padding: 0 var(--spacing-md);
     z-index: 999;
@@ -564,3 +564,109 @@
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* ─── Theme Toggle Button ─────────────────────────── */
+.theme-toggle-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  width: 100%;
+}
+
+.theme-toggle-btn {
+  position: relative;
+  width: 68px;
+  height: 32px;
+  border-radius: 100px;
+  background: #111827; /* Dark capsule background */
+  border: 1px solid var(--card-border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+  outline: none;
+}
+
+.theme-toggle-btn.light {
+  background: #E5E7EB; /* Light capsule background */
+  border-color: #D1D5DB;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.theme-toggle-knob {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  position: absolute;
+  left: 3px;
+  z-index: 2;
+}
+
+.theme-toggle-btn.light .theme-toggle-knob {
+  left: calc(100% - 27px);
+  background: #1F2937; /* Dark knob in light mode */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.theme-toggle-icon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+
+.theme-toggle-icon.moon {
+  right: 10px;
+  color: #FFE600; /* Yellow moon */
+  opacity: 1;
+  transform: scale(1);
+}
+
+.theme-toggle-btn.light .theme-toggle-icon.moon {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.theme-toggle-icon.sun {
+  left: 10px;
+  color: #F59E0B; /* Orange-yellow sun */
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.theme-toggle-btn.light .theme-toggle-icon.sun {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Align theme selector toggle button side-by-side with language selector inside mobile header if needed, but since it has flex gap it will just align nicely */
+@media (max-width: 767px) {
+  .theme-toggle-btn {
+    width: 58px;
+    height: 28px;
+    padding: 3px;
+  }
+  .theme-toggle-knob {
+    width: 20px;
+    height: 20px;
+  }
+  .theme-toggle-btn.light .theme-toggle-knob {
+    left: calc(100% - 23px);
+  }
+  .theme-toggle-icon.moon {
+    right: 8px;
+  }
+  .theme-toggle-icon.sun {
+    left: 8px;
+  }
+}
+

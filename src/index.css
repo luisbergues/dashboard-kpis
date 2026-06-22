@@ -136,3 +136,211 @@ h1, h2, h3, h4, h5, h6 {
   background-clip: text;
   color: transparent;
 }
+
+/* ─── Light Theme Overrides ─────────────────────────── */
+:root.light-theme {
+  --bg-deep: #F3F4F6;        /* Light grey background for containers */
+  --bg-surface: #E5E7EB;     /* Deeper light grey background */
+  
+  --card-bg: #FFFFFF;        /* Solid white cards */
+  --card-border: #D1D5DB;    /* Soft grey borders */
+  --card-hover: #F9FAFB;     /* Slight off-white hover background */
+  
+  --color-navy: #E5E7EB;     /* Pill background */
+  
+  --text-primary: #111827;   /* Dark grey text */
+  --text-secondary: #374151; /* Medium grey text */
+  --text-muted: #6B7280;     /* Muted grey text */
+}
+
+/* Light Theme Global Rules */
+:root.light-theme body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+}
+
+:root.light-theme .navbar {
+  background: #FFFFFF !important;
+  border-color: var(--card-border) !important;
+}
+
+:root.light-theme .mobile-header {
+  background: #FFFFFF !important;
+  border-color: var(--card-border) !important;
+}
+
+:root.light-theme .nav-btn {
+  color: var(--text-secondary);
+}
+
+:root.light-theme .nav-btn:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: var(--text-primary);
+}
+
+:root.light-theme .nav-user-profile {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+
+:root.light-theme .nav-user-profile:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+}
+
+:root.light-theme .lang-selector-btn {
+  background: rgba(0, 122, 255, 0.06) !important;
+  border-color: rgba(0, 122, 255, 0.15) !important;
+}
+
+:root.light-theme .lang-selector-btn:hover {
+  background: rgba(0, 122, 255, 0.12) !important;
+}
+
+:root.light-theme .lang-dropdown-menu {
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1) !important;
+}
+
+:root.light-theme .lang-dropdown-item {
+  color: var(--text-primary);
+}
+
+:root.light-theme .lang-dropdown-item:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+:root.light-theme .glass-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Dashboard kpi / cost cards overrides */
+:root.light-theme .kpi-card,
+:root.light-theme .fi-card,
+:root.light-theme .insight-point-card,
+:root.light-theme .takeaway-item {
+  background: #FFFFFF !important;
+  border-color: var(--card-border) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+:root.light-theme .insight-point-card:hover,
+:root.light-theme .fi-card:hover {
+  background: var(--card-hover) !important;
+}
+
+/* Page title text-shadow / gradients for light theme */
+:root.light-theme .page-title {
+  background: linear-gradient(135deg, #111827 0%, #4B5563 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* Modals styling for light theme */
+:root.light-theme .pdf-modal-content,
+:root.light-theme .profile-modal-content {
+  background: #FFFFFF !important;
+  border-color: var(--card-border) !important;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Project cards and pipeline overrides */
+:root.light-theme .project-card,
+:root.light-theme .kanban-column {
+  background: #FFFFFF !important;
+  border-color: var(--card-border) !important;
+}
+
+:root.light-theme .kanban-column {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+:root.light-theme .search-bar {
+  background: #FFFFFF !important;
+  border: 1px solid var(--card-border) !important;
+}
+
+:root.light-theme .search-bar input {
+  color: var(--text-primary) !important;
+}
+
+/* Form inputs & textareas overrides */
+:root.light-theme .form-input,
+:root.light-theme .form-select,
+:root.light-theme textarea,
+:root.light-theme input[type="text"],
+:root.light-theme select {
+  background: #FFFFFF !important;
+  border-color: var(--card-border) !important;
+  color: var(--text-primary) !important;
+}
+
+:root.light-theme .form-input:focus,
+:root.light-theme .form-select:focus,
+:root.light-theme textarea:focus,
+:root.light-theme input[type="text"]:focus {
+  border-color: var(--color-neon-green) !important;
+}
+
+/* Materials table and calendar overrides */
+:root.light-theme .materials-table th {
+  background: #F3F4F6 !important;
+  color: var(--text-secondary) !important;
+}
+
+:root.light-theme .materials-table td {
+  border-color: var(--card-border) !important;
+}
+
+:root.light-theme .calendar-grid,
+:root.light-theme .calendar-day-card {
+  border-color: var(--card-border) !important;
+}
+
+:root.light-theme .calendar-day-card.other-month {
+  background: #F9FAFB !important;
+}
+
+:root.light-theme .calendar-day-card.today {
+  background: rgba(0, 122, 255, 0.05) !important;
+}
+
+/* Floating Chatbot Overrides for Light Theme */
+:root.light-theme .chatbot-window {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: var(--card-border) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+}
+
+:root.light-theme .chatbot-header {
+  background: rgba(0, 0, 0, 0.02) !important;
+}
+
+:root.light-theme .chat-message.bot .message-content {
+  background: #F3F4F6 !important;
+  border-color: var(--card-border) !important;
+  color: var(--text-primary) !important;
+}
+
+:root.light-theme .chatbot-chips {
+  background: rgba(0, 0, 0, 0.02) !important;
+}
+
+:root.light-theme .chatbot-chip {
+  background: #FFFFFF !important;
+  border-color: var(--card-border) !important;
+  color: var(--text-secondary) !important;
+}
+
+:root.light-theme .chatbot-chip:hover {
+  background: rgba(0, 122, 255, 0.08) !important;
+  border-color: var(--color-neon-green) !important;
+  color: var(--color-neon-green) !important;
+}
+
+:root.light-theme .chatbot-footer {
+  background: #FFFFFF !important;
+}
+
+:root.light-theme .chatbot-footer input {
+  background: #F3F4F6 !important;
+}
+

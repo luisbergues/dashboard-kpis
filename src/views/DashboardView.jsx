@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Clock, CheckCircle, AlertTriangle, ChevronLeft, ChevronRight, ListTodo, DollarSign, TrendingUp, Download } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
+import { useTheme } from '../utils/ThemeContext';
 import {
   Chart as ChartJS,
   LinearScale,
@@ -57,6 +58,7 @@ const STACKED_METRICS = Object.keys(METRIC_COLORS);
 
 export default function DashboardView({ data, weeklyHistory = [] }) {
   const { t, language } = useLanguage();
+  const { theme } = useTheme();
   
   if (!data) {
     return (
@@ -209,11 +211,11 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
           type: 'line',
           label: getMetricLabel('Total Active Projects'),
           data: getMetricData('Total Active Projects'),
-          borderColor: '#FFFFFF',
-          backgroundColor: '#FFFFFF',
+          borderColor: theme === 'light' ? '#111827' : '#FFFFFF',
+          backgroundColor: theme === 'light' ? '#111827' : '#FFFFFF',
           borderWidth: 3,
           pointBackgroundColor: '#FF2E93',
-          pointBorderColor: '#FFFFFF',
+          pointBorderColor: theme === 'light' ? '#111827' : '#FFFFFF',
           pointRadius: 6,
           pointHoverRadius: 8,
           fill: false,
@@ -229,7 +231,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
         }))
       ]
     };
-  }, [weekOverWeek, weekLabels, weeklyHistory, language]);
+  }, [weekOverWeek, weekLabels, weeklyHistory, language, theme]);
 
 
   const chartOptions = {
@@ -242,17 +244,17 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
     plugins: {
       legend: {
         labels: {
-          color: '#94A3B8',
+          color: theme === 'light' ? '#374151' : '#94A3B8',
           font: { family: 'Inter', size: 11 },
           boxWidth: 12,
           padding: 10,
         }
       },
       tooltip: {
-        backgroundColor: 'rgba(11, 21, 32, 0.95)',
-        titleColor: '#80EE98',
-        bodyColor: '#fff',
-        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.98)' : 'rgba(11, 21, 32, 0.95)',
+        titleColor: theme === 'light' ? '#10B981' : '#80EE98',
+        bodyColor: theme === 'light' ? '#111827' : '#fff',
+        borderColor: theme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)',
         borderWidth: 1,
         padding: 12,
       }
@@ -261,13 +263,13 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
       x: {
         stacked: true,
         grid: { display: false, drawBorder: false },
-        ticks: { color: '#94A3B8', font: { size: 11 } }
+        ticks: { color: theme === 'light' ? '#374151' : '#94A3B8', font: { size: 11 } }
       },
       y: {
         stacked: true,
         beginAtZero: true,
-        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-        ticks: { color: '#64748B' }
+        grid: { color: theme === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+        ticks: { color: theme === 'light' ? '#4B5563' : '#64748B' }
       }
     }
   };

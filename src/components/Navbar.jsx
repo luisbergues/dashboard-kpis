@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User, Briefcase, ChevronDown, Award } from 'lucide-react';
+import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User, Briefcase, ChevronDown, Award, Sun, Moon } from 'lucide-react';
 import { auth, db, ref, set, signOut } from '../utils/firebase';
 import { useLanguage } from '../utils/LanguageContext';
+import { useTheme } from '../utils/ThemeContext';
 import './Navbar.css';
 
 export default function Navbar({ activeTab, setActiveTab, userProfile }) {
   const { t, language, setLanguage } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -99,6 +101,22 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
             <span className="brand-text text-gradient">Engineering</span>
           </div>
           <div className="mobile-header-right">
+            {/* Theme Toggle Selector for Mobile */}
+            <button 
+              type="button"
+              className={`theme-toggle-btn ${theme}`} 
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
+            >
+              <div className="theme-toggle-knob" />
+              <span className="theme-toggle-icon sun">
+                <Sun size={12} strokeWidth={2.5} />
+              </span>
+              <span className="theme-toggle-icon moon">
+                <Moon size={12} fill="currentColor" strokeWidth={0} />
+              </span>
+            </button>
+
             {/* Custom Language Dropdown Selector for Mobile */}
             <div className="lang-selector-container mobile-lang">
               <button 
@@ -173,6 +191,24 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
         </ul>
         {userProfile && (
           <div className="nav-user-section">
+            {/* Theme Toggle Selector */}
+            <div className="theme-toggle-container">
+              <button 
+                type="button"
+                className={`theme-toggle-btn ${theme}`} 
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
+              >
+                <div className="theme-toggle-knob" />
+                <span className="theme-toggle-icon sun">
+                  <Sun size={14} strokeWidth={2.5} />
+                </span>
+                <span className="theme-toggle-icon moon">
+                  <Moon size={14} fill="currentColor" strokeWidth={0} />
+                </span>
+              </button>
+            </div>
+
             {/* Custom Language Dropdown Selector */}
             <div className="lang-selector-container">
               <button 
