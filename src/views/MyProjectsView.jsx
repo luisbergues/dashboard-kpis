@@ -12,6 +12,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, 
 import { Bar, Line } from 'react-chartjs-2';
 import { calculatePersonalStageAverages, calculateMonthlyCompletions, getUpcomingDeadlines } from '../services/kpiCalculator';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
+import PDFGeneratorModal from '../components/PDFGeneratorModal';
 import './MyProjectsView.css';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, ChartTooltip, Legend, Filler);
@@ -116,6 +117,10 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [isCollabModalOpen, setIsCollabModalOpen] = useState(false);
   const [activeCollabProjectSo, setActiveCollabProjectSo] = useState(null);
   const [collabSearchTerm, setCollabSearchTerm] = useState('');
+
+  // ESS Modal State
+  const [isESSModalOpen, setIsESSModalOpen] = useState(false);
+  const [activeESSProject, setActiveESSProject] = useState(null);
 
   // Analytics & Sorting State
   const [showAnalytics, setShowAnalytics] = useState(true);
@@ -1168,13 +1173,21 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                           })}
                         </div>
 
-                        <div className="card-footer-actions">
+                        <div className="card-footer-actions" style={{ display: 'flex', gap: '8px' }}>
                           <button 
                             onClick={() => generatePDF(project)}
                             className="btn-secondary btn-sm btn-download-pdf"
                           >
                             <Download size={14} />
                             <span>{t('myProjects.downloadPdf')}</span>
+                          </button>
+                          <button 
+                            onClick={() => { setActiveESSProject(project); setIsESSModalOpen(true); }}
+                            className="btn-primary btn-sm btn-download-pdf"
+                            style={{ background: 'var(--color-cyan)', color: '#000', fontWeight: 'bold' }}
+                          >
+                            <StickyNote size={14} />
+                            <span>Completar ESS</span>
                           </button>
                         </div>
                       </>
@@ -1466,6 +1479,14 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
             </form>
           </div>
         </div>
+      )}
+
+      {/* ESS PDF Generator Modal */}
+      {isESSModalOpen && activeESSProject && (
+        <PDFGeneratorModal 
+          project={activeESSProject} 
+          onClose={() => { setIsESSModalOpen(false); setActiveESSProject(null); }} 
+        />
       )}
     </div>
   );

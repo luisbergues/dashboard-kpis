@@ -1,0 +1,239 @@
+/* CSS specific for the ReactToPrint layout */
+.pdf-print-container {
+  /* Typical letter size aspect ratio and scaling */
+  width: 8.5in;
+  /* height: 11in; */
+  min-height: 11in;
+  padding: 0.5in;
+  margin: 0 auto;
+  background-color: white;
+  color: black;
+  font-family: Arial, Helvetica, sans-serif;
+  box-sizing: border-box;
+}
+
+/* Base resets inside the print layout so main app styles don't leak */
+.pdf-print-container * {
+  box-sizing: border-box;
+}
+
+.pdf-print-container h1, 
+.pdf-print-container h2, 
+.pdf-print-container h3, 
+.pdf-print-container p {
+  margin: 0;
+  color: black;
+}
+
+/* Header */
+.pdf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 30px;
+}
+
+.pdf-logo {
+  text-align: center;
+  width: 25%;
+}
+
+.logo-text {
+  font-family: "Times New Roman", serif;
+  font-size: 24px;
+  color: #B29B52; /* Gold color matching the screenshot */
+  letter-spacing: 1px;
+}
+
+.logo-subtext {
+  font-family: "Times New Roman", serif;
+  font-size: 10px;
+  color: #B29B52;
+  margin-top: 4px;
+}
+
+.pdf-job-info, .pdf-staff-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pdf-job-info {
+  width: 45%;
+}
+
+.pdf-staff-info {
+  width: 30%;
+}
+
+.info-row {
+  display: flex;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.info-label {
+  font-weight: bold;
+}
+
+.info-value {
+  font-weight: normal;
+}
+
+/* Sections */
+.pdf-section {
+  border: 2px solid black;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: bold;
+  padding: 8px 0;
+}
+
+.section-title.centered {
+  text-align: center;
+}
+
+.section-title.underline {
+  text-decoration: underline;
+}
+
+/* Drawers Options Grid */
+.options-grid {
+  display: flex;
+  border-top: 1px solid black;
+  border-bottom: 2px solid black;
+}
+
+.option-col {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.option-col.handles-col {
+  flex: 2;
+}
+
+.option-title {
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.handles-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 20px;
+  text-align: left;
+}
+
+.option-item {
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 15px;
+  border: 1px solid transparent; /* Placeholder for selected state */
+  display: inline-block;
+}
+
+.option-item.selected {
+  border: 1px solid black;
+  /* Instead of full circle, an oval border is cleaner in CSS */
+}
+
+/* Tables */
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.print-table th, .print-table td {
+  border: 1px solid black;
+  padding: 6px;
+  font-size: 12px;
+}
+
+.print-table th {
+  font-weight: bold;
+  text-align: center;
+}
+
+.print-table td.center {
+  text-align: center;
+}
+
+.print-table thead tr th {
+  border-top: none;
+}
+.print-table th:first-child, .print-table td:first-child {
+  border-left: none;
+}
+.print-table th:last-child, .print-table td:last-child {
+  border-right: none;
+}
+
+/* Bottom Grid (Rods & Misc) */
+.pdf-bottom-grid {
+  display: flex;
+  border: 2px solid black;
+  min-height: 300px;
+}
+
+.rods-section {
+  width: 40%;
+  border-right: 2px solid black;
+}
+
+.rods-table {
+  width: 100%;
+}
+
+.rods-table .title-cell {
+  text-align: left;
+  border-bottom: 2px solid black;
+  padding-left: 10px;
+}
+
+.rods-table th {
+  border-bottom: 2px solid black;
+}
+
+.rods-table .room-cell {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.misc-section {
+  width: 60%;
+  padding: 0;
+}
+
+.misc-section .section-title {
+  border-bottom: 2px solid black;
+  padding-left: 10px;
+}
+
+.misc-content {
+  display: flex;
+  padding: 10px;
+  height: calc(100% - 40px); /* Fill remaining space minus title */
+}
+
+.misc-col {
+  flex: 1;
+  padding: 0 10px;
+}
+
+.misc-col pre {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
