@@ -28,31 +28,41 @@
 /* Organic Background Glow Styles */
 .organic-glow-container {
   position: absolute;
-  left: 15%;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 420px;
-  height: 720px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
   pointer-events: none;
   z-index: 1;
+  overflow: hidden;
 }
 
 .organic-glow-wrapper {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 340px;
+  height: 620px;
+  transform: translate(calc(var(--mouse-x, 25vw) - 170px), calc(var(--mouse-y, 50vh) - 310px));
+  transition: transform 0.8s cubic-bezier(0.15, 0.85, 0.3, 1);
   pointer-events: none;
+  will-change: transform;
 }
 
 .organic-glow {
-  width: 340px;
-  height: 620px;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  border-radius: 40% 60% 35% 65% / 65% 45% 55% 35%;
+  animation: morphShape 12s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.organic-glow::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: inherit;
   background: radial-gradient(
     circle at 35% 40%,
     rgba(255, 255, 255, 0.95) 0%,
@@ -61,9 +71,19 @@
     rgba(0, 74, 255, 0) 80%
   );
   filter: blur(48px);
-  border-radius: 40% 60% 35% 65% / 65% 45% 55% 35%;
-  animation: morphShape 12s ease-in-out infinite alternate;
   box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.2);
+}
+
+.organic-glow::after {
+  content: "";
+  position: absolute;
+  top: -48px; left: -48px; right: -48px; bottom: -48px;
+  border-radius: inherit;
+  opacity: 0.25;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, black 20%, transparent 65%);
+  mask-image: radial-gradient(circle at 50% 50%, black 20%, transparent 65%);
   pointer-events: none;
 }
 
@@ -86,18 +106,6 @@
   }
 }
 
-.grain-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  opacity: 0.16;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  z-index: 2;
-}
-
 @media (max-width: 1023px) {
   .login-view {
     justify-content: center;
@@ -105,18 +113,14 @@
     padding-right: var(--spacing-lg);
   }
 
-  .organic-glow-container {
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 320px;
-    height: 520px;
+  .organic-glow-wrapper {
+    width: 260px;
+    height: 460px;
+    transform: translate(calc(var(--mouse-x, 50vw) - 130px), calc(var(--mouse-y, 50vh) - 230px));
     opacity: 0.65;
   }
 
-  .organic-glow {
-    width: 260px;
-    height: 460px;
+  .organic-glow::before {
     filter: blur(55px);
   }
 }

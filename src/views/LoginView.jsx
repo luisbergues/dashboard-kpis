@@ -28,18 +28,18 @@ export default function LoginView({ data }) {
   const [loading, setLoading] = useState(false);
   const [allowedDesigners, setAllowedDesigners] = useState(DEFAULT_DESIGNERS);
   const [designers, setDesigners] = useState([]);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [mousePos, setMousePos] = useState({ x: -1000, y: -1000 });
+
+  useEffect(() => {
+    setMousePos({ x: window.innerWidth * 0.25, y: window.innerHeight * 0.5 });
+  }, []);
 
   const handleMouseMove = (e) => {
-    const { clientX, clientY, currentTarget } = e;
-    const { left, top, width, height } = currentTarget.getBoundingClientRect();
-    const x = ((clientX - left) / width - 0.5) * 50;
-    const y = ((clientY - top) / height - 0.5) * 50;
-    setMousePos({ x, y });
+    setMousePos({ x: e.clientX, y: e.clientY });
   };
 
   const handleMouseLeave = () => {
-    setMousePos({ x: 0, y: 0 });
+    setMousePos({ x: window.innerWidth * 0.25, y: window.innerHeight * 0.5 });
   };
 
   useEffect(() => {
@@ -189,21 +189,17 @@ export default function LoginView({ data }) {
       className="login-view animate-fade-in"
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      style={{
+        '--mouse-x': `${mousePos.x}px`,
+        '--mouse-y': `${mousePos.y}px`
+      }}
     >
       {/* Interactive Background Organic Glow */}
       <div className="organic-glow-container">
-        <div 
-          className="organic-glow-wrapper"
-          style={{
-            transform: `translate(${mousePos.x * 1.6}px, ${mousePos.y * 1.6}px)`
-          }}
-        >
+        <div className="organic-glow-wrapper">
           <div className="organic-glow" />
         </div>
       </div>
-
-      {/* Grain texture overlay */}
-      <div className="grain-overlay" />
 
       {/* Floating Login Card */}
       <div className="login-container glass-card">
