@@ -54,14 +54,14 @@
   height: 100%;
   position: relative;
   border-radius: 
-    calc(30% + var(--mouse-xp, 0.5) * 40%) 
-    calc(80% - var(--mouse-xp, 0.5) * 50%) 
-    calc(30% + var(--mouse-yp, 0.5) * 40%) 
-    calc(80% - var(--mouse-yp, 0.5) * 50%) / 
-    calc(70% - var(--mouse-yp, 0.5) * 40%) 
-    calc(30% + var(--mouse-yp, 0.5) * 50%) 
-    calc(70% - var(--mouse-xp, 0.5) * 40%) 
-    calc(30% + var(--mouse-xp, 0.5) * 50%);
+    calc(10% + var(--mouse-xp, 0.5) * 80%) 
+    calc(90% - var(--mouse-xp, 0.5) * 80%) 
+    calc(10% + var(--mouse-yp, 0.5) * 80%) 
+    calc(90% - var(--mouse-yp, 0.5) * 80%) / 
+    calc(90% - var(--mouse-yp, 0.5) * 80%) 
+    calc(10% + var(--mouse-yp, 0.5) * 80%) 
+    calc(90% - var(--mouse-xp, 0.5) * 80%) 
+    calc(10% + var(--mouse-xp, 0.5) * 80%);
   transition: border-radius 0.25s ease-out;
   animation: morphShape 12s ease-in-out infinite alternate;
   pointer-events: none;
