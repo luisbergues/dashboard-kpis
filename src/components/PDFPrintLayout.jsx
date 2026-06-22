@@ -9,65 +9,105 @@ export default function PDFPrintLayout({ headerData, drawerOptions, drawers, rod
 
   return (
     <div className="pdf-print-container">
-      {/* Header */}
-      <div className="pdf-header">
-        <div className="pdf-logo">
-          <img src="/logo.png" alt="JL Closets Logo" style={{ maxWidth: '100%', maxHeight: '120px' }} />
-        </div>
-        <div className="pdf-job-info">
-          <div className="info-row">
-            <span className="info-label">JOB NAME:</span> <span className="info-value">{headerData.jobName}</span>
-          </div>
-          <div className="info-row">
-            <span className="info-label">COLOR:</span> <span className="info-value">{headerData.color}</span>
-          </div>
-          <div className="info-row">
-            <span className="info-label">ROOM(S):</span> <span className="info-value">{headerData.rooms}</span>
-          </div>
-        </div>
-        <div className="pdf-staff-info">
-          <div className="info-row">
-            <span className="info-label">DESIGNER:</span> <span className="info-value">{headerData.designer}</span>
-          </div>
-          <div className="info-row">
-            <span className="info-label">ENGINEER:</span> <span className="info-value">{headerData.engineer}</span>
-          </div>
-        </div>
-      </div>
+      {/* Header Table */}
+      <table className="pdf-header-table">
+        <tbody>
+          <tr>
+            <td className="pdf-logo-cell">
+              <img src="/logo.png" alt="JL Closets Logo" style={{ maxWidth: '100%', maxHeight: '120px' }} />
+            </td>
+            <td className="pdf-job-info-cell">
+              <div className="info-row">
+                <span className="info-label">JOB NAME:</span> <span className="info-value">{headerData.jobName}</span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">COLOR:</span> <span className="info-value">{headerData.color}</span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">ROOM(S):</span> <span className="info-value">{headerData.rooms}</span>
+              </div>
+            </td>
+            <td className="pdf-staff-info-cell">
+              <div className="info-row">
+                <span className="info-label">DESIGNER:</span> <span className="info-value">{headerData.designer}</span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">ENGINEER:</span> <span className="info-value">{headerData.engineer}</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       {/* Drawers Section */}
       <div className="pdf-section">
         <h2 className="section-title centered underline">DRAWERS</h2>
         
-        <div className="options-grid">
-          <div className="option-col">
-            <div className="option-title">FRONTS</div>
-            <OptionItem label="SLAB" selected={drawerOptions.fronts === 'SLAB'} />
-            <OptionItem label="THERMOFOIL" selected={drawerOptions.fronts === 'THERMOFOIL'} />
-          </div>
-          <div className="option-col">
-            <div className="option-title">BOX</div>
-            <OptionItem label="PRFV" selected={drawerOptions.box === 'PRFV'} />
-            <OptionItem label="DOVETAIL" selected={drawerOptions.box === 'DOVETAIL'} />
-          </div>
-          <div className="option-col">
-            <div className="option-title">SLIDES</div>
-            <br/>
-            <OptionItem label="SOFT CLOSE" selected={drawerOptions.slides === 'SOFT CLOSE'} />
-            <OptionItem label="FULL EXTENSION" selected={drawerOptions.slides === 'FULL EXTENSION'} />
-          </div>
-          <div className="option-col handles-col">
-            <div className="option-title">HANDLES</div>
-            <div className="handles-grid">
-              <OptionItem label="STD. B. NICKEL" selected={drawerOptions.handles === 'STD. B. NICKEL'} />
-              <OptionItem label="NONE" selected={drawerOptions.handles === 'NONE'} />
-              <OptionItem label="STD. CHROME" selected={drawerOptions.handles === 'STD. CHROME'} />
-              <OptionItem label="CUSTOMER OWN" selected={drawerOptions.handles === 'CUSTOMER OWN'} />
-              <OptionItem label="STD. M. BLACK" selected={drawerOptions.handles === 'STD. M. BLACK'} />
-              <OptionItem label="SPECIAL" selected={drawerOptions.handles === 'SPECIAL'} />
-            </div>
-          </div>
-        </div>
+        {/* Options Table */}
+        <table className="options-table">
+          <tbody>
+            <tr>
+              <td className="option-cell">
+                <div className="option-title">FRONTS</div>
+                <div style={{ marginTop: '8px' }}>
+                  <OptionItem label="SLAB" selected={drawerOptions.fronts === 'SLAB'} />
+                </div>
+                <div style={{ marginTop: '8px' }}>
+                  <OptionItem label="THERMOFOIL" selected={drawerOptions.fronts === 'THERMOFOIL'} />
+                </div>
+              </td>
+              <td className="option-cell">
+                <div className="option-title">BOX</div>
+                <div style={{ marginTop: '8px' }}>
+                  <OptionItem label="PRFV" selected={drawerOptions.box === 'PRFV'} />
+                </div>
+                <div style={{ marginTop: '8px' }}>
+                  <OptionItem label="DOVETAIL" selected={drawerOptions.box === 'DOVETAIL'} />
+                </div>
+              </td>
+              <td className="option-cell">
+                <div className="option-title">SLIDES</div>
+                <div style={{ marginTop: '8px' }}>
+                  <OptionItem label="SOFT CLOSE" selected={drawerOptions.slides === 'SOFT CLOSE'} />
+                </div>
+                <div style={{ marginTop: '8px' }}>
+                  <OptionItem label="FULL EXTENSION" selected={drawerOptions.slides === 'FULL EXTENSION'} />
+                </div>
+              </td>
+              <td className="option-cell handles-cell">
+                <div className="option-title">HANDLES</div>
+                <table style={{ width: '100%', border: 'none', marginTop: '8px' }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ border: 'none', padding: '2px', textAlign: 'left' }}>
+                        <OptionItem label="STD. B. NICKEL" selected={drawerOptions.handles === 'STD. B. NICKEL'} />
+                      </td>
+                      <td style={{ border: 'none', padding: '2px', textAlign: 'left' }}>
+                        <OptionItem label="NONE" selected={drawerOptions.handles === 'NONE'} />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={{ border: 'none', padding: '2px', textAlign: 'left' }}>
+                        <OptionItem label="STD. CHROME" selected={drawerOptions.handles === 'STD. CHROME'} />
+                      </td>
+                      <td style={{ border: 'none', padding: '2px', textAlign: 'left' }}>
+                        <OptionItem label="CUSTOMER OWN" selected={drawerOptions.handles === 'CUSTOMER OWN'} />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={{ border: 'none', padding: '2px', textAlign: 'left' }}>
+                        <OptionItem label="STD. M. BLACK" selected={drawerOptions.handles === 'STD. M. BLACK'} />
+                      </td>
+                      <td style={{ border: 'none', padding: '2px', textAlign: 'left' }}>
+                        <OptionItem label="SPECIAL" selected={drawerOptions.handles === 'SPECIAL'} />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
         <table className="print-table">
           <thead>
@@ -101,50 +141,52 @@ export default function PDFPrintLayout({ headerData, drawerOptions, drawers, rod
         </table>
       </div>
 
-      {/* Rods and Misc Section */}
-      <div className="pdf-bottom-grid">
-        <div className="rods-section">
-          <table className="print-table rods-table">
-            <thead>
-              <tr>
-                <th colSpan="2" className="title-cell"><h2 className="section-title">RODS</h2></th>
-                <th>QTY.</th>
-                <th>SIZE</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rods.map((r, i) => (
-                <tr key={i}>
-                  <td colSpan="2" className="room-cell">
-                    <strong>{r.room}</strong><br/>
-                    {r.type}
-                  </td>
-                  <td className="center">{r.qty}</td>
-                  <td className="center">{r.size}</td>
-                </tr>
-              ))}
-              {/* Fill empty rods */}
-              {rods.length < 8 && Array(8 - rods.length).fill(0).map((_, i) => (
-                <tr key={`empty-r-${i}`}>
-                  <td colSpan="2">&nbsp;</td><td></td><td></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        <div className="misc-section">
-          <h2 className="section-title">MISCELLANEOUS ITEMS / NOTES</h2>
-          <div className="misc-content">
-            <div className="misc-col">
-              <pre>{miscCol1}</pre>
-            </div>
-            <div className="misc-col">
-              <pre>{miscCol2}</pre>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Bottom Table Layout */}
+      <table className="pdf-bottom-table">
+        <tbody>
+          <tr>
+            <td className="rods-cell">
+              <table className="rods-table">
+                <thead>
+                  <tr>
+                    <th>RODS</th>
+                    <th style={{width: '15%'}}>QTY.</th>
+                    <th style={{width: '20%'}}>SIZE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rods.map((r, i) => (
+                    <tr key={i}>
+                      <td className="room-cell">
+                        <div style={{fontWeight: 'bold', fontSize: '11px'}}>{r.room}</div>
+                        <div style={{fontSize: '11px'}}>{r.type}</div>
+                      </td>
+                      <td className="center">{r.qty}</td>
+                      <td className="center">{r.size}</td>
+                    </tr>
+                  ))}
+                  {rods.length < 10 && Array(10 - rods.length).fill(0).map((_, i) => (
+                    <tr key={`empty-r-${i}`}>
+                      <td>&nbsp;</td><td></td><td></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </td>
+            <td className="misc-cell">
+              <h2 className="section-title" style={{ paddingLeft: '10px', borderBottom: '2px solid black' }}>MISCELLANEOUS ITEMS / NOTES</h2>
+              <div className="misc-content">
+                <div className="misc-col">
+                  <pre className="misc-col-pre">{miscCol1}</pre>
+                </div>
+                <div className="misc-col">
+                  <pre className="misc-col-pre">{miscCol2}</pre>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }

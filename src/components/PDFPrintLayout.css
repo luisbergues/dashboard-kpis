@@ -29,45 +29,37 @@
   color: black;
 }
 
-/* Header */
-.pdf-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+/* Header Table */
+.pdf-header-table {
+  width: 100%;
+  border-collapse: collapse;
   margin-bottom: 30px;
+  border: none;
 }
 
-.pdf-logo {
-  text-align: center;
+.pdf-header-table td {
+  border: none !important;
+  vertical-align: top;
+  padding: 0;
+}
+
+.pdf-logo-cell {
   width: 25%;
+  text-align: center;
 }
 
-.logo-text {
-  font-family: "Times New Roman", serif;
-  font-size: 24px;
-  color: #B29B52; /* Gold color matching the screenshot */
-  letter-spacing: 1px;
-}
-
-.logo-subtext {
-  font-family: "Times New Roman", serif;
-  font-size: 10px;
-  color: #B29B52;
-  margin-top: 4px;
-}
-
-.pdf-job-info, .pdf-staff-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.pdf-job-info {
+.pdf-job-info-cell {
   width: 45%;
 }
 
-.pdf-staff-info {
+.pdf-staff-info-cell {
   width: 30%;
+}
+
+.pdf-job-info-cell, .pdf-staff-info-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .info-row {
@@ -104,30 +96,29 @@
   text-decoration: underline;
 }
 
-/* Drawers Options Grid */
-.options-grid {
-  display: flex;
+/* Drawers Options Table */
+.options-table {
+  width: 100%;
+  border-collapse: collapse;
   border-top: 1px solid black;
   border-bottom: 2px solid black;
+  margin-bottom: 0;
 }
 
-.option-col {
-  flex: 1;
-  padding: 10px;
+.option-cell {
+  width: 20%;
+  padding: 8px 10px;
   text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  border-right: 1px solid black;
+  vertical-align: top;
+  border-right: 1px solid black !important;
 }
 
-.option-col:last-child {
-  border-right: none;
+.option-cell:last-child {
+  border-right: none !important;
 }
 
-.option-col.handles-col {
-  flex: 2;
+.option-cell.handles-cell {
+  width: 40%;
 }
 
 .option-title {
@@ -188,15 +179,18 @@
 }
 
 /* Bottom Grid (Rods & Misc) */
-.pdf-bottom-grid {
-  display: flex;
+.pdf-bottom-table {
+  width: 100%;
+  border-collapse: collapse;
   border: 2px solid black;
-  min-height: 300px;
+  margin-top: 20px;
 }
 
-.rods-section {
+.rods-cell {
   width: 30%;
-  border-right: 2px solid black;
+  vertical-align: top;
+  border-right: 2px solid black !important;
+  padding: 0;
 }
 
 .rods-table {
@@ -227,20 +221,15 @@
   vertical-align: middle;
 }
 
-.misc-section {
+.misc-cell {
   width: 70%;
+  vertical-align: top;
   padding: 0;
-}
-
-.misc-section .section-title {
-  border-bottom: 2px solid black;
-  padding-left: 10px;
 }
 
 .misc-content {
   display: flex;
   padding: 10px;
-  height: calc(100% - 40px); /* Fill remaining space minus title */
 }
 
 .misc-col {
@@ -248,10 +237,10 @@
   padding: 0 10px;
 }
 
-.misc-col pre {
+.misc-col-pre {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 14px; /* Increased from 12px */
+  font-size: 14px;
   white-space: pre-wrap;
   word-wrap: break-word;
 }
