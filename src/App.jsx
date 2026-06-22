@@ -303,7 +303,7 @@ function App() {
           userProfile={userProfile}
         />
       )}
-      <main className="main-content">
+      <main className={`main-content ${!currentUser ? 'no-sidebar' : ''}`}>
         <ErrorBoundary>
           {renderView()}
         </ErrorBoundary>

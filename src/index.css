@@ -103,6 +103,15 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+.main-content.no-sidebar {
+  margin: 0 !important;
+  margin-left: 0 !important;
+  padding: 0 !important;
+  max-width: none !important;
+  width: 100vw;
+  min-height: 100vh;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
