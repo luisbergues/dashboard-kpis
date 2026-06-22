@@ -565,18 +565,18 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* ─── Theme Toggle Button ─────────────────────────── */
-.theme-toggle-container {
+/* ─── Controls Row (Theme & Language side-by-side) ─── */
+.nav-controls-row {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: var(--spacing-md);
+  gap: 12px;
   width: 100%;
+  margin-bottom: var(--spacing-md);
 }
 
-.theme-toggle-btn {
+.theme-toggle-btn,
+.lang-toggle-btn {
+  flex: 1; /* Occupy exactly half the space */
   position: relative;
-  width: 68px;
   height: 32px;
   border-radius: 100px;
   background: #111827; /* Dark capsule background */
@@ -587,17 +587,34 @@
   padding: 4px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
-  flex-shrink: 0;
   outline: none;
 }
 
-.theme-toggle-btn.light {
-  background: #E5E7EB; /* Light capsule background */
+.theme-toggle-btn.light,
+.lang-toggle-btn.en {
+  /* Light mode for theme, or English mode for language */
+  background: #E5E7EB;
   border-color: #D1D5DB;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.theme-toggle-knob {
+/* In light theme, make the dark states of sliders look correct */
+:root.light-theme .theme-toggle-btn,
+:root.light-theme .lang-toggle-btn {
+  background: #E5E7EB;
+  border-color: #D1D5DB;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+:root.light-theme .theme-toggle-btn.dark,
+:root.light-theme .lang-toggle-btn.es {
+  background: #111827;
+  border-color: var(--card-border);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.theme-toggle-knob,
+.lang-toggle-knob {
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -611,10 +628,58 @@
 
 .theme-toggle-btn.light .theme-toggle-knob {
   left: calc(100% - 27px);
-  background: #1F2937; /* Dark knob in light mode */
+  background: #1F2937;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
+:root.light-theme .theme-toggle-btn.dark .theme-toggle-knob {
+  background: #FFFFFF;
+  left: 3px;
+}
+
+/* Language knob styling */
+.lang-toggle-knob {
+  background: var(--color-neon-green); /* Bright active blue/green knob */
+}
+
+.lang-toggle-btn.en .lang-toggle-knob {
+  left: calc(100% - 27px);
+}
+
+/* Language label text overlay */
+.lang-toggle-label {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  transition: color 0.3s ease;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.lang-toggle-label.es {
+  left: 3px;
+}
+
+.lang-toggle-label.en {
+  right: 3px;
+}
+
+.lang-toggle-btn.es .lang-toggle-label.es {
+  color: #FFFFFF;
+}
+
+.lang-toggle-btn.en .lang-toggle-label.en {
+  color: #FFFFFF;
+}
+
+/* Icons for theme */
 .theme-toggle-icon {
   position: absolute;
   display: flex;
@@ -626,7 +691,7 @@
 
 .theme-toggle-icon.moon {
   right: 10px;
-  color: #FFE600; /* Yellow moon */
+  color: #FFE600;
   opacity: 1;
   transform: scale(1);
 }
@@ -636,9 +701,14 @@
   transform: scale(0.6);
 }
 
+:root.light-theme .theme-toggle-btn.dark .theme-toggle-icon.moon {
+  opacity: 1;
+  transform: scale(1);
+}
+
 .theme-toggle-icon.sun {
   left: 10px;
-  color: #F59E0B; /* Orange-yellow sun */
+  color: #F59E0B;
   opacity: 0;
   transform: scale(0.6);
 }
@@ -648,19 +718,33 @@
   transform: scale(1);
 }
 
-/* Align theme selector toggle button side-by-side with language selector inside mobile header if needed, but since it has flex gap it will just align nicely */
+:root.light-theme .theme-toggle-btn.dark .theme-toggle-icon.sun {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+/* Responsive side-by-side styles for mobile header */
 @media (max-width: 767px) {
-  .theme-toggle-btn {
+  .theme-toggle-btn,
+  .lang-toggle-btn {
+    flex: none; /* Keep them as separate buttons on mobile header row */
     width: 58px;
     height: 28px;
     padding: 3px;
   }
-  .theme-toggle-knob {
+  .theme-toggle-knob,
+  .lang-toggle-knob {
     width: 20px;
     height: 20px;
   }
-  .theme-toggle-btn.light .theme-toggle-knob {
+  .theme-toggle-btn.light .theme-toggle-knob,
+  .lang-toggle-btn.en .lang-toggle-knob {
     left: calc(100% - 23px);
+  }
+  .lang-toggle-label {
+    width: 20px;
+    height: 20px;
+    font-size: 0.65rem;
   }
   .theme-toggle-icon.moon {
     right: 8px;

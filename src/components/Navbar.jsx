@@ -8,8 +8,6 @@ import './Navbar.css';
 export default function Navbar({ activeTab, setActiveTab, userProfile }) {
   const { t, language, setLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState('engineer');
@@ -21,32 +19,6 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
     { id: 'pipeline', label: t('navbar.pipeline'), icon: ListTodo },
     { id: 'materials', label: t('navbar.materials'), icon: Hammer },
     ...(userProfile?.role !== 'administrative' ? [{ id: 'quality', label: 'Team Stats', icon: Award }] : [])
-  ];
-
-  const languages = [
-    {
-      code: 'en',
-      label: 'English',
-      flag: (
-        <svg className="flag-icon" viewBox="0 0 36 36" width="18" height="18" style={{ borderRadius: '50%' }}>
-          <rect width="36" height="36" fill="#00247D"/>
-          <path fill="#FFF" d="M15 0h6v36h-6zm0 0h36v6H0z"/>
-          <path fill="#FFF" d="M0 0l36 36M36 0L0 36" stroke="#FFF" strokeWidth="4"/>
-          <path fill="#CF142B" d="M16 0h4v36h-4zm-16 16h36v4H0z"/>
-          <path fill="#CF142B" d="M0 0l36 36M36 0L0 36" stroke="#CF142B" strokeWidth="2"/>
-        </svg>
-      )
-    },
-    {
-      code: 'es',
-      label: 'Español',
-      flag: (
-        <svg className="flag-icon" viewBox="0 0 36 36" width="18" height="18" style={{ borderRadius: '50%' }}>
-          <path fill="#FFD15C" d="M0 12h36v12H0z"/>
-          <path fill="#E65545" d="M0 0h36v12H0zm0 24h36v12H0z"/>
-        </svg>
-      )
-    }
   ];
 
   const openModal = () => {
@@ -117,36 +89,17 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
               </span>
             </button>
 
-            {/* Custom Language Dropdown Selector for Mobile */}
-            <div className="lang-selector-container mobile-lang">
-              <button 
-                className="lang-selector-btn"
-                onClick={() => setIsMobileDropdownOpen(!isMobileDropdownOpen)}
-                type="button"
-              >
-                <span>{language.toUpperCase()}</span>
-                <ChevronDown size={12} className={`chevron-arrow ${isMobileDropdownOpen ? 'open' : ''}`} />
-              </button>
-              
-              {isMobileDropdownOpen && (
-                <div className="lang-dropdown-menu">
-                  {languages.map(lang => (
-                    <button
-                      key={lang.code}
-                      type="button"
-                      className={`lang-dropdown-item ${language === lang.code ? 'active' : ''}`}
-                      onClick={() => {
-                        setLanguage(lang.code);
-                        setIsMobileDropdownOpen(false);
-                      }}
-                    >
-                      <span className="lang-item-label">{lang.label}</span>
-                      <span className="lang-item-flag">{lang.flag}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Language Slider Selector for Mobile */}
+            <button 
+              type="button"
+              className={`lang-toggle-btn ${language}`} 
+              onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
+              title={language === 'es' ? 'English' : 'Español'}
+            >
+              <div className="lang-toggle-knob" />
+              <span className="lang-toggle-label es">ES</span>
+              <span className="lang-toggle-label en">EN</span>
+            </button>
 
             {/* Profile Capsule on Mobile */}
             <div className="nav-user-profile mobile-profile" onClick={openModal}>
@@ -191,8 +144,9 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
         </ul>
         {userProfile && (
           <div className="nav-user-section">
-            {/* Theme Toggle Selector */}
-            <div className="theme-toggle-container">
+            {/* Controls Row (Theme & Language side-by-side) */}
+            <div className="nav-controls-row">
+              {/* Theme Toggle Selector */}
               <button 
                 type="button"
                 className={`theme-toggle-btn ${theme}`} 
@@ -207,37 +161,18 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
                   <Moon size={14} fill="currentColor" strokeWidth={0} />
                 </span>
               </button>
-            </div>
 
-            {/* Custom Language Dropdown Selector */}
-            <div className="lang-selector-container">
+              {/* Language Slider Selector */}
               <button 
-                className="lang-selector-btn"
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 type="button"
+                className={`lang-toggle-btn ${language}`} 
+                onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
+                title={language === 'es' ? 'English' : 'Español'}
               >
-                <span>{language === 'es' ? 'ESPAÑOL' : 'ENGLISH'}</span>
-                <ChevronDown size={14} className={`chevron-arrow ${isDropdownOpen ? 'open' : ''}`} />
+                <div className="lang-toggle-knob" />
+                <span className="lang-toggle-label es">ES</span>
+                <span className="lang-toggle-label en">EN</span>
               </button>
-              
-              {isDropdownOpen && (
-                <div className="lang-dropdown-menu">
-                  {languages.map(lang => (
-                    <button
-                      key={lang.code}
-                      type="button"
-                      className={`lang-dropdown-item ${language === lang.code ? 'active' : ''}`}
-                      onClick={() => {
-                        setLanguage(lang.code);
-                        setIsDropdownOpen(false);
-                      }}
-                    >
-                      <span className="lang-item-label">{lang.label}</span>
-                      <span className="lang-item-flag">{lang.flag}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div className="nav-user-profile" onClick={openModal}>
