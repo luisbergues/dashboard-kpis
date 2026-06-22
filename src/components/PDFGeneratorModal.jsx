@@ -136,6 +136,12 @@ export default function PDFGeneratorModal({ project, onClose }) {
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: () => `ESS_${project.name.split(':')[0].trim()}`,
+    pageStyle: `
+      @page {
+        size: A4 portrait;
+        margin: 8mm !important;
+      }
+    `
   });
 
   if (isLoading) {
