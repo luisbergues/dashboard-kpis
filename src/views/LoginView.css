@@ -3,11 +3,14 @@
   align-items: center;
   justify-content: flex-end;
   padding-right: 12%;
-  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100vw;
+  height: 100vh;
   background-color: #06080c;
-  position: relative;
   overflow: hidden;
+  z-index: 9999;
 }
 
 .login-container {
