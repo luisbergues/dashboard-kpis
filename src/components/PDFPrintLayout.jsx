@@ -12,7 +12,7 @@ export default function PDFPrintLayout({ headerData, drawerOptions, drawers, rod
       {/* Header */}
       <div className="pdf-header">
         <div className="pdf-logo">
-          <img src="/logo.png" alt="JL Closets Logo" style={{ maxWidth: '100%', maxHeight: '60px' }} />
+          <img src="/logo.png" alt="JL Closets Logo" style={{ maxWidth: '100%', maxHeight: '120px' }} />
         </div>
         <div className="pdf-job-info">
           <div className="info-row">

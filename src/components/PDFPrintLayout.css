@@ -5,10 +5,10 @@
 }
 
 .pdf-print-container {
-  /* A4 size mapping */
-  width: 210mm;
+  /* Let it fill the page width entirely, using padding for margins */
+  width: 100%;
   min-height: 297mm;
-  padding: 10mm 10mm; /* 1cm margins */
+  padding: 10mm 10%; /* 10% margin on the left and right */
   margin: 0 auto;
   background-color: white;
   color: black;
@@ -195,7 +195,7 @@
 }
 
 .rods-section {
-  width: 40%;
+  width: 30%;
   border-right: 2px solid black;
 }
 
@@ -219,7 +219,7 @@
 }
 
 .misc-section {
-  width: 60%;
+  width: 70%;
   padding: 0;
 }
 
