@@ -579,14 +579,14 @@
   position: relative;
   height: 32px;
   border-radius: 100px;
-  background: #111827; /* Dark capsule background */
+  background: var(--card-bg); /* Flat capsule background */
   border: 1px solid var(--card-border);
   cursor: pointer;
   display: flex;
   align-items: center;
   padding: 4px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: none;
   outline: none;
 }
 
@@ -595,7 +595,7 @@
   /* Light mode for theme, or English mode for language */
   background: #E5E7EB;
   border-color: #D1D5DB;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
 }
 
 /* In light theme, make the dark states of sliders look correct */
@@ -603,14 +603,14 @@
 :root.light-theme .lang-toggle-btn {
   background: #E5E7EB;
   border-color: #D1D5DB;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
 }
 
 :root.light-theme .theme-toggle-btn.dark,
 :root.light-theme .lang-toggle-btn.es {
-  background: #111827;
+  background: var(--card-bg);
   border-color: var(--card-border);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: none;
 }
 
 .theme-toggle-knob,
@@ -620,7 +620,7 @@
   border-radius: 50%;
   background: #FFFFFF;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  box-shadow: none;
   position: absolute;
   left: 3px;
   z-index: 2;
@@ -629,7 +629,7 @@
 .theme-toggle-btn.light .theme-toggle-knob {
   left: calc(100% - 27px);
   background: #1F2937;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
 }
 
 :root.light-theme .theme-toggle-btn.dark .theme-toggle-knob {
@@ -639,7 +639,7 @@
 
 /* Language knob styling */
 .lang-toggle-knob {
-  background: var(--color-neon-green); /* Bright active blue/green knob */
+  background: #0084FF; /* Flat bright celeste blue knob */
 }
 
 .lang-toggle-btn.en .lang-toggle-knob {
