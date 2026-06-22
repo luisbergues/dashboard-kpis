@@ -4,7 +4,7 @@ import { saveEngineeringCheck } from '../utils/engineeringCheck';
 import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';
 import { 
-  Briefcase, Calendar, CheckCircle2, Circle, Clock, 
+  Briefcase, Calendar, Check, Clock, 
   AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag, Users,
   ChevronDown, ChevronUp, ArrowUpDown, TrendingUp
 } from 'lucide-react';
@@ -1178,9 +1178,9 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                                 <div className="stage-connector-line"></div>
                                 <div className="stage-icon-container">
                                   {isCompleted ? (
-                                    <CheckCircle2 size={20} className="icon-completed" />
+                                    <Check size={16} className="icon-completed" />
                                   ) : (
-                                    <Circle size={20} className="icon-pending" />
+                                    <span className="stage-number">{idx + 1}</span>
                                   )}
                                 </div>
                                 <span className="stage-step-label">{getStageLabel(stage.id, language)}</span>

@@ -208,17 +208,17 @@
   justify-content: space-between;
   align-items: center;
   position: relative;
-  padding: var(--spacing-md) 0 var(--spacing-sm) 0;
-  margin-top: var(--spacing-sm);
+  padding: 16px 0 8px 0;
+  margin-top: 8px;
   flex-wrap: wrap;
-  gap: var(--spacing-md) 0;
+  gap: 16px 0;
 }
 
 /* Timeline connecting bar */
 .stages-timeline::before {
   content: '';
   position: absolute;
-  top: 36px;
+  top: 34px; /* Exact center of the 36px circle with 16px top padding */
   left: 5%;
   right: 5%;
   height: 2px;
@@ -230,7 +230,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px; /* Clean gap spacing */
   flex: 1;
   min-width: 80px;
   position: relative;
@@ -243,37 +243,40 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--bg-surface);
-  border: 1px solid var(--card-border);
+  background: #0b1320; /* Matches card dark background */
+  border: 2px solid rgba(255, 255, 255, 0.15); /* Clean default borders */
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.icon-completed {
-  color: var(--color-mint);
-  fill: rgba(70, 223, 177, 0.1);
-  filter: drop-shadow(0 0 6px rgba(70, 223, 177, 0.4));
+.stage-number {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: 'Outfit', sans-serif;
 }
 
-.icon-pending {
-  color: var(--text-muted);
+.icon-completed {
+  color: var(--color-mint);
+  filter: drop-shadow(0 0 6px rgba(70, 223, 177, 0.4));
 }
 
 .stage-step-label {
   font-family: 'Outfit', sans-serif;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
-  transition: color 0.3s;
+  transition: all 0.3s;
+  letter-spacing: 0.2px;
 }
 
 /* Hover effects */
 .stage-step:hover .stage-icon-container {
-  transform: scale(1.15);
+  transform: translateY(-2px); /* Premium gentle lift */
   border-color: var(--color-cyan);
-  box-shadow: 0 0 12px rgba(9, 209, 199, 0.3);
+  box-shadow: 0 4px 12px rgba(9, 209, 199, 0.2);
 }
 
 .stage-step:hover .stage-step-label {
@@ -283,11 +286,12 @@
 /* Completed styles */
 .stage-step.completed .stage-icon-container {
   border-color: var(--color-mint);
-  background: rgba(70, 223, 177, 0.05);
+  background: rgba(70, 223, 177, 0.08); /* Clean background highlight */
 }
 
 .stage-step.completed .stage-step-label {
   color: var(--color-mint);
+  font-weight: 600;
 }
 
 /* Footer Actions */
