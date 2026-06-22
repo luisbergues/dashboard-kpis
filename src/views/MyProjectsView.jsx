@@ -13,6 +13,9 @@ import { Bar, Line } from 'react-chartjs-2';
 import { calculatePersonalStageAverages, calculateMonthlyCompletions, getUpcomingDeadlines } from '../services/kpiCalculator';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import PDFGeneratorModal from '../components/PDFGeneratorModal';
+import IPGeneratorModal from '../components/IPGeneratorModal';
+import { cleanupESSData } from '../utils/essData';
+import { cleanupIPData } from '../utils/ipData';
 import './MyProjectsView.css';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, ChartTooltip, Legend, Filler);
@@ -122,6 +125,10 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [isESSModalOpen, setIsESSModalOpen] = useState(false);
   const [activeESSProject, setActiveESSProject] = useState(null);
 
+  // IP Modal State
+  const [isIPModalOpen, setIsIPModalOpen] = useState(false);
+  const [activeIPProject, setActiveIPProject] = useState(null);
+
   // Analytics & Sorting State
   const [showAnalytics, setShowAnalytics] = useState(true);
   const [sortBy, setSortBy] = useState(null); // 'date' | 'so'
@@ -198,11 +205,12 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     }
   };
 
-  // Cleanup ESS data for completed projects
+  // Cleanup ESS & IP data for completed projects
   useEffect(() => {
     if (data && data.activeProjects) {
       const activeSOs = data.activeProjects.map(p => p.so);
       cleanupESSData(activeSOs);
+      cleanupIPData(activeSOs);
     }
   }, [data]);
 
@@ -1197,6 +1205,14 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                             <StickyNote size={14} />
                             <span>Completar ESS</span>
                           </button>
+                          <button 
+                            onClick={() => { setActiveIPProject(project); setIsIPModalOpen(true); }}
+                            className="btn-primary btn-sm btn-download-pdf"
+                            style={{ background: '#80EE98', color: '#000', fontWeight: 'bold' }}
+                          >
+                            <StickyNote size={14} />
+                            <span>Completar IP</span>
+                          </button>
                         </div>
                       </>
                     )}
@@ -1494,6 +1510,14 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
         <PDFGeneratorModal 
           project={activeESSProject} 
           onClose={() => { setIsESSModalOpen(false); setActiveESSProject(null); }} 
+        />
+      )}
+
+      {/* IP PDF Generator Modal */}
+      {isIPModalOpen && activeIPProject && (
+        <IPGeneratorModal 
+          project={activeIPProject} 
+          onClose={() => { setIsIPModalOpen(false); setActiveIPProject(null); }} 
         />
       )}
     </div>
