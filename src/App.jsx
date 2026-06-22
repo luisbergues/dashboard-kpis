@@ -289,8 +289,12 @@ function App() {
       case 'my-projects': return <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
       case 'pipeline': return <PipelineView data={mergedData} currentUser={currentUser} userProfile={userProfile} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} />;
       case 'materials': return <MaterialsView data={mergedData} />;
-      case 'quality': return <DesignQualityView data={mergedData} />;
-      default: return <DashboardView data={mergedData} />;
+      case 'quality': 
+        if (userProfile?.role === 'administrative') {
+          return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
+        }
+        return <DesignQualityView data={mergedData} />;
+      default: return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
     }
   };
 

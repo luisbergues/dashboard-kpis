@@ -22,6 +22,7 @@ export default function LoginView({ data }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [designerName, setDesignerName] = useState('');
+  const [signupRole, setSignupRole] = useState('engineer');
   
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -126,6 +127,7 @@ export default function LoginView({ data }) {
           await set(ref(db, `users/${user.uid}`), {
             email: user.email,
             designerName: designerName,
+            role: signupRole,
             createdAt: new Date().toISOString()
           });
         }
@@ -226,23 +228,42 @@ export default function LoginView({ data }) {
 
         <form onSubmit={handleSubmit} className="login-form">
           {isSignUp && (
-            <div className="form-group">
-              <label className="form-label">{t('login.linkDesigner')}</label>
-              <div className="input-wrapper">
-                <User size={18} className="input-icon" />
-                <select
-                  value={designerName}
-                  onChange={(e) => setDesignerName(e.target.value)}
-                  className="form-input form-select has-icon"
-                  required={isSignUp}
-                >
-                  <option value="">{t('login.selectName')}</option>
-                  {designers.map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
+            <>
+              <div className="form-group">
+                <label className="form-label">{t('login.linkDesigner')}</label>
+                <div className="input-wrapper">
+                  <User size={18} className="input-icon" />
+                  <select
+                    value={designerName}
+                    onChange={(e) => setDesignerName(e.target.value)}
+                    className="form-input form-select has-icon"
+                    required={isSignUp}
+                  >
+                    <option value="">{t('login.selectName')}</option>
+                    {designers.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
+
+              <div className="form-group">
+                <label className="form-label">{t('login.role')}</label>
+                <div className="input-wrapper">
+                  <User size={18} className="input-icon" />
+                  <select
+                    value={signupRole}
+                    onChange={(e) => setSignupRole(e.target.value)}
+                    className="form-input form-select has-icon"
+                    required={isSignUp}
+                  >
+                    <option value="engineer">{language === 'es' ? 'Ingeniero (Engineer)' : 'Engineer'}</option>
+                    <option value="administrative">{language === 'es' ? 'Administrador (Administrator)' : 'Administrative'}</option>
+                    <option value="engineer_nester">{language === 'es' ? 'Ingeniero - Nester (Engineer - Nester)' : 'Engineer - Nester'}</option>
+                  </select>
+                </div>
+              </div>
+            </>
           )}
 
           <div className="form-group">

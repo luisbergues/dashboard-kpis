@@ -455,7 +455,7 @@
   flex: 1;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--card-border);
-  border-radius: var(--radius-sm);
+  border-radius: 12px;
   padding: 8px 10px;
   color: var(--text-primary);
   font-family: 'Inter', sans-serif;

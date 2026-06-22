@@ -18,7 +18,7 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
     ...(userProfile ? [{ id: 'my-projects', label: t('navbar.myProjects'), icon: Briefcase }] : []),
     { id: 'pipeline', label: t('navbar.pipeline'), icon: ListTodo },
     { id: 'materials', label: t('navbar.materials'), icon: Hammer },
-    { id: 'quality', label: 'Team Stats', icon: Award }
+    ...(userProfile?.role !== 'administrative' ? [{ id: 'quality', label: 'Team Stats', icon: Award }] : [])
   ];
 
   const languages = [
@@ -251,6 +251,7 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
                   value={newRole} 
                   onChange={(e) => setNewRole(e.target.value)} 
                   className="form-input form-select"
+                  disabled={userProfile?.role === 'administrative'}
                 >
                   <option value="engineer">{language === 'es' ? 'Ingeniero (Engineer)' : 'Engineer'}</option>
                   <option value="administrative">{language === 'es' ? 'Administrativo (Administrative)' : 'Administrative'}</option>

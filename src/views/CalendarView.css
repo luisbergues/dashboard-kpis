@@ -568,7 +568,7 @@
   color: var(--text-secondary);
 }
 
-.form-input, .form-select, .form-textarea {
+.form-input, .form-select {
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-sm);
@@ -577,6 +577,18 @@
   font-family: 'Inter', sans-serif;
   font-size: 0.9rem;
   transition: all 0.2s ease;
+}
+
+.form-textarea {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  color: var(--text-primary);
+  padding: 10px 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  resize: vertical;
 }
 
 .form-input:focus, .form-select:focus, .form-textarea:focus {
@@ -589,10 +601,6 @@
 .form-select option {
   background: var(--bg-surface);
   color: var(--text-primary);
-}
-
-.form-textarea {
-  resize: vertical;
 }
 
 .form-actions {

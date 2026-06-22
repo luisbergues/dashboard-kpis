@@ -479,7 +479,7 @@
 .pipeline-note-input-field {
   flex: 2.2;
   padding: 8px 14px;
-  border-radius: var(--radius-sm); /* pill shape */
+  border-radius: 12px;
   border: 1px solid var(--card-border);
   background: rgba(255, 255, 255, 0.03);
   color: #fff;
