@@ -17,22 +17,45 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 async function main() {
-  // 1. Delete all old weekly_history data
-  console.log('🗑️  Cleaning old weekly_history...');
-  const historyRef = ref(db, 'weekly_history');
+  console.log('🧹 Cleaning duplicate/unnormalized keys from weekly_history...');
   
-  const oldSnap = await get(historyRef);
-  if (oldSnap.exists()) {
-    console.log('Old data found:', Object.keys(oldSnap.val()));
-    await remove(historyRef);
-    console.log('✅ Old data removed');
-  } else {
-    console.log('No old data found');
+  const badKeys = [
+    'JUNE_15,_2026',
+    'June_8,_2026',
+    'current_week',
+    'previous_week'
+  ];
+
+  for (const key of badKeys) {
+    const keyRef = ref(db, `weekly_history/${key}`);
+    const snap = await get(keyRef);
+    if (snap.exists()) {
+      console.log(`Deleting bad key: ${key}`);
+      await remove(keyRef);
+    }
   }
 
-  // 2. The app will auto-save the correct snapshots on next load
-  // (both previous and current weeks from the sheet)
-  console.log('✅ Done! The app will now save correct snapshots automatically on next page load.');
+  console.log('✏️ Correcting june_22,_2026 node...');
+  const june22Ref = ref(db, 'weekly_history/june_22,_2026');
+  
+  const correctJune22 = {
+    label: "JUNE 22, 2026",
+    metrics: {
+      "Check": 6,
+      "Check Eng": 0,
+      "Completed Projects": 42,
+      "Engineering": 7,
+      "Nesting": 0,
+      "ON HOLD": 8,
+      "Paperwork": 1,
+      "Review": 1,
+      "Total Active Projects": 24
+    },
+    savedAt: new Date().toISOString()
+  };
+
+  await set(june22Ref, correctJune22);
+  console.log('✅ Corrected june_22,_2026 node successfully!');
   
   process.exit(0);
 }

@@ -29,6 +29,29 @@ const getIdx = (map, keys, fallback) => {
   return fallback;
 };
 
+const parseDateStringOrNumber = (val) => {
+  if (!val) return '0';
+  const cleanVal = val.trim();
+  if (cleanVal.includes('/')) {
+    const parts = cleanVal.split('/');
+    if (parts.length === 3) {
+      const month = parseInt(parts[0], 10);
+      const day = parseInt(parts[1], 10);
+      const year = parseInt(parts[2], 10);
+      if (!isNaN(month) && !isNaN(day) && !isNaN(year)) {
+        const d = new Date(year, month - 1, day);
+        if (!isNaN(d.getTime())) {
+          const epoch = new Date(1899, 11, 30);
+          const diffTime = d.getTime() - epoch.getTime();
+          const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+          return diffDays.toString();
+        }
+      }
+    }
+  }
+  return cleanVal;
+};
+
 export async function fetchAndParseData() {
   try {
     // Append a unique timestamp to prevent browser and CDN caching
@@ -176,9 +199,9 @@ export async function fetchAndParseData() {
         if (row[metricIdx] && row[metricIdx].toLowerCase() !== 'metric') {
           parsedData.weekOverWeek.push({
             metric: row[metricIdx],
-            previous: row[prevIdx],
-            current: row[currIdx],
-            variance: row[varIdx]
+            previous: parseDateStringOrNumber(row[prevIdx]),
+            current: parseDateStringOrNumber(row[currIdx]),
+            variance: parseDateStringOrNumber(row[varIdx])
           });
         }
       }
