@@ -3,13 +3,13 @@ import './IPPrintLayout.css';
 
 export default function IPPrintLayout({ data }) {
   const {
-    clientName,
-    clientAddress,
-    clientPhone,
-    designerPhone,
-    collectPayment,
-    observations
-  } = data;
+    clientName = '',
+    clientAddress = '',
+    clientPhone = '',
+    designerPhone = '',
+    collectPayment = '',
+    observations = ''
+  } = data || {};
 
   return (
     <div className="ip-print-container">

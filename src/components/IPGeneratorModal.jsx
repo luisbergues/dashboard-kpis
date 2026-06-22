@@ -36,8 +36,13 @@ export default function IPGeneratorModal({ project, onClose }) {
     const fetch = async () => {
       const data = await loadIPData(project.so);
       if (isMounted) {
-        if (data && data.length > 0) {
-          setPages(data);
+        if (data) {
+          // Normalize and filter out nulls or empty properties
+          const parsed = Array.isArray(data) ? data : Object.values(data);
+          const sanitized = parsed.filter(Boolean);
+          if (sanitized.length > 0) {
+            setPages(sanitized);
+          }
         }
         setIsLoading(false);
       }
@@ -86,15 +91,26 @@ export default function IPGeneratorModal({ project, onClose }) {
     updateCurrentPage(p => ({ ...p, [name]: value }));
   };
 
-  const currentPage = pages[currentPageIndex] || pages[0];
-  const { clientName, clientAddress, clientPhone, designerPhone, collectPayment, observations } = currentPage;
+  const currentPage = pages[currentPageIndex] || pages[0] || {};
+  const {
+    clientName = '',
+    clientAddress = '',
+    clientPhone = '',
+    designerPhone = '',
+    collectPayment = '',
+    observations = ''
+  } = currentPage;
 
   // --- Print Logic ---
   const printRef = useRef(null);
   
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: () => `IP_${project.name.split(':')[0].trim()}`,
+    documentTitle: () => {
+      const baseName = project.name.split(':')[0];
+      const cleanName = baseName.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim();
+      return `IP_${cleanName}`;
+    },
     pageStyle: `
       @page {
         size: A4 portrait;
