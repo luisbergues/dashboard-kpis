@@ -381,20 +381,20 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
       <section className="kpi-metrics-row mb-xl" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         <div className="glass-card kpi-card">
           <span className="kpi-label">Conversion Rate</span>
-          <span className="kpi-value text-neon-green">{conversionRate}%</span>
+          <span className="kpi-value">{conversionRate}%</span>
         </div>
         <div className="glass-card kpi-card">
           <span className="kpi-label">Budget Deviation (Hold/Total)</span>
-          <span className={`kpi-value ${budgetDeviation > 10 ? 'text-danger' : 'text-yellow'}`}>{budgetDeviation}%</span>
+          <span className="kpi-value">{budgetDeviation}%</span>
         </div>
         <div className="glass-card kpi-card">
           <span className="kpi-label">Avg. Validation Time</span>
-          <span className="kpi-value text-mint">{avgValidationTime} hrs</span>
+          <span className="kpi-value">{avgValidationTime} hrs</span>
         </div>
         {bottleneckAlerts.length > 0 && (
           <div className="glass-card kpi-card" style={{ borderColor: 'var(--color-pink)' }}>
             <span className="kpi-label text-danger">Bottleneck Alerts</span>
-            <span className="kpi-value text-danger">{bottleneckAlerts.length} Active</span>
+            <span className="kpi-value">{bottleneckAlerts.length} Active</span>
           </div>
         )}
       </section>
@@ -599,7 +599,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
       
       {/* Meeting Talking Points */}
       <section className="glass-card meeting-card full-width">
-        <h3 className="section-title text-gradient">{t('dashboard.meetingPoints')}</h3>
+        <h3 className="section-title">{t('dashboard.meetingPoints')}</h3>
         <ul className="meeting-list">
           {meetingPoints.map((point, idx) => (
             <li key={idx}>{point.replace('- ', '')}</li>
@@ -613,14 +613,14 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
           <section className="glass-card cost-analysis-dashboard full-width" style={{ marginTop: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
               <div>
-                <h3 className="section-title text-gradient" style={{ margin: 0 }}>{language === 'es' ? 'Análisis de Costos' : 'Cost Analysis'}</h3>
+                <h3 className="section-title" style={{ margin: 0 }}>{t('costs.title')}</h3>
                 <p className="text-muted" style={{ fontSize: '0.875rem', marginTop: '4px' }}>
-                  {language === 'es' ? 'Proyectos activos principales por valor de pipeline' : 'Top active projects by pipeline value'}
+                  {t('costs.subtitle')}
                 </p>
               </div>
               <div className="total-value-card" style={{ padding: '8px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'right' }}>
                 <span className="text-muted" style={{ fontSize: '0.75rem', display: 'block' }}>
-                  {language === 'es' ? 'Valor Total del Pipeline' : 'Total Pipeline Value'}
+                  {t('costs.totalPipeline')}
                 </span>
                 <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#80EE98' }}>
                   {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
@@ -636,7 +636,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
                   labels: topCostProjects.map(p => p.name.split(':')[0]),
                   datasets: [
                     {
-                      label: language === 'es' ? 'Costo del Proyecto ($)' : 'Project Cost ($)',
+                      label: t('costs.projectCost'),
                       data: topCostProjects.map(p => parseFloat(p.cost.replace(/[^0-9.-]+/g,""))),
                       backgroundColor: 'rgba(9, 209, 199, 0.85)',
                       hoverBackgroundColor: '#80EE98',
