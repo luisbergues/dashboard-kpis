@@ -13,6 +13,7 @@ import MyProjectsView from './views/MyProjectsView'
 import DesignQualityView from './views/DesignQualityView'
 import ErrorBoundary from './components/ErrorBoundary'
 import ToastNotifications from './components/ToastNotifications'
+import ProjectChatbot from './components/ProjectChatbot'
 import { auth, db, onAuthStateChanged, ref, onValue, set, get, child } from './utils/firebase'
 
 function App() {
@@ -312,6 +313,13 @@ function App() {
           {renderView()}
         </ErrorBoundary>
       </main>
+      {currentUser && (
+        <ProjectChatbot 
+          projects={mergedData?.priorityAnalysis} 
+          currentUser={currentUser} 
+          userProfile={userProfile} 
+        />
+      )}
       <ToastNotifications 
         alerts={realAlerts} 
         onClickAlert={(so) => {
