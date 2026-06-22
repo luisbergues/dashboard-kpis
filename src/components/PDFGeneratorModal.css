@@ -91,6 +91,11 @@
   font-size: 0.95rem;
 }
 
+.form-grid select option {
+  background-color: #0b1520;
+  color: #ffffff;
+}
+
 .table-container {
   overflow-x: auto;
   margin-top: 16px;
