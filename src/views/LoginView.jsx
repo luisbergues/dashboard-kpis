@@ -28,18 +28,20 @@ export default function LoginView({ data }) {
   const [loading, setLoading] = useState(false);
   const [allowedDesigners, setAllowedDesigners] = useState(DEFAULT_DESIGNERS);
   const [designers, setDesigners] = useState([]);
-  const [mousePos, setMousePos] = useState({ x: -1000, y: -1000 });
+  const [mousePos, setMousePos] = useState({ x: -1000, y: -1000, xPct: 0.5, yPct: 0.5 });
 
   useEffect(() => {
-    setMousePos({ x: window.innerWidth * 0.25, y: window.innerHeight * 0.5 });
+    setMousePos({ x: window.innerWidth * 0.25, y: window.innerHeight * 0.5, xPct: 0.25, yPct: 0.5 });
   }, []);
 
   const handleMouseMove = (e) => {
-    setMousePos({ x: e.clientX, y: e.clientY });
+    const xPct = e.clientX / window.innerWidth;
+    const yPct = e.clientY / window.innerHeight;
+    setMousePos({ x: e.clientX, y: e.clientY, xPct, yPct });
   };
 
   const handleMouseLeave = () => {
-    setMousePos({ x: window.innerWidth * 0.25, y: window.innerHeight * 0.5 });
+    setMousePos({ x: window.innerWidth * 0.25, y: window.innerHeight * 0.5, xPct: 0.25, yPct: 0.5 });
   };
 
   useEffect(() => {
@@ -191,7 +193,9 @@ export default function LoginView({ data }) {
       onMouseLeave={handleMouseLeave}
       style={{
         '--mouse-x': `${mousePos.x}px`,
-        '--mouse-y': `${mousePos.y}px`
+        '--mouse-y': `${mousePos.y}px`,
+        '--mouse-xp': mousePos.xPct,
+        '--mouse-yp': mousePos.yPct
       }}
     >
       {/* Interactive Background Organic Glow */}

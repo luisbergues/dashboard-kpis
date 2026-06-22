@@ -44,7 +44,6 @@ ChartJS.register(
 
 // Metric colors used across historical bars
 const METRIC_COLORS = {
-  'Completed Projects': '#46DFB1',
   'ON HOLD': '#FFE600',
   'Check': '#80EE98',
   'Review': '#09D1C7',
