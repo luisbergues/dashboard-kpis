@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
-import { X, Plus, Trash2, Printer } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { X, Plus, Trash2, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import PDFPrintLayout from './PDFPrintLayout';
+import { saveESSData, loadESSData } from '../utils/essData';
 import './PDFGeneratorModal.css';
 
 const DEFAULT_DRAWERS = [
@@ -15,26 +16,96 @@ const DEFAULT_RODS = [
   { room: 'Her Master', type: 'Oval Chrome rod', qty: 1, size: '24"' }
 ];
 
-export default function PDFGeneratorModal({ project, onClose }) {
-  // --- Header State ---
-  const [headerData, setHeaderData] = useState({
-    jobName: `${project.so} - ${project.name.split(':')[0].trim()}`,
+const createDefaultPage = (project) => ({
+  headerData: {
+    jobName: project ? `${project.so} - ${project.name.split(':')[0].trim()}` : '',
     color: 'White Classic 300',
-    rooms: 'Her Master, His Master',
-    designer: project.designer || 'Russell',
-    engineer: project.eng || 'JS'
-  });
-
-  // --- Drawers State ---
-  const [drawerOptions, setDrawerOptions] = useState({
+    rooms: 'Her Master',
+    designer: project ? (project.designer || 'Russell') : '',
+    engineer: project ? (project.eng || 'JS') : ''
+  },
+  drawerOptions: {
     fronts: 'THERMOFOIL',
     box: 'DOVETAIL',
     slides: 'SOFT CLOSE',
     handles: 'STD. CHROME'
-  });
+  },
+  drawers: [...DEFAULT_DRAWERS],
+  rods: [...DEFAULT_RODS],
+  miscCol1: 'HER MASTER\n• Edge-band exposed top edges Right panel #4 + filler #5',
+  miscCol2: ''
+});
 
-  const [drawers, setDrawers] = useState([...DEFAULT_DRAWERS]);
+export default function PDFGeneratorModal({ project, onClose }) {
+  // --- Multi-page State ---
+  const [pages, setPages] = useState([createDefaultPage(project)]);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // --- Load Initial Data ---
+  useEffect(() => {
+    let isMounted = true;
+    const fetch = async () => {
+      const data = await loadESSData(project.so);
+      if (isMounted) {
+        if (data && data.length > 0) {
+          setPages(data);
+        }
+        setIsLoading(false);
+      }
+    };
+    fetch();
+    return () => { isMounted = false; };
+  }, [project.so]);
+
+  // --- Auto-Save ---
+  // Debounce the save to prevent excessive Firebase writes
+  useEffect(() => {
+    if (isLoading) return; // Don't save on initial load
+    
+    const handler = setTimeout(() => {
+      saveESSData(project.so, pages);
+    }, 1000);
+    
+    return () => clearTimeout(handler);
+  }, [pages, project.so, isLoading]);
+
+  // --- Page Management ---
+  const addPage = () => {
+    setPages([...pages, createDefaultPage(project)]);
+    setCurrentPageIndex(pages.length);
+  };
+
+  const removePage = (indexToRemove) => {
+    if (pages.length <= 1) return; // Must have at least one page
+    const newPages = pages.filter((_, i) => i !== indexToRemove);
+    setPages(newPages);
+    if (currentPageIndex >= newPages.length) {
+      setCurrentPageIndex(newPages.length - 1);
+    }
+  };
+
+  // --- Helpers to update current page state ---
+  const updateCurrentPage = (updater) => {
+    setPages(prevPages => {
+      const newPages = [...prevPages];
+      newPages[currentPageIndex] = updater(newPages[currentPageIndex]);
+      return newPages;
+    });
+  };
+
+  const setHeaderData = (newData) => updateCurrentPage(p => ({ ...p, headerData: typeof newData === 'function' ? newData(p.headerData) : newData }));
+  const setDrawerOptions = (newOpts) => updateCurrentPage(p => ({ ...p, drawerOptions: typeof newOpts === 'function' ? newOpts(p.drawerOptions) : newOpts }));
+  const setDrawers = (newDrawers) => updateCurrentPage(p => ({ ...p, drawers: typeof newDrawers === 'function' ? newDrawers(p.drawers) : newDrawers }));
+  const setRods = (newRods) => updateCurrentPage(p => ({ ...p, rods: typeof newRods === 'function' ? newRods(p.rods) : newRods }));
+  const setMiscCol1 = (val) => updateCurrentPage(p => ({ ...p, miscCol1: val }));
+  const setMiscCol2 = (val) => updateCurrentPage(p => ({ ...p, miscCol2: val }));
+
+  // Extraction of current page data for render
+  const currentPage = pages[currentPageIndex] || pages[0];
+  const { headerData, drawerOptions, drawers, rods, miscCol1, miscCol2 } = currentPage;
+
+  // --- Mutators ---
   const addDrawer = () => setDrawers([...drawers, { front: '', qty: 1, open: '', box: '', room: '', handles: '' }]);
   const removeDrawer = (index) => setDrawers(drawers.filter((_, i) => i !== index));
   const updateDrawer = (index, field, value) => {
@@ -43,8 +114,6 @@ export default function PDFGeneratorModal({ project, onClose }) {
     setDrawers(newDrawers);
   };
 
-  // --- Rods State ---
-  const [rods, setRods] = useState([...DEFAULT_RODS]);
   const addRod = () => setRods([...rods, { room: '', type: 'Oval Chrome rod', qty: 1, size: '' }]);
   const removeRod = (index) => setRods(rods.filter((_, i) => i !== index));
   const updateRod = (index, field, value) => {
@@ -52,18 +121,6 @@ export default function PDFGeneratorModal({ project, onClose }) {
     newRods[index][field] = value;
     setRods(newRods);
   };
-
-  // --- Miscellaneous State ---
-  const [miscCol1, setMiscCol1] = useState('HER MASTER\n• Edge-band exposed top edges Right panel #4 + filler #5');
-  const [miscCol2, setMiscCol2] = useState('');
-
-  // --- Print Logic ---
-  const printRef = useRef(null);
-  
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: () => `ESS_SO_${project.so}`,
-  });
 
   const handleHeaderChange = (e) => {
     setHeaderData({ ...headerData, [e.target.name]: e.target.value });
@@ -73,12 +130,31 @@ export default function PDFGeneratorModal({ project, onClose }) {
     setDrawerOptions({ ...drawerOptions, [e.target.name]: e.target.value });
   };
 
+  // --- Print Logic ---
+  const printRef = useRef(null);
+  
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: () => `ESS_${project.name.split(':')[0].trim()}`,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="pdf-modal-overlay animate-fade-in">
+        <div className="pdf-modal-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+          <p style={{ color: 'var(--color-cyan)' }}>Cargando datos guardados...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pdf-modal-overlay animate-fade-in">
       <div className="pdf-modal-content">
         <div className="pdf-modal-header">
           <h2>Completar ESS - Proyecto {project.so}</h2>
           <div className="pdf-modal-actions">
+            <span className="save-status text-muted" style={{ fontSize: '0.8rem', marginRight: '10px' }}>Autoguardado activado</span>
             <button className="btn-primary btn-sm" onClick={handlePrint}>
               <Printer size={16} /> Imprimir / Guardar PDF
             </button>
@@ -88,9 +164,36 @@ export default function PDFGeneratorModal({ project, onClose }) {
           </div>
         </div>
 
+        {/* Tab System for Multiple Pages */}
+        <div className="pdf-tabs-container">
+          <div className="pdf-tabs">
+            {pages.map((p, index) => (
+              <div 
+                key={index} 
+                className={`pdf-tab ${index === currentPageIndex ? 'active' : ''}`}
+                onClick={() => setCurrentPageIndex(index)}
+              >
+                Hoja {index + 1}
+                {pages.length > 1 && (
+                  <span 
+                    className="tab-close" 
+                    onClick={(e) => { e.stopPropagation(); removePage(index); }}
+                    title="Eliminar Hoja"
+                  >
+                    <X size={12} />
+                  </span>
+                )}
+              </div>
+            ))}
+            <button className="btn-add-tab" onClick={addPage} title="Añadir nueva hoja">
+              <Plus size={16} />
+            </button>
+          </div>
+        </div>
+
         <div className="pdf-modal-body">
           <div className="form-section">
-            <h3>Cabecera (Header)</h3>
+            <h3>Cabecera (Header) - Hoja {currentPageIndex + 1}</h3>
             <div className="form-grid">
               <label>JOB NAME: <input type="text" name="jobName" value={headerData.jobName} onChange={handleHeaderChange} /></label>
               <label>COLOR: <input type="text" name="color" value={headerData.color} onChange={handleHeaderChange} /></label>
@@ -199,17 +302,21 @@ export default function PDFGeneratorModal({ project, onClose }) {
         </div>
       </div>
 
-      {/* Hidden print layout component. We only render it for the react-to-print library to capture */}
+      {/* Hidden print layout component. Render ALL pages */}
       <div style={{ display: 'none' }}>
         <div ref={printRef}>
-          <PDFPrintLayout 
-            headerData={headerData}
-            drawerOptions={drawerOptions}
-            drawers={drawers}
-            rods={rods}
-            miscCol1={miscCol1}
-            miscCol2={miscCol2}
-          />
+          {pages.map((pData, idx) => (
+            <div key={idx} className="print-page-wrapper">
+              <PDFPrintLayout 
+                headerData={pData.headerData}
+                drawerOptions={pData.drawerOptions}
+                drawers={pData.drawers}
+                rods={pData.rods}
+                miscCol1={pData.miscCol1}
+                miscCol2={pData.miscCol2}
+              />
+            </div>
+          ))}
         </div>
       </div>
     </div>

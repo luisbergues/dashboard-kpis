@@ -147,3 +147,89 @@
   color: var(--text-muted);
   margin-bottom: 8px;
 }
+
+/* Tabs System */
+.pdf-tabs-container {
+  padding: 0 20px;
+  border-bottom: 1px solid var(--card-border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.pdf-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-top: 10px;
+}
+
+.pdf-tab {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-bottom: none;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.pdf-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.pdf-tab.active {
+  background: var(--bg-surface);
+  color: var(--color-cyan);
+  border: 1px solid var(--card-border);
+  border-bottom: none;
+  font-weight: bold;
+}
+
+.tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  transition: background 0.2s;
+  color: #ef4444;
+}
+
+.tab-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.btn-add-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  color: var(--text-muted);
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -1px; /* Align with bottom border */
+}
+
+.btn-add-tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Page wrapper for print */
+.print-page-wrapper {
+  page-break-after: always;
+}
+.print-page-wrapper:last-child {
+  page-break-after: auto;
+}

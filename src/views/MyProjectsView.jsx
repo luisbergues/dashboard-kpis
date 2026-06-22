@@ -198,6 +198,14 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     }
   };
 
+  // Cleanup ESS data for completed projects
+  useEffect(() => {
+    if (dashboardData && dashboardData.activeProjects) {
+      const activeSOs = dashboardData.activeProjects.map(p => p.so);
+      cleanupESSData(activeSOs);
+    }
+  }, [dashboardData]);
+
   // Listen to stage progress, overrides, and history in Realtime Database
   useEffect(() => {
     if (!db || !currentUser) {

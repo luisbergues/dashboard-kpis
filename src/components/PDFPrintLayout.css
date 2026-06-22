@@ -1,9 +1,14 @@
 /* CSS specific for the ReactToPrint layout */
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
 .pdf-print-container {
-  /* Use full width instead of fixed width to occupy page better */
-  width: 100%;
-  min-height: 11in;
-  padding: 0.25in;
+  /* A4 size mapping */
+  width: 210mm;
+  min-height: 297mm;
+  padding: 10mm 10mm; /* 1cm margins */
   margin: 0 auto;
   background-color: white;
   color: black;
