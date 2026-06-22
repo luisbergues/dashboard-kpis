@@ -274,7 +274,7 @@ export default function ProjectChatbot({ projects = [], currentUser, userProfile
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="chatbot-window glass-card animate-slide-up">
+        <div className="chatbot-window animate-slide-up">
           {/* Header */}
           <div className="chatbot-header">
             <div className="chatbot-profile">
