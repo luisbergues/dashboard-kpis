@@ -200,11 +200,11 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
   // Cleanup ESS data for completed projects
   useEffect(() => {
-    if (dashboardData && dashboardData.activeProjects) {
-      const activeSOs = dashboardData.activeProjects.map(p => p.so);
+    if (data && data.activeProjects) {
+      const activeSOs = data.activeProjects.map(p => p.so);
       cleanupESSData(activeSOs);
     }
-  }, [dashboardData]);
+  }, [data]);
 
   // Listen to stage progress, overrides, and history in Realtime Database
   useEffect(() => {
