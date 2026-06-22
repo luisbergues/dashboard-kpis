@@ -58,12 +58,11 @@ export default function PDFGeneratorModal({ project, onClose }) {
   const [miscCol2, setMiscCol2] = useState('');
 
   // --- Print Logic ---
-  const printRef = useRef();
+  const printRef = useRef(null);
   
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-    documentTitle: `ESS_SO_${project.so}`,
-    removeAfterPrint: true,
+    contentRef: printRef,
+    documentTitle: () => `ESS_SO_${project.so}`,
   });
 
   const handleHeaderChange = (e) => {
