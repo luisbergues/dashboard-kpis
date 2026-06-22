@@ -164,8 +164,8 @@
 
 .print-table th, .print-table td {
   border: 1px solid black;
-  padding: 8px 6px;
-  font-size: 14px; /* Increased from 12px */
+  padding: 4px 6px; /* Thinner vertical padding */
+  font-size: 14px;
 }
 
 .print-table th {
@@ -201,16 +201,25 @@
 
 .rods-table {
   width: 100%;
+  border-collapse: collapse;
 }
 
-.rods-table .title-cell {
-  text-align: left;
-  border-bottom: 2px solid black;
-  padding-left: 10px;
+.rods-table th, .rods-table td {
+  border-bottom: 1px solid black;
+  border-right: 1px solid black;
+  padding: 3px 4px; /* Thinner padding for rods */
+  font-size: 12px;
+}
+
+.rods-table th:last-child, .rods-table td:last-child {
+  border-right: none;
 }
 
 .rods-table th {
   border-bottom: 2px solid black;
+  font-weight: bold;
+  text-align: center;
+  padding: 6px 4px;
 }
 
 .rods-table .room-cell {

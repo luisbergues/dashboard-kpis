@@ -233,3 +233,31 @@
 .print-page-wrapper:last-child {
   page-break-after: auto;
 }
+
+/* Icon Buttons style overrides */
+.btn-icon {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #fff;
+}
+
+.btn-icon.danger {
+  color: #ef4444 !important;
+}
+
+.btn-icon.danger:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #f87171 !important;
+}

@@ -164,7 +164,7 @@ export default function PDFGeneratorModal({ project, onClose }) {
             <button className="btn-primary btn-sm" onClick={handlePrint}>
               <Printer size={16} /> Imprimir / Guardar PDF
             </button>
-            <button className="btn-icon" onClick={onClose}>
+            <button className="btn-icon danger" onClick={onClose}>
               <X size={20} />
             </button>
           </div>
