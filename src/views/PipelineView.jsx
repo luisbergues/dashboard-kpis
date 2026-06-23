@@ -640,11 +640,12 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                                   );
                                 })()}
                               </div>
-                              <div className="pipeline-note-card-date">
-                                {new Date(note.createdAt).toLocaleString(language === 'es' ? 'es-AR' : 'en-US', {
-                                  day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                                })}
-                              </div>
+                                <div className="pipeline-note-card-date">
+                                  {note.createdBy && <span style={{ marginRight: '8px', fontWeight: 'bold' }}>{note.createdBy} &bull;</span>}
+                                  {new Date(note.createdAt).toLocaleString(language === 'es' ? 'es-AR' : 'en-US', {
+                                    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                  })}
+                                </div>
                             </div>
                           ))}
                         </div>
