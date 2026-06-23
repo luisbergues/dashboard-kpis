@@ -16,6 +16,16 @@
   box-sizing: border-box;
 }
 
+@media print {
+  /* Prevent browser from rasterizing the PDF by disabling all 3D transforms, filters and shadows */
+  .pdf-print-container, .pdf-print-container * {
+    backdrop-filter: none !important;
+    filter: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+}
+
 /* Base resets inside the print layout so main app styles don't leak */
 .pdf-print-container * {
   box-sizing: border-box;

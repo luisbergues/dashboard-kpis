@@ -156,12 +156,17 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     }
 
     // Materials Matrix Query
-    if (cleanText.includes('matrix') || cleanText.includes('materials') || cleanText.includes('materiales') || cleanText.includes('matriz')) {
-      const searchWord = cleanText.replace(/[^a-z0-9]/g, '');
+    if (cleanText.includes('matrix') || cleanText.includes('materials') || cleanText.includes('materiales') || cleanText.includes('matriz') || cleanText.includes('meterial') || cleanText.includes('material')) {
       const matchedMaterial = materialsMatrix.find(m => {
-        const cleanName = (m.projectName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const cleanSo = (m.so || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        return searchWord.length >= 3 && (cleanName.includes(searchWord) || cleanSo.includes(searchWord));
+        const cleanName = (m.projectName || '').toLowerCase().trim();
+        const cleanSo = (m.so || '').toLowerCase().trim();
+        
+        if (cleanSo && cleanText.includes(cleanSo)) return true;
+        
+        const nameParts = cleanName.split(' ').filter(part => part.length >= 3);
+        if (nameParts.length > 0 && nameParts.some(part => cleanText.includes(part))) return true;
+        
+        return false;
       });
 
       if (matchedMaterial) {
