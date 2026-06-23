@@ -140,8 +140,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ─── Light Theme Overrides ─────────────────────────── */
 :root.light-theme {
-  --bg-deep: #F3F4F6;        /* Light grey background for containers */
-  --bg-surface: #E5E7EB;     /* Deeper light grey background */
+  --bg-deep: #E5E7EB;        /* Darker light grey background for more contrast */
+  --bg-surface: #D1D5DB;     /* Deeper light grey background */
   
   --card-bg: #FFFFFF;        /* Solid white cards */
   --card-border: #D1D5DB;    /* Soft grey borders */
