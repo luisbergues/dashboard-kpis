@@ -135,6 +135,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
   // Completed Projects Modal State
   const [isCompletedProjectsModalOpen, setIsCompletedProjectsModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   // Analytics & Sorting State
   const [showAnalytics, setShowAnalytics] = useState(true);
@@ -1434,18 +1435,22 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                                 return (
                                   <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                     {atts.map((att, i) => (
-                                      <a key={i} href={att.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                                      <div key={i} style={{ textDecoration: 'none' }}>
                                         {att.type === 'document' ? (
-                                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
-                                            <FileText size={16} />
-                                            <span style={{ fontSize: '0.85rem', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                              {att.name || 'Document'}
-                                            </span>
-                                          </div>
+                                          <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
+                                              <FileText size={16} />
+                                              <span style={{ fontSize: '0.85rem', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {att.name || 'Document'}
+                                              </span>
+                                            </div>
+                                          </a>
                                         ) : (
-                                          <img src={att.url} alt="Note attachment" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', border: '1px solid var(--card-border)', objectFit: 'cover' }} />
+                                          <div onClick={() => setSelectedImage(att.url)} style={{ cursor: 'pointer' }}>
+                                            <img src={att.url} alt="Note attachment" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', border: '1px solid var(--card-border)', objectFit: 'cover' }} />
+                                          </div>
                                         )}
-                                      </a>
+                                      </div>
                                     ))}
                                   </div>
                                 );

@@ -55,6 +55,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   const [commentPriorities, setCommentPriorities] = useState({});
   const [noteImages, setNoteImages] = useState({});
   const [isUploadingImage, setIsUploadingImage] = useState({});
+  const [selectedImage, setSelectedImage] = useState(null);
   const [expandedProjects, setExpandedProjects] = useState({});
 
   const toggleCollapse = (so) => {
@@ -317,6 +318,43 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
           </div>
         </div>
       </header>
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => setSelectedImage(null)}
+          style={{ 
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999,
+            display: 'flex', justifyContent: 'center', alignItems: 'center',
+            backdropFilter: 'blur(5px)'
+          }}
+        >
+          <div 
+            style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setSelectedImage(null)}
+              style={{ 
+                position: 'absolute', top: '-40px', right: '0', 
+                background: 'none', border: 'none', color: '#fff', 
+                cursor: 'pointer', padding: '8px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(255,255,255,0.1)', borderRadius: '50%'
+              }}
+            >
+              <X size={24} />
+            </button>
+            <img 
+              src={selectedImage} 
+              alt="Enlarged Note attachment" 
+              style={{ maxWidth: '100%', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} 
+            />
+          </div>
+        </div>
+      )}
 
       <div className="project-list">
         {projects.length === 0 ? (
@@ -581,18 +619,22 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                                   return (
                                     <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                       {atts.map((att, i) => (
-                                        <a key={i} href={att.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                                        <div key={i} style={{ textDecoration: 'none' }}>
                                           {att.type === 'document' ? (
-                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
-                                              <FileText size={14} />
-                                              <span style={{ fontSize: '0.75rem', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {att.name || 'Document'}
-                                              </span>
-                                            </div>
+                                            <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
+                                                <FileText size={14} />
+                                                <span style={{ fontSize: '0.75rem', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                  {att.name || 'Document'}
+                                                </span>
+                                              </div>
+                                            </a>
                                           ) : (
-                                            <img src={att.url} alt="Note attachment" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '6px', border: '1px solid var(--card-border)', objectFit: 'cover' }} />
+                                            <div onClick={() => setSelectedImage(att.url)} style={{ cursor: 'pointer' }}>
+                                              <img src={att.url} alt="Note attachment" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '6px', border: '1px solid var(--card-border)', objectFit: 'cover' }} />
+                                            </div>
                                           )}
-                                        </a>
+                                        </div>
                                       ))}
                                     </div>
                                   );
