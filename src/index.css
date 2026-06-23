@@ -143,11 +143,11 @@ h1, h2, h3, h4, h5, h6 {
     --bg-deep: #FFFFFF;        /* Very light background */
     --bg-surface: #FFFFFF;     /* Deeper light grey background */
     
-    --card-bg: #E5E7EB;        /* Slightly darker cards */
+    --card-bg: #FFFFFF;        /* White cards */
     --card-border: #D1D5DB;    /* Soft grey borders */
-    --card-hover: #D1D5DB;     /* Slight off-white hover background */
+    --card-hover: #F9FAFB;     /* Slight off-white hover background */
     
-    --color-navy: #E5E7EB;     /* Pill background */
+    --color-navy: #FFFFFF;     /* Pill background */
   
   --text-primary: #111827;   /* Dark grey text */
   --text-secondary: #374151; /* Medium grey text */
