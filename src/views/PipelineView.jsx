@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, AlertCircle, Calendar, StickyNote, Flag, Clock, CheckCircle2, Users, Plus, Circle, Image as ImageIcon, Loader2, X } from 'lucide-react';
+import { Search, AlertCircle, Calendar, StickyNote, Flag, Clock, CheckCircle2, Users, Plus, Circle, Image as ImageIcon, Loader2, X, FileText, Paperclip } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import { db, ref, onValue, set } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
-import { compressImage, uploadNoteImage } from '../services/imageService';
+import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import './PipelineView.css';
 
 const STAGES = [
@@ -129,13 +129,22 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     setIsUploadingImage(prev => ({ ...prev, [so]: true }));
 
     let imageUrl = null;
+    let attachmentType = null;
+    let attachmentName = null;
     if (imageFile) {
+      if (!imageFile.type.startsWith('image/') && imageFile.size > 1024 * 1024) {
+        alert(language === 'es' ? 'El archivo es demasiado grande (Máx 1MB)' : 'File is too large (Max 1MB)');
+        setIsUploadingImage(prev => ({ ...prev, [so]: false }));
+        return;
+      }
       try {
-        const compressedFile = await compressImage(imageFile);
-        imageUrl = await uploadNoteImage(compressedFile, so);
+        const fileToUpload = imageFile.type.startsWith('image/') ? await compressImage(imageFile) : imageFile;
+        imageUrl = await uploadNoteAttachment(fileToUpload, so);
+        attachmentType = imageFile.type.startsWith('image/') ? 'image' : 'document';
+        attachmentName = imageFile.name;
       } catch (error) {
-        console.error('Error uploading image:', error);
-        alert(language === 'es' ? 'Error al subir la imagen' : 'Error uploading image');
+        console.error('Error uploading file:', error);
+        alert(language === 'es' ? 'Error al subir el archivo' : 'Error uploading file');
         setIsUploadingImage(prev => ({ ...prev, [so]: false }));
         return; // Halt if upload fails
       }
@@ -153,6 +162,8 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
 
     if (imageUrl) {
       newNote.imageUrl = imageUrl;
+      newNote.attachmentType = attachmentType;
+      newNote.attachmentName = attachmentName;
     }
 
     const currentNotes = projectNotes[so] ? [...projectNotes[so]] : [];
@@ -443,12 +454,21 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                         </div>
                         <div className="pipeline-note-input-row" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {noteImages[project.so] && (
-                            <div style={{ position: 'relative', display: 'inline-block', alignSelf: 'flex-start' }}>
-                              <img 
-                                src={URL.createObjectURL(noteImages[project.so])} 
-                                alt="Preview" 
-                                style={{ height: '40px', borderRadius: '4px', border: '1px solid var(--card-border)' }} 
-                              />
+                            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px', border: '1px solid var(--card-border)', borderRadius: '4px', background: 'rgba(255,255,255,0.02)', alignSelf: 'flex-start' }}>
+                              {noteImages[project.so].type.startsWith('image/') ? (
+                                <img 
+                                  src={URL.createObjectURL(noteImages[project.so])} 
+                                  alt="Preview" 
+                                  style={{ height: '40px', borderRadius: '4px' }} 
+                                />
+                              ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', color: '#94A3B8' }}>
+                                  <FileText size={18} />
+                                  <span style={{ fontSize: '0.75rem', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {noteImages[project.so].name}
+                                  </span>
+                                </div>
+                              )}
                               <button 
                                 type="button"
                                 onClick={() => setNoteImages(prev => ({ ...prev, [project.so]: null }))}
@@ -472,11 +492,11 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                                 }
                               }}
                             />
-                            <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', padding: '0 10px', borderRadius: '8px', color: '#94A3B8' }}>
-                              <ImageIcon size={14} />
+                            <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', padding: '0 10px', borderRadius: '8px', color: '#94A3B8' }} title={language === 'es' ? 'Adjuntar Imagen o Documento (Máx 1MB)' : 'Attach Image or Document (Max 1MB)'}>
+                              <Paperclip size={14} />
                               <input 
                                 type="file" 
-                                accept="image/*" 
+                                accept="image/*,.pdf,.doc,.docx" 
                                 style={{ display: 'none' }}
                                 onChange={(e) => {
                                   if (e.target.files && e.target.files[0]) {
@@ -538,8 +558,15 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                               </div>
                               {note.imageUrl && (
                                 <div style={{ marginTop: '6px' }}>
-                                  <a href={note.imageUrl} target="_blank" rel="noopener noreferrer">
-                                    <img src={note.imageUrl} alt="Note attachment" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '4px', border: '1px solid var(--card-border)' }} />
+                                  <a href={note.imageUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                                    {note.attachmentType === 'document' ? (
+                                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
+                                        <FileText size={14} />
+                                        <span style={{ fontSize: '0.75rem' }}>{note.attachmentName || 'Document'}</span>
+                                      </div>
+                                    ) : (
+                                      <img src={note.imageUrl} alt="Note attachment" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '4px', border: '1px solid var(--card-border)' }} />
+                                    )}
                                   </a>
                                 </div>
                               )}

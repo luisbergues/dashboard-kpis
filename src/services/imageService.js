@@ -24,18 +24,18 @@ export const compressImage = async (file) => {
 };
 
 /**
- * Uploads an image to Firebase Storage under the project's folder.
- * @param {File} file - The compressed image file
+ * Uploads an attachment to Firebase Storage under the project's folder.
+ * @param {File} file - The file to upload
  * @param {string} projectId - The SO number
  * @param {function} onProgress - Callback for upload progress
- * @returns {Promise<string>} Download URL of the uploaded image
+ * @returns {Promise<string>} Download URL of the uploaded file
  */
-export const uploadNoteImage = async (file, projectId, onProgress) => {
+export const uploadNoteAttachment = async (file, projectId, onProgress) => {
   if (!storage) throw new Error('Firebase Storage is not initialized');
 
   const timestamp = Date.now();
-  const fileExt = file.name.split('.').pop() || 'webp';
-  const filePath = `project_images/${projectId}/img_${timestamp}.${fileExt}`;
+  const fileExt = file.name.split('.').pop() || 'file';
+  const filePath = `project_images/${projectId}/att_${timestamp}.${fileExt}`;
   
   const imgRef = storageRef(storage, filePath);
   const uploadTask = uploadBytesResumable(imgRef, file);
