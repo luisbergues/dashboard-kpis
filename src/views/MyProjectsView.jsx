@@ -14,6 +14,7 @@ import { calculatePersonalStageAverages, calculateMonthlyCompletions, getUpcomin
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import PDFGeneratorModal from '../components/PDFGeneratorModal';
 import IPGeneratorModal from '../components/IPGeneratorModal';
+import CompletedProjectsModal from '../components/CompletedProjectsModal';
 import { cleanupESSData } from '../utils/essData';
 import { cleanupIPData } from '../utils/ipData';
 import './MyProjectsView.css';
@@ -129,6 +130,9 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [isIPModalOpen, setIsIPModalOpen] = useState(false);
   const [activeIPProject, setActiveIPProject] = useState(null);
 
+  // Completed Projects Modal State
+  const [isCompletedProjectsModalOpen, setIsCompletedProjectsModalOpen] = useState(false);
+
   // Analytics & Sorting State
   const [showAnalytics, setShowAnalytics] = useState(true);
   const [sortBy, setSortBy] = useState(null); // 'date' | 'so'
@@ -154,6 +158,14 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     return p.eng && p.eng.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
   });
 
+  const myArchivedProjects = (data.archivedProjects || []).filter(p => {
+    if (!userProfile) return false;
+    if (userProfile.role === 'administrative' || userProfile.role === 'admin' || userProfile.role === 'engineer_nester') {
+      return true;
+    }
+    return p.eng && p.eng.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
+  });
+
   const isAdmin = userProfile && (userProfile.role === 'administrative' || userProfile.role === 'admin');
 
   const myProjects = [...myProjectsRaw].sort((a, b) => {
@@ -171,7 +183,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
   // Calculate analytics
   const stageAverages = calculatePersonalStageAverages(projectStages, myProjectsRaw, projectHistory, engineeringChecks);
-  const monthlyData = calculateMonthlyCompletions(projectStages, myProjectsRaw);
+  const monthlyData = calculateMonthlyCompletions(projectStages, [...myProjectsRaw, ...myArchivedProjects]);
   const upcomingDeadlines = getUpcomingDeadlines(myProjectsRaw);
 
   const stageAveragesChartData = {
@@ -987,13 +999,21 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
   return (
     <div className="my-projects-view animate-fade-in">
-      <header className="view-header">
+      <header className="view-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div className="view-header-title">
           <h1 className="page-title">{t('myProjects.title')}</h1>
           <p className="text-muted">
             {t('myProjects.subtitle')}
           </p>
         </div>
+        <button 
+          className="btn btn-outline" 
+          onClick={() => setIsCompletedProjectsModalOpen(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          <CheckCircle2 size={16} />
+          Completed Projects
+        </button>
       </header>
 
       {/* Analytics Section */}
@@ -1518,6 +1538,14 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
         <IPGeneratorModal 
           project={activeIPProject} 
           onClose={() => { setIsIPModalOpen(false); setActiveIPProject(null); }} 
+        />
+      )}
+
+      {/* Completed Projects Modal */}
+      {isCompletedProjectsModalOpen && (
+        <CompletedProjectsModal 
+          projects={data.archivedProjects || []}
+          onClose={() => setIsCompletedProjectsModalOpen(false)}
         />
       )}
     </div>

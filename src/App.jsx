@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchAndParseData } from './utils/sheetParser'
 import { getCachedData, setCachedData, isCacheFresh } from './utils/dbCache'
 import { checkDbSizeAndArchive } from './utils/archiveHelpers'
+import { archiveMissingCompletedProjects, fetchArchivedCompletedProjects } from './utils/completedProjectsArchive'
 import Navbar from './components/Navbar'
 import DashboardView from './views/DashboardView'
 import PipelineView from './views/PipelineView'
@@ -35,17 +36,25 @@ function App() {
       
       if (cached && isCacheFresh(cached.timestamp)) {
         dataToReturn = cached.parsedData;
-        // Trigger background refresh if we want, but React Query handles staleTime
+        // Fetch archived projects
+        dataToReturn.archivedProjects = await fetchArchivedCompletedProjects();
       } else {
         try {
           const parsedData = await fetchAndParseData();
+          
+          if (cached && cached.parsedData) {
+            await archiveMissingCompletedProjects(cached.parsedData, parsedData);
+          }
+          
           await setCachedData(parsedData);
           checkDbSizeAndArchive().catch(console.error);
           dataToReturn = parsedData;
+          dataToReturn.archivedProjects = await fetchArchivedCompletedProjects();
         } catch (err) {
           if (cached) {
             console.warn('Fallback to expired cache due to fetch error', err);
             dataToReturn = cached.parsedData;
+            dataToReturn.archivedProjects = await fetchArchivedCompletedProjects();
           } else {
             throw err;
           }
