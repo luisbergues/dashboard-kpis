@@ -1,5 +1,4 @@
 import imageCompression from 'browser-image-compression';
-import { storage, storageRef, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from '../utils/firebase';
 
 /**
  * Compresses an image client-side before uploading.
@@ -31,58 +30,28 @@ export const compressImage = async (file) => {
  * @returns {Promise<string>} Download URL of the uploaded file
  */
 export const uploadNoteAttachment = async (file, projectId, onProgress) => {
-  if (!storage) throw new Error('Firebase Storage is not initialized');
-
-  const timestamp = Date.now();
-  const fileExt = file.name.split('.').pop() || 'file';
-  const filePath = `project_images/${projectId}/att_${timestamp}.${fileExt}`;
-  
-  const imgRef = storageRef(storage, filePath);
-  const uploadTask = uploadBytesResumable(imgRef, file);
-
   return new Promise((resolve, reject) => {
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        if (onProgress) onProgress(progress);
-      },
-      (error) => {
-        console.error('Upload failed:', error);
-        reject(error);
-      },
-      async () => {
-        try {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve(downloadURL);
-        } catch (error) {
-          reject(error);
-        }
-      }
-    );
+    // Simulate initial progress
+    if (onProgress) onProgress(10);
+    
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    
+    reader.onload = () => {
+      // Simulate completion progress
+      if (onProgress) onProgress(100);
+      resolve(reader.result); // Returns the Base64 string
+    };
+    
+    reader.onerror = (error) => {
+      console.error('Error reading file:', error);
+      reject(error);
+    };
   });
 };
 
-/**
- * Deletes all images associated with a project from Firebase Storage.
- * @param {string} projectId - The SO number
- * @returns {Promise<void>}
- */
 export const deleteProjectImages = async (projectId) => {
-  if (!storage) return;
-
-  const folderRef = storageRef(storage, `project_images/${projectId}`);
-  
-  try {
-    const dir = await listAll(folderRef);
-    const deletePromises = dir.items.map((itemRef) => deleteObject(itemRef));
-    
-    await Promise.all(deletePromises);
-    console.log(`Successfully deleted all images for project ${projectId}`);
-  } catch (error) {
-    // If the folder doesn't exist, Firebase might throw an error. It's safe to ignore.
-    if (error.code !== 'storage/object-not-found') {
-      console.error(`Error deleting images for project ${projectId}:`, error);
-    }
-  }
+  // No longer needed since images are saved as text (Base64) directly inside the RTDB notes.
+  // They will be automatically deleted when the note or project is deleted.
+  return Promise.resolve();
 };
