@@ -67,15 +67,14 @@
 }
 
 .pdf-job-info-cell, .pdf-staff-info-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  /* Removed display: flex to preserve table-cell behavior */
 }
 
 .info-row {
   display: flex;
   gap: 8px;
   font-size: 16px; /* Increased from 14px */
+  margin-bottom: 8px;
 }
 
 .info-label {
