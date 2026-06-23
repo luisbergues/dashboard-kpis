@@ -12,9 +12,10 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",
+    "browser-image-compression": "^2.0.2",
     "chart.js": "^4.5.1",
     "date-fns": "^4.2.1",
-    "firebase": "^12.13.0",
+    "firebase": "^12.15.0",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.16.0",
     "papaparse": "^5.5.3",

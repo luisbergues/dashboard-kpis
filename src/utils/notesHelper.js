@@ -7,9 +7,10 @@ const CACHE_PREFIX = 'project_notes_';
  * @param {string} so - Project SO number
  * @param {string} text - Note content
  * @param {string} userName - Author name
+ * @param {string} imageUrl - Optional image URL
  * @returns {Promise<Array>} The updated notes array
  */
-export const addProjectNote = async (so, text, userName) => {
+export const addProjectNote = async (so, text, userName, imageUrl = null) => {
   const newNote = {
     id: Date.now().toString(),
     text: text.trim(),
@@ -17,6 +18,10 @@ export const addProjectNote = async (so, text, userName) => {
     createdAt: new Date().toISOString(),
     createdBy: userName || 'Asistente Chat'
   };
+
+  if (imageUrl) {
+    newNote.imageUrl = imageUrl;
+  }
 
   let currentNotes = [];
 

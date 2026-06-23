@@ -7,6 +7,7 @@ import {
   signOut, 
   onAuthStateChanged 
 } from 'firebase/auth';
+import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
 
 // Firebase configuration using Vite environment variables
 const firebaseConfig = {
@@ -29,6 +30,7 @@ const isConfigured =
 let db = null;
 let firebaseApp = null;
 let auth = null;
+let storage = null;
 let initError = null;
 
 if (isConfigured) {
@@ -37,12 +39,14 @@ if (isConfigured) {
     firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     db = getDatabase(firebaseApp);
     auth = getAuth(firebaseApp);
+    storage = getStorage(firebaseApp);
     console.log('🔥 Firebase initialized successfully!');
   } catch (error) {
     console.error('❌ Failed to initialize Firebase:', error);
     initError = error.message || String(error);
     db = null;
     auth = null;
+    storage = null;
   }
 } else {
   console.warn('⚠️ Firebase credentials not fully configured in environment variables (.env.local or hosting provider dashboard). Operating in Local Storage Mode.');
@@ -53,8 +57,10 @@ if (isConfigured) {
 export { 
   db, 
   auth,
+  storage,
   initError,
   ref, 
+  storageRef,
   set, 
   remove, 
   onValue, 
@@ -64,5 +70,9 @@ export {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  uploadBytesResumable,
+  getDownloadURL,
+  deleteObject,
+  listAll
 };

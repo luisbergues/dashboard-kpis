@@ -6,8 +6,9 @@ import { useLanguage } from '../utils/LanguageContext';
 import { 
   Briefcase, Calendar, Check, Clock, 
   AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag, Users,
-  ChevronDown, ChevronUp, ArrowUpDown, TrendingUp, CheckCircle2
+  ChevronDown, ChevronUp, ArrowUpDown, TrendingUp, CheckCircle2, Image as ImageIcon, Loader2
 } from 'lucide-react';
+import { compressImage, uploadNoteImage } from '../services/imageService';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
 import { calculatePersonalStageAverages, calculateMonthlyCompletions, getUpcomingDeadlines } from '../services/kpiCalculator';
@@ -110,6 +111,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   // Project Notes State
   const [projectNotes, setProjectNotes] = useState({});
   const [noteInputs, setNoteInputs] = useState({}); // { [so]: { text: '', priority: false } }
+  const [noteImages, setNoteImages] = useState({}); // { [so]: File }
+  const [isUploadingImage, setIsUploadingImage] = useState({}); // { [so]: boolean }
 
   // Hold Modal State
   const [isHoldModalOpen, setIsHoldModalOpen] = useState(false);
@@ -591,16 +594,37 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       return;
     }
     const input = noteInputs[so];
-    if (!input || !input.text?.trim()) return;
+    const imageFile = noteImages[so];
+    
+    if ((!input || !input.text?.trim()) && !imageFile) return;
+
+    setIsUploadingImage(prev => ({ ...prev, [so]: true }));
+
+    let imageUrl = null;
+    if (imageFile) {
+      try {
+        const compressedFile = await compressImage(imageFile);
+        imageUrl = await uploadNoteImage(compressedFile, so);
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        alert(language === 'es' ? 'Error al subir la imagen' : 'Error uploading image');
+        setIsUploadingImage(prev => ({ ...prev, [so]: false }));
+        return; // Halt if upload fails
+      }
+    }
 
     const userName = userProfile?.designerName || currentUser?.displayName || currentUser?.email || 'Unknown User';
     const newNote = {
       id: Date.now().toString(),
-      text: input.text.trim(),
-      priority: input.priority || false,
+      text: input?.text?.trim() || '',
+      priority: input?.priority || false,
       createdAt: new Date().toISOString(),
       createdBy: userName
     };
+
+    if (imageUrl) {
+      newNote.imageUrl = imageUrl;
+    }
 
     const currentNotes = projectNotes[so] ? [...projectNotes[so]] : [];
     currentNotes.unshift(newNote);
@@ -617,6 +641,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     }
 
     setNoteInputs(prev => ({ ...prev, [so]: { text: '', priority: false } }));
+    setNoteImages(prev => ({ ...prev, [so]: null }));
+    setIsUploadingImage(prev => ({ ...prev, [so]: false }));
   };
 
   const handleDeleteNote = async (so, noteId) => {
@@ -1007,12 +1033,12 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
           </p>
         </div>
         <button 
-          className="btn btn-outline" 
+          className="btn-primary btn-sm" 
           onClick={() => setIsCompletedProjectsModalOpen(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          style={{ background: 'var(--color-cyan)', color: '#fff', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          <CheckCircle2 size={16} />
-          Completed Projects
+          <CheckCircle2 size={14} />
+          <span>Completed Projects</span>
         </button>
       </header>
 
@@ -1253,6 +1279,22 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
                       {!isAdmin && (
                         <div className="add-note-form">
+                          {noteImages[project.so] && (
+                            <div style={{ marginBottom: '8px', position: 'relative', display: 'inline-block' }}>
+                              <img 
+                                src={URL.createObjectURL(noteImages[project.so])} 
+                                alt="Preview" 
+                                style={{ height: '60px', borderRadius: '4px', border: '1px solid var(--card-border)' }} 
+                              />
+                              <button 
+                                type="button"
+                                onClick={() => setNoteImages(prev => ({ ...prev, [project.so]: null }))}
+                                style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#EF4444', color: '#fff', borderRadius: '50%', border: 'none', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          )}
                           <textarea
                             className="note-input"
                             placeholder={language === 'es' ? 'Agregar nota...' : 'Add note...'}
@@ -1268,27 +1310,48 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                               }
                             }}
                             rows={2}
+                            disabled={isUploadingImage[project.so]}
                           />
                           <div className="note-actions-row">
-                            <button
-                              type="button"
-                              className={`priority-toggle ${noteInputs[project.so]?.priority ? 'is-priority' : 'not-priority'}`}
-                              onClick={() => setNoteInputs(prev => ({
-                                ...prev,
-                                [project.so]: { ...prev[project.so], priority: !prev[project.so]?.priority }
-                              }))}
-                            >
-                              <Flag size={12} />
-                              {noteInputs[project.so]?.priority 
-                                ? (language === 'es' ? 'Prioritaria' : 'Priority')
-                                : (language === 'es' ? 'Normal' : 'Normal')}
-                            </button>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                type="button"
+                                className={`priority-toggle ${noteInputs[project.so]?.priority ? 'is-priority' : 'not-priority'}`}
+                                onClick={() => setNoteInputs(prev => ({
+                                  ...prev,
+                                  [project.so]: { ...prev[project.so], priority: !prev[project.so]?.priority }
+                                }))}
+                                disabled={isUploadingImage[project.so]}
+                              >
+                                <Flag size={12} />
+                                {noteInputs[project.so]?.priority 
+                                  ? (language === 'es' ? 'Prioritaria' : 'Priority')
+                                  : (language === 'es' ? 'Normal' : 'Normal')}
+                              </button>
+                              
+                              <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '12px', fontSize: '0.75rem', color: '#94A3B8' }}>
+                                <ImageIcon size={14} />
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  style={{ display: 'none' }}
+                                  onChange={(e) => {
+                                    if (e.target.files && e.target.files[0]) {
+                                      setNoteImages(prev => ({ ...prev, [project.so]: e.target.files[0] }));
+                                    }
+                                  }}
+                                  disabled={isUploadingImage[project.so]}
+                                />
+                              </label>
+                            </div>
+
                             <button
                               className="btn-add-note"
                               onClick={() => handleAddNote(project.so)}
-                              disabled={!noteInputs[project.so]?.text?.trim()}
+                              disabled={(!noteInputs[project.so]?.text?.trim() && !noteImages[project.so]) || isUploadingImage[project.so]}
+                              style={{ opacity: isUploadingImage[project.so] ? 0.7 : 1 }}
                             >
-                              <Plus size={14} />
+                              {isUploadingImage[project.so] ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                               {language === 'es' ? 'Agregar' : 'Add'}
                             </button>
                           </div>
@@ -1325,6 +1388,13 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                                 )}
                               </div>
                               <div className="note-item-text">{note.text}</div>
+                              {note.imageUrl && (
+                                <div style={{ marginTop: '8px' }}>
+                                  <a href={note.imageUrl} target="_blank" rel="noopener noreferrer">
+                                    <img src={note.imageUrl} alt="Note attachment" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', border: '1px solid var(--card-border)' }} />
+                                  </a>
+                                </div>
+                              )}
                               <div className="note-item-date">
                                 {new Date(note.createdAt).toLocaleDateString(language === 'es' ? 'es-AR' : 'en-US', {
                                   day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'

@@ -38,6 +38,9 @@ export async function fetchArchivedCompletedProjects() {
   if (!backupDb) return [];
 
   try {
+    // Run garbage collection in the background
+    purgeExpiredArchives().catch(e => console.error('Background purge failed:', e));
+
     const archiveRef = collection(backupDb, 'completed_projects_archive');
     // Fetch all and filter in memory to avoid needing composite indexes.
     const querySnapshot = await getDocs(archiveRef);
@@ -61,5 +64,46 @@ export async function fetchArchivedCompletedProjects() {
   } catch (error) {
     console.error('❌ Error fetching archived projects:', error);
     return [];
+  }
+}
+
+export async function purgeExpiredArchives() {
+  if (!backupDb) return;
+
+  try {
+    const archiveRef = collection(backupDb, 'completed_projects_archive');
+    const querySnapshot = await getDocs(archiveRef);
+    
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    const deletePromises = [];
+    
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const archivedAt = data.archivedAt?.toDate();
+      
+      // If older than 6 months, purge it and its images
+      if (archivedAt && archivedAt < sixMonthsAgo) {
+        console.log(`🗑️ Purging expired project: ${data.so}`);
+        
+        // 1. Delete associated images from Storage
+        import('../services/imageService').then(({ deleteProjectImages }) => {
+          deleteProjectImages(data.so.toString());
+        });
+        
+        // 2. Delete document from Firestore
+        import('firebase/firestore').then(({ deleteDoc }) => {
+          deletePromises.push(deleteDoc(docSnap.ref));
+        });
+      }
+    });
+    
+    await Promise.all(deletePromises);
+    if (deletePromises.length > 0) {
+      console.log(`✅ Successfully purged ${deletePromises.length} expired projects.`);
+    }
+  } catch (error) {
+    console.error('❌ Error purging expired archives:', error);
   }
 }

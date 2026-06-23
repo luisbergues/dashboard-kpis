@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, AlertCircle, Calendar, StickyNote, Flag, Clock, CheckCircle2, Users, Plus, Circle } from 'lucide-react';
+import { Search, AlertCircle, Calendar, StickyNote, Flag, Clock, CheckCircle2, Users, Plus, Circle, Image as ImageIcon, Loader2, X } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import { db, ref, onValue, set } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
+import { compressImage, uploadNoteImage } from '../services/imageService';
 import './PipelineView.css';
 
 const STAGES = [
@@ -52,6 +53,8 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   const [newNoteTexts, setNewNoteTexts] = useState({});
   const [nestingChecks, setNestingChecks] = useState({});
   const [commentPriorities, setCommentPriorities] = useState({});
+  const [noteImages, setNoteImages] = useState({});
+  const [isUploadingImage, setIsUploadingImage] = useState({});
   const [expandedProjects, setExpandedProjects] = useState({});
 
   const toggleCollapse = (so) => {
@@ -119,17 +122,38 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
 
   const handleAddNote = async (so, engName, isPriority = false) => {
     const text = newNoteTexts[so];
-    if (!text || !text.trim()) return;
+    const imageFile = noteImages[so];
+    
+    if ((!text || !text.trim()) && !imageFile) return;
+
+    setIsUploadingImage(prev => ({ ...prev, [so]: true }));
+
+    let imageUrl = null;
+    if (imageFile) {
+      try {
+        const compressedFile = await compressImage(imageFile);
+        imageUrl = await uploadNoteImage(compressedFile, so);
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        alert(language === 'es' ? 'Error al subir la imagen' : 'Error uploading image');
+        setIsUploadingImage(prev => ({ ...prev, [so]: false }));
+        return; // Halt if upload fails
+      }
+    }
 
     const userName = userProfile?.designerName || currentUser?.displayName || currentUser?.email || 'Unknown User';
 
     const newNote = {
       id: Date.now().toString(),
-      text: text.trim(),
+      text: text?.trim() || '',
       priority: isPriority,
       createdAt: new Date().toISOString(),
       createdBy: userName
     };
+
+    if (imageUrl) {
+      newNote.imageUrl = imageUrl;
+    }
 
     const currentNotes = projectNotes[so] ? [...projectNotes[so]] : [];
     currentNotes.unshift(newNote);
@@ -139,8 +163,11 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
         await set(ref(db, `project_notes/${so}`), currentNotes);
         setNewNoteTexts(prev => ({ ...prev, [so]: '' }));
         setCommentPriorities(prev => ({ ...prev, [so]: false }));
+        setNoteImages(prev => ({ ...prev, [so]: null }));
+        setIsUploadingImage(prev => ({ ...prev, [so]: false }));
       } catch (err) {
         console.error('Failed to save note to Firebase:', err);
+        setIsUploadingImage(prev => ({ ...prev, [so]: false }));
       }
     }
   };
@@ -414,27 +441,61 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                             }
                           </button>
                         </div>
-                        <div className="pipeline-note-input-row">
-                          <input 
-                            type="text"
-                            placeholder={language === 'es' ? 'Escribe una nota...' : 'Write a note...'}
-                            value={newNoteTexts[project.so] || ''}
-                            onChange={(e) => setNewNoteTexts(prev => ({ ...prev, [project.so]: e.target.value }))}
-                            className="pipeline-note-input-field"
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleAddNote(project.so, project.eng, commentPriorities[project.so]);
-                              }
-                            }}
-                          />
-                          <button 
-                            onClick={() => handleAddNote(project.so, project.eng, commentPriorities[project.so])}
-                            disabled={!(newNoteTexts[project.so] || '').trim()}
-                            className="btn-sm btn-primary pipeline-add-note-btn"
-                          >
-                            <Plus size={12} />
-                            {language === 'es' ? 'Agregar' : 'Add'}
-                          </button>
+                        <div className="pipeline-note-input-row" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {noteImages[project.so] && (
+                            <div style={{ position: 'relative', display: 'inline-block', alignSelf: 'flex-start' }}>
+                              <img 
+                                src={URL.createObjectURL(noteImages[project.so])} 
+                                alt="Preview" 
+                                style={{ height: '40px', borderRadius: '4px', border: '1px solid var(--card-border)' }} 
+                              />
+                              <button 
+                                type="button"
+                                onClick={() => setNoteImages(prev => ({ ...prev, [project.so]: null }))}
+                                style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#EF4444', color: '#fff', borderRadius: '50%', border: 'none', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                              >
+                                <X size={10} />
+                              </button>
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                            <input 
+                              type="text"
+                              placeholder={language === 'es' ? 'Escribe una nota...' : 'Write a note...'}
+                              value={newNoteTexts[project.so] || ''}
+                              onChange={(e) => setNewNoteTexts(prev => ({ ...prev, [project.so]: e.target.value }))}
+                              className="pipeline-note-input-field"
+                              disabled={isUploadingImage[project.so]}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleAddNote(project.so, project.eng, commentPriorities[project.so]);
+                                }
+                              }}
+                            />
+                            <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', padding: '0 10px', borderRadius: '8px', color: '#94A3B8' }}>
+                              <ImageIcon size={14} />
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    setNoteImages(prev => ({ ...prev, [project.so]: e.target.files[0] }));
+                                  }
+                                }}
+                                disabled={isUploadingImage[project.so]}
+                              />
+                            </label>
+                            <button 
+                              onClick={() => handleAddNote(project.so, project.eng, commentPriorities[project.so])}
+                              disabled={(!(newNoteTexts[project.so] || '').trim() && !noteImages[project.so]) || isUploadingImage[project.so]}
+                              className="btn-sm btn-primary pipeline-add-note-btn"
+                              style={{ opacity: isUploadingImage[project.so] ? 0.7 : 1 }}
+                            >
+                              {isUploadingImage[project.so] ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                              {language === 'es' ? 'Agregar' : 'Add'}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -475,6 +536,13 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                               <div className="pipeline-note-card-text">
                                 {note.text}
                               </div>
+                              {note.imageUrl && (
+                                <div style={{ marginTop: '6px' }}>
+                                  <a href={note.imageUrl} target="_blank" rel="noopener noreferrer">
+                                    <img src={note.imageUrl} alt="Note attachment" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '4px', border: '1px solid var(--card-border)' }} />
+                                  </a>
+                                </div>
+                              )}
                               <div className="pipeline-note-card-date">
                                 {new Date(note.createdAt).toLocaleString(language === 'es' ? 'es-AR' : 'en-US', {
                                   day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -495,4 +563,3 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     </div>
   );
 }
-
