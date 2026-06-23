@@ -4,7 +4,28 @@ import { addProjectNote } from '../utils/notesHelper';
 import { useLanguage } from '../utils/LanguageContext';
 import './ProjectChatbot.css';
 
-export default function ProjectChatbot({ projects = [], currentUser, userProfile }) {
+const DESIGNERS_CONTACTS = [
+  { name: 'Monica Gabriel', phone: '954-678-8432', email: 'mgabriel@jlclosets.com', city: 'BOCA RATON' },
+  { name: 'Natalie Ball', phone: '954-899-7307', email: 'nball@jlclosets.com', city: 'CORAL SPRINGS' },
+  { name: 'Marsha Diquez', phone: '754-779-0502', email: 'mdiquez@jlclosets.com', city: 'COCONUT CK' },
+  { name: 'Iris Lopes', phone: '786-280-4004', email: 'ilopes@jlclosets.com', city: 'DEERFIELD BCH' },
+  { name: 'Kat Baumgartner', phone: '270-991-1002', email: 'kbaumgartner@jlclosets.com', city: 'DANIA BEACH' },
+  { name: 'Melissa Barker', phone: '561-587-0632', email: 'mbarker@jlclosets.com', city: 'DELRAY BEACH' },
+  { name: 'Nicole Dugan', phone: '239-788-4114', email: 'ndugan@jlclosets.com', city: 'FORT MYERS' },
+  { name: 'Tricia Hatton', phone: '561-324-0033', email: 'thatton@jlclosets.com', city: 'LAKE WORTH' },
+  { name: 'Blerta Veseli', phone: '561-971-0525', email: 'bveseli@jlclosets.com', city: 'MIAMI' },
+  { name: 'Lana Kravtchenko', phone: '646-309-5301', email: 'lkravtchenko@jlclosets.com', city: 'MIAMI' },
+  { name: 'Krisztina Vizi', phone: '561-537-6787', email: 'kvizi@jlclosets.com', city: 'PALM BEACH' },
+  { name: 'Luana Tamagnone', phone: '561-816-1779', email: 'ltamagnone@jlclosets.com', city: 'W. PALM BEACH' },
+  { name: 'Russell Reiner', phone: '561-350-7999', email: 'rreiner@jlclosets.com', city: 'PALM BEACH' },
+  { name: 'Mauricio Dasso', phone: '203-561-9581', email: 'mdasso@jlclosets.com', city: 'PALM BEACH' },
+  { name: 'Sarah Manev', phone: '561-306-6192', email: 'smanev@jlclosets.com', city: 'PARKLAND' },
+  { name: 'Her Henslovitz', phone: '945-290-7997', email: 'chenslovitz@jlclosets.com', city: 'PARKLAND' },
+  { name: 'Michael Kaboskey', phone: '954-257-5087', email: 'mkaboskey@jlclosets.com', city: 'PORT ST. LUCIE' },
+  { name: 'Malanie Dalfrey', phone: '772-278-6949', email: 'mdalfrey@jlclosets.com', city: 'PORT ST. LUCIE' }
+];
+
+export default function ProjectChatbot({ projects = [], materialsMatrix = [], currentUser, userProfile }) {
   const { language } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -134,62 +155,120 @@ export default function ProjectChatbot({ projects = [], currentUser, userProfile
       };
     }
 
-    // On Hold projects query
-    if (cleanText.includes('hold') || cleanText.includes('espera') || cleanText.includes('frenado') || cleanText.includes('parado')) {
-      const holdProjects = projects.filter(p => p.status === 'ON HOLD');
-      if (holdProjects.length === 0) {
-        return {
-          text: isES ? 'Actualmente no hay ningún proyecto marcado como ON HOLD. 🎉' : 'There are currently no projects marked ON HOLD. 🎉'
-        };
-      }
-      return {
-        text: isES
-          ? `Aquí están los proyectos en **ON HOLD**:\n\n${holdProjects.map(p => `• **SO #${p.so}**: ${p.name}\n  *Encargado:* ${p.eng || 'Sin asignar'}`).join('\n\n')}`
-          : `Here are the projects **ON HOLD**:\n\n${holdProjects.map(p => `• **SO #${p.so}**: ${p.name}\n  *Assigned:* ${p.eng || 'Unassigned'}`).join('\n\n')}`
-      };
-    }
+    // Materials Matrix Query
+    if (cleanText.includes('matrix') || cleanText.includes('materials') || cleanText.includes('materiales') || cleanText.includes('matriz')) {
+      const searchWord = cleanText.replace(/[^a-z0-9]/g, '');
+      const matchedMaterial = materialsMatrix.find(m => {
+        const cleanName = (m.projectName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanSo = (m.so || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        return searchWord.length >= 3 && (cleanName.includes(searchWord) || cleanSo.includes(searchWord));
+      });
 
-    // Install Dates query
-    if (cleanText.includes('install') || cleanText.includes('fecha') || cleanText.includes('instal') || cleanText.includes('cuando')) {
-      // Find installations with dates
-      const installs = projects
-        .filter(p => p.install && p.install !== '0' && p.install.toLowerCase() !== 'sin fecha')
-        .sort((a, b) => new Date(a.install) - new Date(b.install));
-
-      if (installs.length === 0) {
+      if (matchedMaterial) {
         return {
-          text: isES ? 'No tengo registradas fechas de instalación próximas.' : 'No upcoming installation dates registered.'
+          text: isES
+            ? `🪵 **Materiales para ${matchedMaterial.projectName} (SO #${matchedMaterial.so})**:\n• **Thermofoil:** ${matchedMaterial.thermofoil || 'No'}\n• **No Holes:** ${matchedMaterial.noHoles || 'No'}\n• **Dovetail:** ${matchedMaterial.dovetail || 'No'}\n• **Element:** ${matchedMaterial.element || 'No'}`
+            : `🪵 **Materials for ${matchedMaterial.projectName} (SO #${matchedMaterial.so})**:\n• **Thermofoil:** ${matchedMaterial.thermofoil || 'No'}\n• **No Holes:** ${matchedMaterial.noHoles || 'No'}\n• **Dovetail:** ${matchedMaterial.dovetail || 'No'}\n• **Element:** ${matchedMaterial.element || 'No'}`
         };
       }
 
       return {
-        text: isES
-          ? `Próximas instalaciones programadas:\n\n${installs.slice(0, 5).map(p => `• **${p.name}**\n  *Fecha:* ${p.install} (SO #${p.so})`).join('\n\n')}`
-          : `Upcoming scheduled installations:\n\n${installs.slice(0, 5).map(p => `• **${p.name}**\n  *Date:* ${p.install} (SO #${p.so})`).join('\n\n')}`
+        text: isES 
+          ? 'Para consultar la Matrix de Materiales, dime el nombre o SO del proyecto. (Ej: "materiales del proyecto 12510" o "materials matrix Perez")'
+          : 'To check the Materials Matrix, tell me the project name or SO. (e.g. "materials for 12510" or "materials matrix Perez")'
       };
     }
 
-    // Projects by designer
-    const designerMatch = projects.find(p => p.designer && cleanText.includes(p.designer.toLowerCase()));
-    const engMatch = projects.find(p => p.eng && cleanText.includes(p.eng.toLowerCase()));
-    const matchingStaff = designerMatch?.designer || engMatch?.eng;
+    // Designer Contact Query
+    if (cleanText.includes('contacto') || cleanText.includes('telefono') || cleanText.includes('email') || cleanText.includes('diseñador') || cleanText.includes('designer') || cleanText.includes('contact')) {
+      const mentionedDesigner = DESIGNERS_CONTACTS.find(d => {
+        const firstName = d.name.split(' ')[0].toLowerCase();
+        const lastName = d.name.split(' ')[1].toLowerCase();
+        return cleanText.includes(firstName) || cleanText.includes(lastName);
+      });
 
-    if (matchingStaff && (cleanText.includes('proyect') || cleanText.includes('trabaj') || cleanText.includes('hace') || cleanText.includes('tiene'))) {
-      const staffProjects = projects.filter(p => 
-        (p.designer && p.designer.toLowerCase() === matchingStaff.toLowerCase()) || 
-        (p.eng && p.eng.toLowerCase() === matchingStaff.toLowerCase())
-      );
-      if (staffProjects.length === 0) {
+      if (mentionedDesigner) {
+        return {
+          text: isES
+            ? `📞 **Contacto de ${mentionedDesigner.name}**:\n• **Tel:** ${mentionedDesigner.phone}\n• **Email:** ${mentionedDesigner.email}\n• **Ciudad:** ${mentionedDesigner.city}`
+            : `📞 **Contact for ${mentionedDesigner.name}**:\n• **Phone:** ${mentionedDesigner.phone}\n• **Email:** ${mentionedDesigner.email}\n• **City:** ${mentionedDesigner.city}`
+        };
+      }
+      
+      if (cleanText.includes('lista') || cleanText.includes('list') || cleanText.includes('todos') || cleanText.includes('all')) {
+         return {
+           text: isES
+             ? `Tengo el contacto de ${DESIGNERS_CONTACTS.length} diseñadores. Pregúntame por el nombre de uno en específico (Ej: "contacto de Russell").`
+             : `I have contact info for ${DESIGNERS_CONTACTS.length} designers. Ask me for a specific name (e.g., "contact Russell").`
+         }
+      }
+    }
+
+    // Complex/Multi-condition Query Pipeline
+    const mentionedStaff = [];
+    projects.forEach(p => {
+      if (p.designer && p.designer.trim() !== '') {
+        const dName = p.designer.toLowerCase().split(' ')[0];
+        if (cleanText.includes(dName) && !mentionedStaff.includes(dName)) mentionedStaff.push(dName);
+      }
+      if (p.eng && p.eng.trim() !== '') {
+        const eName = p.eng.toLowerCase().split(' ')[0];
+        if (cleanText.includes(eName) && !mentionedStaff.includes(eName)) mentionedStaff.push(eName);
+      }
+    });
+
+    const isHold = cleanText.includes('hold') || cleanText.includes('espera') || cleanText.includes('frenado') || cleanText.includes('parado');
+    const isSoonest = cleanText.includes('sooner') || cleanText.includes('soonest') || cleanText.includes('próximo') || cleanText.includes('proximo') || cleanText.includes('first');
+    const isInstall = cleanText.includes('install') || cleanText.includes('fecha') || cleanText.includes('instal') || cleanText.includes('cuando') || isSoonest;
+    const isProjectMention = cleanText.includes('proyect') || cleanText.includes('project') || cleanText.includes('trabaj') || cleanText.includes('tiene');
+
+    let appliedFilters = 0;
+    let filteredProjects = [...projects];
+
+    if (mentionedStaff.length > 0) {
+      filteredProjects = filteredProjects.filter(p => {
+        return mentionedStaff.every(staff => 
+          (p.designer && p.designer.toLowerCase().includes(staff)) || 
+          (p.eng && p.eng.toLowerCase().includes(staff))
+        );
+      });
+      appliedFilters++;
+    }
+
+    if (isHold) {
+      filteredProjects = filteredProjects.filter(p => p.status === 'ON HOLD');
+      appliedFilters++;
+    }
+
+    if (isInstall) {
+      filteredProjects = filteredProjects.filter(p => p.install && p.install !== '0' && p.install.toLowerCase() !== 'sin fecha');
+      filteredProjects.sort((a, b) => new Date(a.install) - new Date(b.install));
+      appliedFilters++;
+    }
+
+    if (appliedFilters > 0 && (isHold || isInstall || (mentionedStaff.length > 0 && isProjectMention))) {
+      if (filteredProjects.length === 0) {
+        return {
+          text: isES ? 'No encontré ningún proyecto que cumpla con todos esos criterios.' : 'I found no projects matching all those criteria.'
+        };
+      }
+
+      if (isSoonest) {
+        const p = filteredProjects[0];
         return {
           text: isES 
-            ? `No encontré proyectos asignados a **${matchingStaff}**.`
-            : `No projects found assigned to **${matchingStaff}**.`
+            ? `El proyecto que cumple tus criterios con la fecha de instalación más próxima es:\n\n• **${p.name}**\n  *SO:* #${p.so}\n  *Instalación:* ${p.install}\n  *Etapa:* ${p.status}`
+            : `The project matching your criteria with the soonest installation date is:\n\n• **${p.name}**\n  *SO:* #${p.so}\n  *Install:* ${p.install}\n  *Stage:* ${p.status}`
         };
       }
+
+      const limit = 5;
+      const displayProjects = filteredProjects.slice(0, limit);
+      
       return {
         text: isES
-          ? `Proyectos asignados a **${matchingStaff}**:\n\n${staffProjects.map(p => `• **SO #${p.so}**: ${p.name}\n  *Etapa:* ${p.status || 'Activo'}`).join('\n\n')}`
-          : `Projects assigned to **${matchingStaff}**:\n\n${staffProjects.map(p => `• **SO #${p.so}**: ${p.name}\n  *Stage:* ${p.status || 'Active'}`).join('\n\n')}`
+          ? `Encontré ${filteredProjects.length} proyectos con esos criterios. ${filteredProjects.length > limit ? `(Mostrando los primeros ${limit})` : ''}\n\n${displayProjects.map(p => `• **SO #${p.so}**: ${p.name}\n  *Instalación:* ${p.install || 'Sin fecha'}\n  *Etapa:* ${p.status}`).join('\n\n')}`
+          : `I found ${filteredProjects.length} projects matching those criteria. ${filteredProjects.length > limit ? `(Showing first ${limit})` : ''}\n\n${displayProjects.map(p => `• **SO #${p.so}**: ${p.name}\n  *Install:* ${p.install || 'No date'}\n  *Stage:* ${p.status}`).join('\n\n')}`
       };
     }
 

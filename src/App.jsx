@@ -316,6 +316,7 @@ function App() {
       {currentUser && (
         <ProjectChatbot 
           projects={mergedData?.priorityAnalysis} 
+          materialsMatrix={mergedData?.materialsMatrix}
           currentUser={currentUser} 
           userProfile={userProfile} 
         />
