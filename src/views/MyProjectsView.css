@@ -44,6 +44,8 @@
   background: rgba(9, 209, 199, 0.1);
   padding: 4px 10px;
   border-radius: 100px;
+  display: inline-block;
+  margin-bottom: 12px;
 }
 
 .project-name-title {

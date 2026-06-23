@@ -579,8 +579,8 @@
   position: relative;
   height: 32px;
   border-radius: 100px;
-  background: var(--card-bg); /* Flat capsule background */
-  border: 1px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.02); /* Flat pastilla background */
+  border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -639,7 +639,7 @@
 
 /* Language knob styling */
 .lang-toggle-knob {
-  background: #0084FF; /* Flat bright celeste blue knob */
+  background: var(--color-cyan); /* Flat celeste blue knob */
 }
 
 .lang-toggle-btn.en .lang-toggle-knob {

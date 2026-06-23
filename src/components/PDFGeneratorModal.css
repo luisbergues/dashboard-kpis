@@ -34,7 +34,7 @@
 .pdf-modal-header h2 {
   margin: 0;
   font-size: 1.25rem;
-  color: var(--color-cyan);
+  color: #ffffff;
 }
 
 .pdf-modal-actions {
@@ -185,7 +185,7 @@
 
 .pdf-tab.active {
   background: var(--bg-surface);
-  color: var(--color-cyan);
+  color: #ffffff;
   border: 1px solid var(--card-border);
   border-bottom: none;
   font-weight: bold;

@@ -6,7 +6,7 @@ import { useLanguage } from '../utils/LanguageContext';
 import { 
   Briefcase, Calendar, Check, Clock, 
   AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag, Users,
-  ChevronDown, ChevronUp, ArrowUpDown, TrendingUp
+  ChevronDown, ChevronUp, ArrowUpDown, TrendingUp, CheckCircle2
 } from 'lucide-react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
@@ -1200,18 +1200,18 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                           <button 
                             onClick={() => { setActiveESSProject(project); setIsESSModalOpen(true); }}
                             className="btn-primary btn-sm btn-download-pdf"
-                            style={{ background: 'var(--color-cyan)', color: '#000', fontWeight: 'bold' }}
+                            style={{ background: 'var(--color-cyan)', color: '#fff', fontWeight: 'bold' }}
                           >
                             <StickyNote size={14} />
-                            <span>Completar ESS</span>
+                            <span>{t('myProjects.completarESS')}</span>
                           </button>
                           <button 
                             onClick={() => { setActiveIPProject(project); setIsIPModalOpen(true); }}
                             className="btn-primary btn-sm btn-download-pdf"
-                            style={{ background: '#80EE98', color: '#000', fontWeight: 'bold' }}
+                            style={{ background: '#80EE98', color: '#fff', fontWeight: 'bold' }}
                           >
                             <StickyNote size={14} />
-                            <span>Completar IP</span>
+                            <span>{t('myProjects.completarIP')}</span>
                           </button>
                         </div>
                       </>

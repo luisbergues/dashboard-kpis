@@ -3,6 +3,7 @@ import { X, Plus, Trash2, Printer } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import IPPrintLayout from './IPPrintLayout';
 import { saveIPData, loadIPData } from '../utils/ipData';
+import { useLanguage } from '../utils/LanguageContext';
 import './PDFGeneratorModal.css'; // Re-use the modal styles for consistency
 
 const getClientName = (projectName) => {
@@ -25,6 +26,7 @@ const createDefaultPage = (project) => ({
 });
 
 export default function IPGeneratorModal({ project, onClose }) {
+  const { t } = useLanguage();
   // --- Multi-page State ---
   const [pages, setPages] = useState([createDefaultPage(project)]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
@@ -123,7 +125,7 @@ export default function IPGeneratorModal({ project, onClose }) {
     return (
       <div className="pdf-modal-overlay animate-fade-in">
         <div className="pdf-modal-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
-          <p style={{ color: 'var(--color-cyan)' }}>Cargando datos guardados...</p>
+          <p style={{ color: 'var(--color-cyan)' }}>{t('myProjects.loadingSavedData')}</p>
         </div>
       </div>
     );
@@ -133,11 +135,11 @@ export default function IPGeneratorModal({ project, onClose }) {
     <div className="pdf-modal-overlay animate-fade-in">
       <div className="pdf-modal-content">
         <div className="pdf-modal-header">
-          <h2>Completar IP (Installer Packet) - Proyecto {project.so}</h2>
+          <h2>{t('myProjects.completarIPTitle')} {project.so}</h2>
           <div className="pdf-modal-actions">
-            <span className="save-status text-muted" style={{ fontSize: '0.8rem', marginRight: '10px' }}>Autoguardado activado</span>
+            <span className="save-status text-muted" style={{ fontSize: '0.8rem', marginRight: '10px' }}>{t('myProjects.autoSaveActive')}</span>
             <button className="btn-primary btn-sm" onClick={handlePrint}>
-              <Printer size={16} /> Imprimir / Guardar PDF
+              <Printer size={16} /> {t('myProjects.printSavePDF')}
             </button>
             <button className="btn-icon danger" onClick={onClose}>
               <X size={20} />
@@ -154,19 +156,19 @@ export default function IPGeneratorModal({ project, onClose }) {
                 className={`pdf-tab ${index === currentPageIndex ? 'active' : ''}`}
                 onClick={() => setCurrentPageIndex(index)}
               >
-                Hoja {index + 1}
+                {t('myProjects.sheet')} {index + 1}
                 {pages.length > 1 && (
                   <span 
                     className="tab-close" 
                     onClick={(e) => { e.stopPropagation(); removePage(index); }}
-                    title="Eliminar Hoja"
+                    title={t('myProjects.deleteSheet')}
                   >
                     <X size={12} />
                   </span>
                 )}
               </div>
             ))}
-            <button className="btn-add-tab" onClick={addPage} title="Añadir nueva hoja">
+            <button className="btn-add-tab" onClick={addPage} title={t('myProjects.addNewSheet')}>
               <Plus size={16} />
             </button>
           </div>
@@ -174,7 +176,7 @@ export default function IPGeneratorModal({ project, onClose }) {
 
         <div className="pdf-modal-body">
           <div className="form-section">
-            <h3>Datos del Paquete del Instalador - Hoja {currentPageIndex + 1}</h3>
+            <h3>{t('myProjects.installerPacketData')} {currentPageIndex + 1}</h3>
             <div className="form-grid" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <label>CLIENT'S NAME: 
                 <input type="text" name="clientName" value={clientName} onChange={handleChange} />

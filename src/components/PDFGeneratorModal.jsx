@@ -3,6 +3,7 @@ import { X, Plus, Trash2, Printer, ChevronLeft, ChevronRight } from 'lucide-reac
 import { useReactToPrint } from 'react-to-print';
 import PDFPrintLayout from './PDFPrintLayout';
 import { saveESSData, loadESSData } from '../utils/essData';
+import { useLanguage } from '../utils/LanguageContext';
 import './PDFGeneratorModal.css';
 
 const DEFAULT_DRAWERS = [
@@ -37,6 +38,7 @@ const createDefaultPage = (project) => ({
 });
 
 export default function PDFGeneratorModal({ project, onClose }) {
+  const { t } = useLanguage();
   // --- Multi-page State ---
   const [pages, setPages] = useState([createDefaultPage(project)]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
@@ -148,7 +150,7 @@ export default function PDFGeneratorModal({ project, onClose }) {
     return (
       <div className="pdf-modal-overlay animate-fade-in">
         <div className="pdf-modal-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
-          <p style={{ color: 'var(--color-cyan)' }}>Cargando datos guardados...</p>
+          <p style={{ color: 'var(--color-cyan)' }}>{t('myProjects.loadingSavedData')}</p>
         </div>
       </div>
     );
@@ -158,11 +160,11 @@ export default function PDFGeneratorModal({ project, onClose }) {
     <div className="pdf-modal-overlay animate-fade-in">
       <div className="pdf-modal-content">
         <div className="pdf-modal-header">
-          <h2>Completar ESS - Proyecto {project.so}</h2>
+          <h2>{t('myProjects.completarESSTitle')} {project.so}</h2>
           <div className="pdf-modal-actions">
-            <span className="save-status text-muted" style={{ fontSize: '0.8rem', marginRight: '10px' }}>Autoguardado activado</span>
+            <span className="save-status text-muted" style={{ fontSize: '0.8rem', marginRight: '10px' }}>{t('myProjects.autoSaveActive')}</span>
             <button className="btn-primary btn-sm" onClick={handlePrint}>
-              <Printer size={16} /> Imprimir / Guardar PDF
+              <Printer size={16} /> {t('myProjects.printSavePDF')}
             </button>
             <button className="btn-icon danger" onClick={onClose}>
               <X size={20} />
@@ -179,19 +181,19 @@ export default function PDFGeneratorModal({ project, onClose }) {
                 className={`pdf-tab ${index === currentPageIndex ? 'active' : ''}`}
                 onClick={() => setCurrentPageIndex(index)}
               >
-                Hoja {index + 1}
+                {t('myProjects.sheet')} {index + 1}
                 {pages.length > 1 && (
                   <span 
                     className="tab-close" 
                     onClick={(e) => { e.stopPropagation(); removePage(index); }}
-                    title="Eliminar Hoja"
+                    title={t('myProjects.deleteSheet')}
                   >
                     <X size={12} />
                   </span>
                 )}
               </div>
             ))}
-            <button className="btn-add-tab" onClick={addPage} title="Añadir nueva hoja">
+            <button className="btn-add-tab" onClick={addPage} title={t('myProjects.addNewSheet')}>
               <Plus size={16} />
             </button>
           </div>
@@ -199,7 +201,7 @@ export default function PDFGeneratorModal({ project, onClose }) {
 
         <div className="pdf-modal-body">
           <div className="form-section">
-            <h3>Cabecera (Header) - Hoja {currentPageIndex + 1}</h3>
+            <h3>{t('myProjects.headerSheet')} {currentPageIndex + 1}</h3>
             <div className="form-grid">
               <label>JOB NAME: <input type="text" name="jobName" value={headerData.jobName} onChange={handleHeaderChange} /></label>
               <label>COLOR: <input type="text" name="color" value={headerData.color} onChange={handleHeaderChange} /></label>
@@ -210,7 +212,7 @@ export default function PDFGeneratorModal({ project, onClose }) {
           </div>
 
           <div className="form-section">
-            <h3>Opciones de Cajoneras (Drawers)</h3>
+            <h3>{t('myProjects.drawerOptions')}</h3>
             <div className="form-grid">
               <label>FRONTS: 
                 <select name="fronts" value={drawerOptions.fronts} onChange={handleOptionsChange}>
@@ -263,12 +265,12 @@ export default function PDFGeneratorModal({ project, onClose }) {
                   ))}
                 </tbody>
               </table>
-              <button className="btn-secondary btn-sm" onClick={addDrawer} style={{marginTop: '10px'}}><Plus size={14} /> Añadir Fila Cajón</button>
+              <button className="btn-secondary btn-sm" onClick={addDrawer} style={{marginTop: '10px'}}><Plus size={14} /> {t('myProjects.addDrawerRow')}</button>
             </div>
           </div>
 
           <div className="form-section">
-            <h3>Barrales (Rods)</h3>
+            <h3>{t('myProjects.rodsTitle')}</h3>
             <div className="table-container" style={{maxWidth: '500px'}}>
               <table>
                 <thead>
@@ -288,19 +290,19 @@ export default function PDFGeneratorModal({ project, onClose }) {
                   ))}
                 </tbody>
               </table>
-              <button className="btn-secondary btn-sm" onClick={addRod} style={{marginTop: '10px'}}><Plus size={14} /> Añadir Barral</button>
+              <button className="btn-secondary btn-sm" onClick={addRod} style={{marginTop: '10px'}}><Plus size={14} /> {t('myProjects.addRod')}</button>
             </div>
           </div>
 
           <div className="form-section">
-            <h3>Misceláneas / Notas (2 Columnas)</h3>
+            <h3>{t('myProjects.miscNotesTitle')}</h3>
             <div className="misc-columns">
               <div style={{flex: 1}}>
-                <label>Columna Izquierda</label>
+                <label>{t('myProjects.leftColumn')}</label>
                 <textarea value={miscCol1} onChange={e => setMiscCol1(e.target.value)} rows={6} style={{width:'100%', padding:'8px'}}></textarea>
               </div>
               <div style={{flex: 1}}>
-                <label>Columna Derecha</label>
+                <label>{t('myProjects.rightColumn')}</label>
                 <textarea value={miscCol2} onChange={e => setMiscCol2(e.target.value)} rows={6} style={{width:'100%', padding:'8px'}}></textarea>
               </div>
             </div>

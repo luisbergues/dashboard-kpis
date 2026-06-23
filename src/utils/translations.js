@@ -171,7 +171,26 @@ export const translations = {
           "The drawing header has the correct project name and information.",
           "Send a copy of the final plans to the designer."
         ]
-      }
+      },
+      completarESS: "Complete ESS",
+      completarIP: "Complete IP",
+      completarESSTitle: "Complete ESS - Project",
+      completarIPTitle: "Complete IP (Installer Packet) - Project",
+      autoSaveActive: "Auto-save active",
+      printSavePDF: "Print / Save PDF",
+      sheet: "Sheet",
+      addNewSheet: "Add new sheet",
+      deleteSheet: "Delete Sheet",
+      loadingSavedData: "Loading saved data...",
+      headerSheet: "Header - Sheet",
+      drawerOptions: "Drawer Options",
+      addDrawerRow: "Add Drawer Row",
+      rodsTitle: "Rods",
+      addRod: "Add Rod",
+      miscNotesTitle: "Miscellaneous / Notes (2 Columns)",
+      leftColumn: "Left Column",
+      rightColumn: "Right Column",
+      installerPacketData: "Installer Packet Data - Sheet"
     },
     pipeline: {
       title: "Project Pipeline",
@@ -370,7 +389,26 @@ export const translations = {
           "El encabezado del dibujo tiene el nombre del proyecto y la información correcta.",
           "Enviar una copia de los planos finales al diseñador."
         ]
-      }
+      },
+      completarESS: "Completar ESS",
+      completarIP: "Completar IP",
+      completarESSTitle: "Completar ESS - Proyecto",
+      completarIPTitle: "Completar IP (Installer Packet) - Proyecto",
+      autoSaveActive: "Autoguardado activado",
+      printSavePDF: "Imprimir / Guardar PDF",
+      sheet: "Hoja",
+      addNewSheet: "Añadir nueva hoja",
+      deleteSheet: "Eliminar Hoja",
+      loadingSavedData: "Cargando datos guardados...",
+      headerSheet: "Cabecera (Header) - Hoja",
+      drawerOptions: "Opciones de Cajoneras (Drawers)",
+      addDrawerRow: "Añadir Fila Cajón",
+      rodsTitle: "Barrales (Rods)",
+      addRod: "Añadir Barral",
+      miscNotesTitle: "Misceláneas / Notas (2 Columnas)",
+      leftColumn: "Columna Izquierda",
+      rightColumn: "Columna Derecha",
+      installerPacketData: "Datos del Paquete del Instalador - Hoja"
     },
     pipeline: {
       title: "Tubería de Proyectos (Pipeline)",
