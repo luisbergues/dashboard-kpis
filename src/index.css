@@ -412,11 +412,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 :root.light-theme .cal-cell.disabled {
-  background: rgba(59, 130, 246, 0.05) !important;
-  border-color: rgba(59, 130, 246, 0.1) !important;
+  background: #E5E7EB !important;
+  border-color: #D1D5DB !important;
 }
 
 :root.light-theme .cal-cell.disabled .cal-date-num {
-  color: rgba(59, 130, 246, 0.5) !important;
+  color: #9CA3AF !important;
+}
+
+:root.light-theme .cal-event,
+:root.light-theme .cal-event-title,
+:root.light-theme .cal-event-so {
+  color: #FFFFFF !important;
 }
 
