@@ -185,19 +185,28 @@ h1, h2, h3, h4, h5, h6 {
   }
   
   :root.light-theme .nav-user-profile {
-    background: rgba(255, 255, 255, 0.1) !important;
+    background: #E5E7EB !important;
   }
   
   :root.light-theme .nav-user-profile:hover {
-    background: rgba(255, 255, 255, 0.2) !important;
+    background: #D1D5DB !important;
   }
   
   :root.light-theme .nav-user-profile .user-name {
-    color: #FFFFFF !important;
+    color: var(--color-cyan) !important;
   }
 
   :root.light-theme .nav-user-profile .user-role {
-    color: rgba(255, 255, 255, 0.75) !important;
+    color: var(--text-secondary) !important;
+  }
+
+  :root.light-theme .nav-btn.signout-btn {
+    background: #E5E7EB !important;
+    color: var(--color-pink) !important;
+  }
+
+  :root.light-theme .nav-btn.signout-btn:hover {
+    background: #D1D5DB !important;
   }
   
   :root.light-theme .navbar .brand-text,
@@ -285,9 +294,10 @@ h1, h2, h3, h4, h5, h6 {
     border: 1px solid var(--card-border) !important;
   }
 
-:root.light-theme .search-bar input {
-  color: var(--text-primary) !important;
-}
+  :root.light-theme .search-bar input {
+    background: transparent !important;
+    color: var(--text-primary) !important;
+  }
 
 /* Form inputs & textareas overrides */
   :root.light-theme .form-input,

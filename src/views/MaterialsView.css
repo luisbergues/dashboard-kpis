@@ -64,12 +64,12 @@
 }
 
 .badge-yes {
-  background: rgba(128, 238, 152, 0.15);
-  color: var(--color-neon-green);
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--color-mint);
 }
 
 .badge-no {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(100, 116, 139, 0.15);
   color: var(--text-muted);
 }
 
