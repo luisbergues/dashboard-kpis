@@ -140,14 +140,14 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ─── Light Theme Overrides ─────────────────────────── */
 :root.light-theme {
-  --bg-deep: #E5E7EB;        /* Darker light grey background for more contrast */
-  --bg-surface: #D1D5DB;     /* Deeper light grey background */
-  
-  --card-bg: #FFFFFF;        /* Solid white cards */
-  --card-border: #D1D5DB;    /* Soft grey borders */
-  --card-hover: #F9FAFB;     /* Slight off-white hover background */
-  
-  --color-navy: #E5E7EB;     /* Pill background */
+    --bg-deep: #FFFFFF;        /* Very light background */
+    --bg-surface: #FFFFFF;     /* Deeper light grey background */
+    
+    --card-bg: #E5E7EB;        /* Slightly darker cards */
+    --card-border: #D1D5DB;    /* Soft grey borders */
+    --card-hover: #D1D5DB;     /* Slight off-white hover background */
+    
+    --color-navy: #E5E7EB;     /* Pill background */
   
   --text-primary: #111827;   /* Dark grey text */
   --text-secondary: #374151; /* Medium grey text */
@@ -161,31 +161,57 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 :root.light-theme .navbar {
-  background: #FFFFFF !important;
-  border-color: var(--card-border) !important;
-}
+    background: var(--color-cyan) !important;
+    border-color: var(--color-cyan) !important;
+  }
+  
+  :root.light-theme .mobile-header {
+    background: var(--color-cyan) !important;
+    border-color: var(--color-cyan) !important;
+  }
+  
+  :root.light-theme .nav-btn {
+    color: rgba(255, 255, 255, 0.75);
+  }
+  
+  :root.light-theme .nav-btn:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #FFFFFF;
+  }
 
-:root.light-theme .mobile-header {
-  background: #FFFFFF !important;
-  border-color: var(--card-border) !important;
-}
+  :root.light-theme .nav-btn.active {
+    background: #E5E7EB !important;
+    color: var(--color-cyan) !important;
+  }
+  
+  :root.light-theme .nav-user-profile {
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  :root.light-theme .nav-user-profile:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+  }
+  
+  :root.light-theme .nav-user-profile .user-name {
+    color: #FFFFFF !important;
+  }
 
-:root.light-theme .nav-btn {
-  color: var(--text-secondary);
-}
-
-:root.light-theme .nav-btn:hover {
-  background: rgba(0, 0, 0, 0.05) !important;
-  color: var(--text-primary);
-}
-
-:root.light-theme .nav-user-profile {
-  background: rgba(0, 0, 0, 0.03) !important;
-}
-
-:root.light-theme .nav-user-profile:hover {
-  background: rgba(0, 0, 0, 0.06) !important;
-}
+  :root.light-theme .nav-user-profile .user-role {
+    color: rgba(255, 255, 255, 0.75) !important;
+  }
+  
+  :root.light-theme .navbar .brand-text,
+  :root.light-theme .mobile-header .brand-text {
+    background: none !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    color: #FFFFFF !important;
+  }
+  
+  :root.light-theme .navbar .brand-logo,
+  :root.light-theme .mobile-header .brand-logo {
+    background: #FFFFFF !important;
+    color: var(--color-cyan) !important;
+  }
 
 :root.light-theme .lang-selector-btn {
   background: rgba(0, 122, 255, 0.06) !important;
@@ -214,14 +240,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Dashboard kpi / cost cards overrides */
-:root.light-theme .kpi-card,
-:root.light-theme .fi-card,
-:root.light-theme .insight-point-card,
-:root.light-theme .takeaway-item {
-  background: #FFFFFF !important;
-  border-color: var(--card-border) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
+  :root.light-theme .kpi-card,
+  :root.light-theme .fi-card,
+  :root.light-theme .insight-point-card,
+  :root.light-theme .takeaway-item {
+    background: var(--card-bg) !important;
+    border-color: var(--card-border) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
 
 :root.light-theme .insight-point-card:hover,
 :root.light-theme .fi-card:hover {
@@ -244,35 +270,35 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Project cards and pipeline overrides */
-:root.light-theme .project-card,
-:root.light-theme .kanban-column {
-  background: #FFFFFF !important;
-  border-color: var(--card-border) !important;
-}
-
-:root.light-theme .kanban-column {
-  background: rgba(255, 255, 255, 0.4) !important;
-}
-
-:root.light-theme .search-bar {
-  background: #FFFFFF !important;
-  border: 1px solid var(--card-border) !important;
-}
+  :root.light-theme .project-card,
+  :root.light-theme .kanban-column {
+    background: var(--card-bg) !important;
+    border-color: var(--card-border) !important;
+  }
+  
+  :root.light-theme .kanban-column {
+    background: rgba(229, 231, 235, 0.4) !important;
+  }
+  
+  :root.light-theme .search-bar {
+    background: var(--card-bg) !important;
+    border: 1px solid var(--card-border) !important;
+  }
 
 :root.light-theme .search-bar input {
   color: var(--text-primary) !important;
 }
 
 /* Form inputs & textareas overrides */
-:root.light-theme .form-input,
-:root.light-theme .form-select,
-:root.light-theme textarea,
-:root.light-theme input[type="text"],
-:root.light-theme select {
-  background: #FFFFFF !important;
-  border-color: var(--card-border) !important;
-  color: var(--text-primary) !important;
-}
+  :root.light-theme .form-input,
+  :root.light-theme .form-select,
+  :root.light-theme textarea,
+  :root.light-theme input[type="text"],
+  :root.light-theme select {
+    background: #FFFFFF !important;
+    border-color: var(--card-border) !important;
+    color: var(--text-primary) !important;
+  }
 
 :root.light-theme .form-input:focus,
 :root.light-theme .form-select:focus,

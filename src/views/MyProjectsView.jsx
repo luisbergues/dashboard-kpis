@@ -205,7 +205,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     plugins: { legend: { position: 'top', labels: { color: '#94A3B8' } } },
     scales: {
       x: { ticks: { color: '#94A3B8' }, grid: { display: false } },
-      y: { ticks: { color: '#94A3B8', precision: 0 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      y: { ticks: { color: '#94A3B8', precision: 0 }, grid: { color: 'rgba(148,163,184,0.2)' } }
     }
   };
 
@@ -217,7 +217,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     },
     scales: {
       x: { ticks: { color: '#94A3B8', font: {size: 10} }, grid: { display: false } },
-      y: { ticks: { color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      y: { ticks: { color: '#94A3B8' }, grid: { color: 'rgba(148,163,184,0.2)' } }
     }
   };
 
@@ -1073,7 +1073,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
             <div className="projects-analytics-grid">
               <SectionErrorBoundary title="Stage Averages Error">
                 <div className="analytics-card">
-                  <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: '#94A3B8', marginBottom: '12px' }}>Avg Time per Stage (Weighted by Size)</h4>
+                  <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Avg Time per Stage (Weighted by Size)</h4>
                   <div style={{ height: '220px' }}>
                     <Bar data={stageAveragesChartData} options={barOptions} />
                   </div>
@@ -1083,7 +1083,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
               <SectionErrorBoundary title="Monthly Output Error">
                 <div className="analytics-card">
-                  <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: '#94A3B8', marginBottom: '12px' }}>Projects Completed (Monthly)</h4>
+                  <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Projects Completed (Monthly)</h4>
                   <div style={{ height: '220px' }}>
                     {monthlyData.labels.length > 0 ? (
                       <Line data={monthlyData} options={lineOptions} />
@@ -1095,8 +1095,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
               </SectionErrorBoundary>
 
               <SectionErrorBoundary title="Deadlines Error">
-                <div className="analytics-card deadlines-card" style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', overflowY: 'auto', maxHeight: '260px' }}>
-                  <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: '#94A3B8', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div className="analytics-card deadlines-card" style={{ background: 'var(--bg-deep)', padding: '16px', borderRadius: '8px', overflowY: 'auto', maxHeight: '260px', border: '1px solid var(--card-border)' }}>
+                  <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <AlertCircle size={16} className="text-yellow" />
                     Upcoming Install Deadlines
                   </h4>
@@ -1105,9 +1105,9 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                   ) : (
                     <div className="deadlines-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {upcomingDeadlines.map(d => (
-                        <div key={d.so} className="deadline-item" style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '6px', borderLeft: d.daysLeft <= 3 ? '3px solid var(--color-pink)' : '3px solid #FFE600' }}>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fff' }}>#{d.so} {d.name.split(':')[0]}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                        <div key={d.so} className="deadline-item" style={{ background: 'var(--card-bg)', padding: '10px', borderRadius: '6px', borderLeft: d.daysLeft <= 3 ? '3px solid var(--color-pink)' : '3px solid #FFE600' }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>#{d.so} {d.name.split(':')[0]}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
                             <span>{d.date}</span>
                             <span className={d.daysLeft <= 3 ? 'text-danger' : 'text-yellow'}>{d.daysLeft} days left</span>
                           </div>
