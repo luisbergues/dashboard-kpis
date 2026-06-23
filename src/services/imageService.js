@@ -10,7 +10,7 @@ export const compressImage = async (file) => {
   const options = {
     maxSizeMB: 0.2, // ~200 KB
     maxWidthOrHeight: 1280,
-    useWebWorker: true,
+    useWebWorker: false, // Disabled to prevent hangs in Vite dev mode
     fileType: 'image/webp'
   };
 

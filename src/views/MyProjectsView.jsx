@@ -594,29 +594,35 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       return;
     }
     const input = noteInputs[so];
-    const imageFile = noteImages[so];
+    const files = noteImages[so] || [];
     
-    if ((!input || !input.text?.trim()) && !imageFile) return;
+    if ((!input || !input.text?.trim()) && files.length === 0) return;
 
     setIsUploadingImage(prev => ({ ...prev, [so]: true }));
 
-    let imageUrl = null;
-    let attachmentType = null;
-    let attachmentName = null;
-    if (imageFile) {
-      if (!imageFile.type.startsWith('image/') && imageFile.size > 1024 * 1024) {
-        alert(language === 'es' ? 'El archivo es demasiado grande (Máx 1MB)' : 'File is too large (Max 1MB)');
-        setIsUploadingImage(prev => ({ ...prev, [so]: false }));
-        return;
-      }
+    let attachments = [];
+    if (files.length > 0) {
       try {
-        const fileToUpload = imageFile.type.startsWith('image/') ? await compressImage(imageFile) : imageFile;
-        imageUrl = await uploadNoteAttachment(fileToUpload, so);
-        attachmentType = imageFile.type.startsWith('image/') ? 'image' : 'document';
-        attachmentName = imageFile.name;
+        const uploadPromises = files.map(async (file) => {
+          if (!file.type.startsWith('image/') && file.size > 1024 * 1024) {
+            throw new Error('FILE_TOO_LARGE');
+          }
+          const fileToUpload = file.type.startsWith('image/') ? await compressImage(file) : file;
+          const url = await uploadNoteAttachment(fileToUpload, so);
+          return {
+            url: url,
+            type: file.type.startsWith('image/') ? 'image' : 'document',
+            name: file.name
+          };
+        });
+        attachments = await Promise.all(uploadPromises);
       } catch (error) {
-        console.error('Error uploading file:', error);
-        alert(language === 'es' ? 'Error al subir el archivo' : 'Error uploading file');
+        if (error.message === 'FILE_TOO_LARGE') {
+          alert(language === 'es' ? 'Uno de los archivos es demasiado grande (Máx 1MB)' : 'One of the files is too large (Max 1MB)');
+        } else {
+          console.error('Error uploading files:', error);
+          alert(language === 'es' ? 'Error al subir los archivos' : 'Error uploading files');
+        }
         setIsUploadingImage(prev => ({ ...prev, [so]: false }));
         return; // Halt if upload fails
       }
@@ -631,10 +637,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       createdBy: userName
     };
 
-    if (imageUrl) {
-      newNote.imageUrl = imageUrl;
-      newNote.attachmentType = attachmentType;
-      newNote.attachmentName = attachmentName;
+    if (attachments.length > 0) {
+      newNote.attachments = attachments;
     }
 
     const currentNotes = projectNotes[so] ? [...projectNotes[so]] : [];
@@ -1290,29 +1294,33 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
                       {!isAdmin && (
                         <div className="add-note-form">
-                          {noteImages[project.so] && (
-                            <div style={{ marginBottom: '8px', position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px', border: '1px solid var(--card-border)', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }}>
-                              {noteImages[project.so].type.startsWith('image/') ? (
-                                <img 
-                                  src={URL.createObjectURL(noteImages[project.so])} 
-                                  alt="Preview" 
-                                  style={{ height: '60px', borderRadius: '4px' }} 
-                                />
-                              ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px', color: '#94A3B8' }}>
-                                  <FileText size={24} />
-                                  <span style={{ fontSize: '0.8rem', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {noteImages[project.so].name}
-                                  </span>
+                          {noteImages[project.so] && noteImages[project.so].length > 0 && (
+                            <div style={{ marginBottom: '8px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                              {noteImages[project.so].map((file, idx) => (
+                                <div key={idx} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px', border: '1px solid var(--card-border)', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }}>
+                                  {file.type.startsWith('image/') ? (
+                                    <img 
+                                      src={URL.createObjectURL(file)} 
+                                      alt="Preview" 
+                                      style={{ height: '60px', borderRadius: '4px', objectFit: 'cover' }} 
+                                    />
+                                  ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px', color: '#94A3B8' }}>
+                                      <FileText size={24} />
+                                      <span style={{ fontSize: '0.8rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {file.name}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <button 
+                                    type="button"
+                                    onClick={() => setNoteImages(prev => ({ ...prev, [project.so]: prev[project.so].filter((_, i) => i !== idx) }))}
+                                    style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#EF4444', color: '#fff', borderRadius: '50%', border: 'none', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                  >
+                                    <X size={12} />
+                                  </button>
                                 </div>
-                              )}
-                              <button 
-                                type="button"
-                                onClick={() => setNoteImages(prev => ({ ...prev, [project.so]: null }))}
-                                style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#EF4444', color: '#fff', borderRadius: '50%', border: 'none', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                              >
-                                <X size={12} />
-                              </button>
+                              ))}
                             </div>
                           )}
                           <textarea
@@ -1353,14 +1361,23 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                                 <Paperclip size={14} />
                                 <input 
                                   type="file" 
+                                  multiple
                                   accept="image/*,.pdf,.doc,.docx" 
                                   style={{ display: 'none' }}
                                   onChange={(e) => {
-                                    if (e.target.files && e.target.files[0]) {
-                                      setNoteImages(prev => ({ ...prev, [project.so]: e.target.files[0] }));
+                                    if (e.target.files) {
+                                      const newFiles = Array.from(e.target.files);
+                                      setNoteImages(prev => {
+                                        const current = prev[project.so] || [];
+                                        const combined = [...current, ...newFiles];
+                                        if (combined.length > 4) {
+                                          alert(language === 'es' ? 'Puedes adjuntar hasta 4 archivos' : 'You can attach up to 4 files');
+                                        }
+                                        return { ...prev, [project.so]: combined.slice(0, 4) };
+                                      });
                                     }
                                   }}
-                                  disabled={isUploadingImage[project.so]}
+                                  disabled={isUploadingImage[project.so] || (noteImages[project.so] && noteImages[project.so].length >= 4)}
                                 />
                               </label>
                             </div>
@@ -1368,7 +1385,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                             <button
                               className="btn-add-note"
                               onClick={() => handleAddNote(project.so)}
-                              disabled={(!noteInputs[project.so]?.text?.trim() && !noteImages[project.so]) || isUploadingImage[project.so]}
+                              disabled={(!noteInputs[project.so]?.text?.trim() && (!noteImages[project.so] || noteImages[project.so].length === 0)) || isUploadingImage[project.so]}
                               style={{ opacity: isUploadingImage[project.so] ? 0.7 : 1 }}
                             >
                               {isUploadingImage[project.so] ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
@@ -1408,20 +1425,31 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                                 )}
                               </div>
                               <div className="note-item-text">{note.text}</div>
-                              {note.imageUrl && (
-                                <div style={{ marginTop: '8px' }}>
-                                  <a href={note.imageUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                                    {note.attachmentType === 'document' ? (
-                                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
-                                        <FileText size={16} />
-                                        <span style={{ fontSize: '0.85rem' }}>{note.attachmentName || 'Document'}</span>
-                                      </div>
-                                    ) : (
-                                      <img src={note.imageUrl} alt="Note attachment" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', border: '1px solid var(--card-border)' }} />
-                                    )}
-                                  </a>
-                                </div>
-                              )}
+                              {(() => {
+                                const atts = note.attachments ? [...note.attachments] : [];
+                                if (note.imageUrl) {
+                                  atts.push({ url: note.imageUrl, type: note.attachmentType || 'image', name: note.attachmentName });
+                                }
+                                if (atts.length === 0) return null;
+                                return (
+                                  <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                    {atts.map((att, i) => (
+                                      <a key={i} href={att.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                                        {att.type === 'document' ? (
+                                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
+                                            <FileText size={16} />
+                                            <span style={{ fontSize: '0.85rem', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                              {att.name || 'Document'}
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <img src={att.url} alt="Note attachment" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', border: '1px solid var(--card-border)', objectFit: 'cover' }} />
+                                        )}
+                                      </a>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
                               <div className="note-item-date">
                                 {new Date(note.createdAt).toLocaleDateString(language === 'es' ? 'es-AR' : 'en-US', {
                                   day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
