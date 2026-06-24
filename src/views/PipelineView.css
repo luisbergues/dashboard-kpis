@@ -166,9 +166,9 @@
 }
 
 .status-check {
-  background: rgba(128, 238, 152, 0.2);
-  color: var(--color-neon-green);
-  border: 1px solid rgba(128, 238, 152, 0.3);
+  background: rgba(70, 223, 177, 0.15);
+  color: var(--color-mint);
+  border: 1px solid rgba(70, 223, 177, 0.3);
 }
 
 .status-review {

@@ -626,9 +626,9 @@
 }
 
 .cal-status-check, .cal-status-check.u-status {
-  background: rgba(128, 238, 152, 0.2);
-  color: var(--color-neon-green);
-  border-left: 2px solid var(--color-neon-green);
+  background: rgba(70, 223, 177, 0.15);
+  color: var(--color-mint);
+  border-left: 2px solid var(--color-mint);
 }
 
 .cal-status-review, .cal-status-review.u-status {
