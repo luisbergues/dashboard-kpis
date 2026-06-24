@@ -154,7 +154,7 @@ export default function DesignQualityView() {
         onClick={() => setShowGuide(true)}
         style={{
           position: 'fixed',
-          bottom: '90px',
+          bottom: '105px',
           right: '24px',
           width: '56px',
           height: '56px',
@@ -206,9 +206,9 @@ export default function DesignQualityView() {
               {language === 'es' ? 'GUÍA DE USUARIO E INSTRUCCIONES' : 'DASHBOARD USER GUIDE & INSTRUCTIONS'}
             </h2>
 
-            <div style={{ color: '#E2E8F0', lineHeight: '1.6', fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ color: '#fff', lineHeight: '1.6', fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div>
-                <h3 style={{ color: '#09D1C7', fontSize: '1.1rem', marginBottom: '8px' }}>
+                <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '8px' }}>
                   {language === 'es' ? '1. COLUMNAS EDITABLES Y RESTRICCIONES' : '1. EDITABLE COLUMNS & RESTRICTIONS'}
                 </h3>
                 <p>
@@ -219,7 +219,7 @@ export default function DesignQualityView() {
               </div>
 
               <div>
-                <h3 style={{ color: '#09D1C7', fontSize: '1.1rem', marginBottom: '8px' }}>
+                <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '8px' }}>
                   {language === 'es' ? '2. DISTRIBUCIÓN DE PUNTOS DE INGENIERÍA (Columnas C, D, E, F, G)' : '2. ENGINEERING POINTS DISTRIBUTION (Columns C, D, E, F, G)'}
                 </h3>
                 <p style={{ marginBottom: '8px' }}>
@@ -235,7 +235,7 @@ export default function DesignQualityView() {
               </div>
 
               <div>
-                <h3 style={{ color: '#09D1C7', fontSize: '1.1rem', marginBottom: '8px' }}>
+                <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '8px' }}>
                   {language === 'es' ? '3. REVISORES Y NESTING (Columnas M, N, O, P)' : '3. REVIEWERS & NESTING (Columns M, N, O, P)'}
                 </h3>
                 <ul style={{ paddingLeft: '20px', listStyleType: 'disc', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -245,7 +245,7 @@ export default function DesignQualityView() {
               </div>
 
               <div>
-                <h3 style={{ color: '#09D1C7', fontSize: '1.1rem', marginBottom: '8px' }}>
+                <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '8px' }}>
                   {language === 'es' ? '4. MULTIPLICADORES DE PROYECTO' : '4. PROJECT MULTIPLIERS'}
                 </h3>
                 <ul style={{ paddingLeft: '20px', listStyleType: 'disc', display: 'flex', flexDirection: 'column', gap: '4px' }}>
