@@ -3,14 +3,32 @@ import { Bell, X, AlertCircle, Clock } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import './NotificationBubble.css';
 
-export default function NotificationBubble({ alerts = [], onAlertClick }) {
+export default function NotificationBubble({ alerts = [], activeTab, onAlertClick }) {
   const { language } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
+  const [isSuppressed, setIsSuppressed] = useState(false);
 
-  if (!alerts || alerts.length === 0) return null;
+  React.useEffect(() => {
+    if (activeTab === 'dashboard') {
+      setIsSuppressed(false);
+    }
+  }, [activeTab]);
+
+  if (!alerts || alerts.length === 0 || isSuppressed) return null;
 
   return (
     <div className="notification-bubble-widget">
+      {/* Dismiss Button */}
+      {!isOpen && activeTab !== 'dashboard' && (
+        <button 
+          className="notification-dismiss-btn"
+          onClick={() => setIsSuppressed(true)}
+          title={language === 'es' ? 'Ocultar notificaciones' : 'Hide notifications'}
+        >
+          <X size={12} />
+        </button>
+      )}
+
       {/* Floating Toggle Button */}
       <button 
         className={`notification-toggle-btn ${isOpen ? 'active' : ''}`} 

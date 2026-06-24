@@ -246,10 +246,13 @@ function App() {
     const alerts = [];
     const projects = mergedData.priorityAnalysis || [];
     const myDesignerName = userProfile.designerName.trim().toLowerCase();
+    const isGlobalRole = userProfile.role === 'engineer_nester' || userProfile.role === 'administrative' || userProfile.role === 'admin';
 
     // Warn about every project currently ON HOLD under this user's name
     const onHoldProjects = projects.filter(p => {
-      return p.status === 'ON HOLD' && p.eng && p.eng.trim().toLowerCase() === myDesignerName;
+      if (p.status !== 'ON HOLD') return false;
+      if (isGlobalRole) return true;
+      return p.eng && p.eng.trim().toLowerCase() === myDesignerName;
     });
     onHoldProjects.forEach(p => {
       const reason = p.onHoldReason ? ` — ${p.onHoldReason}` : '';
@@ -267,8 +270,10 @@ function App() {
     in14Days.setDate(today.getDate() + 14);
     const urgentInstalls = projects.filter(p => {
       if (!p.install || p.status === 'ON HOLD' || p.status === 'COMPLETED' || p.status === 'CANCELLED') return false;
-      const belongsToMe = p.eng && p.eng.trim().toLowerCase() === myDesignerName;
-      if (!belongsToMe) return false;
+      if (!isGlobalRole) {
+        const belongsToMe = p.eng && p.eng.trim().toLowerCase() === myDesignerName;
+        if (!belongsToMe) return false;
+      }
       const d = new Date(p.install);
       return !isNaN(d) && d >= today && d <= in14Days;
     });
@@ -341,6 +346,7 @@ function App() {
       )}
       <NotificationBubble 
         alerts={realAlerts} 
+        activeTab={activeTab}
         onAlertClick={(so) => {
           setFocusedProjectSo(so);
           setActiveTab('pipeline');

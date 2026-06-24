@@ -55,21 +55,19 @@
   top: 70px;
   right: 0;
   width: 320px;
-  background: rgba(25, 25, 30, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   max-height: 400px;
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 
 :root.light-theme .notification-window {
-  background: rgba(255, 255, 255, 0.75) !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  background: #FFFFFF !important;
+  border: 1px solid var(--border-color) !important;
 }
 
 .animate-slide-down {
@@ -91,16 +89,16 @@
 
 .notification-header {
   padding: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-card-hover);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 :root.light-theme .notification-header {
-  background: rgba(0, 0, 0, 0.03) !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  background: #F9FAFB !important;
+  border-bottom: 1px solid var(--border-color) !important;
 }
 
 .notification-header h3 {
@@ -146,25 +144,26 @@
   gap: 12px;
   padding: 12px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-page);
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 :root.light-theme .notification-item {
-  background: rgba(0, 0, 0, 0.02) !important;
+  background: #FFFFFF !important;
+  border: 1px solid var(--border-color) !important;
 }
 
 .notification-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--bg-card-hover);
+  border-color: var(--border-color);
   transform: translateX(2px);
 }
 
 :root.light-theme .notification-item:hover {
-  background: rgba(0, 0, 0, 0.05) !important;
-  border-color: rgba(0, 0, 0, 0.1) !important;
+  background: #F3F4F6 !important;
+  border-color: var(--border-color) !important;
 }
 
 .notification-icon {
@@ -198,3 +197,27 @@
 .notification-item:hover .notification-text {
   color: var(--text-primary);
 }
+
+.notification-dismiss-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.notification-dismiss-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+}
+
