@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { HelpCircle, X } from 'lucide-react';
 import { fetchAndParseQualityData } from '../utils/sheetParser';
 import { useLanguage } from '../utils/LanguageContext';
 
@@ -11,6 +12,7 @@ export default function DesignQualityView() {
   const [data, setData] = useState({ kpiData: [], analysisText: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -145,6 +147,116 @@ export default function DesignQualityView() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Floating Action Button for Guide */}
+      <button 
+        onClick={() => setShowGuide(true)}
+        style={{
+          position: 'fixed',
+          bottom: '90px',
+          right: '24px',
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          backgroundColor: '#007BFF',
+          color: '#fff',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          boxShadow: '0 4px 12px rgba(0, 123, 255, 0.4)',
+          border: 'none',
+          cursor: 'pointer',
+          zIndex: 1000
+        }}
+        title={language === 'es' ? 'Guía de Usuario' : 'User Guide'}
+      >
+        <HelpCircle size={28} />
+      </button>
+
+      {/* Guide Modal */}
+      {showGuide && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => setShowGuide(false)}
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 100000,
+            display: 'flex', justifyContent: 'center', alignItems: 'center'
+          }}
+        >
+          <div 
+            className="modal-content glass-card animate-fade-in" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '90%', maxWidth: '700px', maxHeight: '85vh',
+              overflowY: 'auto', padding: '32px', position: 'relative'
+            }}
+          >
+            <button 
+              onClick={() => setShowGuide(false)}
+              style={{
+                position: 'absolute', top: '16px', right: '16px',
+                background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer'
+              }}
+            >
+              <X size={24} />
+            </button>
+            <h2 style={{ color: '#fff', marginBottom: '24px', fontSize: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '16px' }}>
+              {language === 'es' ? 'GUÍA DE USUARIO E INSTRUCCIONES' : 'DASHBOARD USER GUIDE & INSTRUCTIONS'}
+            </h2>
+
+            <div style={{ color: '#E2E8F0', lineHeight: '1.6', fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div>
+                <h3 style={{ color: '#09D1C7', fontSize: '1.1rem', marginBottom: '8px' }}>
+                  {language === 'es' ? '1. COLUMNAS EDITABLES Y RESTRICCIONES' : '1. EDITABLE COLUMNS & RESTRICTIONS'}
+                </h3>
+                <p>
+                  {language === 'es' 
+                    ? "Las columnas editables son C, D, E, F, G, M, N, O y P. Contienen una fórmula que permite borrar la información del ingeniero asignado y la celda se regenera automáticamente. Estos son los únicos valores que se pueden editar en la tabla, el resto es automático." 
+                    : "Editable columns are C, D, E, F, G, M, N, O, and P. They contain a formula that allows you to delete the assigned engineer's information and the cell automatically regenerates. These are the only values that can be edited in the table, the rest is automatic."}
+                </p>
+              </div>
+
+              <div>
+                <h3 style={{ color: '#09D1C7', fontSize: '1.1rem', marginBottom: '8px' }}>
+                  {language === 'es' ? '2. DISTRIBUCIÓN DE PUNTOS DE INGENIERÍA (Columnas C, D, E, F, G)' : '2. ENGINEERING POINTS DISTRIBUTION (Columns C, D, E, F, G)'}
+                </h3>
+                <p style={{ marginBottom: '8px' }}>
+                  {language === 'es' ? "Estas columnas distribuyen los 'Puntos Propios' base (70% del total):" : "These columns distribute the base 'Own Points' (70% of total):"}
+                </p>
+                <ul style={{ paddingLeft: '20px', listStyleType: 'disc', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <li>{language === 'es' ? 'Columna C (Revisión de Ing.): 10%' : 'Column C (Eng. Review): 10%'}</li>
+                  <li>{language === 'es' ? 'Columna D (Ingeniería): 12%' : 'Column D (Eng. Engineering): 12%'}</li>
+                  <li>{language === 'es' ? 'Columna E (Check Ingeniería): 12%' : 'Column E (Eng. Check Eng): 12%'}</li>
+                  <li>{language === 'es' ? 'Columna F (Paperwork): 12%' : 'Column F (Eng. Paperwork): 12%'}</li>
+                  <li>{language === 'es' ? 'Columna G (Check de Ing.): 24%' : 'Column G (Eng. Check): 24%'}</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ color: '#09D1C7', fontSize: '1.1rem', marginBottom: '8px' }}>
+                  {language === 'es' ? '3. REVISORES Y NESTING (Columnas M, N, O, P)' : '3. REVIEWERS & NESTING (Columns M, N, O, P)'}
+                </h3>
+                <ul style={{ paddingLeft: '20px', listStyleType: 'disc', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <li>{language === 'es' ? 'Columnas M, N, O (Revisores 1, 2, 3): Comparten un 5% de pool de Revisión. Los puntos se dividen equitativamente entre los revisores listados.' : 'Columns M, N, O (Reviewers 1, 2, 3): Share a 5% Revision pool. Points are divided equally among the listed reviewers.'}</li>
+                  <li>{language === 'es' ? 'Columna P (Nesting): Recibe una asignación del 30% de los puntos.' : 'Column P (Nesting): Receives a 30% point allocation.'}</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ color: '#09D1C7', fontSize: '1.1rem', marginBottom: '8px' }}>
+                  {language === 'es' ? '4. MULTIPLICADORES DE PROYECTO' : '4. PROJECT MULTIPLIERS'}
+                </h3>
+                <ul style={{ paddingLeft: '20px', listStyleType: 'disc', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <li><strong style={{color: '#80EE98'}}>No Holes?:</strong> {language === 'es' ? 'Multiplica el peso total calculado por 1.25x.' : 'Multiplies the total Calculated Weight by 1.25x.'}</li>
+                  <li><strong style={{color: '#80EE98'}}>Strip Lights?:</strong> {language === 'es' ? 'Agrega un bono del 10% específicamente al cálculo de puntos de Nesting.' : 'Adds a 10% bonus specifically to the Nesting points calculation.'}</li>
+                  <li><strong style={{color: '#80EE98'}}>Multicolor?:</strong> {language === 'es' ? 'Agrega un bono del 10% específicamente al cálculo de puntos de Nesting.' : 'Adds a 10% bonus specifically to the Nesting points calculation.'}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
