@@ -48,8 +48,8 @@ const METRIC_COLORS = {
   'ON HOLD': '#FFE600',
   'Check': '#80EE98',
   'Review': '#09D1C7',
-  'Nesting': '#8A2BE2',
-  'Engineering': '#FF2E93',
+  'Nesting': '#9CA3AF',
+  'Engineering': '#8A2BE2',
   'Check Eng': '#15919B',
   'Paperwork': '#0C6478'
 };

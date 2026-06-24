@@ -257,6 +257,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     if (s.includes('CHECK')) return 'status-check';
     if (s.includes('REVIEW')) return 'status-review';
     if (s.includes('ENG')) return 'status-eng';
+    if (s.includes('NEST')) return 'status-nesting';
     return 'status-default';
   };
 

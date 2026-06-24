@@ -183,6 +183,12 @@
   border: 1px solid rgba(138, 43, 226, 0.3);
 }
 
+.status-nesting {
+  background: rgba(156, 163, 175, 0.2);
+  color: #9CA3AF;
+  border: 1px solid rgba(156, 163, 175, 0.3);
+}
+
 .status-default {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);

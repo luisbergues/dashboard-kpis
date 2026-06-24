@@ -94,6 +94,12 @@
   border-color: rgba(138, 43, 226, 0.2);
 }
 
+.status-badge-inline.nesting {
+  background: rgba(156, 163, 175, 0.1);
+  color: #9CA3AF;
+  border-color: rgba(156, 163, 175, 0.2);
+}
+
 .status-badge-inline.active {
   background: rgba(70, 223, 177, 0.1);
   color: var(--color-mint);

@@ -642,6 +642,11 @@
   color: var(--color-purple);
   border-left: 2px solid var(--color-purple);
 }
+.cal-status-nesting, .cal-status-nesting.u-status {
+  background: rgba(156, 163, 175, 0.2);
+  color: #9CA3AF;
+  border-left: 2px solid #9CA3AF;
+}
 
 .cal-status-default, .cal-status-default.u-status {
   background: rgba(255, 255, 255, 0.1);
@@ -849,6 +854,9 @@
   }
   .cal-status-eng {
     background: var(--color-purple) !important;
+  }
+  .cal-status-nesting {
+    background: #9CA3AF !important;
   }
   .cal-status-default {
     background: var(--text-muted) !important;

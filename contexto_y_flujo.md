@@ -10,7 +10,7 @@ El JL Closets KPI Dashboard es una aplicación web moderna del tipo **Progressiv
 
 ### Puntos Clave de la Arquitectura
 *   **Fuente de Datos Original:** Hojas de cálculo de Google (Google Sheets) procesadas por un parser local para extraer métricas financieras, requerimientos de material, e información de proyectos.
-*   **Base de Datos en Tiempo Real (Firebase RTDB):** Gestiona la autenticación, los perfiles de usuario, el historial semanal de métricas (`weekly_history`), el control de tiempos de ingeniería (`project_stages`), y las anulaciones de estados en vivo (`project_overrides`).
+*   **Base de Datos en Tiempo Real (Firebase RTDB):** Gestiona la autenticación, los perfiles de usuario, el historial semanal de métricas (`weekly_history`), el control de tiempos de ingeniería (`project_stages`), las anulaciones de estados en vivo (`project_overrides`), los registros de calidad detallados (`project_qa_checklist`) y el seguimiento de tiempos de Nesting (`nesting_checks`).
 *   **Base de Datos Secundaria de Respaldo (Firebase Firestore):** Utilizada como archivo histórico de seguridad en frío. Cuando el peso de la base de datos de tiempo real simula exceder 1GB, los datos antiguos de historial y proyectos eliminados se mueven automáticamente aquí para optimizar costos y velocidad en RTDB.
 *   **Caché con React Query:** Implementa un patrón **SWR (Stale-While-Revalidate)** en [dbCache.js](file:///c:/Users/luis_/.gemini/antigravity/scratch/dashboard-kpis/src/utils/dbCache.js) que carga datos guardados en LocalStorage en menos de 200ms para mostrar la UI instantáneamente, mientras actualiza la información desde Google Sheets en el fondo de forma asíncrona.
 
@@ -27,7 +27,9 @@ El JL Closets KPI Dashboard es una aplicación web moderna del tipo **Progressiv
     *   Genera el modelo unificado de datos (`priorityAnalysis`, `weekOverWeek`, `financialImpact`, etc.).
 3.  **[kpiCalculator.js](file:///c:/Users/luis_/.gemini/antigravity/scratch/dashboard-kpis/src/services/kpiCalculator.js):**
     *   Encapsula la lógica matemática y de negocio: conversión, desviación de presupuestos, tiempos de validación promedio de ingeniería, predicción de cuellos de botella e incidencias de CAD.
-4.  **[archiveHelpers.js](file:///c:/Users/luis_/.gemini/antigravity/scratch/dashboard-kpis/src/utils/archiveHelpers.js):**
+4.  **[translations.js](file:///c:/Users/luis_/.gemini/antigravity/scratch/dashboard-kpis/src/utils/translations.js):**
+    *   Gestiona la internacionalización (i18n) de la aplicación y mantiene los listados granulares de ítems para los controles de calidad (Checklists de Ingeniería, Paperwork, y Checklist Final) en múltiples idiomas.
+5.  **[archiveHelpers.js](file:///c:/Users/luis_/.gemini/antigravity/scratch/dashboard-kpis/src/utils/archiveHelpers.js):**
     *   Maneja la lógica de archivado automático a Firestore y previene saturar la consola de advertencias.
 
 ---
@@ -53,10 +55,10 @@ graph TD
     RTDB[("Firebase Realtime DB <br/>(Datos en Tiempo Real)")]:::rtdb
     Firestore[("Firebase Firestore <br/>(Base de Respaldo / Archivo)")]:::firestore
     
-    subgraph Vistas ["Vistas e Interfaces del Usuario"]
+    subgraph Vistas ["Vistas e Interfaces del Usuario (Paleta Unificada)"]
         Dash["DashboardView.jsx<br/>(Resumen General, WoW Chart, Bottlenecks)"]:::view
-        MyProj["MyProjectsView.jsx<br/>(Mi Agenda, Start/Finish de Ingeniería, Gráficos Personales, PDF)"]:::view
-        Pipeline["PipelineView.jsx<br/>(Tablero Kanban del Proceso)"]:::view
+        MyProj["MyProjectsView.jsx<br/>(Mi Agenda, Tiempos, Checklists QA, PDF)"]:::view
+        Pipeline["PipelineView.jsx<br/>(Tablero Kanban, Modales de Imagen, QA y Nesting)"]:::view
         Costs["CostAnalysisView.jsx<br/>(Análisis Financiero de Proyectos)"]:::view
         Calendar["CalendarView.jsx<br/>(Calendario de Instalaciones)"]:::view
         Quality["DesignQualityView.jsx<br/>(Control de Errores CAD)"]:::view
@@ -76,7 +78,7 @@ graph TD
     %% Renderización e Interacciones del Usuario
     App -->|7. Inyecta mergedData unificado| Vistas
     
-    MyProj -->|8. Guarda marcas de tiempo de Ingeniería (Start/Finish)| RTDB
+    MyProj -->|8. Guarda marcas de tiempo y resoluciones de Checklists QA| RTDB
     Calendar -->|9. Permite editar fechas y agregar comentarios| RTDB
     
     %% Alertas

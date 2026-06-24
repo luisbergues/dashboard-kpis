@@ -111,6 +111,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
     if (s.includes('CHECK')) return 'cal-status-check';
     if (s.includes('REVIEW')) return 'cal-status-review';
     if (s.includes('ENG')) return 'cal-status-eng';
+    if (s.includes('NEST')) return 'cal-status-nesting';
     return 'cal-status-default';
   };
 
