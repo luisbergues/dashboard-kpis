@@ -1,6 +1,6 @@
 .notification-bubble-widget {
   position: fixed;
-  bottom: 100px;
+  top: 24px;
   right: 24px;
   z-index: 1000;
   font-family: 'Inter', sans-serif;
@@ -52,50 +52,40 @@
 /* Popover Window */
 .notification-window {
   position: absolute;
-  bottom: 70px;
+  top: 70px;
   right: 0;
   width: 320px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-top: 1px solid rgba(255, 255, 255, 0.5);
-  border-left: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(25, 25, 30, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  box-shadow: 
-    0 16px 40px rgba(0, 0, 0, 0.4),
-    inset 0 1px 2px rgba(255, 255, 255, 0.6),
-    inset 0 0 20px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   max-height: 400px;
-  backdrop-filter: blur(24px) saturate(200%);
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 
 :root.light-theme .notification-window {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.4)) !important;
-  border: 1px solid rgba(255, 255, 255, 0.6) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.8) !important;
-  border-left: 1px solid rgba(255, 255, 255, 0.7) !important;
-  box-shadow: 
-    0 16px 40px rgba(0, 0, 0, 0.1),
-    inset 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+  background: rgba(255, 255, 255, 0.75) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
 }
 
-.animate-slide-up {
-  animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.animate-slide-down {
+  animation: slideDownFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes slideUpFade {
+@keyframes slideDownFade {
   0% {
     opacity: 0;
-    transform: translateY(20px) scale(0.95);
-    transform-origin: bottom right;
+    transform: translateY(-20px) scale(0.95);
+    transform-origin: top right;
   }
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
-    transform-origin: bottom right;
+    transform-origin: top right;
   }
 }
 

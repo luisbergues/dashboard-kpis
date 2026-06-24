@@ -24,7 +24,7 @@ export default function NotificationBubble({ alerts = [], onAlertClick }) {
 
       {/* Popover Window */}
       {isOpen && (
-        <div className="notification-window animate-slide-up">
+        <div className="notification-window animate-slide-down">
           <div className="notification-header">
             <h3>{language === 'es' ? 'Notificaciones' : 'Notifications'}</h3>
             <span className="notification-count">{alerts.length} {language === 'es' ? 'nuevas' : 'new'}</span>
