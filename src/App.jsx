@@ -282,6 +282,7 @@ function App() {
     // Process new notes and installations, and clean up readNotes for COMPLETED/CANCELLED
     let readNotesUpdates = {};
     let hasReadNotesUpdates = false;
+    let notesToDelete = {};
 
     projects.forEach(p => {
       const isCompletedOrCancelled = p.status === 'COMPLETED' || p.status === 'CANCELLED';
@@ -290,6 +291,11 @@ function App() {
       if (isCompletedOrCancelled && userProfile.readNotes && userProfile.readNotes[p.so]) {
         readNotesUpdates[p.so] = null; // Mark for deletion
         hasReadNotesUpdates = true;
+      }
+
+      // 1.5 Cleanup actual project notes for completed/cancelled projects
+      if (isCompletedOrCancelled && projectNotes[p.so]) {
+        notesToDelete[p.so] = true;
       }
 
       // Check if user should see alerts for this project
@@ -367,6 +373,16 @@ function App() {
           set(ref(db, refPath), null);
         });
       }, 100);
+    }
+
+    // Fire and forget project_notes cleanup for completed projects
+    if (Object.keys(notesToDelete).length > 0 && db) {
+      setTimeout(() => {
+        Object.keys(notesToDelete).forEach(so => {
+          const refPath = `project_notes/${so}`;
+          set(ref(db, refPath), null);
+        });
+      }, 200);
     }
 
     return alerts;
