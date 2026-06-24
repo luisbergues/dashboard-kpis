@@ -426,3 +426,17 @@ h1, h2, h3, h4, h5, h6 {
   color: #FFFFFF !important;
 }
 
+
+.pipeline-comments-bubble {
+  background: rgba(9, 209, 199, 0.1);
+  color: var(--primary);
+  padding: 4px 10px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-right: 8px;
+}
+

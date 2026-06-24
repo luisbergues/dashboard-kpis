@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, AlertCircle, Calendar, StickyNote, Flag, Clock, CheckCircle2, Users, Plus, Circle, Image as ImageIcon, Loader2, X, FileText, Paperclip } from 'lucide-react';
+import { Search, AlertCircle, Calendar, StickyNote, Flag, Clock, CheckCircle2, Users, Plus, Circle, Image as ImageIcon, Loader2, X, FileText, Paperclip, MessageSquare } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import { db, ref, onValue, set } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
@@ -402,6 +402,12 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                   </div>
                   
                   <div className="project-side">
+                    {(projectNotes[project.so] || []).length > 0 && (
+                      <span className="pipeline-comments-bubble" title={language === 'es' ? 'Comentarios' : 'Comments'}>
+                        <MessageSquare size={14} strokeWidth={2.5} />
+                        <span>{(projectNotes[project.so] || []).length}</span>
+                      </span>
+                    )}
                     <span className={`status-badge ${getStatusColor(project.status)}`}>
                       {getStatusLabel(project.status)}
                     </span>
