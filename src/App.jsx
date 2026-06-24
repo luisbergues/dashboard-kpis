@@ -21,6 +21,7 @@ function App() {
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('active_tab') || 'dashboard';
   });
+  const [projectNotes, setProjectNotes] = useState({});
   const [overrides, setOverrides] = useState({});
   const [currentUser, setCurrentUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
@@ -203,7 +204,16 @@ function App() {
     const unsubscribeOverrides = onValue(overridesRef, (snapshot) => {
       setOverrides(snapshot.val() || {});
     });
-    return () => unsubscribeOverrides();
+
+    const notesRef = ref(db, 'project_notes');
+    const unsubscribeNotes = onValue(notesRef, (snapshot) => {
+      setProjectNotes(snapshot.val() || {});
+    });
+
+    return () => {
+      unsubscribeOverrides();
+      unsubscribeNotes();
+    };
   }, []);
 
   useEffect(() => {
@@ -268,36 +278,99 @@ function App() {
     today.setHours(0, 0, 0, 0);
     const in14Days = new Date(today);
     in14Days.setDate(today.getDate() + 14);
-    const urgentInstalls = projects.filter(p => {
-      if (!p.install || p.status === 'ON HOLD' || p.status === 'COMPLETED' || p.status === 'CANCELLED') return false;
-      if (!isGlobalRole) {
-        const belongsToMe = p.eng && p.eng.trim().toLowerCase() === myDesignerName;
-        if (!belongsToMe) return false;
-      }
-      const d = new Date(p.install);
-      return !isNaN(d) && d >= today && d <= in14Days;
-    });
     
-    // Sort urgent installs by date
-    urgentInstalls.sort((a, b) => new Date(a.install) - new Date(b.install));
+    // Process new notes and installations, and clean up readNotes for COMPLETED/CANCELLED
+    let readNotesUpdates = {};
+    let hasReadNotesUpdates = false;
 
-    urgentInstalls.forEach(p => {
-      const d = new Date(p.install);
-      const daysLeft = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
-      
-      let type = 'info';
-      if (daysLeft === 0) type = 'error';
-      else if (daysLeft <= 3) type = 'warning';
+    projects.forEach(p => {
+      const isCompletedOrCancelled = p.status === 'COMPLETED' || p.status === 'CANCELLED';
 
-      alerts.push({
-        so: p.so,
-        type: type,
-        text: `¡Urgente! SO #${p.so} tiene instalación ${daysLeft === 0 ? 'HOY' : `en ${daysLeft} día${daysLeft > 1 ? 's' : ''}`}: ${p.name.split(':')[0].trim()}`
-      });
+      // 1. Cleanup readNotes for completed/cancelled projects
+      if (isCompletedOrCancelled && userProfile.readNotes && userProfile.readNotes[p.so]) {
+        readNotesUpdates[p.so] = null; // Mark for deletion
+        hasReadNotesUpdates = true;
+      }
+
+      // Check if user should see alerts for this project
+      let belongsToMe = false;
+      if (isGlobalRole) {
+        belongsToMe = true;
+      } else {
+        belongsToMe = p.eng && p.eng.trim().toLowerCase() === myDesignerName;
+      }
+
+      if (!belongsToMe) return;
+
+      // 2. Urgent installs logic
+      if (!isCompletedOrCancelled && p.status !== 'ON HOLD' && p.install) {
+        const d = new Date(p.install);
+        if (!isNaN(d) && d >= today && d <= in14Days) {
+          const diffTime = d - today;
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          alerts.push({
+            so: p.so,
+            type: 'urgent',
+            text: `¡Urgente! SO #${p.so} tiene instalación en ${diffDays} días: ${p.name.split(':')[0].trim()}`
+          });
+        }
+      }
+
+      // 3. Unread Notes logic
+      if (!isCompletedOrCancelled) {
+        const notes = projectNotes[p.so] || [];
+        const lastReadTimestamp = userProfile.readNotes ? userProfile.readNotes[p.so] : null;
+        
+        let unreadCount = 0;
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        notes.forEach(note => {
+          const noteDate = new Date(note.timestamp);
+          
+          // Ignore notes from the current user
+          const isMyNote = note.author && (
+            note.author.trim().toLowerCase() === myDesignerName || 
+            note.author.trim().toLowerCase() === userProfile.email.toLowerCase()
+          );
+
+          if (!isMyNote) {
+            if (lastReadTimestamp) {
+              if (noteDate > new Date(lastReadTimestamp)) {
+                unreadCount++;
+              }
+            } else {
+              // If no last read timestamp, only count notes from the last 7 days to avoid spam
+              if (noteDate > sevenDaysAgo) {
+                unreadCount++;
+              }
+            }
+          }
+        });
+
+        if (unreadCount > 0) {
+          alerts.push({
+            so: p.so,
+            type: 'note',
+            text: `SO #${p.so}: ${unreadCount} nota${unreadCount > 1 ? 's' : ''} nueva${unreadCount > 1 ? 's' : ''} en ${p.name.split(':')[0].trim()}`
+          });
+        }
+      }
     });
+
+    // Fire and forget readNotes cleanup
+    if (hasReadNotesUpdates && currentUser && db) {
+      // Small timeout to avoid state loops during render
+      setTimeout(() => {
+        Object.keys(readNotesUpdates).forEach(so => {
+          const refPath = `users/${currentUser.uid}/readNotes/${so}`;
+          set(ref(db, refPath), null);
+        });
+      }, 100);
+    }
 
     return alerts;
-  }, [mergedData, userProfile]);
+  }, [mergedData, userProfile, projectNotes, currentUser]);
 
   const renderView = () => {
     if (loading || authLoading) return <div className="loading-state">Loading application...</div>;
@@ -347,8 +420,13 @@ function App() {
       <NotificationBubble 
         alerts={realAlerts} 
         activeTab={activeTab}
-        onAlertClick={(so) => {
-          setFocusedProjectSo(so);
+        onAlertClick={(alert) => {
+          if (alert.type === 'note' && currentUser && db) {
+            // Update read timestamp to dismiss the notification
+            const refPath = `users/${currentUser.uid}/readNotes/${alert.so}`;
+            set(ref(db, refPath), new Date().toISOString());
+          }
+          setFocusedProjectSo(alert.so);
           setActiveTab('pipeline');
         }} 
       />

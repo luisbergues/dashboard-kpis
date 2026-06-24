@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, X, AlertCircle, Clock } from 'lucide-react';
+import { Bell, X, AlertCircle, Clock, MessageSquare } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import './NotificationBubble.css';
 
@@ -33,6 +33,7 @@ export default function NotificationBubble({ alerts = [], activeTab, onAlertClic
       <button 
         className={`notification-toggle-btn ${isOpen ? 'active' : ''}`} 
         onClick={() => setIsOpen(!isOpen)}
+        title={language === 'es' ? 'Notificaciones de Instalaciones Urgentes y Notas' : 'Urgent Install and Note Notifications'}
       >
         {isOpen ? <X size={24} /> : <Bell size={24} />}
         {!isOpen && (
@@ -48,18 +49,18 @@ export default function NotificationBubble({ alerts = [], activeTab, onAlertClic
             <span className="notification-count">{alerts.length} {language === 'es' ? 'nuevas' : 'new'}</span>
           </div>
 
-          <div className="notification-body">
+          <div className="notification-list">
             {alerts.map((alert, idx) => (
               <div 
                 key={`${alert.so}-${idx}`} 
                 className={`notification-item ${alert.type}`}
                 onClick={() => {
-                  onAlertClick(alert.so);
                   setIsOpen(false);
+                  onAlertClick(alert);
                 }}
               >
                 <div className="notification-icon">
-                  {alert.type === 'error' ? <AlertCircle size={18} /> : <Clock size={18} />}
+                  {alert.type === 'note' ? <MessageSquare size={18} /> : (alert.type === 'error' ? <AlertCircle size={18} /> : <Clock size={18} />)}
                 </div>
                 <div className="notification-content">
                   <p className="notification-text">{alert.text}</p>
