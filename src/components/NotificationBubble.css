@@ -55,8 +55,8 @@
   top: 70px;
   right: 0;
   width: 320px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 16px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   overflow: hidden;
@@ -67,7 +67,7 @@
 
 :root.light-theme .notification-window {
   background: #FFFFFF !important;
-  border: 1px solid var(--border-color) !important;
+  border: 1px solid var(--card-border) !important;
 }
 
 .animate-slide-down {
@@ -89,8 +89,8 @@
 
 .notification-header {
   padding: 16px;
-  background: var(--bg-card-hover);
-  border-bottom: 1px solid var(--border-color);
+  background: var(--card-hover);
+  border-bottom: 1px solid var(--card-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -98,7 +98,7 @@
 
 :root.light-theme .notification-header {
   background: #F9FAFB !important;
-  border-bottom: 1px solid var(--border-color) !important;
+  border-bottom: 1px solid var(--card-border) !important;
 }
 
 .notification-header h3 {
@@ -144,7 +144,7 @@
   gap: 12px;
   padding: 12px;
   border-radius: 10px;
-  background: var(--bg-page);
+  background: var(--bg-surface);
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -152,18 +152,18 @@
 
 :root.light-theme .notification-item {
   background: #FFFFFF !important;
-  border: 1px solid var(--border-color) !important;
+  border: 1px solid var(--card-border) !important;
 }
 
 .notification-item:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--border-color);
+  background: var(--card-hover);
+  border-color: var(--card-border);
   transform: translateX(2px);
 }
 
 :root.light-theme .notification-item:hover {
   background: #F3F4F6 !important;
-  border-color: var(--border-color) !important;
+  border-color: var(--card-border) !important;
 }
 
 .notification-icon {
@@ -202,9 +202,9 @@
   position: absolute;
   top: -6px;
   left: -6px;
-  background: var(--bg-card);
+  background: var(--card-bg);
   color: var(--text-secondary);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--card-border);
   border-radius: 50%;
   width: 22px;
   height: 22px;
@@ -218,6 +218,6 @@
 
 .notification-dismiss-btn:hover {
   color: var(--text-primary);
-  background: var(--bg-card-hover);
+  background: var(--card-hover);
 }
 
