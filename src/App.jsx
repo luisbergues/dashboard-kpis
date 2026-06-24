@@ -13,7 +13,7 @@ import LoginView from './views/LoginView'
 import MyProjectsView from './views/MyProjectsView'
 import DesignQualityView from './views/DesignQualityView'
 import ErrorBoundary from './components/ErrorBoundary'
-import ToastNotifications from './components/ToastNotifications'
+import NotificationBubble from './components/NotificationBubble'
 import ProjectChatbot from './components/ProjectChatbot'
 import { auth, db, onAuthStateChanged, ref, onValue, set, get, child } from './utils/firebase'
 
@@ -260,25 +260,34 @@ function App() {
       });
     });
 
-    // Warn about installations in the next 3 days under this user's name
+    // Warn about installations in the next 14 days under this user's name
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const in3Days = new Date(today);
-    in3Days.setDate(today.getDate() + 3);
+    const in14Days = new Date(today);
+    in14Days.setDate(today.getDate() + 14);
     const urgentInstalls = projects.filter(p => {
-      if (!p.install || p.status === 'ON HOLD') return false;
+      if (!p.install || p.status === 'ON HOLD' || p.status === 'COMPLETED' || p.status === 'CANCELLED') return false;
       const belongsToMe = p.eng && p.eng.trim().toLowerCase() === myDesignerName;
       if (!belongsToMe) return false;
       const d = new Date(p.install);
-      return !isNaN(d) && d >= today && d <= in3Days;
+      return !isNaN(d) && d >= today && d <= in14Days;
     });
+    
+    // Sort urgent installs by date
+    urgentInstalls.sort((a, b) => new Date(a.install) - new Date(b.install));
+
     urgentInstalls.forEach(p => {
       const d = new Date(p.install);
       const daysLeft = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+      
+      let type = 'info';
+      if (daysLeft === 0) type = 'error';
+      else if (daysLeft <= 3) type = 'warning';
+
       alerts.push({
         so: p.so,
-        type: daysLeft === 0 ? 'error' : 'info',
-        text: `SO #${p.so} tiene instalación ${daysLeft === 0 ? 'HOY' : `en ${daysLeft} día${daysLeft > 1 ? 's' : ''}`}: ${p.name.split(':')[0].trim()}`
+        type: type,
+        text: `¡Urgente! SO #${p.so} tiene instalación ${daysLeft === 0 ? 'HOY' : `en ${daysLeft} día${daysLeft > 1 ? 's' : ''}`}: ${p.name.split(':')[0].trim()}`
       });
     });
 
@@ -330,9 +339,9 @@ function App() {
           userProfile={userProfile} 
         />
       )}
-      <ToastNotifications 
+      <NotificationBubble 
         alerts={realAlerts} 
-        onClickAlert={(so) => {
+        onAlertClick={(so) => {
           setFocusedProjectSo(so);
           setActiveTab('pipeline');
         }} 

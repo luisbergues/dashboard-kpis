@@ -284,12 +284,6 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       let options = [];
       let optionIdCounter = 1;
 
-      // Check Designers
-      const matchedDesigners = [...new Set(projects.filter(p => p.designer && p.designer.toLowerCase().replace(/[^a-z0-9]/g, '').includes(searchWord)).map(p => p.designer))];
-      matchedDesigners.forEach(d => {
-        options.push({ id: optionIdCounter++, type: 'designer', name: d, label: isES ? `Ver proyectos de ${d} (Diseñador)` : `View projects for ${d} (Designer)` });
-      });
-
       // Check Engineers
       const matchedEngineers = [...new Set(projects.filter(p => p.eng && p.eng.toLowerCase().replace(/[^a-z0-9]/g, '').includes(searchWord)).map(p => p.eng))];
       matchedEngineers.forEach(e => {
@@ -356,12 +350,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     const isES = language === 'es';
     let responseText = '';
 
-    if (opt.type === 'designer') {
-      const activeProjects = projects.filter(p => p.designer === opt.name && p.status !== 'COMPLETED' && p.status !== 'CANCELLED');
-      responseText = isES 
-        ? `**Proyectos activos de ${opt.name}:**\n\n${activeProjects.length > 0 ? activeProjects.map(p => `• **${p.name}** (SO #${p.so}) - ${p.status}`).join('\n') : 'No tiene proyectos activos.'}`
-        : `**Active projects for ${opt.name}:**\n\n${activeProjects.length > 0 ? activeProjects.map(p => `• **${p.name}** (SO #${p.so}) - ${p.status}`).join('\n') : 'No active projects.'}`;
-    } else if (opt.type === 'engineer') {
+    if (opt.type === 'engineer') {
       const activeProjects = projects.filter(p => p.eng === opt.name && p.status !== 'COMPLETED' && p.status !== 'CANCELLED');
       responseText = isES 
         ? `**Proyectos activos de ${opt.name}:**\n\n${activeProjects.length > 0 ? activeProjects.map(p => `• **${p.name}** (SO #${p.so}) - ${p.status}`).join('\n') : 'No tiene proyectos activos.'}`
