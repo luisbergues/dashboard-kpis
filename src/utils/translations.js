@@ -28,7 +28,7 @@ export const translations = {
       titleSignUp: "Create an Account",
       subtitleSignIn: "Sign in to your engineering dashboard",
       subtitleSignUp: "Sign up to access your personalized projects",
-      linkDesigner: "Link Designer Profile",
+      linkDesigner: "Link Engineer Profile",
       selectName: "-- Select Your Name --",
       role: "Initial Role",
       email: "Email Address",
@@ -37,7 +37,7 @@ export const translations = {
       btnSignUp: "Sign Up",
       noAccount: "Don't have an account?",
       hasAccount: "Already have an account?",
-      validationName: "Please select your designer name to link your profile."
+      validationName: "Please select your engineer name to link your profile."
     },
     dashboard: {
       title: "Weekly KPI Dashboard",
@@ -250,7 +250,7 @@ export const translations = {
       titleSignUp: "Crear una Cuenta",
       subtitleSignIn: "Inicia sesión en tu panel de ingeniería",
       subtitleSignUp: "Regístrate para acceder a tus proyectos personalizados",
-      linkDesigner: "Vincular Perfil de Diseñador",
+      linkDesigner: "Vincular Perfil de Ingeniero",
       selectName: "-- Selecciona tu Nombre --",
       role: "Rol Inicial",
       email: "Correo Electrónico",
@@ -259,7 +259,7 @@ export const translations = {
       btnSignUp: "Registrarse",
       noAccount: "¿No tienes una cuenta?",
       hasAccount: "¿Ya tienes una cuenta?",
-      validationName: "Por favor selecciona tu nombre de diseñador para vincular tu perfil."
+      validationName: "Por favor selecciona tu nombre de ingeniero para vincular tu perfil."
     },
     dashboard: {
       title: "Tablero KPI Semanal",

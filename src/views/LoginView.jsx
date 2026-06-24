@@ -229,7 +229,13 @@ export default function LoginView({ data }) {
         <form onSubmit={handleSubmit} className="login-form">
           {isSignUp && (
             <>
-              <div className="form-group">
+              <div 
+                className="form-group"
+                style={{ 
+                  opacity: (signupRole === 'engineer' || signupRole === 'engineer_nester') ? 1 : 0.5,
+                  pointerEvents: (signupRole === 'engineer' || signupRole === 'engineer_nester') ? 'auto' : 'none'
+                }}
+              >
                 <label className="form-label">{t('login.linkDesigner')}</label>
                 <div className="input-wrapper">
                   <User size={18} className="input-icon" />
@@ -237,7 +243,8 @@ export default function LoginView({ data }) {
                     value={designerName}
                     onChange={(e) => setDesignerName(e.target.value)}
                     className="form-input form-select has-icon"
-                    required={isSignUp}
+                    required={isSignUp && (signupRole === 'engineer' || signupRole === 'engineer_nester')}
+                    disabled={signupRole !== 'engineer' && signupRole !== 'engineer_nester'}
                   >
                     <option value="">{t('login.selectName')}</option>
                     {designers.map(name => (
