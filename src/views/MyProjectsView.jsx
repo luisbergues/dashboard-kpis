@@ -1679,6 +1679,42 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
           onClose={() => setIsCompletedProjectsModalOpen(false)}
         />
       )}
+
+      {/* Fullscreen Image Modal */}
+      {selectedImage && (
+        <div 
+          onClick={() => setSelectedImage(null)}
+          style={{ 
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 100000, 
+            display: 'flex', justifyContent: 'center', alignItems: 'center',
+            backdropFilter: 'blur(5px)'
+          }}
+        >
+          <div 
+            style={{ position: 'relative', maxWidth: '85vw', maxHeight: '90vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setSelectedImage(null)}
+              style={{ 
+                position: 'absolute', top: '0', right: '-50px', 
+                background: 'none', border: 'none', color: '#fff', 
+                cursor: 'pointer', padding: '8px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(255,255,255,0.1)', borderRadius: '50%'
+              }}
+            >
+              <X size={24} />
+            </button>
+            <img 
+              src={selectedImage} 
+              alt="Enlarged Note attachment" 
+              style={{ maxWidth: '100%', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} 
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

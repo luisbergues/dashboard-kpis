@@ -320,25 +320,25 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
       </header>
 
       {/* Image Modal */}
+      {/* Fullscreen Image Modal */}
       {selectedImage && (
         <div 
-          className="modal-overlay" 
           onClick={() => setSelectedImage(null)}
           style={{ 
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999,
+            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 100000, 
             display: 'flex', justifyContent: 'center', alignItems: 'center',
             backdropFilter: 'blur(5px)'
           }}
         >
           <div 
-            style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}
+            style={{ position: 'relative', maxWidth: '85vw', maxHeight: '90vh' }}
             onClick={(e) => e.stopPropagation()}
           >
             <button 
               onClick={() => setSelectedImage(null)}
               style={{ 
-                position: 'absolute', top: '-40px', right: '0', 
+                position: 'absolute', top: '0', right: '-50px', 
                 background: 'none', border: 'none', color: '#fff', 
                 cursor: 'pointer', padding: '8px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
