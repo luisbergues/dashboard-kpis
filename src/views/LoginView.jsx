@@ -109,7 +109,8 @@ export default function LoginView({ data }) {
     setError(null);
     setLoading(true);
 
-    if (isSignUp && !designerName) {
+    const requiresEngineerName = signupRole === 'engineer' || signupRole === 'engineer_nester';
+    if (isSignUp && requiresEngineerName && !designerName) {
       setError(t('login.validationName'));
       setLoading(false);
       return;
