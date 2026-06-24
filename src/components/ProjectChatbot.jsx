@@ -278,24 +278,41 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     }
 
     // Specific SO or Project name query (Status check)
-    // Filter alphanumeric query
+    // Entity Search (Designer, Engineer, Project)
     const searchWord = cleanText.replace(/[^a-z0-9]/g, '');
     if (searchWord.length >= 3) {
-      const matched = projects.find(p => {
+      let options = [];
+      let optionIdCounter = 1;
+
+      // Check Designers
+      const matchedDesigners = [...new Set(projects.filter(p => p.designer && p.designer.toLowerCase().replace(/[^a-z0-9]/g, '').includes(searchWord)).map(p => p.designer))];
+      matchedDesigners.forEach(d => {
+        options.push({ id: optionIdCounter++, type: 'designer', name: d, label: isES ? `Ver proyectos de ${d} (Diseñador)` : `View projects for ${d} (Designer)` });
+      });
+
+      // Check Engineers
+      const matchedEngineers = [...new Set(projects.filter(p => p.eng && p.eng.toLowerCase().replace(/[^a-z0-9]/g, '').includes(searchWord)).map(p => p.eng))];
+      matchedEngineers.forEach(e => {
+        options.push({ id: optionIdCounter++, type: 'engineer', name: e, label: isES ? `Ver proyectos de ${e} (Ingeniero)` : `View projects for ${e} (Engineer)` });
+      });
+
+      // Check Projects
+      const matchedProjects = projects.filter(p => {
         const cleanName = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
         const cleanSo = p.so.toLowerCase().replace(/[^a-z0-9]/g, '');
         return cleanName.includes(searchWord) || cleanSo.includes(searchWord);
       });
+      matchedProjects.forEach(p => {
+        options.push({ id: optionIdCounter++, type: 'project', data: p, label: isES ? `Ver proyecto ${p.name} (SO #${p.so})` : `View project ${p.name} (SO #${p.so})` });
+      });
 
-      if (matched) {
+      if (options.length > 0) {
         return {
-          text: isES
-            ? `📊 **Proyecto Encontrado:**\n**${matched.name}**\n\n• **SO:** #${matched.so}\n• **Etapa actual:** ${matched.status || 'Activo'}\n• **Diseñador:** ${matched.designer || 'N/A'}\n• **Ingeniero:** ${matched.eng || 'Sin asignar'}\n• **Instalación:** ${matched.install || 'Sin fecha'}`
-            : `📊 **Project Found:**\n**${matched.name}**\n\n• **SO:** #${matched.so}\n• **Current Stage:** ${matched.status || 'Active'}\n• **Designer:** ${matched.designer || 'N/A'}\n• **Engineer:** ${matched.eng || 'Unassigned'}\n• **Installation:** ${matched.install || 'No date'}`
+          text: isES ? `Encontré resultados para "${text.trim()}". Selecciona una opción:` : `Found results for "${text.trim()}". Select an option:`,
+          options: options
         };
       }
     }
-
     // Help/Fallback
     return {
       text: isES
@@ -326,12 +343,40 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     const reply = await processInput(text);
 
     // Replace loading bubble with actual reply
-    setMessages(prev => prev.filter(m => m.id !== loadingId).concat({
+    setMessages(prev => prev.map(m => m.id === loadingId ? {
       id: Date.now().toString(),
       sender: 'bot',
       text: reply.text,
+      options: reply.options,
       timestamp: new Date()
-    }));
+    } : m));
+  };
+
+  const handleOptionClick = (opt) => {
+    const isES = language === 'es';
+    let responseText = '';
+
+    if (opt.type === 'designer') {
+      const activeProjects = projects.filter(p => p.designer === opt.name && p.status !== 'COMPLETED' && p.status !== 'CANCELLED');
+      responseText = isES 
+        ? `**Proyectos activos de ${opt.name}:**\n\n${activeProjects.length > 0 ? activeProjects.map(p => `• **${p.name}** (SO #${p.so}) - ${p.status}`).join('\n') : 'No tiene proyectos activos.'}`
+        : `**Active projects for ${opt.name}:**\n\n${activeProjects.length > 0 ? activeProjects.map(p => `• **${p.name}** (SO #${p.so}) - ${p.status}`).join('\n') : 'No active projects.'}`;
+    } else if (opt.type === 'engineer') {
+      const activeProjects = projects.filter(p => p.eng === opt.name && p.status !== 'COMPLETED' && p.status !== 'CANCELLED');
+      responseText = isES 
+        ? `**Proyectos activos de ${opt.name}:**\n\n${activeProjects.length > 0 ? activeProjects.map(p => `• **${p.name}** (SO #${p.so}) - ${p.status}`).join('\n') : 'No tiene proyectos activos.'}`
+        : `**Active projects for ${opt.name}:**\n\n${activeProjects.length > 0 ? activeProjects.map(p => `• **${p.name}** (SO #${p.so}) - ${p.status}`).join('\n') : 'No active projects.'}`;
+    } else if (opt.type === 'project') {
+      const matched = opt.data;
+      responseText = isES
+        ? `📋 **Proyecto Encontrado:**\n**${matched.name}**\n\n• **SO:** #${matched.so}\n• **Etapa actual:** ${matched.status || 'Activo'}\n• **Diseñador:** ${matched.designer || 'N/A'}\n• **Ingeniero:** ${matched.eng || 'Sin asignar'}\n• **Instalación:** ${matched.install || 'Sin fecha'}`
+        : `📋 **Project Found:**\n**${matched.name}**\n\n• **SO:** #${matched.so}\n• **Current Stage:** ${matched.status || 'Active'}\n• **Designer:** ${matched.designer || 'N/A'}\n• **Engineer:** ${matched.eng || 'Unassigned'}\n• **Installation:** ${matched.install || 'No date'}`;
+    }
+
+    setMessages(prev => [...prev, 
+      { id: Date.now().toString() + '_user', sender: 'user', text: opt.label, timestamp: new Date() },
+      { id: Date.now().toString() + '_bot', sender: 'bot', text: responseText, timestamp: new Date() }
+    ]);
   };
 
   const handleChipClick = (action) => {
@@ -386,6 +431,19 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
                 </div>
                 <div className="message-content">
                   <pre className="message-pre">{m.text}</pre>
+                  {m.options && m.options.length > 0 && (
+                    <div className="message-options">
+                      {m.options.map((opt) => (
+                        <button 
+                          key={opt.id} 
+                          className="chatbot-option-btn" 
+                          onClick={() => handleOptionClick(opt)}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

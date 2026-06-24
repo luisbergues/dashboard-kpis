@@ -330,3 +330,28 @@
     right: 16px;
   }
 }
+
+.message-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.chatbot-option-btn {
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chatbot-option-btn:hover {
+  background: rgba(9, 209, 199, 0.1);
+  border-color: var(--primary);
+}
+
