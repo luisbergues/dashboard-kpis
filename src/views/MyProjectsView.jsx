@@ -1323,7 +1323,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                             {language === 'es' ? 'Elementos de Proyecto (Material Matrix)' : 'Project Elements (Material Matrix)'}
                           </h4>
                           <div className="materials-grid">
-                            {['thermofoil', 'noHoles', 'dovetail', 'element'].map((key) => {
+                            {['thermofoil', 'dovetail', 'element'].map((key) => {
                               const materials = getProjectMaterials(project.so);
                               const isChecked = materials[key] === 'Yes';
                               const label = t(`materials.headers.${key}`);
