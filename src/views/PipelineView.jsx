@@ -45,6 +45,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   if (!data) return null;
 
   const [filter, setFilter] = useState('ALL');
+  const [showMyProjects, setShowMyProjects] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [projectNotes, setProjectNotes] = useState({});
   const [engineeringChecks, setEngineeringChecks] = useState({});
@@ -262,7 +263,15 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           p.so.includes(searchTerm) ||
                           p.eng.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesFilter && matchesSearch;
+    
+    let matchesMyProjects = true;
+    if (showMyProjects && userProfile?.designerName) {
+      const isEng = p.eng && p.eng.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
+      const isCollab = projectCollaborators[p.so] && projectCollaborators[p.so].some(c => c.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase());
+      matchesMyProjects = isEng || isCollab;
+    }
+
+    return matchesFilter && matchesSearch && matchesMyProjects;
   });
 
   const getStatusColor = (status) => {
@@ -345,6 +354,14 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
             />
           </div>
           <div className="filter-chips">
+            <button 
+              className={`chip ${showMyProjects ? 'active' : ''}`}
+              onClick={() => setShowMyProjects(!showMyProjects)}
+              style={{ border: showMyProjects ? '1px solid var(--color-cyan)' : '1px solid var(--card-border)', color: showMyProjects ? 'var(--text-primary)' : 'var(--color-cyan)', marginRight: '4px' }}
+            >
+              {language === 'es' ? 'MIS PROYECTOS' : 'MY PROJECTS'}
+            </button>
+            <div style={{ width: '1px', background: 'var(--card-border)', margin: '0 4px' }}></div>
             {['ALL', 'ON HOLD', 'CHECK', 'REVIEW', 'ENGINEERING', 'KANBAN'].map(f => (
               <button 
                 key={f} 
