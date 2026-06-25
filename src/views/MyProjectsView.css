@@ -152,6 +152,16 @@
   color: var(--color-mint);
 }
 
+.btn-hold-toggle.active-procurement {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #3B82F6;
+}
+
+.btn-hold-toggle.active-procurement svg {
+  color: #3B82F6;
+}
+
 .hold-reason-banner {
   background: rgba(255, 46, 147, 0.08);
   border: 1px dashed rgba(255, 46, 147, 0.3);

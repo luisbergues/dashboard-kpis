@@ -519,7 +519,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       noHoles: (override?.noHoles !== undefined) ? override.noHoles : (sheetItem?.noHoles || 'No'),
       dovetail: (override?.dovetail !== undefined) ? override.dovetail : (sheetItem?.dovetail || 'No'),
       element: (override?.element !== undefined) ? override.element : (sheetItem?.element || 'No'),
-      ordered: (override?.ordered !== undefined) ? override.ordered : (sheetItem?.ordered || 'No')
+      ordered: (override?.ordered !== undefined) ? override.ordered : (sheetItem?.ordered || 'No'),
+      procurement: (override?.procurement !== undefined) ? override.procurement : (sheetItem?.procurement || 'No')
     };
   };
 
@@ -1230,6 +1231,16 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                             >
                               {getProjectMaterials(project.so).ordered === 'Yes' ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
                               <span>Material</span>
+                            </button>
+                          )}
+                          {userProfile && (userProfile.role === 'engineer_nester' || userProfile.role === 'admin' || userProfile.role === 'administrative') && (
+                            <button 
+                              onClick={() => handleToggleMaterial(project.so, 'procurement')}
+                              className={`btn-hold-toggle ${getProjectMaterials(project.so).procurement === 'Yes' ? 'active-procurement' : ''}`}
+                              title={getProjectMaterials(project.so).procurement === 'Yes' ? 'Procurement Done' : 'Procurement Pending'}
+                            >
+                              {getProjectMaterials(project.so).procurement === 'Yes' ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                              <span>Procurement</span>
                             </button>
                           )}
                           <button 
