@@ -405,11 +405,17 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                           {projectCollaborators[project.so].join(', ')}
                         </span>
                       )}
-                      {materialOverrides[project.so]?.procurement === 'Yes' && (
-                        <span className="meta-item procurement-badge">
-                          Procurement
-                        </span>
-                      )}
+                      {(() => {
+                        const matReq = data.materialRequirements?.find(m => String(m.so) === String(project.so));
+                        const ov = materialOverrides[project.so] || {};
+                        const thermofoil = ov.thermofoil !== undefined ? ov.thermofoil : (matReq?.thermofoil || 'No');
+                        const dovetail   = ov.dovetail   !== undefined ? ov.dovetail   : (matReq?.dovetail   || 'No');
+                        const element    = ov.element    !== undefined ? ov.element    : (matReq?.element    || 'No');
+                        const needsProcurement = thermofoil === 'Yes' || dovetail === 'Yes' || element === 'Yes';
+                        return needsProcurement ? (
+                          <span className="meta-item procurement-badge">Procurement</span>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                   
