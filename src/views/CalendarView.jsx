@@ -38,7 +38,13 @@ export default function CalendarView({ data, currentUser, userProfile }) {
   const [linkedSo, setLinkedSo] = useState('');
   
   // Filtering state
-  const [showMyProjectsOnly, setShowMyProjectsOnly] = useState(true);
+  const [showMyProjectsOnly, setShowMyProjectsOnly] = useState(() => {
+    // Default to false for engineer_nester and administrative roles
+    if (userProfile?.role === 'engineer_nester' || userProfile?.role === 'administrative' || userProfile?.role === 'admin') {
+      return false;
+    }
+    return true;
+  });
 
   // Sidebar tab state: 'installs' or 'notes'
   const [sidebarTab, setSidebarTab] = useState('installs');
@@ -295,16 +301,18 @@ export default function CalendarView({ data, currentUser, userProfile }) {
           <p className="text-muted">{t('calendar.subtitle')}</p>
         </div>
         <div className="view-header-actions">
-          <label className="toggle-switch-container">
-            <input 
-              type="checkbox" 
-              checked={showMyProjectsOnly}
-              onChange={(e) => setShowMyProjectsOnly(e.target.checked)}
-              className="toggle-checkbox"
-            />
-            <div className="toggle-switch"></div>
-            <span className="toggle-label">{t('calendar.myProjectsOnly')}</span>
-          </label>
+          {userProfile?.role !== 'administrative' && userProfile?.role !== 'admin' && (
+            <label className="toggle-switch-container">
+              <input 
+                type="checkbox" 
+                checked={showMyProjectsOnly}
+                onChange={(e) => setShowMyProjectsOnly(e.target.checked)}
+                className="toggle-checkbox"
+              />
+              <div className="toggle-switch"></div>
+              <span className="toggle-label">{t('calendar.myProjectsOnly')}</span>
+            </label>
+          )}
           <button className="btn-primary" onClick={handleAddNoteClick}>
             <Plus size={16} />
             <span>{t('calendar.addNote')}</span>
