@@ -382,6 +382,19 @@
   gap: 4px;
 }
 
+.procurement-badge {
+  background-color: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #F59E0B;
+  padding: 2px 10px;
+  border-radius: 100px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 .project-side {
   display: flex;
   align-items: center;

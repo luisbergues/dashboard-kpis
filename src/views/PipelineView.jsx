@@ -57,6 +57,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   const [isUploadingImage, setIsUploadingImage] = useState({});
   const [selectedImage, setSelectedImage] = useState(null);
   const [expandedProjects, setExpandedProjects] = useState({});
+  const [materialOverrides, setMaterialOverrides] = useState({});
 
   const toggleCollapse = (so) => {
     setExpandedProjects(prev => ({ ...prev, [so]: !prev[so] }));
@@ -90,12 +91,18 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
       setNestingChecks(snapshot.val() || {});
     });
 
+    const matOverridesRef = ref(db, 'project_materials');
+    const unsubscribeMatOverrides = onValue(matOverridesRef, (snapshot) => {
+      setMaterialOverrides(snapshot.val() || {});
+    });
+
     return () => {
       unsubscribeNotes();
       unsubscribeEngChecks();
       unsubscribeCollabs();
       unsubscribeStages();
       unsubscribeNesting();
+      unsubscribeMatOverrides();
     };
   }, []);
 
@@ -396,6 +403,11 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                           <Users size={14} />
                           {language === 'es' ? 'Colab: ' : 'Collabs: '}
                           {projectCollaborators[project.so].join(', ')}
+                        </span>
+                      )}
+                      {materialOverrides[project.so]?.procurement === 'Yes' && (
+                        <span className="meta-item procurement-badge">
+                          Procurement
                         </span>
                       )}
                     </div>
