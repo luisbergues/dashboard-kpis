@@ -1320,7 +1320,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
                         <div className="project-materials-section">
                           <h4 className="project-section-title">
-                            {language === 'es' ? 'Elementos de Proyecto (Material Matrix)' : 'Project Elements (Material Matrix)'}
+                            {language === 'es' ? 'Elementos de Proyecto' : 'Project Elements'}
                           </h4>
                           <div className="materials-grid">
                             {['thermofoil', 'dovetail', 'element'].map((key) => {
@@ -1343,6 +1343,33 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                             })}
                           </div>
                         </div>
+
+                        {data.projectSpecificMaterials && data.projectSpecificMaterials[project.so] && data.projectSpecificMaterials[project.so].length > 0 && (
+                          <div className="project-materials-section" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+                            <h4 className="project-section-title">
+                              {language === 'es' ? 'Materiales' : 'Materials'}
+                            </h4>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                              {data.projectSpecificMaterials[project.so].map((mat, idx) => (
+                                <span key={idx} style={{ 
+                                  backgroundColor: 'rgba(255, 255, 255, 0.05)', 
+                                  color: 'var(--text-secondary)', 
+                                  padding: '4px 12px', 
+                                  borderRadius: '100px', 
+                                  fontSize: '0.8rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                                }}>
+                                  {mat.material}
+                                  {mat.quantity && <span style={{ opacity: 0.6 }}>({mat.quantity})</span>}
+                                  {mat.urgency === '⚠️' && <span title="Urgent">⚠️</span>}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         <div className="card-footer-actions" style={{ display: 'flex', gap: '8px' }}>
                           <button 

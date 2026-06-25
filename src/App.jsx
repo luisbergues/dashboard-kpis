@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { fetchAndParseData } from './utils/sheetParser'
+import { fetchAndParseData, fetchAndParseProjectMaterials } from './utils/sheetParser'
 import { getCachedData, setCachedData, isCacheFresh } from './utils/dbCache'
 import { checkDbSizeAndArchive } from './utils/archiveHelpers'
 import { archiveMissingCompletedProjects, fetchArchivedCompletedProjects } from './utils/completedProjectsArchive'
@@ -54,8 +54,13 @@ function App() {
         dataToReturn.archivedProjects = await fetchArchivedCompletedProjects();
       } else {
         try {
-          const parsedData = await fetchAndParseData();
+          const [parsedData, projectMaterialsData] = await Promise.all([
+            fetchAndParseData(),
+            fetchAndParseProjectMaterials()
+          ]);
           
+          parsedData.projectSpecificMaterials = projectMaterialsData;
+
           if (cached && cached.parsedData) {
             await archiveMissingCompletedProjects(cached.parsedData, parsedData);
           }

@@ -415,3 +415,74 @@ export async function fetchAndParseQualityData() {
   }
 }
 
+const PROJECT_MATERIALS_CSV_URL = 'https://docs.google.com/spreadsheets/d/1qENXOvlEEY70LQ4i4EQBA0rGpuDr9L1sQIPtEL-Rm1I/export?format=csv&gid=2135314033';
+
+export async function fetchAndParseProjectMaterials() {
+  try {
+    const cacheBuster = `&t=${new Date().getTime()}`;
+    const response = await fetch(`${PROJECT_MATERIALS_CSV_URL}${cacheBuster}`);
+    if (!response.ok) throw new Error('Failed to fetch Project Materials CSV data');
+    const csvText = await response.text();
+
+    const { data } = Papa.parse(csvText, { skipEmptyLines: false });
+    
+    // Group materials by SO
+    const materialsBySo = {};
+    let currentSo = null;
+
+    // Find headers
+    let headerRowIdx = -1;
+    let headers = {};
+    for (let i = 0; i < Math.min(10, data.length); i++) {
+      const row = data[i];
+      if (row.join('').toLowerCase().includes('so#') && row.join('').toLowerCase().includes('material')) {
+        headerRowIdx = i;
+        headers = createHeaderMap(row);
+        break;
+      }
+    }
+
+    if (headerRowIdx === -1) {
+       console.warn("Could not find headers in project materials sheet");
+       return {};
+    }
+
+    const soIdx = getIdx(headers, ['so#', 'so'], 0);
+    const materialIdx = getIdx(headers, ['material', 'materials'], 2);
+    const quantityIdx = getIdx(headers, ['quantity', 'qty'], 3);
+    const urgencyIdx = getIdx(headers, ['urgency'], 4);
+
+    for (let i = headerRowIdx + 1; i < data.length; i++) {
+      const row = data[i];
+      const rowString = row.join('').trim();
+      if (!rowString) continue;
+
+      const soVal = row[soIdx]?.trim();
+      if (soVal && soVal.toLowerCase() !== 'so#') {
+        currentSo = soVal;
+      }
+
+      if (!currentSo) continue;
+
+      const material = row[materialIdx]?.trim();
+      const quantity = row[quantityIdx]?.trim();
+      const urgency = row[urgencyIdx]?.trim();
+
+      if (material) {
+        if (!materialsBySo[currentSo]) {
+          materialsBySo[currentSo] = [];
+        }
+        materialsBySo[currentSo].push({
+          material,
+          quantity,
+          urgency
+        });
+      }
+    }
+
+    return materialsBySo;
+  } catch (error) {
+    console.error('Error parsing Project Materials sheet:', error);
+    return {}; // Return empty object on failure so app doesn't break
+  }
+}
