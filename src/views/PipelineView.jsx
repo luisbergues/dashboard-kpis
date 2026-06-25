@@ -58,6 +58,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   const [selectedImage, setSelectedImage] = useState(null);
   const [expandedProjects, setExpandedProjects] = useState({});
   const [materialOverrides, setMaterialOverrides] = useState({});
+  const [kanbanState, setKanbanState] = useState({});
 
   const toggleCollapse = (so) => {
     setExpandedProjects(prev => ({ ...prev, [so]: !prev[so] }));
@@ -96,6 +97,11 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
       setMaterialOverrides(snapshot.val() || {});
     });
 
+    const kanbanRef = ref(db, 'project_kanban_state');
+    const unsubscribeKanban = onValue(kanbanRef, (snapshot) => {
+      setKanbanState(snapshot.val() || {});
+    });
+
     return () => {
       unsubscribeNotes();
       unsubscribeEngChecks();
@@ -103,6 +109,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
       unsubscribeStages();
       unsubscribeNesting();
       unsubscribeMatOverrides();
+      unsubscribeKanban();
     };
   }, []);
 
@@ -251,7 +258,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
 
   // Combine data or just use priorityAnalysis as the main source
   const projects = priorityAnalysis.filter(p => {
-    const matchesFilter = filter === 'ALL' || p.status.toUpperCase() === filter.toUpperCase();
+    const matchesFilter = filter === 'ALL' || filter === 'KANBAN' || p.status.toUpperCase() === filter.toUpperCase();
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           p.so.includes(searchTerm) ||
                           p.eng.toLowerCase().includes(searchTerm.toLowerCase());
@@ -287,6 +294,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
         case 'CHECK': return 'CHECK';
         case 'REVIEW': return 'REVISIÓN';
         case 'ENGINEERING': return 'INGENIERÍA';
+        case 'KANBAN': return 'KANBAN';
         default: return filterVal;
       }
     }
@@ -298,6 +306,29 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     const note = onHoldNotes.find(n => projectName.includes(n.project) || n.project.includes(projectName));
     return note ? note.notes : null;
   };
+
+  const handleDragStart = (e, so) => {
+    e.dataTransfer.setData('text/plain', so);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e, columnId) => {
+    e.preventDefault();
+    const so = e.dataTransfer.getData('text/plain');
+    if (so && db) {
+      await set(ref(db, `project_kanban_state/${so}`), columnId);
+    }
+  };
+
+  const KANBAN_COLUMNS = [
+    { id: 'procurement', label: 'PROCUREMENT' },
+    { id: 'material', label: 'MATERIAL' },
+    { id: 'nesting', label: 'NESTING' },
+    { id: 'projects', label: 'PROJECTS' }
+  ];
 
   return (
     <div className="pipeline-view animate-fade-in">
@@ -314,7 +345,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
             />
           </div>
           <div className="filter-chips">
-            {['ALL', 'ON HOLD', 'CHECK', 'REVIEW', 'ENGINEERING'].map(f => (
+            {['ALL', 'ON HOLD', 'CHECK', 'REVIEW', 'ENGINEERING', 'KANBAN'].map(f => (
               <button 
                 key={f} 
                 className={`chip ${filter === f ? 'active' : ''}`}
@@ -364,10 +395,58 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
         </div>
       )}
 
-      <div className="project-list">
-        {projects.length === 0 ? (
-          <div className="no-results text-muted">{t('pipeline.noProjects')}</div>
-        ) : (
+      {filter === 'KANBAN' ? (
+        <div className="kanban-board">
+          {KANBAN_COLUMNS.map(col => {
+            const columnProjects = projects.filter(p => (kanbanState[p.so] || 'projects') === col.id);
+            return (
+              <div 
+                key={col.id} 
+                className={`kanban-column column-${col.id}`}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, col.id)}
+              >
+                <div className="kanban-column-header">
+                  <h3>{col.label}</h3>
+                  <span className="kanban-count">({columnProjects.length})</span>
+                </div>
+                <div className="kanban-column-content">
+                  {columnProjects.map(project => (
+                    <div 
+                      key={project.so}
+                      className="kanban-card glass-card"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, project.so)}
+                    >
+                      <div className="kanban-card-top">
+                        <span className="kanban-project-id">#{project.so}</span>
+                        <span className={`status-badge ${getStatusColor(project.status)}`} style={{ padding: '2px 6px', fontSize: '0.65rem' }}>
+                          {getStatusLabel(project.status)}
+                        </span>
+                      </div>
+                      <h4 className="kanban-project-name">{project.name}</h4>
+                      <div className="kanban-card-meta">
+                        <span className="meta-item" style={{ fontSize: '0.75rem' }}><Calendar size={12}/> {project.install}</span>
+                        <span className="meta-item eng-badge" style={{ fontSize: '0.75rem' }}>ENG: {project.eng}</span>
+                      </div>
+                      <div className="kanban-card-bottom">
+                        <span className="pipeline-comments-bubble" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>
+                          <MessageSquare size={12} />
+                          <span>{(projectNotes[project.so] || []).length}</span>
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="project-list">
+          {projects.length === 0 ? (
+            <div className="no-results text-muted">{t('pipeline.noProjects')}</div>
+          ) : (
           projects.map((project, idx) => {
             const onHoldNote = project.status.toUpperCase() === 'ON HOLD' 
               ? (project.onHoldReason || getOnHoldNote(project.name)) 
@@ -694,6 +773,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
           })
         )}
       </div>
+      )}
     </div>
   );
 }
