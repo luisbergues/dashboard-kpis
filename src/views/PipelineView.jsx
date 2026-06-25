@@ -422,7 +422,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                               <span className="meta-item procurement-badge">Procurement</span>
                             )}
                             {hasNonSnowWhiteMaterial && (
-                              <span className="meta-item procurement-badge">Materials</span>
+                              <span className="meta-item materials-badge-red">Materials</span>
                             )}
                           </>
                         );
