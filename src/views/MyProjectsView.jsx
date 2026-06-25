@@ -108,6 +108,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [engineeringChecks, setEngineeringChecks] = useState({});
   const [nestingChecks, setNestingChecks] = useState({});
   const [materialOverrides, setMaterialOverrides] = useState({});
+  const [kanbanState, setKanbanState] = useState({});
+  const [kanbanFilter, setKanbanFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
 
   // Project Notes State
@@ -141,8 +143,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
   // Analytics & Sorting State
   const [showAnalytics, setShowAnalytics] = useState(true);
-  const [sortBy, setSortBy] = useState(null); // 'date' | 'so'
-  const [sortDesc, setSortDesc] = useState(true);
+  const [sortBy, setSortBy] = useState('date');
+  const [sortDesc, setSortDesc] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState({});
 
   const toggleCollapse = (so) => {
@@ -174,18 +176,23 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
   const isAdmin = userProfile && (userProfile.role === 'administrative' || userProfile.role === 'admin');
 
-  const myProjects = [...myProjectsRaw].sort((a, b) => {
-    if (!sortBy) return 0;
-    if (sortBy === 'so') {
-      return sortDesc ? b.so - a.so : a.so - b.so;
-    }
-    if (sortBy === 'date') {
-      const dateA = new Date(a.install).getTime() || 0;
-      const dateB = new Date(b.install).getTime() || 0;
-      return sortDesc ? dateB - dateA : dateA - dateB;
-    }
-    return 0;
-  });
+  const myProjects = [...myProjectsRaw]
+    .filter(p => {
+      if (kanbanFilter === 'ALL') return true;
+      return (kanbanState[p.so] || 'projects') === kanbanFilter;
+    })
+    .sort((a, b) => {
+      // Always push no-date projects to the bottom
+      const dateA = a.install ? new Date(a.install).getTime() : null;
+      const dateB = b.install ? new Date(b.install).getTime() : null;
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+      if (sortBy === 'date') {
+        return sortDesc ? dateB - dateA : dateA - dateB;
+      }
+      return dateA - dateB; // default: ascending date
+    });
 
   // Calculate analytics
   const stageAverages = calculatePersonalStageAverages(projectStages, myProjectsRaw, projectHistory, engineeringChecks);
@@ -354,6 +361,12 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       setMaterialOverrides(dbData);
     });
 
+    // Load Kanban state
+    const kanbanRef = ref(db, 'project_kanban_state');
+    const unsubscribeKanban = onValue(kanbanRef, (snapshot) => {
+      setKanbanState(snapshot.val() || {});
+    });
+
     return () => {
       unsubscribeStages();
       unsubscribeOverrides();
@@ -363,6 +376,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       unsubscribeNotes();
       unsubscribeCollabs();
       unsubscribeMatOverrides();
+      unsubscribeKanban();
     };
   }, [currentUser, userProfile]);
 
@@ -1169,22 +1183,28 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
         </section>
       )}
 
-      <div className="projects-list-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+      <div className="projects-list-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <h2 className="section-title" style={{ margin: 0 }}>Active Projects</h2>
-        <div className="sort-controls" style={{ display: 'flex', gap: '8px' }}>
-          <button 
-            className={`btn-sm ${sortBy === 'so' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => { setSortBy('so'); setSortDesc(!sortDesc); }}
-            title="Sort by SO Number"
-          >
-            <ArrowUpDown size={14} /> SO#
-          </button>
-          <button 
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {[{id:'ALL',label:'All'},{id:'projects',label:'Projects'},{id:'nesting',label:'Nesting'},{id:'material',label:'Material'},{id:'procurement',label:'Procurement'}].map(col => (
+              <button
+                key={col.id}
+                className={`btn-sm ${kanbanFilter === col.id ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setKanbanFilter(col.id)}
+                style={{ fontSize: '0.72rem', padding: '4px 10px' }}
+              >
+                {col.label}
+              </button>
+            ))}
+          </div>
+          <div style={{ width: '1px', height: '20px', background: 'var(--card-border)' }} />
+          <button
             className={`btn-sm ${sortBy === 'date' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => { setSortBy('date'); setSortDesc(!sortDesc); }}
+            onClick={() => { setSortBy('date'); setSortDesc(prev => sortBy === 'date' ? !prev : false); }}
             title="Sort by Install Date"
           >
-            <Calendar size={14} /> Date
+            <Calendar size={14} /> Date {sortBy === 'date' ? (sortDesc ? '↓' : '↑') : ''}
           </button>
         </div>
       </div>

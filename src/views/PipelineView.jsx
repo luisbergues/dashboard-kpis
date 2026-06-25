@@ -354,14 +354,21 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
             />
           </div>
           <div className="filter-chips">
-            <button 
-              className={`chip ${showMyProjects ? 'active' : ''}`}
-              onClick={() => setShowMyProjects(!showMyProjects)}
-              style={{ border: showMyProjects ? '1px solid var(--color-cyan)' : '1px solid var(--card-border)', color: showMyProjects ? 'var(--text-primary)' : 'var(--color-cyan)', marginRight: '4px' }}
-            >
-              {language === 'es' ? 'MIS PROYECTOS' : 'MY PROJECTS'}
-            </button>
-            <div style={{ width: '1px', background: 'var(--card-border)', margin: '0 4px' }}></div>
+            <label className="pipeline-my-projects-toggle" htmlFor="my-projects-toggle">
+              <div
+                id="my-projects-toggle"
+                className={`pipeline-toggle-btn ${showMyProjects ? 'on' : 'off'}`}
+                onClick={() => setShowMyProjects(!showMyProjects)}
+                role="switch"
+                aria-checked={showMyProjects}
+              >
+                <span className="pipeline-toggle-knob" />
+              </div>
+              <span className="pipeline-toggle-label">
+                {language === 'es' ? 'Mostrar Solo Mis Proyectos' : 'Show My Projects Only'}
+              </span>
+            </label>
+            <div className="filter-chips-divider" />
             {['ALL', 'ON HOLD', 'CHECK', 'REVIEW', 'ENGINEERING', 'KANBAN'].map(f => (
               <button 
                 key={f} 
