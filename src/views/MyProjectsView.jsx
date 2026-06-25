@@ -518,7 +518,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       thermofoil: (override?.thermofoil !== undefined) ? override.thermofoil : (sheetItem?.thermofoil || 'No'),
       noHoles: (override?.noHoles !== undefined) ? override.noHoles : (sheetItem?.noHoles || 'No'),
       dovetail: (override?.dovetail !== undefined) ? override.dovetail : (sheetItem?.dovetail || 'No'),
-      element: (override?.element !== undefined) ? override.element : (sheetItem?.element || 'No')
+      element: (override?.element !== undefined) ? override.element : (sheetItem?.element || 'No'),
+      ordered: (override?.ordered !== undefined) ? override.ordered : (sheetItem?.ordered || 'No')
     };
   };
 
@@ -1221,6 +1222,16 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                           <span className={`status-badge-inline ${currentStatus.toLowerCase().replace(' ', '-')}`}>
                             {getStatusLabelPdf(currentStatus)}
                           </span>
+                          {userProfile && (userProfile.role === 'engineer_nester' || userProfile.role === 'admin' || userProfile.role === 'administrative') && (
+                            <button 
+                              onClick={() => handleToggleMaterial(project.so, 'ordered')}
+                              className={`btn-hold-toggle ${getProjectMaterials(project.so).ordered === 'Yes' ? 'active-material' : ''}`}
+                              title={getProjectMaterials(project.so).ordered === 'Yes' ? 'Material Ordered' : 'Material Not Ordered'}
+                            >
+                              {getProjectMaterials(project.so).ordered === 'Yes' ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                              <span>Material</span>
+                            </button>
+                          )}
                           <button 
                             onClick={() => handleHoldToggle(project.so, currentStatus)}
                             className={`btn-hold-toggle ${currentStatus === 'ON HOLD' ? 'active-hold' : ''}`}
