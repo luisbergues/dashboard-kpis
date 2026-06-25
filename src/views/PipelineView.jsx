@@ -411,7 +411,18 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                   <span className="kanban-count">({columnProjects.length})</span>
                 </div>
                 <div className="kanban-column-content">
-                  {columnProjects.map(project => (
+                  {columnProjects.map(project => {
+                    const matReq = data.materialRequirements?.find(m => String(m.so) === String(project.so));
+                    const ov = materialOverrides[project.so] || {};
+                    const thermofoil = ov.thermofoil !== undefined ? ov.thermofoil : (matReq?.thermofoil || 'No');
+                    const dovetail   = ov.dovetail   !== undefined ? ov.dovetail   : (matReq?.dovetail   || 'No');
+                    const element    = ov.element    !== undefined ? ov.element    : (matReq?.element    || 'No');
+                    const needsProcurement = thermofoil === 'Yes' || dovetail === 'Yes' || element === 'Yes';
+                    
+                    const projectMaterials = data.projectSpecificMaterials?.[project.so] || [];
+                    const hasNonSnowWhiteMaterial = projectMaterials.some(m => m.material && m.material.toLowerCase() !== 'snow white');
+
+                    return (
                     <div 
                       key={project.so}
                       className="kanban-card glass-card"
@@ -429,14 +440,22 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                         <span className="meta-item" style={{ fontSize: '0.75rem' }}><Calendar size={12}/> {project.install}</span>
                         <span className="meta-item eng-badge" style={{ fontSize: '0.75rem' }}>ENG: {project.eng}</span>
                       </div>
-                      <div className="kanban-card-bottom">
+                      <div className="kanban-card-bottom" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          {needsProcurement && (
+                            <span className="meta-item procurement-badge" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>Procurement</span>
+                          )}
+                          {hasNonSnowWhiteMaterial && (
+                            <span className="meta-item materials-badge-red" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>Materials</span>
+                          )}
+                        </div>
                         <span className="pipeline-comments-bubble" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>
                           <MessageSquare size={12} />
                           <span>{(projectNotes[project.so] || []).length}</span>
                         </span>
                       </div>
                     </div>
-                  ))}
+                  );})}
                 </div>
               </div>
             );
