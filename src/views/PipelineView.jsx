@@ -412,9 +412,20 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                         const dovetail   = ov.dovetail   !== undefined ? ov.dovetail   : (matReq?.dovetail   || 'No');
                         const element    = ov.element    !== undefined ? ov.element    : (matReq?.element    || 'No');
                         const needsProcurement = thermofoil === 'Yes' || dovetail === 'Yes' || element === 'Yes';
-                        return needsProcurement ? (
-                          <span className="meta-item procurement-badge">Procurement</span>
-                        ) : null;
+                        
+                        const projectMaterials = data.projectSpecificMaterials?.[project.so] || [];
+                        const hasNonSnowWhiteMaterial = projectMaterials.some(m => m.material && m.material.toLowerCase() !== 'snow white');
+
+                        return (
+                          <>
+                            {needsProcurement && (
+                              <span className="meta-item procurement-badge">Procurement</span>
+                            )}
+                            {hasNonSnowWhiteMaterial && (
+                              <span className="meta-item procurement-badge">Materials</span>
+                            )}
+                          </>
+                        );
                       })()}
                     </div>
                   </div>
