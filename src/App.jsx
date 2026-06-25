@@ -23,6 +23,19 @@ function App() {
   });
   const [projectNotes, setProjectNotes] = useState({});
   const [overrides, setOverrides] = useState({});
+  const [materialOverrides, setMaterialOverrides] = useState(() => {
+    const local = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('project_materials_')) {
+        const so = key.replace('project_materials_', '');
+        try {
+          local[so] = JSON.parse(localStorage.getItem(key));
+        } catch (e) {}
+      }
+    }
+    return local;
+  });
   const [currentUser, setCurrentUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -210,9 +223,15 @@ function App() {
       setProjectNotes(snapshot.val() || {});
     });
 
+    const matOverridesRef = ref(db, 'project_materials');
+    const unsubscribeMatOverrides = onValue(matOverridesRef, (snapshot) => {
+      setMaterialOverrides(snapshot.val() || {});
+    });
+
     return () => {
       unsubscribeOverrides();
       unsubscribeNotes();
+      unsubscribeMatOverrides();
     };
   }, []);
 
@@ -242,9 +261,43 @@ function App() {
       };
     });
 
+    // Merge material matrix requirements
+    const mergedMaterialRequirements = [...(data.materialRequirements || [])];
+    const seenSos = new Set(mergedMaterialRequirements.map(m => String(m.so)));
+
+    const updatedMaterialRequirements = mergedMaterialRequirements.map(m => {
+      const override = materialOverrides[m.so];
+      if (override) {
+        return {
+          ...m,
+          thermofoil: override.thermofoil !== undefined ? override.thermofoil : m.thermofoil,
+          noHoles: override.noHoles !== undefined ? override.noHoles : m.noHoles,
+          dovetail: override.dovetail !== undefined ? override.dovetail : m.dovetail,
+          element: override.element !== undefined ? override.element : m.element,
+        };
+      }
+      return m;
+    });
+
+    Object.entries(materialOverrides).forEach(([so, override]) => {
+      if (!seenSos.has(String(so))) {
+        const project = mergedPriorityAnalysis?.find(p => String(p.so) === String(so));
+        updatedMaterialRequirements.push({
+          so: so,
+          name: project ? project.name : `SO #${so}`,
+          installDate: project ? (project.install || '') : '',
+          thermofoil: override.thermofoil || 'No',
+          noHoles: override.noHoles || 'No',
+          dovetail: override.dovetail || 'No',
+          element: override.element || 'No'
+        });
+      }
+    });
+
     return {
       ...data,
-      priorityAnalysis: mergedPriorityAnalysis
+      priorityAnalysis: mergedPriorityAnalysis,
+      materialRequirements: updatedMaterialRequirements
     };
   };
 

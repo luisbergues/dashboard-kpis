@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, ref, set, onValue, get, child } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
+import { saveMaterialOverride } from '../utils/materialOverrides';
 import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';
 import { 
@@ -60,15 +61,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const { t, language } = useLanguage();
   if (!data) return null;
 
-  const { priorityAnalysis, onHoldNotes, materialRequirements } = data;
-
-  // Build a lookup map from SO to material data from the spreadsheet
-  const materialBySO = {};
-  if (materialRequirements) {
-    materialRequirements.forEach(m => {
-      materialBySO[m.so] = m;
-    });
-  }
+  const { priorityAnalysis, onHoldNotes } = data;
 
   const DEFAULT_DESIGNERS = ['Joaquin', 'Jose', 'Luis', 'Santiago', 'Julieta', 'Andres', 'Delfina', 'Josema'];
   const [allowedDesigners, setAllowedDesigners] = useState(DEFAULT_DESIGNERS);
@@ -250,6 +243,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       const localNotes = {};
       const localCollabs = {};
       const localNestingChecks = {};
+      const localMaterialOverrides = {};
       
       myProjects.forEach(p => {
         try {
@@ -274,11 +268,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
           const savedNestingCheck = localStorage.getItem(`nesting_check_${p.so}`);
           localNestingChecks[p.so] = savedNestingCheck ? JSON.parse(savedNestingCheck) : {};
 
-          const savedMaterialOverride = localStorage.getItem(`material_override_${p.so}`);
-          if (savedMaterialOverride) {
-            const parsed = JSON.parse(savedMaterialOverride);
-            localNestingChecks[`__mat_${p.so}`] = parsed; // temp holder
-          }
+          const savedMatOverride = localStorage.getItem(`project_materials_${p.so}`);
+          localMaterialOverrides[p.so] = savedMatOverride ? JSON.parse(savedMatOverride) : {};
         } catch (e) {
           localStages[p.so] = Array(STAGES.length).fill(false);
           localOverrides[p.so] = null;
@@ -287,6 +278,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
           localNotes[p.so] = [];
           localCollabs[p.so] = [];
           localNestingChecks[p.so] = {};
+          localMaterialOverrides[p.so] = {};
         }
       });
       setProjectStages(localStages);
@@ -296,6 +288,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       setNestingChecks(localNestingChecks);
       setProjectNotes(localNotes);
       setProjectCollaborators(localCollabs);
+      setMaterialOverrides(localMaterialOverrides);
       setLoading(false);
       return;
     }
@@ -340,13 +333,6 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       setNestingChecks(dbData);
     });
 
-    // Load Material Overrides
-    const materialOverridesRef = ref(db, 'material_overrides');
-    const unsubscribeMaterialOverrides = onValue(materialOverridesRef, (snapshot) => {
-      const dbData = snapshot.val() || {};
-      setMaterialOverrides(dbData);
-    });
-
     // Load Project Notes
     const notesRef = ref(db, 'project_notes');
     const unsubscribeNotes = onValue(notesRef, (snapshot) => {
@@ -361,6 +347,13 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       setProjectCollaborators(dbData);
     });
 
+    // Load Project Materials Overrides
+    const matOverridesRef = ref(db, 'project_materials');
+    const unsubscribeMatOverrides = onValue(matOverridesRef, (snapshot) => {
+      const dbData = snapshot.val() || {};
+      setMaterialOverrides(dbData);
+    });
+
     return () => {
       unsubscribeStages();
       unsubscribeOverrides();
@@ -369,7 +362,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       unsubscribeNestingChecks();
       unsubscribeNotes();
       unsubscribeCollabs();
-      unsubscribeMaterialOverrides();
+      unsubscribeMatOverrides();
     };
   }, [currentUser, userProfile]);
 
@@ -468,48 +461,6 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   };
 
   const executeStageToggle = async (so, stageIndex, shouldComplete) => {
-
-  // ─── Material Override Toggle ─────────────────────────────
-  const MATERIAL_FIELDS = ['thermofoil', 'noHoles', 'dovetail', 'element'];
-
-  const getMaterialValue = (so, field) => {
-    // Override takes priority over spreadsheet
-    if (materialOverrides[so] && materialOverrides[so][field] !== undefined) {
-      return materialOverrides[so][field];
-    }
-    // Fallback to spreadsheet data
-    const sheetData = materialBySO[so];
-    if (sheetData) {
-      const val = sheetData[field];
-      if (typeof val === 'string') return val.toUpperCase() === 'YES';
-    }
-    return false;
-  };
-
-  const handleMaterialToggle = async (so, field) => {
-    const currentVal = getMaterialValue(so, field);
-    const newVal = !currentVal;
-
-    const updated = {
-      ...(materialOverrides[so] || {}),
-      [field]: newVal,
-      updatedAt: new Date().toISOString(),
-      updatedBy: userProfile?.designerName || 'Unknown'
-    };
-
-    setMaterialOverrides(prev => ({ ...prev, [so]: updated }));
-
-    if (db && currentUser) {
-      try {
-        await set(ref(db, `material_overrides/${so}`), updated);
-      } catch (err) {
-        console.error('Failed to save material override:', err);
-      }
-    } else {
-      localStorage.setItem(`material_override_${so}`, JSON.stringify(updated));
-    }
-  };
-
     const currentProgress = projectStages[so] ? [...projectStages[so]] : Array(STAGES.length).fill(false);
     const timestamp = new Date().toISOString();
     
@@ -557,6 +508,35 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
         console.error('Failed to save stage progress to localStorage:', err);
       }
     }
+  };
+
+  const getProjectMaterials = (so) => {
+    const override = materialOverrides[so];
+    const sheetItem = data.materialRequirements?.find(m => String(m.so) === String(so));
+    
+    return {
+      thermofoil: (override?.thermofoil !== undefined) ? override.thermofoil : (sheetItem?.thermofoil || 'No'),
+      noHoles: (override?.noHoles !== undefined) ? override.noHoles : (sheetItem?.noHoles || 'No'),
+      dovetail: (override?.dovetail !== undefined) ? override.dovetail : (sheetItem?.dovetail || 'No'),
+      element: (override?.element !== undefined) ? override.element : (sheetItem?.element || 'No')
+    };
+  };
+
+  const handleToggleMaterial = async (so, key) => {
+    const current = getProjectMaterials(so);
+    const updated = {
+      ...current,
+      [key]: current[key] === 'Yes' ? 'No' : 'Yes',
+      updatedBy: userProfile?.designerName || currentUser?.email || 'Engineer',
+      updatedAt: new Date().toISOString()
+    };
+    
+    await saveMaterialOverride(so, updated);
+    
+    setMaterialOverrides(prev => ({
+      ...prev,
+      [so]: updated
+    }));
   };
 
   const handleHoldToggle = (so, currentStatus) => {
@@ -1316,42 +1296,30 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                           })}
                         </div>
 
-                        {/* ─── Material Matrix Toggles ─────────────── */}
-                        <div className="material-matrix-toggles" style={{
-                          display: 'flex', gap: '12px', flexWrap: 'wrap',
-                          padding: '12px 0', marginTop: '8px',
-                          borderTop: '1px solid rgba(255,255,255,0.06)',
-                          borderBottom: '1px solid rgba(255,255,255,0.06)'
-                        }}>
-                          {MATERIAL_FIELDS.map(field => {
-                            const isActive = getMaterialValue(project.so, field);
-                            const label = field === 'noHoles' ? 'NO HOLES'
-                              : field === 'thermofoil' ? 'THERMOFOIL'
-                              : field === 'dovetail' ? 'DOVETAIL'
-                              : 'ELEMENT';
-                            return (
-                              <button
-                                key={field}
-                                onClick={() => handleMaterialToggle(project.so, field)}
-                                style={{
-                                  display: 'flex', alignItems: 'center', gap: '6px',
-                                  padding: '6px 14px', borderRadius: '20px',
-                                  border: isActive ? '1px solid #09D1C7' : '1px solid rgba(255,255,255,0.12)',
-                                  background: isActive ? 'rgba(9, 209, 199, 0.15)' : 'rgba(255,255,255,0.03)',
-                                  color: isActive ? '#09D1C7' : '#64748B',
-                                  fontSize: '0.75rem', fontWeight: 600,
-                                  letterSpacing: '0.04em',
-                                  cursor: 'pointer', transition: 'all 0.2s ease'
-                                }}
-                                title={isActive
-                                  ? (language === 'es' ? `Desactivar ${label}` : `Disable ${label}`)
-                                  : (language === 'es' ? `Activar ${label}` : `Enable ${label}`)}
-                              >
-                                {isActive ? <Check size={14} /> : <span style={{ width: '14px', textAlign: 'center' }}>—</span>}
-                                {label}
-                              </button>
-                            );
-                          })}
+                        <div className="project-materials-section">
+                          <h4 className="project-section-title">
+                            {language === 'es' ? 'Elementos de Proyecto (Material Matrix)' : 'Project Elements (Material Matrix)'}
+                          </h4>
+                          <div className="materials-grid">
+                            {['thermofoil', 'noHoles', 'dovetail', 'element'].map((key) => {
+                              const materials = getProjectMaterials(project.so);
+                              const isChecked = materials[key] === 'Yes';
+                              const label = t(`materials.headers.${key}`);
+                              return (
+                                <button
+                                  key={key}
+                                  className={`material-toggle-btn ${isChecked ? 'active' : ''}`}
+                                  onClick={() => handleToggleMaterial(project.so, key)}
+                                  type="button"
+                                >
+                                  <div className="checkbox-indicator">
+                                    {isChecked && <Check size={12} />}
+                                  </div>
+                                  <span>{label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
 
                         <div className="card-footer-actions" style={{ display: 'flex', gap: '8px' }}>

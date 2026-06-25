@@ -688,3 +688,64 @@
     grid-column: span 1;
   }
 }
+
+/* ─── Project Materials Checklist ────────────────────── */
+.project-materials-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--card-border);
+}
+
+.materials-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.material-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--card-border);
+  color: var(--text-secondary);
+  border-radius: 100px;
+  padding: 6px 16px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.material-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.material-toggle-btn.active {
+  background: rgba(70, 223, 177, 0.1);
+  border-color: rgba(70, 223, 177, 0.35);
+  color: var(--color-mint);
+  box-shadow: 0 0 10px rgba(70, 223, 177, 0.08);
+}
+
+.checkbox-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.material-toggle-btn.active .checkbox-indicator {
+  border-color: var(--color-mint);
+  background: var(--color-mint);
+  color: #0b1320;
+}
