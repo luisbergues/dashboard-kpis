@@ -1320,7 +1320,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                           >
                             <User size={16} />
                             <span style={{ maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {projectDesigners[project.so] || project.eng || (language === 'es' ? 'Ninguno' : 'None')}
+                              {projectDesigners[project.so] || (language === 'es' ? 'Ninguno' : 'None')}
                             </span>
                           </button>
                         </div>

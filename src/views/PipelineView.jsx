@@ -535,8 +535,13 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                         {project.install}
                       </span>
                       <span className="meta-item eng-badge">
-                        ENG: {projectDesigners[project.so] || project.eng || (language === 'es' ? 'Ninguno' : 'None')}
+                        ENG: {project.eng}
                       </span>
+                      {projectDesigners[project.so] && (
+                        <span className="meta-item des-badge" style={{ background: 'rgba(128, 90, 213, 0.2)', color: '#d6bcfa', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: '500', border: '1px solid rgba(128, 90, 213, 0.3)' }}>
+                          DES: {projectDesigners[project.so]}
+                        </span>
+                      )}
                       {projectCollaborators[project.so] && projectCollaborators[project.so].length > 0 && (
                         <span className="meta-item collabs-badge">
                           <Users size={14} />
