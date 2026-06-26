@@ -316,15 +316,20 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     return note ? note.notes : null;
   };
 
+  const canEditKanban = userProfile?.role === 'engineer_nester' || userProfile?.role === 'admin' || userProfile?.role === 'administrative';
+
   const handleDragStart = (e, so) => {
+    if (!canEditKanban) return;
     e.dataTransfer.setData('text/plain', so);
   };
 
   const handleDragOver = (e) => {
+    if (!canEditKanban) return;
     e.preventDefault();
   };
 
   const handleDrop = async (e, columnId) => {
+    if (!canEditKanban) return;
     e.preventDefault();
     const so = e.dataTransfer.getData('text/plain');
     if (so && db) {
@@ -432,7 +437,12 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
               >
                 <div className="kanban-column-header">
                   <h3>{col.label}</h3>
-                  <span className="kanban-count">({columnProjects.length})</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span className="kanban-count">({columnProjects.length})</span>
+                    {!canEditKanban && (
+                      <span title="Read-only" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>🔒</span>
+                    )}
+                  </div>
                 </div>
                 <div className="kanban-column-content">
                   {columnProjects.map(project => {
@@ -449,9 +459,9 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                     return (
                     <div 
                       key={project.so}
-                      className="kanban-card glass-card"
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, project.so)}
+                      className={`kanban-card glass-card ${canEditKanban ? 'kanban-card-draggable' : ''}`}
+                      draggable={canEditKanban}
+                      onDragStart={canEditKanban ? (e) => handleDragStart(e, project.so) : undefined}
                     >
                       <div className="kanban-card-top">
                         <span className="kanban-project-id">#{project.so}</span>
