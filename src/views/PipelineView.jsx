@@ -477,10 +477,10 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                       <div className="kanban-card-bottom" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', gap: '4px' }}>
                           {needsProcurement && (
-                            <span className="meta-item procurement-badge" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>Procurement</span>
+                            <span className="meta-item procurement-badge" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>Proc.</span>
                           )}
                           {hasNonSnowWhiteMaterial && (
-                            <span className="meta-item materials-badge-red" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>Materials</span>
+                            <span className="meta-item materials-badge-red" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>Mat.</span>
                           )}
                         </div>
                         <span className="pipeline-comments-bubble" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>
