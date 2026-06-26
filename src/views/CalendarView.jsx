@@ -38,8 +38,10 @@ export default function CalendarView({ data, currentUser, userProfile }) {
   const [linkedSo, setLinkedSo] = useState('');
   
   // Filtering state
+  const isDesigner = userProfile?.role === 'designer';
   const [showMyProjectsOnly, setShowMyProjectsOnly] = useState(() => {
-    // Default to false for engineer_nester and administrative roles
+    // Designers always see only their projects; others default based on role
+    if (isDesigner) return true;
     if (userProfile?.role === 'engineer_nester' || userProfile?.role === 'administrative' || userProfile?.role === 'admin') {
       return false;
     }
@@ -48,6 +50,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
 
   // Sidebar tab state: 'installs' or 'notes'
   const [sidebarTab, setSidebarTab] = useState('installs');
+  const [projectDesigners, setProjectDesigners] = useState({});
 
   // Real-Time Database listener hook
   useEffect(() => {
@@ -73,10 +76,27 @@ export default function CalendarView({ data, currentUser, userProfile }) {
     return () => unsubscribe();
   }, [currentUser]);
 
+  // Load project designers from Firebase
+  useEffect(() => {
+    if (!db) return;
+    const designersRef = ref(db, 'project_designers');
+    const unsubscribe = onValue(designersRef, (snapshot) => {
+      setProjectDesigners(snapshot.val() || {});
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Parse projects to get valid dates
   const projectsWithDates = priorityAnalysis
     .filter(p => p.install && p.install.trim() !== '')
-    .filter(p => !showMyProjectsOnly || (userProfile && p.eng && p.eng.trim() === userProfile.designerName))
+    .filter(p => {
+      if (isDesigner && userProfile?.designerName) {
+        // Designers see only projects assigned to them
+        return projectDesigners[p.so] &&
+          projectDesigners[p.so].trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
+      }
+      return !showMyProjectsOnly || (userProfile && p.eng && p.eng.trim() === userProfile.designerName);
+    })
     .map(p => {
       let dateObj;
       try {
@@ -301,7 +321,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
           <p className="text-muted">{t('calendar.subtitle')}</p>
         </div>
         <div className="view-header-actions">
-          {userProfile?.role !== 'administrative' && userProfile?.role !== 'admin' && (
+          {userProfile?.role !== 'administrative' && userProfile?.role !== 'admin' && !isDesigner && (
             <label className="toggle-switch-container">
               <input 
                 type="checkbox" 
