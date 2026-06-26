@@ -6,7 +6,7 @@ import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';
 import { 
   Briefcase, Calendar, Check, Clock, 
-  AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag, Users,
+  AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag, Users, User,
   ChevronDown, ChevronUp, ArrowUpDown, TrendingUp, CheckCircle2, Image as ImageIcon, Loader2, FileText, Paperclip
 } from 'lucide-react';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
@@ -109,6 +109,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [nestingChecks, setNestingChecks] = useState({});
   const [materialOverrides, setMaterialOverrides] = useState({});
   const [kanbanState, setKanbanState] = useState({});
+  const [projectDesigners, setProjectDesigners] = useState({});
   const [kanbanFilter, setKanbanFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
 
@@ -128,6 +129,11 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [isCollabModalOpen, setIsCollabModalOpen] = useState(false);
   const [activeCollabProjectSo, setActiveCollabProjectSo] = useState(null);
   const [collabSearchTerm, setCollabSearchTerm] = useState('');
+
+  // Designer Modal State
+  const [isDesignerModalOpen, setIsDesignerModalOpen] = useState(false);
+  const [activeDesignerProjectSo, setActiveDesignerProjectSo] = useState(null);
+  const [designerSearchTerm, setDesignerSearchTerm] = useState('');
 
   // ESS Modal State
   const [isESSModalOpen, setIsESSModalOpen] = useState(false);
@@ -354,6 +360,13 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       setProjectCollaborators(dbData);
     });
 
+    // Load Project Designers
+    const designersRef = ref(db, 'project_designers');
+    const unsubscribeDesigners = onValue(designersRef, (snapshot) => {
+      const dbData = snapshot.val() || {};
+      setProjectDesigners(dbData);
+    });
+
     // Load Project Materials Overrides
     const matOverridesRef = ref(db, 'project_materials');
     const unsubscribeMatOverrides = onValue(matOverridesRef, (snapshot) => {
@@ -375,6 +388,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       unsubscribeNestingChecks();
       unsubscribeNotes();
       unsubscribeCollabs();
+      unsubscribeDesigners();
       unsubscribeMatOverrides();
       unsubscribeKanban();
     };
@@ -744,6 +758,26 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     setActiveCollabProjectSo(so);
     setCollabSearchTerm('');
     setIsCollabModalOpen(true);
+  };
+
+  const handleOpenDesignerModal = (so) => {
+    setActiveDesignerProjectSo(so);
+    setDesignerSearchTerm(projectDesigners[so] || '');
+    setIsDesignerModalOpen(true);
+  };
+
+  const handleSaveDesigner = async (e) => {
+    e.preventDefault();
+    if (!designerSearchTerm || !activeDesignerProjectSo) return;
+    
+    try {
+      await set(ref(db, `project_designers/${activeDesignerProjectSo}`), designerSearchTerm);
+      setIsDesignerModalOpen(false);
+      setDesignerSearchTerm('');
+      setActiveDesignerProjectSo(null);
+    } catch (err) {
+      console.error('Error saving designer:', err);
+    }
   };
 
   const handleAddCollab = async (e) => {
@@ -1279,6 +1313,16 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                             <Users size={16} />
                             <span>{(projectCollaborators[project.so] || []).length}</span>
                           </button>
+                          <button
+                            onClick={() => handleOpenDesignerModal(project.so)}
+                            className="btn-hold-toggle collab-btn"
+                            title={language === 'es' ? 'Diseñador a Cargo' : 'Designer in Charge'}
+                          >
+                            <User size={16} />
+                            <span style={{ maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {projectDesigners[project.so] || project.eng || (language === 'es' ? 'Ninguno' : 'None')}
+                            </span>
+                          </button>
                         </div>
                         <span style={{ color: '#64748B', marginLeft: '8px', fontSize: '0.85rem' }}>{isCollapsed ? '▼' : '▲'}</span>
                       </div>
@@ -1652,6 +1696,44 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Designer Modal */}
+      {isDesignerModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsDesignerModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">{language === 'es' ? 'Diseñador a Cargo' : 'Designer in Charge'}</h3>
+              <button className="modal-close-btn" onClick={() => setIsDesignerModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body" style={{ padding: '20px' }}>
+              <form onSubmit={handleSaveDesigner} className="collab-add-form" style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                <select 
+                  value={designerSearchTerm}
+                  onChange={(e) => setDesignerSearchTerm(e.target.value)}
+                  className="form-input"
+                  style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.9rem' }}
+                >
+                  <option value="" disabled>{language === 'es' ? 'Seleccionar diseñador...' : 'Select designer...'}</option>
+                  {[
+                    "Monica Gabriel", "Natalie Ball", "Marsha Diquez", "Iris Lopes", 
+                    "Kat Baumgartner", "Melissa Barker", "Nicole Dugan", "Tricia Hatton", 
+                    "Blerta Veseli", "Lana Kravtchenko", "Krisztina Vizi", "Luana Tamagnone", 
+                    "Russell Reiner", "Mauricio Dasso", "Sarah Manev", "Her Henslovitz", 
+                    "Michael Kaboskey", "Malanie Dalfrey"
+                  ].sort().map(name => (
+                    <option key={name} value={name} style={{ color: '#000' }}>{name}</option>
+                  ))}
+                </select>
+                <button type="submit" className="btn-primary" disabled={!designerSearchTerm.trim()} style={{ padding: '0 16px' }}>
+                  <Plus size={16} /> {language === 'es' ? 'Guardar' : 'Save'}
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       )}
