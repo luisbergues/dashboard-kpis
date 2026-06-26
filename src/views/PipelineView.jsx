@@ -50,6 +50,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   const [projectNotes, setProjectNotes] = useState({});
   const [engineeringChecks, setEngineeringChecks] = useState({});
   const [projectCollaborators, setProjectCollaborators] = useState({});
+  const [projectDesigners, setProjectDesigners] = useState({});
   const [projectStages, setProjectStages] = useState({});
   const [newNoteTexts, setNewNoteTexts] = useState({});
   const [nestingChecks, setNestingChecks] = useState({});
@@ -83,6 +84,11 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
       setProjectCollaborators(snapshot.val() || {});
     });
 
+    const designersRef = ref(db, 'project_designers');
+    const unsubscribeDesigners = onValue(designersRef, (snapshot) => {
+      setProjectDesigners(snapshot.val() || {});
+    });
+
     const stagesRef = ref(db, 'project_stages');
     const unsubscribeStages = onValue(stagesRef, (snapshot) => {
       setProjectStages(snapshot.val() || {});
@@ -107,6 +113,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
       unsubscribeNotes();
       unsubscribeEngChecks();
       unsubscribeCollabs();
+      unsubscribeDesigners();
       unsubscribeStages();
       unsubscribeNesting();
       unsubscribeMatOverrides();
@@ -528,7 +535,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                         {project.install}
                       </span>
                       <span className="meta-item eng-badge">
-                        ENG: {project.eng}
+                        ENG: {projectDesigners[project.so] || project.eng || (language === 'es' ? 'Ninguno' : 'None')}
                       </span>
                       {projectCollaborators[project.so] && projectCollaborators[project.so].length > 0 && (
                         <span className="meta-item collabs-badge">
