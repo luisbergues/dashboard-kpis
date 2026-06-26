@@ -16,6 +16,14 @@ import './LoginView.css';
 
 const DEFAULT_DESIGNERS = ['Joaquin', 'Jose', 'Luis', 'Santiago', 'Julieta', 'Andres', 'Delfina', 'Josema'];
 
+const DESIGNER_NAMES = [
+  "Blerta Veseli", "Caryn Henslovitz", "Iris Lopes", "Kat Baumgartner",
+  "Krisztina Vizi", "Lana Kravtchenko", "Luana Tamagnone", "Malanie Dalfrey",
+  "Marsha Diquez", "Mauricio Dasso", "melissa Barker", "Michael Kaboskey",
+  "Monica Gabriel", "Natalie Ball", "Nicole Dugan", "Russell Reiner",
+  "Sarah Manev", "Tricia Hatton"
+].sort();
+
 export default function LoginView({ data }) {
   const { t, language } = useLanguage();
   const [isSignUp, setIsSignUp] = useState(false);
@@ -109,8 +117,8 @@ export default function LoginView({ data }) {
     setError(null);
     setLoading(true);
 
-    const requiresEngineerName = signupRole === 'engineer' || signupRole === 'engineer_nester';
-    if (isSignUp && requiresEngineerName && !designerName) {
+    const requiresName = signupRole === 'engineer' || signupRole === 'engineer_nester' || signupRole === 'designer';
+    if (isSignUp && requiresName && !designerName) {
       setError(t('login.validationName'));
       setLoading(false);
       return;
@@ -243,6 +251,7 @@ export default function LoginView({ data }) {
                     <option value="engineer">{language === 'es' ? 'Ingeniero (Engineer)' : 'Engineer'}</option>
                     <option value="administrative">{language === 'es' ? 'Administrador (Administrator)' : 'Administrative'}</option>
                     <option value="engineer_nester">{language === 'es' ? 'Ingeniero - Nester (Engineer - Nester)' : 'Engineer - Nester'}</option>
+                    <option value="designer">{language === 'es' ? 'Diseñador (Designer)' : 'Designer'}</option>
                   </select>
                 </div>
               </div>
@@ -250,25 +259,44 @@ export default function LoginView({ data }) {
               <div 
                 className="form-group"
                 style={{ 
-                  opacity: (signupRole === 'engineer' || signupRole === 'engineer_nester') ? 1 : 0.5,
-                  pointerEvents: (signupRole === 'engineer' || signupRole === 'engineer_nester') ? 'auto' : 'none'
+                  opacity: signupRole === 'administrative' ? 0.5 : 1,
+                  pointerEvents: signupRole === 'administrative' ? 'none' : 'auto'
                 }}
               >
-                <label className="form-label">{t('login.linkDesigner')}</label>
+                <label className="form-label">
+                  {signupRole === 'designer'
+                    ? (language === 'es' ? 'Tu nombre como diseñador' : 'Your designer name')
+                    : t('login.linkDesigner')
+                  }
+                </label>
                 <div className="input-wrapper">
                   <User size={18} className="input-icon" />
-                  <select
-                    value={designerName}
-                    onChange={(e) => setDesignerName(e.target.value)}
-                    className="form-input form-select has-icon"
-                    required={isSignUp && (signupRole === 'engineer' || signupRole === 'engineer_nester')}
-                    disabled={signupRole !== 'engineer' && signupRole !== 'engineer_nester'}
-                  >
-                    <option value="">{t('login.selectName')}</option>
-                    {designers.map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
+                  {signupRole === 'designer' ? (
+                    <select
+                      value={designerName}
+                      onChange={(e) => setDesignerName(e.target.value)}
+                      className="form-input form-select has-icon"
+                      required={isSignUp}
+                    >
+                      <option value="">{language === 'es' ? 'Selecciona tu nombre...' : 'Select your name...'}</option>
+                      {DESIGNER_NAMES.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <select
+                      value={designerName}
+                      onChange={(e) => setDesignerName(e.target.value)}
+                      className="form-input form-select has-icon"
+                      required={isSignUp && (signupRole === 'engineer' || signupRole === 'engineer_nester')}
+                      disabled={signupRole === 'administrative'}
+                    >
+                      <option value="">{t('login.selectName')}</option>
+                      {designers.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
             </>

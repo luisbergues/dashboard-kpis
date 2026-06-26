@@ -12,7 +12,12 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState('engineer');
 
-  const tabs = [
+  const isDesigner = userProfile?.role === 'designer';
+
+  const tabs = isDesigner ? [
+    { id: 'pipeline', label: t('navbar.pipeline'), icon: ListTodo },
+    { id: 'calendar', label: t('navbar.calendar'), icon: CalendarDays },
+  ] : [
     { id: 'dashboard', label: t('navbar.dashboard'), icon: LayoutDashboard },
     { id: 'calendar', label: t('navbar.calendar'), icon: CalendarDays },
     ...(userProfile ? [{ id: 'my-projects', label: t('navbar.myProjects'), icon: Briefcase }] : []),
@@ -59,6 +64,9 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
     }
     if (userProfile?.role === 'engineer_nester') {
       return language === 'es' ? 'Ingeniero - Nester' : 'Engineer - Nester';
+    }
+    if (userProfile?.role === 'designer') {
+      return language === 'es' ? 'Diseñador' : 'Designer';
     }
     return language === 'es' ? 'Ingeniero' : 'Engineering';
   };

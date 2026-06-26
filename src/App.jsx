@@ -454,17 +454,28 @@ function App() {
       return <LoginView data={data} />;
     }
 
+    const isDesigner = userProfile?.role === 'designer';
+
+    // Redirect designer away from restricted tabs
+    if (isDesigner && !['pipeline', 'calendar'].includes(activeTab)) {
+      setTimeout(() => setActiveTab('pipeline'), 0);
+      return <div className="loading-state">Loading...</div>;
+    }
+
     switch (activeTab) {
-      case 'dashboard': return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
+      case 'dashboard':
+        return isDesigner ? null : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
       case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
-      case 'my-projects': return <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
+      case 'my-projects':
+        return isDesigner ? null : <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
       case 'pipeline': return <PipelineView data={mergedData} currentUser={currentUser} userProfile={userProfile} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} />;
-      case 'materials': return <MaterialsView data={mergedData} />;
+      case 'materials':
+        return isDesigner ? null : <MaterialsView data={mergedData} />;
       case 'quality': 
         if (userProfile?.role === 'administrative') {
           return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
         }
-        return <DesignQualityView data={mergedData} />;
+        return isDesigner ? null : <DesignQualityView data={mergedData} />;
       default: return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
     }
   };

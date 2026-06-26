@@ -263,6 +263,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   };
 
   const { priorityAnalysis, onHoldNotes } = data;
+  const isDesigner = userProfile?.role === 'designer';
 
   // Combine data or just use priorityAnalysis as the main source
   const projects = priorityAnalysis.filter(p => {
@@ -271,6 +272,13 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                           p.so.includes(searchTerm) ||
                           p.eng.toLowerCase().includes(searchTerm.toLowerCase());
     
+    // Designers only see projects assigned to them
+    if (isDesigner && userProfile?.designerName) {
+      return matchesFilter && matchesSearch &&
+        projectDesigners[p.so] &&
+        projectDesigners[p.so].trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
+    }
+
     let matchesMyProjects = true;
     if (showMyProjects && userProfile?.designerName) {
       const isEng = p.eng && p.eng.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
@@ -366,21 +374,25 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
             />
           </div>
           <div className="filter-chips">
-            <label className="pipeline-my-projects-toggle" htmlFor="my-projects-toggle">
-              <div
-                id="my-projects-toggle"
-                className={`pipeline-toggle-btn ${showMyProjects ? 'on' : 'off'}`}
-                onClick={() => setShowMyProjects(!showMyProjects)}
-                role="switch"
-                aria-checked={showMyProjects}
-              >
-                <span className="pipeline-toggle-knob" />
-              </div>
-              <span className="pipeline-toggle-label">
-                {language === 'es' ? 'Mostrar Solo Mis Proyectos' : 'Show My Projects Only'}
-              </span>
-            </label>
-            <div className="filter-chips-divider" />
+            {!isDesigner && (
+              <>
+                <label className="pipeline-my-projects-toggle" htmlFor="my-projects-toggle">
+                  <div
+                    id="my-projects-toggle"
+                    className={`pipeline-toggle-btn ${showMyProjects ? 'on' : 'off'}`}
+                    onClick={() => setShowMyProjects(!showMyProjects)}
+                    role="switch"
+                    aria-checked={showMyProjects}
+                  >
+                    <span className="pipeline-toggle-knob" />
+                  </div>
+                  <span className="pipeline-toggle-label">
+                    {language === 'es' ? 'Mostrar Solo Mis Proyectos' : 'Show My Projects Only'}
+                  </span>
+                </label>
+                <div className="filter-chips-divider" />
+              </>
+            )}
             {['ALL', 'ON HOLD', 'CHECK', 'REVIEW', 'ENGINEERING', 'KANBAN'].map(f => (
               <button 
                 key={f} 
@@ -538,7 +550,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                         ENG: {project.eng}
                       </span>
                       {projectDesigners[project.so] && (
-                        <span className="meta-item des-badge" style={{ background: 'rgba(128, 90, 213, 0.2)', color: '#d6bcfa', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: '500', border: '1px solid rgba(128, 90, 213, 0.3)' }}>
+                        <span className="meta-item eng-badge">
                           DES: {projectDesigners[project.so]}
                         </span>
                       )}
@@ -599,7 +611,8 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
 
                     {/* Check, Nesting & Comment Isolated Sections */}
                     <div className="pipeline-row-grid">
-                      {/* Card 1: Engineering Check Controls */}
+                      {/* Card 1: Engineering Check Controls - hidden for designers */}
+                      {!isDesigner && (
                       <div className="pipeline-eng-check-controls card-eng">
                         <div className="pipeline-eng-check-header">
                           <span className="pipeline-eng-check-title">{t('myProjects.engineeringCheck', 'Engineering Time')}</span>
@@ -627,8 +640,10 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                           )}
                         </div>
                       </div>
+                      )}
 
-                      {/* Card 2: Nesting Controls */}
+                      {/* Card 2: Nesting Controls - hidden for designers */}
+                      {!isDesigner && (
                       <div className="pipeline-eng-check-controls card-nesting">
                         <div className="pipeline-eng-check-header">
                           <span className="pipeline-eng-check-title">Nesting Time</span>
@@ -656,6 +671,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                           )}
                         </div>
                       </div>
+                      )}
 
                       {/* Card 3: Note Controls */}
                       <div className="pipeline-eng-check-controls card-notes-input">
