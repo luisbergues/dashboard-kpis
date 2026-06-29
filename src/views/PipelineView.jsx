@@ -4,16 +4,8 @@ import { useLanguage } from '../utils/LanguageContext';
 import { db, ref, onValue, set } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
+import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
 import './PipelineView.css';
-
-const STAGES = [
-  { id: 'ingenieria', label: 'Ingeniería' },
-  { id: 'check1', label: 'Check' },
-  { id: 'paperwork', label: 'Paperwork' },
-  { id: 'check2', label: 'Check' },
-  { id: 'nesting', label: 'Nesting' },
-  { id: 'install', label: 'Install' }
-];
 
 const getStageLabel = (stageId, language) => {
   if (language === 'es') {
@@ -51,7 +43,6 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   const [engineeringChecks, setEngineeringChecks] = useState({});
   const [projectCollaborators, setProjectCollaborators] = useState({});
   const [projectDesigners, setProjectDesigners] = useState({});
-  const [projectStages, setProjectStages] = useState({});
   const [newNoteTexts, setNewNoteTexts] = useState({});
   const [nestingChecks, setNestingChecks] = useState({});
   const [commentPriorities, setCommentPriorities] = useState({});
@@ -89,11 +80,6 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
       setProjectDesigners(snapshot.val() || {});
     });
 
-    const stagesRef = ref(db, 'project_stages');
-    const unsubscribeStages = onValue(stagesRef, (snapshot) => {
-      setProjectStages(snapshot.val() || {});
-    });
-
     const nestingRef = ref(db, 'nesting_checks');
     const unsubscribeNesting = onValue(nestingRef, (snapshot) => {
       setNestingChecks(snapshot.val() || {});
@@ -114,7 +100,6 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
       unsubscribeEngChecks();
       unsubscribeCollabs();
       unsubscribeDesigners();
-      unsubscribeStages();
       unsubscribeNesting();
       unsubscribeMatOverrides();
       unsubscribeKanban();
@@ -524,7 +509,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
               ? (project.onHoldReason || getOnHoldNote(project.name)) 
               : null;
             
-            const progress = projectStages[project.so] || Array(STAGES.length).fill(false);
+            const progress = calculateAutomaticStages(project);
             const percent = Math.round((progress.filter(s => s && s.completed).length / STAGES.length) * 100);
 
             const isCollapsed = !expandedProjects[project.so];

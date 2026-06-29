@@ -16,8 +16,10 @@ import {
   Filler
 } from 'chart.js';
 import { Chart, Bar } from 'react-chartjs-2';
+
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import SkeletonLoader from '../components/SkeletonLoader';
+import { calculateAutomaticStages } from '../utils/stageUtils';
 import { exportToCSV } from '../utils/csvExport';
 import { 
   calculateConversionRate, 
@@ -76,16 +78,6 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
 
   const { weekOverWeek = [], insights = {}, meetingPoints = [], topCostProjects = [], weekLabels = {}, financialImpact = { rows: [] } } = data;
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [projectStages, setProjectStages] = useState({});
-
-  React.useEffect(() => {
-    if (!db) return;
-    const stagesRef = ref(db, 'project_stages');
-    const unsubscribe = onValue(stagesRef, (snapshot) => {
-      setProjectStages(snapshot.val() || {});
-    });
-    return () => unsubscribe();
-  }, []);
 
   const filteredProjects = data.priorityAnalysis || [];
 
@@ -100,7 +92,15 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
   const budgetDeviation = calculateBudgetDeviation(holdValueStr, totalValueStr);
   
   // Calculate Avg Validation Time (Check 2 to Nesting) using real stage progress from Firebase
-  const avgValidationTime = calculateGlobalValidationTime(projectStages, filteredProjects);
+  const derivedProjectStages = React.useMemo(() => {
+    const obj = {};
+    filteredProjects.forEach(p => {
+      obj[p.so] = calculateAutomaticStages(p);
+    });
+    return obj;
+  }, [filteredProjects]);
+
+  const avgValidationTime = calculateGlobalValidationTime(derivedProjectStages, filteredProjects);
   
   const bottleneckAlerts = predictBottlenecks(filteredProjects);
 

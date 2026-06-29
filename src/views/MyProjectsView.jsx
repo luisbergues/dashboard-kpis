@@ -19,18 +19,10 @@ import IPGeneratorModal from '../components/IPGeneratorModal';
 import CompletedProjectsModal from '../components/CompletedProjectsModal';
 import { cleanupESSData } from '../utils/essData';
 import { cleanupIPData } from '../utils/ipData';
+import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
 import './MyProjectsView.css';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, ChartTooltip, Legend, Filler);
-
-const STAGES = [
-  { id: 'ingenieria', label: 'Ingeniería' },
-  { id: 'check1', label: 'Check' },
-  { id: 'paperwork', label: 'Paperwork' },
-  { id: 'check2', label: 'Check' },
-  { id: 'nesting', label: 'Nesting' },
-  { id: 'install', label: 'Install' }
-];
 
 const getStageLabel = (stageId, language) => {
   if (language === 'es') {
@@ -201,8 +193,18 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     });
 
   // Calculate analytics
-  const stageAverages = calculatePersonalStageAverages(projectStages, myProjectsRaw, projectHistory, engineeringChecks);
-  const monthlyData = calculateMonthlyCompletions(projectStages, [...myProjectsRaw, ...myArchivedProjects]);
+  // We no longer need to track projectStages manually, we derive it.
+  const derivedProjectStages = React.useMemo(() => {
+    const obj = {};
+    const allProj = [...myProjectsRaw, ...myArchivedProjects];
+    allProj.forEach(p => {
+      obj[p.so] = calculateAutomaticStages(p);
+    });
+    return obj;
+  }, [myProjectsRaw, myArchivedProjects]);
+
+  const stageAverages = calculatePersonalStageAverages(derivedProjectStages, myProjectsRaw, projectHistory, engineeringChecks);
+  const monthlyData = calculateMonthlyCompletions(derivedProjectStages, [...myProjectsRaw, ...myArchivedProjects]);
   const upcomingDeadlines = getUpcomingDeadlines(myProjectsRaw);
 
   const stageAveragesChartData = {
@@ -403,43 +405,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [qaChecks, setQAChecks] = useState({});
 
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
-
-  const toggleStage = async (so, stageIndex) => {
-    const currentProgress = projectStages[so] ? [...projectStages[so]] : Array(STAGES.length).fill(false);
-    const wasCompleted = !!(currentProgress[stageIndex] && currentProgress[stageIndex].completed);
-
-    // If making the stage completed (toggling to true)
-    if (!wasCompleted) {
-      let type = '';
-      // Map stages: 
-      // index 0 (Ingeniería) & index 1 (Check 1) & index 3 (Check 2) -> engineering
-      // index 2 (Paperwork) -> ess_ip
-      // index 4 (Nesting) & index 5 (Install) -> final
-      if (stageIndex === 0 || stageIndex === 1 || stageIndex === 3) {
-        type = 'engineering';
-      } else if (stageIndex === 2) {
-        type = 'ess_ip';
-      } else if (stageIndex === 4 || stageIndex === 5) {
-        type = 'final';
-      }
-
-      if (type) {
-        setQAPendingAction({ so, stageIndex });
-        setQAType(type);
-        setHasScrolledToBottom(false); // Reset scroll state
-        const initialChecks = {};
-        const list = t(`myProjects.checklists.${type}`) || [];
-        list.forEach((_, index) => {
-          initialChecks[index] = false;
-        });
-        setQAChecks(initialChecks);
-        setIsQAModalOpen(true);
-        return; // Wait for modal submission
-      }
-    }
-
-    await executeStageToggle(so, stageIndex, !wasCompleted);
-  };
+  // toggleStage removed as timeline is now automatic
 
   const handleScroll = (e) => {
     const target = e.target;
@@ -478,64 +444,12 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       } else {
         localStorage.setItem(`project_qa_${so}_${STAGES[stageIndex].id}`, JSON.stringify(qaLog));
       }
-
-      await executeStageToggle(so, stageIndex, true);
     }
 
     setIsQAModalOpen(false);
     setQAPendingAction(null);
     setQAType('');
     setHasScrolledToBottom(false);
-  };
-
-  const executeStageToggle = async (so, stageIndex, shouldComplete) => {
-    const currentProgress = projectStages[so] ? [...projectStages[so]] : Array(STAGES.length).fill(false);
-    const timestamp = new Date().toISOString();
-    
-    currentProgress[stageIndex] = {
-      completed: shouldComplete,
-      timestamp: shouldComplete ? timestamp : null
-    };
-
-    // Prepare history event
-    const historyEvent = {
-      type: 'stage_changed',
-      stage: STAGES[stageIndex].label,
-      completed: shouldComplete,
-      timestamp: timestamp,
-      user: userProfile?.designerName || currentUser?.email || 'Unknown User'
-    };
-
-    const updatedStages = {
-      ...projectStages,
-      [so]: currentProgress
-    };
-    setProjectStages(updatedStages);
-
-    if (db && currentUser) {
-      try {
-        await set(ref(db, `project_stages/${so}`), currentProgress);
-        
-        // Push event to history array
-        const currentHistory = projectHistory[so] ? [...projectHistory[so]] : [];
-        currentHistory.push(historyEvent);
-        await set(ref(db, `project_history/${so}`), currentHistory);
-      } catch (err) {
-        console.error('Failed to save stage progress to Firebase:', err);
-      }
-    } else {
-      // Local storage fallback
-      try {
-        localStorage.setItem(`project_stages_${so}`, JSON.stringify(currentProgress));
-        
-        const currentHistory = projectHistory[so] ? [...projectHistory[so]] : [];
-        currentHistory.push(historyEvent);
-        localStorage.setItem(`project_history_${so}`, JSON.stringify(currentHistory));
-        setProjectHistory({ ...projectHistory, [so]: currentHistory });
-      } catch (err) {
-        console.error('Failed to save stage progress to localStorage:', err);
-      }
-    }
   };
 
   const getProjectMaterials = (so) => {
@@ -837,7 +751,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const generatePDF = (project) => {
     const doc = new jsPDF();
     const history = projectHistory[project.so] || [];
-    const stages = projectStages[project.so] || Array(STAGES.length).fill(false);
+    const stages = calculateAutomaticStages(project);
 
     // Header styling
     doc.setFillColor(18, 33, 48); // Deep blue matching var(--bg-surface)
@@ -1256,7 +1170,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       ) : (
         <div className="projects-grid">
           {myProjects.map((project) => {
-            const progress = projectStages[project.so] || Array(STAGES.length).fill(false);
+            const progress = calculateAutomaticStages(project);
             const percent = calculateProgress(progress);
             const overridden = projectOverrides[project.so];
             const currentStatus = overridden ? overridden.status : project.status;
@@ -1365,8 +1279,6 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                               <div 
                                 key={stage.id} 
                                 className={`stage-step ${isCompleted ? 'completed' : ''}`}
-                                onClick={() => toggleStage(project.so, idx)}
-                                title={language === 'es' ? `Clic para marcar como ${isCompleted ? 'pendiente' : 'completada'}` : `Click to mark as ${isCompleted ? 'pending' : 'completed'}`}
                               >
                                 <div className="stage-connector-line"></div>
                                 <div className="stage-icon-container">
