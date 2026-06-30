@@ -481,6 +481,17 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       ...prev,
       [so]: updated
     }));
+
+    // Auto-move Kanban card from Procurement to Material if procurement is marked done
+    if (key === 'procurement' && updated.procurement === 'Yes' && kanbanState[so] === 'procurement') {
+      if (db) {
+        try {
+          await set(ref(db, `project_kanban_state/${so}`), 'material');
+        } catch (error) {
+          console.error("Error moving Kanban card to material:", error);
+        }
+      }
+    }
   };
 
   const handleHoldToggle = (so, currentStatus) => {
