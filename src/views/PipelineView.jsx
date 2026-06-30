@@ -455,10 +455,10 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                     const thermofoil = ov.thermofoil !== undefined ? ov.thermofoil : (matReq?.thermofoil || 'No');
                     const dovetail   = ov.dovetail   !== undefined ? ov.dovetail   : (matReq?.dovetail   || 'No');
                     const element    = ov.element    !== undefined ? ov.element    : (matReq?.element    || 'No');
-                    const needsProcurement = thermofoil === 'Yes' || dovetail === 'Yes' || element === 'Yes';
+                    const needsProcurement = (thermofoil === 'Yes' || dovetail === 'Yes' || element === 'Yes') && ov.procurement !== 'Yes';
                     
                     const projectMaterials = data.projectSpecificMaterials?.[project.so] || [];
-                    const hasNonSnowWhiteMaterial = projectMaterials.some(m => m.material && m.material.toLowerCase() !== 'snow white');
+                    const hasNonSnowWhiteMaterial = projectMaterials.some(m => m.material && m.material.toLowerCase() !== 'snow white') && ov.ordered !== 'Yes';
 
                     return (
                     <div 
@@ -552,10 +552,10 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                         const thermofoil = ov.thermofoil !== undefined ? ov.thermofoil : (matReq?.thermofoil || 'No');
                         const dovetail   = ov.dovetail   !== undefined ? ov.dovetail   : (matReq?.dovetail   || 'No');
                         const element    = ov.element    !== undefined ? ov.element    : (matReq?.element    || 'No');
-                        const needsProcurement = thermofoil === 'Yes' || dovetail === 'Yes' || element === 'Yes';
+                        const needsProcurement = (thermofoil === 'Yes' || dovetail === 'Yes' || element === 'Yes') && ov.procurement !== 'Yes';
                         
                         const projectMaterials = data.projectSpecificMaterials?.[project.so] || [];
-                        const hasNonSnowWhiteMaterial = projectMaterials.some(m => m.material && m.material.toLowerCase() !== 'snow white');
+                        const hasNonSnowWhiteMaterial = projectMaterials.some(m => m.material && m.material.toLowerCase() !== 'snow white') && ov.ordered !== 'Yes';
 
                         return (
                           <>
