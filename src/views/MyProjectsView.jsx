@@ -1635,7 +1635,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                     "Monica Gabriel", "Natalie Ball", "Marsha Diquez", "Iris Lopes", 
                     "Kat Baumgartner", "Melissa Barker", "Nicole Dugan", "Tricia Hatton", 
                     "Blerta Veseli", "Lana Kravtchenko", "Krisztina Vizi", "Luana Tamagnone", 
-                    "Russell Reiner", "Mauricio Dasso", "Sarah Manev", "Her Henslovitz", 
+                    "Russell Reiner", "Mauricio Dasso", "Sarah Manev", "Caryn Henslovitz", 
                     "Michael Kaboskey", "Malanie Dalfrey"
                   ].sort().map(name => (
                     <option key={name} value={name} style={{ color: '#000' }}>{name}</option>

@@ -20,7 +20,7 @@ const DESIGNERS_CONTACTS = [
   { name: 'Russell Reiner', phone: '561-350-7999', email: 'rreiner@jlclosets.com', city: 'PALM BEACH' },
   { name: 'Mauricio Dasso', phone: '203-561-9581', email: 'mdasso@jlclosets.com', city: 'PALM BEACH' },
   { name: 'Sarah Manev', phone: '561-306-6192', email: 'smanev@jlclosets.com', city: 'PARKLAND' },
-  { name: 'Her Henslovitz', phone: '945-290-7997', email: 'chenslovitz@jlclosets.com', city: 'PARKLAND' },
+  { name: 'Caryn Henslovitz', phone: '945-290-7997', email: 'chenslovitz@jlclosets.com', city: 'PARKLAND' },
   { name: 'Michael Kaboskey', phone: '954-257-5087', email: 'mkaboskey@jlclosets.com', city: 'PORT ST. LUCIE' },
   { name: 'Malanie Dalfrey', phone: '772-278-6949', email: 'mdalfrey@jlclosets.com', city: 'PORT ST. LUCIE' }
 ];
