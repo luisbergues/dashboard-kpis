@@ -16,11 +16,38 @@ const getClientName = (projectName) => {
   return projectName.trim();
 };
 
+const DESIGNER_PHONES = {
+  'Monica Gabriel': '954-678-8432',
+  'Natalie Ball': '954-899-7307',
+  'Marsha Diquez': '754-779-0502',
+  'Iris Lopes': '786-280-4004',
+  'Kat Baumgartner': '270-991-1002',
+  'Melissa Barker': '561-587-0632',
+  'Nicole Dugan': '239-788-4114',
+  'Tricia Hatton': '561-324-0033',
+  'Blerta Veseli': '561-971-0525',
+  'Lana Kravtchenko': '646-309-5301',
+  'Krisztina Vizi': '561-537-6787',
+  'Luana Tamagnone': '561-816-1779',
+  'Russell Reiner': '561-350-7999',
+  'Mauricio Dasso': '203-561-9581',
+  'Sarah Manev': '561-306-6192',
+  'Caryn Henslovitz': '945-290-7997',
+  'Michael Kaboskey': '954-257-5087',
+  'Malanie Dalfrey': '772-278-6949'
+};
+
+const getDesignerPhoneStr = (designerName) => {
+  if (!designerName) return '';
+  const phone = DESIGNER_PHONES[designerName] || 'xxx-xxx-xxxx';
+  return `${phone} - ${designerName}`;
+};
+
 const createDefaultPage = (project) => ({
   clientName: project ? getClientName(project.name) : '',
   clientAddress: '',
   clientPhone: '',
-  designerPhone: project && project.designer ? `xxx-xxx-xxxx (phone number) - ${project.designer}` : '',
+  designerPhone: getDesignerPhoneStr(project ? project.designer : ''),
   collectPayment: '',
   observations: ''
 });
@@ -46,7 +73,7 @@ export default function IPGeneratorModal({ project, onClose }) {
             // Auto-fill designer phone if it's empty but project has a designer
             const pagesWithDesigner = sanitized.map(p => {
               if (!p.designerPhone && project && project.designer) {
-                return { ...p, designerPhone: `xxx-xxx-xxxx (phone number) - ${project.designer}` };
+                return { ...p, designerPhone: getDesignerPhoneStr(project.designer) };
               }
               return p;
             });

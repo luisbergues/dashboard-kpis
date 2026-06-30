@@ -51,7 +51,15 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
       const data = await loadESSData(project.so);
       if (isMounted) {
         if (data && data.length > 0) {
-          setPages(data);
+          const updatedPages = data.map(page => ({
+            ...page,
+            drawerOptions: {
+              ...page.drawerOptions,
+              fronts: materials?.thermofoil === 'Yes' ? 'THERMOFOIL' : (page.drawerOptions?.fronts || 'SLAB'),
+              box: materials?.dovetail === 'Yes' ? 'DOVETAIL' : (page.drawerOptions?.box || 'PRFV')
+            }
+          }));
+          setPages(updatedPages);
         }
         setIsLoading(false);
       }
