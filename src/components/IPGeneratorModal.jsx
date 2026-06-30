@@ -32,8 +32,11 @@ const DESIGNER_PHONES = {
   'Russell Reiner': '561-350-7999',
   'Mauricio Dasso': '203-561-9581',
   'Sarah Manev': '561-306-6192',
+  'Caryn': '945-290-7997',
   'Caryn Henslovitz': '945-290-7997',
   'Her Henslovitz': '945-290-7997',
+  'Caryn Heitlovitz': '945-290-7997',
+  'Her Heitlovitz': '945-290-7997',
   'Michael Kaboskey': '954-257-5087',
   'Malanie Dalfrey': '772-278-6949'
 };

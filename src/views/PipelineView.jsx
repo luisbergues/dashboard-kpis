@@ -468,7 +468,14 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                       onDragStart={canEditKanban ? (e) => handleDragStart(e, project.so) : undefined}
                     >
                       <div className="kanban-card-top">
-                        <span className="kanban-project-id">#{project.so}</span>
+                        <a
+                          href={`${window.location.origin}${window.location.pathname}?project=${project.so}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="kanban-project-id"
+                          onClick={e => e.stopPropagation()}
+                          style={{ textDecoration: 'none', cursor: 'pointer' }}
+                        >#{project.so}</a>
                         <span className={`status-badge ${getStatusColor(project.status)}`} style={{ padding: '2px 6px', fontSize: '0.65rem' }}>
                           {getStatusLabel(project.status)}
                         </span>
@@ -523,7 +530,14 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                 <div className="project-header-row" onClick={() => toggleCollapse(project.so)}>
                   <div className="project-main">
                     <div className="project-title-container">
-                      <div className="project-id">#{project.so}</div>
+                      <a
+                        href={`${window.location.origin}${window.location.pathname}?project=${project.so}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="project-id"
+                        onClick={e => e.stopPropagation()}
+                        style={{ textDecoration: 'none', cursor: 'pointer' }}
+                      >#{project.so}</a>
                       <h3 className="project-name">{project.name}</h3>
                     </div>
                     <div className="project-meta">

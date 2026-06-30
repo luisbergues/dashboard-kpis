@@ -1194,7 +1194,14 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                   <div className="project-card-main">
                     <div className="card-header-main" onClick={() => toggleCollapse(project.so)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <span className="project-so">SO #{project.so}</span>
+                        <a
+                          href={`${window.location.origin}${window.location.pathname}?project=${project.so}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="project-so"
+                          onClick={e => e.stopPropagation()}
+                          style={{ textDecoration: 'none', cursor: 'pointer' }}
+                        >SO #{project.so}</a>
                         <h3 className="project-name-title" style={{ margin: 0 }}>{project.name}</h3>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

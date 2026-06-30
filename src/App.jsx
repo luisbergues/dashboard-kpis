@@ -12,6 +12,7 @@ import CalendarView from './views/CalendarView'
 import LoginView from './views/LoginView'
 import MyProjectsView from './views/MyProjectsView'
 import DesignQualityView from './views/DesignQualityView'
+import ProjectDetailView from './views/ProjectDetailView'
 import ErrorBoundary from './components/ErrorBoundary'
 import NotificationBubble from './components/NotificationBubble'
 import ProjectChatbot from './components/ProjectChatbot'
@@ -41,6 +42,7 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [weeklyHistory, setWeeklyHistory] = useState([]);
   const [focusedProjectSo, setFocusedProjectSo] = useState(null);
+  const [projectDesigners, setProjectDesigners] = useState({});
 
   const { data, isLoading: loading, error } = useQuery({
     queryKey: ['dashboardData'],
@@ -233,10 +235,16 @@ function App() {
       setMaterialOverrides(snapshot.val() || {});
     });
 
+    const designersRef = ref(db, 'project_designers');
+    const unsubscribeDesigners = onValue(designersRef, (snapshot) => {
+      setProjectDesigners(snapshot.val() || {});
+    });
+
     return () => {
       unsubscribeOverrides();
       unsubscribeNotes();
       unsubscribeMatOverrides();
+      unsubscribeDesigners();
     };
   }, []);
 
@@ -447,6 +455,21 @@ function App() {
   }, [mergedData, userProfile, projectNotes, currentUser]);
 
   const renderView = () => {
+    // Standalone shareable project detail page
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectSoParam = urlParams.get('project');
+    if (projectSoParam) {
+      if (loading || authLoading) return <div className="loading-state">Loading project...</div>;
+      return (
+        <ProjectDetailView
+          data={mergedData}
+          projectNotes={projectNotes}
+          projectDesigners={projectDesigners}
+          overrides={overrides}
+        />
+      );
+    }
+
     if (loading || authLoading) return <div className="loading-state">Loading application...</div>;
     if (error) return <div className="error-state">Error: {error}</div>;
 
