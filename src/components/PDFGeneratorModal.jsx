@@ -17,7 +17,7 @@ const DEFAULT_RODS = [
   { room: 'Her Master', type: 'Oval Chrome rod', qty: 1, size: '24"' }
 ];
 
-const createDefaultPage = (project) => ({
+const createDefaultPage = (project, materials) => ({
   headerData: {
     jobName: project ? `${project.so} - ${project.name.split(':')[0].trim()}` : '',
     color: 'White Classic 300',
@@ -26,8 +26,8 @@ const createDefaultPage = (project) => ({
     engineer: project ? (project.eng || 'JS') : ''
   },
   drawerOptions: {
-    fronts: 'THERMOFOIL',
-    box: 'DOVETAIL',
+    fronts: materials?.thermofoil === 'Yes' ? 'THERMOFOIL' : 'SLAB',
+    box: materials?.dovetail === 'Yes' ? 'DOVETAIL' : 'PRFV',
     slides: 'SOFT CLOSE',
     handles: 'STD. CHROME'
   },
@@ -37,10 +37,10 @@ const createDefaultPage = (project) => ({
   miscCol2: ''
 });
 
-export default function PDFGeneratorModal({ project, onClose }) {
+export default function PDFGeneratorModal({ project, materials, onClose }) {
   const { t } = useLanguage();
   // --- Multi-page State ---
-  const [pages, setPages] = useState([createDefaultPage(project)]);
+  const [pages, setPages] = useState([createDefaultPage(project, materials)]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -74,7 +74,7 @@ export default function PDFGeneratorModal({ project, onClose }) {
 
   // --- Page Management ---
   const addPage = () => {
-    setPages([...pages, createDefaultPage(project)]);
+    setPages([...pages, createDefaultPage(project, materials)]);
     setCurrentPageIndex(pages.length);
   };
 

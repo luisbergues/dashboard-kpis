@@ -1793,7 +1793,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       {/* ESS PDF Generator Modal */}
       {isESSModalOpen && activeESSProject && (
         <PDFGeneratorModal 
-          project={activeESSProject} 
+          project={activeESSProject}
+          materials={getProjectMaterials(activeESSProject.so)}
           onClose={() => { setIsESSModalOpen(false); setActiveESSProject(null); }} 
         />
       )}
@@ -1801,7 +1802,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       {/* IP PDF Generator Modal */}
       {isIPModalOpen && activeIPProject && (
         <IPGeneratorModal 
-          project={activeIPProject} 
+          project={{ ...activeIPProject, designer: projectDesigners[activeIPProject.so] || '' }} 
           onClose={() => { setIsIPModalOpen(false); setActiveIPProject(null); }} 
         />
       )}

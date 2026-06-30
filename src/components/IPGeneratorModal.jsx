@@ -20,7 +20,7 @@ const createDefaultPage = (project) => ({
   clientName: project ? getClientName(project.name) : '',
   clientAddress: '',
   clientPhone: '',
-  designerPhone: project ? (project.designer || '') : '',
+  designerPhone: project && project.designer ? `xxx-xxx-xxxx (phone number) - ${project.designer}` : '',
   collectPayment: '',
   observations: ''
 });
@@ -43,7 +43,14 @@ export default function IPGeneratorModal({ project, onClose }) {
           const parsed = Array.isArray(data) ? data : Object.values(data);
           const sanitized = parsed.filter(Boolean);
           if (sanitized.length > 0) {
-            setPages(sanitized);
+            // Auto-fill designer phone if it's empty but project has a designer
+            const pagesWithDesigner = sanitized.map(p => {
+              if (!p.designerPhone && project && project.designer) {
+                return { ...p, designerPhone: `xxx-xxx-xxxx (phone number) - ${project.designer}` };
+              }
+              return p;
+            });
+            setPages(pagesWithDesigner);
           }
         }
         setIsLoading(false);
