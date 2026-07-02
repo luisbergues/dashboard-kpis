@@ -3,8 +3,8 @@ import { useKpi } from '../context/KpiContext';
 import { calculatePhase1ScoreAndStatus, calculateTechnicalPoints } from '../utils/scoreCalculator';
 import toast from 'react-hot-toast';
 import type { Project, ProjectStatus } from '../types';
+import { Link2 } from 'lucide-react';
 
-// Checklist uses timestamp (number) when checked, false when not
 type ChecklistState = {
   kcdFile: number | false;
   jlContract: number | false;
@@ -32,7 +32,7 @@ const emptyComplexity = {
 };
 
 export const Phase1Form: React.FC = () => {
-  const { designers, projects, addProject, updateProject } = useKpi();
+  const { designers, designerNames, projects, addProject, updateProject, getProjectComplexity } = useKpi();
 
   const [mode, setMode] = useState<'New' | 'Update'>('New');
   const [soNumber, setSoNumber] = useState('');
@@ -41,10 +41,33 @@ export const Phase1Form: React.FC = () => {
   const [totalRooms, setTotalRooms] = useState<number | ''>('');
   const [checklist, setChecklist] = useState<ChecklistState>(emptyChecklist);
   const [complexity, setComplexity] = useState(emptyComplexity);
+  // Track which complexity fields were auto-populated (to show sync badge)
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
 
   const updatableProjects = projects.filter(p => p.status === 'Rejected' || p.status === 'To review');
 
-  // Pre-fill when selecting a project in Update mode
+  // In New mode: when SO number is typed, auto-fill complexity from project elements
+  useEffect(() => {
+    if (mode === 'New' && soNumber && soNumber.length > 3) {
+      const auto = getProjectComplexity(soNumber);
+      if (Object.keys(auto).length > 0) {
+        const filled = new Set<string>();
+        setComplexity(prev => {
+          const updated = { ...prev };
+          (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(key => {
+            if (auto[key] !== undefined) {
+              updated[key] = auto[key] as boolean;
+              if (auto[key]) filled.add(key);
+            }
+          });
+          return updated;
+        });
+        setAutoFilledFields(filled);
+      }
+    }
+  }, [soNumber, mode]);
+
+  // In Update mode: pre-fill from existing project
   useEffect(() => {
     if (mode === 'Update' && soNumber) {
       const existing = projects.find(p => p.id === soNumber && (p.status === 'Rejected' || p.status === 'To review'));
@@ -54,11 +77,17 @@ export const Phase1Form: React.FC = () => {
         setTotalRooms(existing.totalRooms);
         setChecklist(existing.checklist);
         setComplexity(existing.complexity);
+        // Also refresh auto-fill indicators
+        const auto = getProjectComplexity(soNumber);
+        const filled = new Set<string>();
+        (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(key => {
+          if (auto[key]) filled.add(key);
+        });
+        setAutoFilledFields(filled);
       }
     }
   }, [mode, soNumber, projects]);
 
-  // Reset form when switching to New mode
   useEffect(() => {
     if (mode === 'New') resetForm();
   }, [mode]);
@@ -70,9 +99,9 @@ export const Phase1Form: React.FC = () => {
     setTotalRooms('');
     setChecklist(emptyChecklist);
     setComplexity(emptyComplexity);
+    setAutoFilledFields(new Set());
   };
 
-  // Toggle a checklist item: if currently unchecked → stamp Date.now(), if checked → clear to false
   const handleChecklistToggle = (field: keyof ChecklistState) => {
     setChecklist(prev => ({
       ...prev,
@@ -82,6 +111,12 @@ export const Phase1Form: React.FC = () => {
 
   const handleComplexityChange = (field: keyof typeof complexity) => {
     setComplexity(prev => ({ ...prev, [field]: !prev[field] }));
+    // If user manually changes, remove the "auto" indicator for that field
+    setAutoFilledFields(prev => {
+      const next = new Set(prev);
+      next.delete(field);
+      return next;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent, forceReviewStatus: boolean = false) => {
@@ -137,7 +172,6 @@ export const Phase1Form: React.FC = () => {
     } else {
       const existing = projects.find(p => p.id === soNumber);
       if (!existing) return;
-
       const updatedProject: Project = {
         ...existing,
         projectName,
@@ -221,7 +255,7 @@ export const Phase1Form: React.FC = () => {
                   value={soNumber}
                   onChange={e => setSoNumber(e.target.value)}
                   className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-100 outline-none"
-                  placeholder="e.g., SO-12345"
+                  placeholder="e.g., 12345"
                 />
               </div>
             )}
@@ -247,8 +281,8 @@ export const Phase1Form: React.FC = () => {
                 className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-100 outline-none"
               >
                 <option value="">Select a designer...</option>
-                {designers.map(d => (
-                  <option key={d.name} value={d.name}>{d.name}</option>
+                {designerNames.map(d => (
+                  <option key={d} value={d}>{d}</option>
                 ))}
               </select>
             </div>
@@ -321,16 +355,26 @@ export const Phase1Form: React.FC = () => {
 
         {/* Technical Complexity */}
         <section className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-100 border-b border-gray-700 pb-2">Technical Complexity</h3>
-          <p className="text-sm text-gray-400">These items add points to the Index of Complexity (ICP) for Phase 2.</p>
+          <div className="flex items-center justify-between border-b border-gray-700 pb-2">
+            <h3 className="text-lg font-semibold text-gray-100">Technical Complexity</h3>
+            {autoFilledFields.size > 0 && (
+              <span className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-900/20 border border-emerald-800/30 px-2.5 py-1 rounded-full">
+                <Link2 size={11} />
+                {autoFilledFields.size} auto-synced from Project Elements
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-gray-400">
+            These items add points to the Index of Complexity (ICP). Pre-filled from Project Elements — editable if needed.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {([
-              { id: 'colorsDefined', label: 'Colors per room defined? (+2)' },
-              { id: 'thermofoilDoors', label: 'Thermofoil / Elements doors? (+1)' },
-              { id: 'customBoreHoles', label: 'Custom bore holes? (+4)' },
-              { id: 'routingRequired', label: 'Routing required? (+2)' },
-              { id: 'customPanels', label: 'Custom panels? (+1)' },
-            ] as { id: keyof typeof complexity; label: string }[]).map(item => (
+              { id: 'colorsDefined',   label: 'Colors per room defined? (+2)',        synced: false },
+              { id: 'thermofoilDoors', label: 'Thermofoil / Elements doors? (+1)',    synced: true },
+              { id: 'customBoreHoles', label: 'Custom bore holes / No Holes? (+4)',   synced: true },
+              { id: 'routingRequired', label: 'Routing / Dovetail required? (+2)',    synced: true },
+              { id: 'customPanels',    label: 'Custom panels / Extra elements? (+1)', synced: true },
+            ] as { id: keyof typeof complexity; label: string; synced: boolean }[]).map(item => (
               <label key={item.id} className="flex items-center space-x-3 cursor-pointer group w-fit">
                 <input
                   type="checkbox"
@@ -339,6 +383,11 @@ export const Phase1Form: React.FC = () => {
                   className="w-5 h-5 text-indigo-500 bg-gray-900 border-gray-600 rounded focus:ring-indigo-500 focus:ring-offset-gray-800"
                 />
                 <span className="text-gray-300 group-hover:text-gray-100 transition-colors">{item.label}</span>
+                {item.synced && autoFilledFields.has(item.id) && (
+                  <span title="Auto-synced from Project Elements" className="text-emerald-400">
+                    <Link2 size={12} />
+                  </span>
+                )}
               </label>
             ))}
           </div>

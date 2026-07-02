@@ -7,90 +7,116 @@ import { db, ref, set, onValue } from '../../utils/firebase';
 interface KpiContextType {
   projects: Project[];
   designers: Designer[];
+  designerNames: string[];
   addProject: (project: Project) => void;
   updateProject: (project: Project) => void;
+  getProjectComplexity: (soNumber: string) => Partial<Project['complexity']>;
 }
-
-const mockDesigners = [
-  'Monica Gabriel', 'Natalie Ball', 'Marsha Diquez', 'Iris Lopes',
-  'Kat Baumgartner', 'Melissa Barker', 'Nicole Dugan', 'Tricia Hatton',
-  'Blerta Veseli', 'Lana Kravtchenko', 'Krisztina Vizi', 'Luana Tamagnone',
-  'Russell Reiner', 'Mauricio Dasso', 'Sarah Manev', 'Caryn Henslovitz',
-  'Her Henslovitz', 'Caryn Heitlovitz', 'Her Heitlovitz', 'Michael Kaboskey',
-  'Malanie Dalfrey'
-];
 
 const KpiContext = createContext<KpiContextType | undefined>(undefined);
 
-export const KpiProvider: React.FC<{ children: ReactNode, externalData?: any, projectDesigners?: any }> = ({ children, externalData, projectDesigners }) => {
+export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; projectDesigners?: Record<string, string> }> = ({
+  children,
+  externalData,
+  projectDesigners = {},
+}) => {
   const [performanceProjects, setPerformanceProjects] = useState<Record<string, Partial<Project>>>({});
   const [projects, setProjects] = useState<Project[]>([]);
+  const [allowedDesigners, setAllowedDesigners] = useState<string[]>([]);
 
-  // 1. Fetch Performance metrics from Firebase
+  // 1. Fetch allowed_designers list from Firebase
+  useEffect(() => {
+    if (!db) return;
+    const designersRef = ref(db, 'allowed_designers');
+    const unsub = onValue(designersRef, (snapshot) => {
+      const val = snapshot.val();
+      if (!val) return;
+      let names: string[] = [];
+      if (Array.isArray(val)) names = val.filter(Boolean);
+      else if (typeof val === 'object') names = Object.values(val).filter(Boolean) as string[];
+      setAllowedDesigners(names);
+    });
+    return () => unsub();
+  }, []);
+
+  // 2. Fetch performance data from Firebase
   useEffect(() => {
     if (!db) return;
     const perfRef = ref(db, 'designer_performance_projects');
-    const unsubscribe = onValue(perfRef, (snapshot) => {
+    const unsub = onValue(perfRef, (snapshot) => {
       const val = snapshot.val();
-      if (val) {
-        setPerformanceProjects(val);
-      } else {
-        setPerformanceProjects({});
-      }
+      setPerformanceProjects(val || {});
     });
-    return () => unsubscribe();
+    return () => unsub();
   }, []);
 
-  // 2. Merge external SO data with performance metrics
+  // 3. Merge externalData + projectDesigners + performanceData
   useEffect(() => {
     if (!externalData?.priorityAnalysis) return;
 
-    const mergedProjects: Project[] = externalData.priorityAnalysis.map((p: any) => {
-      const so = p.so;
-      const designerName = (projectDesigners && projectDesigners[so]) ? projectDesigners[so] : (p.eng || 'Unassigned');
+    const merged: Project[] = externalData.priorityAnalysis.map((p: any) => {
+      const so = String(p.so);
+      const designerName = projectDesigners[so] || p.eng || 'Unassigned';
       const perfData = performanceProjects[so] || {};
 
+      // Auto-derive complexity from project materials data
+      const matReq = externalData.materialRequirements?.find((m: any) => String(m.so) === so);
+      const autoComplexity: Project['complexity'] = {
+        colorsDefined:     perfData.complexity?.colorsDefined     ?? false,
+        thermofoilDoors:   perfData.complexity?.thermofoilDoors   ?? (matReq?.thermofoil === 'Yes'),
+        customBoreHoles:   perfData.complexity?.customBoreHoles   ?? (matReq?.noHoles === 'Yes'),
+        routingRequired:   perfData.complexity?.routingRequired   ?? (matReq?.dovetail === 'Yes'),
+        customPanels:      perfData.complexity?.customPanels      ?? (matReq?.element === 'Yes'),
+      };
+
       return {
-        id: String(so),
-        createdAt: perfData.createdAt || Date.now(),
-        approvedAt: perfData.approvedAt || null,
-        projectName: p.name || `SO #${so}`,
-        designerName: designerName,
-        status: perfData.status || 'Pending',
-        totalRooms: perfData.totalRooms || 1,
-        icp: perfData.icp || 1,
-        phase1Score: perfData.phase1Score ?? null,
-        phase2Score: perfData.phase2Score ?? null,
+        id: so,
+        createdAt:    perfData.createdAt    ?? Date.now(),
+        approvedAt:   perfData.approvedAt   ?? null,
+        projectName:  p.name || `SO #${so}`,
+        designerName,
+        status:       perfData.status       ?? 'Pending',
+        totalRooms:   perfData.totalRooms   ?? 1,
+        icp:          perfData.icp          ?? 1,
+        phase1Score:  perfData.phase1Score  ?? null,
+        phase2Score:  perfData.phase2Score  ?? null,
         checklist: {
-          kcdFile: false,
-          jlContract: false,
-          quoteComplete: false,
-          drawingsSigned: false,
-          finalMeasurementsApplies: false,
-          finalMeasurementsDelivered: false,
-          ...(perfData.checklist || {})
+          kcdFile:                      false,
+          jlContract:                   false,
+          quoteComplete:                false,
+          drawingsSigned:               false,
+          finalMeasurementsApplies:     false,
+          finalMeasurementsDelivered:   false,
+          ...(perfData.checklist || {}),
         },
-        complexity: {
-          colorsDefined: false,
-          thermofoilDoors: false,
-          customBoreHoles: false,
-          routingRequired: false,
-          customPanels: false,
-          ...(perfData.complexity || {})
-        },
-        phase2Data: perfData.phase2Data || {
-          totalRedFlags: 0,
-          redFlagsOver4Days: 0
-        }
+        complexity: autoComplexity,
+        phase2Data: perfData.phase2Data ?? { totalRedFlags: 0, redFlagsOver4Days: 0 },
       };
     });
 
-    setProjects(mergedProjects);
+    setProjects(merged);
   }, [externalData, projectDesigners, performanceProjects]);
 
-  const designers: Designer[] = mockDesigners.map(name =>
-    calculateDesignerStats(name, projects)
-  );
+  // Dynamic unique list of designers: from Firebase + from project assignments
+  const designerNames: string[] = React.useMemo(() => {
+    const set = new Set<string>(allowedDesigners);
+    Object.values(projectDesigners).forEach(name => { if (name) set.add(name); });
+    return Array.from(set).sort();
+  }, [allowedDesigners, projectDesigners]);
+
+  const designers: Designer[] = designerNames.map(name => calculateDesignerStats(name, projects));
+
+  // Helper to get the auto-derived complexity for any SO (used in Phase1Form pre-fill)
+  const getProjectComplexity = (soNumber: string): Partial<Project['complexity']> => {
+    const matReq = externalData?.materialRequirements?.find((m: any) => String(m.so) === soNumber);
+    if (!matReq) return {};
+    return {
+      thermofoilDoors: matReq.thermofoil === 'Yes',
+      customBoreHoles: matReq.noHoles    === 'Yes',
+      routingRequired: matReq.dovetail   === 'Yes',
+      customPanels:    matReq.element    === 'Yes',
+    };
+  };
 
   const addProject = (project: Project) => {
     if (!db) return;
@@ -103,7 +129,7 @@ export const KpiProvider: React.FC<{ children: ReactNode, externalData?: any, pr
   };
 
   return (
-    <KpiContext.Provider value={{ projects, designers, addProject, updateProject }}>
+    <KpiContext.Provider value={{ projects, designers, designerNames, addProject, updateProject, getProjectComplexity }}>
       {children}
     </KpiContext.Provider>
   );
@@ -111,8 +137,6 @@ export const KpiProvider: React.FC<{ children: ReactNode, externalData?: any, pr
 
 export const useKpi = () => {
   const context = useContext(KpiContext);
-  if (context === undefined) {
-    throw new Error('useKpi must be used within a KpiProvider');
-  }
+  if (!context) throw new Error('useKpi must be used within a KpiProvider');
   return context;
 };

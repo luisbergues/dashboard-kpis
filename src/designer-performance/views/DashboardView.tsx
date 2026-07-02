@@ -1,65 +1,131 @@
 import React from 'react';
 import { useKpi } from '../context/KpiContext';
 import { Badge } from '../components/Badge';
+import { Users, FolderOpen, CheckCircle } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
   const { designers, projects } = useKpi();
 
-  const totalProjects = projects.length;
+  const totalProjects   = projects.length;
   const completedProjects = projects.filter(p => p.status === 'Completed').length;
-  
-  return (
-    <div className="space-y-6">
-      <header>
-        <h2 className="text-2xl font-bold text-gray-100">Leaderboard</h2>
-        <p className="text-gray-400 mt-1">Overview of designer performance and KPIs.</p>
-      </header>
+  const activeDesigners   = designers.filter(d => d.totalProjects > 0).length;
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-sm">
-          <h3 className="text-sm font-medium text-gray-400">Total Projects</h3>
-          <p className="text-3xl font-bold text-gray-100 mt-2">{totalProjects}</p>
-        </div>
-        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-sm">
-          <h3 className="text-sm font-medium text-gray-400">Completed Projects</h3>
-          <p className="text-3xl font-bold text-gray-100 mt-2">{completedProjects}</p>
-        </div>
-        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-sm">
-          <h3 className="text-sm font-medium text-gray-400">Active Designers</h3>
-          <p className="text-3xl font-bold text-gray-100 mt-2">{designers.length}</p>
-        </div>
+  const statCards = [
+    { label: 'Total Projects',    value: totalProjects,    icon: FolderOpen,   color: '#3b82f6' },
+    { label: 'Completed',         value: completedProjects, icon: CheckCircle, color: '#10b981' },
+    { label: 'Active Designers',  value: activeDesigners,  icon: Users,        color: '#8b5cf6' },
+  ];
+
+  return (
+    <div style={{ fontFamily: "'Inter', sans-serif" }}>
+      {/* Header */}
+      <div style={{ marginBottom: 28 }}>
+        <h2 style={{ color: '#f1f5f9', fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>Leaderboard</h2>
+        <p style={{ color: '#64748b', margin: '6px 0 0', fontSize: '0.9rem' }}>Designer performance overview and KPIs.</p>
       </div>
 
-      <div className="bg-gray-800 rounded-xl border border-gray-700 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-700">
-            <thead className="bg-gray-900/50">
+      {/* Stat Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 28 }}>
+        {statCards.map(({ label, value, icon: Icon, color }) => (
+          <div key={label} style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 14,
+            padding: '20px 22px',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+          }}>
+            <div style={{
+              width: 42, height: 42, borderRadius: 10,
+              background: `${color}20`,
+              border: `1px solid ${color}40`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <Icon size={20} color={color} />
+            </div>
+            <div>
+              <div style={{ color: '#64748b', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+                {label}
+              </div>
+              <div style={{ color: '#f1f5f9', fontSize: '1.6rem', fontWeight: 700, lineHeight: 1 }}>
+                {value}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Leaderboard Table */}
+      <div style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        borderRadius: 16,
+        overflow: 'hidden',
+        backdropFilter: 'blur(8px)',
+      }}>
+        <div style={{
+          padding: '14px 24px',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          background: 'rgba(0,0,0,0.15)',
+        }}>
+          <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Designer Rankings
+          </span>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Designer Name</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Completed Projects</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Avg P1 Score (ICE)</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Avg P2 Score (IFR)</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Global KPI</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Performance</th>
+                {['Rank', 'Designer', 'Projects', 'Avg P1 (ICE)', 'Avg P2 (IFR)', 'Global KPI', 'Performance'].map(col => (
+                  <th key={col} style={{
+                    padding: '10px 20px',
+                    textAlign: 'left',
+                    color: '#475569',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  }}>
+                    {col}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-700 bg-gray-800">
-              {designers.map((designer) => (
-                <tr key={designer.name} className="hover:bg-gray-700/50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-200">{designer.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{designer.totalProjects}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{designer.avgPhase1Score}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{designer.avgPhase2Score}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-100">{designer.globalKpi}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {designer.totalProjects > 0 ? (
-                      <Badge score={designer.globalKpi} />
-                    ) : (
-                      <span className="text-xs text-gray-500 italic">No data</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+            <tbody>
+              {designers
+                .sort((a, b) => b.globalKpi - a.globalKpi)
+                .map((designer, idx) => (
+                  <tr
+                    key={designer.name}
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <td style={{ padding: '12px 20px', color: '#475569', fontSize: '0.8rem', fontWeight: 600 }}>
+                      {idx + 1 <= 3 ? ['🥇','🥈','🥉'][idx] : `#${idx + 1}`}
+                    </td>
+                    <td style={{ padding: '12px 20px', color: '#e2e8f0', fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                      {designer.name}
+                    </td>
+                    <td style={{ padding: '12px 20px', color: '#94a3b8', fontSize: '0.85rem' }}>{designer.totalProjects}</td>
+                    <td style={{ padding: '12px 20px', color: '#94a3b8', fontSize: '0.85rem' }}>{designer.avgPhase1Score || '—'}</td>
+                    <td style={{ padding: '12px 20px', color: '#94a3b8', fontSize: '0.85rem' }}>{designer.avgPhase2Score || '—'}</td>
+                    <td style={{ padding: '12px 20px', color: '#f1f5f9', fontSize: '0.95rem', fontWeight: 700 }}>
+                      {designer.globalKpi || '—'}
+                    </td>
+                    <td style={{ padding: '12px 20px' }}>
+                      {designer.totalProjects > 0 ? (
+                        <Badge score={designer.globalKpi} />
+                      ) : (
+                        <span style={{ color: '#334155', fontSize: '0.78rem', fontStyle: 'italic' }}>No data yet</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
