@@ -118,7 +118,8 @@ export const Phase1Form: React.FC = () => {
   const [complexity, setComplexity]   = useState(emptyComplexity);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
 
-  const updatableProjects = projects.filter(p => p.status === 'Rejected' || p.status === 'To review');
+  // Any project that has been evaluated (not Pending) can be updated to correct mistakes
+  const updatableProjects = projects.filter(p => p.status !== 'Pending');
   // Active projects = Pending (not yet evaluated in Phase 1)
   const activeProjects = projects.filter(p => p.status === 'Pending');
 
@@ -335,8 +336,7 @@ export const Phase1Form: React.FC = () => {
             <Field label="Total Rooms" half>
               <input type="number" min="1" value={totalRooms}
                 onChange={e => setTotalRooms(e.target.value === '' ? '' : Number(e.target.value))}
-                readOnly={mode === 'Update'}
-                style={{ ...inputStyle, opacity: mode === 'Update' ? 0.5 : 1 }} />
+                style={inputStyle} />
             </Field>
           </div>
         </Card>
