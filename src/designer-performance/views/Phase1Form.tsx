@@ -130,6 +130,8 @@ export const Phase1Form: React.FC = () => {
     if (proj) {
       setProjectName(proj.projectName);
       if (proj.designerName && proj.designerName !== 'Unassigned') setDesignerName(proj.designerName);
+      // Removed auto-fill for totalRooms per user request so it must be entered manually
+      setTotalRooms('');
     }
     // auto-fill complexity from project elements
     const auto = getProjectComplexity(selectedSo);
@@ -323,14 +325,14 @@ export const Phase1Form: React.FC = () => {
             </Field>
           </div>
 
-          {mode === 'Update' && (
-            <div style={{ display: 'flex', gap: 14, marginTop: 14, flexWrap: 'wrap' }}>
-              <Field label="Total Rooms" half>
-                <input type="number" min="1" value={totalRooms} readOnly
-                  style={{ ...inputStyle, opacity: 0.5 }} />
-              </Field>
-            </div>
-          )}
+          <div style={{ display: 'flex', gap: 14, marginTop: 14, flexWrap: 'wrap' }}>
+            <Field label="Total Rooms" half>
+              <input type="number" min="1" value={totalRooms}
+                onChange={e => setTotalRooms(e.target.value === '' ? '' : Number(e.target.value))}
+                readOnly={mode === 'Update'}
+                style={{ ...inputStyle, opacity: mode === 'Update' ? 0.5 : 1 }} />
+            </Field>
+          </div>
         </Card>
 
         {/* ── Checklist ───────────────────────────────────────────── */}

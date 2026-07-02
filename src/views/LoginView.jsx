@@ -58,36 +58,9 @@ export default function LoginView({ data }) {
     }
   }, []);
 
-  // Real-time listener for allowed designers list in Firebase
-  useEffect(() => {
-    if (!db) return;
-
-    const designersRef = ref(db, 'allowed_designers');
-    const unsubscribe = onValue(designersRef, (snapshot) => {
-      const dbVal = snapshot.val();
-      if (dbVal) {
-        let namesArray = [];
-        if (Array.isArray(dbVal)) {
-          namesArray = dbVal.filter(Boolean);
-        } else if (typeof dbVal === 'object') {
-          namesArray = Object.values(dbVal).filter(Boolean);
-        }
-        setAllowedDesigners(namesArray);
-      } else {
-        // Initialize Firebase with the default names if the path is empty
-        try {
-          set(ref(db, 'allowed_designers'), DEFAULT_DESIGNERS);
-        } catch (err) {
-          console.error('Failed to initialize allowed_designers in Firebase:', err);
-        }
-        setAllowedDesigners(DEFAULT_DESIGNERS);
-      }
-    }, (error) => {
-      console.error('Firebase allowed_designers listener error:', error);
-    });
-
-    return () => unsubscribe();
-  }, [db]);
+  // We no longer read allowed_designers from Firebase directly to avoid permission 
+  // denied errors on the login screen before authentication.
+  // We rely on the DEFAULT_DESIGNERS array and dynamically collected names from the spreadsheet.
 
   // Merge predefined/Firebase allowed designers with active spreadsheet designers
   useEffect(() => {
