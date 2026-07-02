@@ -205,8 +205,8 @@ export const Phase1Form: React.FC = () => {
     if (!soNumber || !projectName || !designerName || totalRooms === '') {
       toast.error('Please fill in all basic project details.'); return;
     }
-    if (mode === 'New' && projects.some(p => p.id === soNumber)) {
-      toast.error('A project with this SO Number already exists.'); return;
+    if (mode === 'New' && projects.some(p => p.id === soNumber && p.status !== 'Pending')) {
+      toast.error('A project with this SO Number has already been processed.'); return;
     }
     let finalStatus: ProjectStatus, score: number | null;
     if (forceReview) { finalStatus = 'To review'; score = null; }
@@ -216,9 +216,15 @@ export const Phase1Form: React.FC = () => {
     const now = Date.now();
 
     if (mode === 'New') {
-      addProject({ id: soNumber, createdAt: now, approvedAt: finalStatus === 'Approved' ? now : null,
+      const existing = projects.find(p => p.id === soNumber);
+      updateProject({ 
+        ...(existing || {}),
+        id: soNumber, 
+        createdAt: existing?.createdAt || now, 
+        approvedAt: finalStatus === 'Approved' ? now : null,
         projectName, designerName, status: finalStatus, totalRooms: Number(totalRooms), icp,
-        phase1Score: score, phase2Score: null, checklist, complexity });
+        phase1Score: score, phase2Score: existing?.phase2Score ?? null, checklist, complexity 
+      });
       toast.success(finalStatus === 'Approved' ? 'Project Approved! ✓' : finalStatus === 'To review' ? 'Saved for review.' : 'Registered (missing docs).');
       resetForm();
     } else {
