@@ -64,7 +64,7 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
 
     const merged: Project[] = externalData.priorityAnalysis.map((p: any) => {
       const so = String(p.so);
-      const designerName = projectDesigners[so] || p.eng || 'Unassigned';
+      const baseDesignerName = projectDesigners[so] || 'Unassigned';
       const perfData = performanceProjects[so] || {};
 
       // Auto-derive complexity from project materials data
@@ -82,7 +82,7 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
         createdAt:    perfData.createdAt    ?? Date.now(),
         approvedAt:   perfData.approvedAt   ?? null,
         projectName:  p.name || `SO #${so}`,
-        designerName,
+        designerName: perfData.designerName || baseDesignerName,
         status:       perfData.status       ?? 'Pending',
         totalRooms:   perfData.totalRooms   ?? 1,
         icp:          perfData.icp          ?? 1,
