@@ -1,153 +1,289 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, Calendar, CheckCircle2, User, Layers, CheckSquare, Zap, Target } from 'lucide-react';
 import type { Project } from '../types';
+
+/* ── design tokens ─────────────────────────────────────────────── */
+const T = {
+  cardBg:     '#1C1C22',
+  cardBorder: '#26272C',
+  bgSurface:  '#0F0F12',
+  textPrimary:   '#FFFFFF',
+  textSecondary: '#94A3B8',
+  textMuted:     '#64748B',
+  blue:    '#3B82F6',
+  green:   '#10B981',
+  yellow:  '#EAB308',
+  red:     '#EF4444',
+  radiusLg: 28,
+  radiusMd: 20,
+  radiusPill: 100,
+};
 
 interface ModalProps {
   project: Project | null;
   onClose: () => void;
 }
 
+const MetricPill: React.FC<{ icon?: React.ReactNode; label: string; color: string; bgColor: string }> = ({ icon, label, color, bgColor }) => (
+  <div style={{
+    display: 'flex', alignItems: 'center', gap: 6,
+    background: bgColor, border: `1px solid ${color}30`,
+    color: color, padding: '6px 12px', borderRadius: T.radiusPill,
+    fontSize: '0.8rem', fontWeight: 600,
+  }}>
+    {icon}
+    {label}
+  </div>
+);
+
+const ChecklistItem: React.FC<{ checked: boolean; label: string; date?: number | false }> = ({ checked, label, date }) => (
+  <div style={{
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '12px 16px', background: T.bgSurface, border: `1px solid ${T.cardBorder}`,
+    borderRadius: 12,
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{
+        width: 20, height: 20, borderRadius: '50%',
+        background: checked ? T.green : 'transparent',
+        border: `2px solid ${checked ? T.green : T.cardBorder}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {checked && <CheckCircle2 size={12} color="#fff" />}
+      </div>
+      <span style={{ color: checked ? T.textPrimary : T.textSecondary, fontSize: '0.85rem' }}>
+        {label}
+      </span>
+    </div>
+    {checked && date && (
+      <span style={{ fontSize: '0.75rem', color: T.textMuted }}>
+        {new Date(date).toLocaleDateString()}
+      </span>
+    )}
+  </div>
+);
+
 export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) => {
   if (!project) return null;
 
+  // Calculate checklist progress
+  const checklistItems = [
+    { key: 'kcdFile', label: 'KCD File' },
+    { key: 'jlContract', label: 'JL Contract' },
+    { key: 'quoteComplete', label: 'Quote Complete' },
+    { key: 'drawingsSigned', label: 'Drawings Signed' },
+  ] as const;
+  
+  let checkedCount = checklistItems.filter(i => project.checklist[i.key] !== false).length;
+  let totalItems = checklistItems.length;
+  if (project.checklist.finalMeasurementsApplies !== false) {
+    totalItems++;
+    if (project.checklist.finalMeasurementsDelivered !== false) checkedCount++;
+  }
+  const progressPercent = totalItems > 0 ? Math.round((checkedCount / totalItems) * 100) : 0;
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Completed': return T.green;
+      case 'Approved': return T.blue;
+      case 'To review': return T.yellow;
+      case 'Rejected': return T.red;
+      default: return T.textSecondary;
+    }
+  };
+  const statusColor = getStatusColor(project.status);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden">
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 50,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 16, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+      fontFamily: "'Inter', sans-serif"
+    }}>
+      <div style={{
+        background: T.cardBg, border: `1px solid ${T.cardBorder}`,
+        borderRadius: T.radiusLg, width: '100%', maxWidth: 800,
+        maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+        boxShadow: '0 24px 50px rgba(0,0,0,0.5)', overflow: 'hidden'
+      }}>
         
-        {/* Header */}
-        <div className="flex justify-between items-start p-6 border-b border-gray-700 bg-gray-800">
+        {/* Header content with scrollable area below */}
+        <div style={{ padding: '28px 32px 20px', borderBottom: `1px solid ${T.cardBorder}`, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          
+          {/* Top pills */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+            <div style={{
+              background: 'rgba(59,130,246,0.15)', color: T.blue, border: `1px solid rgba(59,130,246,0.3)`,
+              padding: '6px 14px', borderRadius: T.radiusPill, fontSize: '0.85rem', fontWeight: 700,
+            }}>
+              SO #{project.id}
+            </div>
+            
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <MetricPill label={project.status} color={statusColor} bgColor={`${statusColor}15`} />
+              <MetricPill icon={<Layers size={14} />} label={`${project.totalRooms} Rooms`} color={T.textSecondary} bgColor="rgba(255,255,255,0.05)" />
+              <MetricPill icon={<User size={14} />} label={project.designerName} color={T.textSecondary} bgColor="rgba(255,255,255,0.05)" />
+              <button onClick={onClose} style={{
+                background: 'transparent', border: 'none', color: T.textMuted, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', padding: '4px', marginLeft: 8
+              }}>
+                <X size={24} />
+              </button>
+            </div>
+          </div>
+
+          {/* Title & Date */}
           <div>
-            <h2 className="text-2xl font-bold text-gray-100">{project.projectName}</h2>
-            <p className="text-gray-400 mt-1">SO Number: {project.id} | Designer: {project.designerName}</p>
-            <div className="flex gap-4 mt-2 text-sm text-gray-500">
-              <span>Registered: {new Date(project.createdAt).toLocaleDateString()}</span>
+            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.8rem', fontWeight: 700, color: T.textPrimary, margin: '0 0 8px 0', lineHeight: 1.2 }}>
+              {project.projectName}
+            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: T.textMuted, fontSize: '0.85rem' }}>
+              <Calendar size={14} />
+              Registered: {new Date(project.createdAt).toLocaleDateString()}
               {project.approvedAt && (
-                <span className="text-blue-400 font-medium">Approved: {new Date(project.approvedAt).toLocaleDateString()}</span>
+                <>
+                  <span style={{ margin: '0 4px' }}>•</span>
+                  <span style={{ color: T.blue }}>Approved: {new Date(project.approvedAt).toLocaleDateString()}</span>
+                </>
               )}
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 text-gray-500 hover:text-gray-300 hover:bg-gray-700 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          {/* Progress Bar */}
+          <div style={{ marginTop: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ color: T.textSecondary, fontSize: '0.8rem', fontWeight: 600 }}>Checklist Progress</span>
+              <span style={{ color: T.green, fontSize: '0.8rem', fontWeight: 700 }}>{progressPercent}%</span>
+            </div>
+            <div style={{ height: 6, background: T.bgSurface, borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', width: `${progressPercent}%`,
+                background: `linear-gradient(90deg, ${T.blue}, ${T.green})`,
+                borderRadius: 10, transition: 'width 0.5s ease-out'
+              }} />
+            </div>
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 max-h-[70vh] overflow-y-auto space-y-8 bg-gray-900">
+        {/* Scrollable Body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-              <span className="block text-xs text-gray-400 uppercase font-semibold">Status</span>
-              <span className={`block mt-1 font-bold ${
-                project.status === 'Completed' ? 'text-green-400' :
-                project.status === 'Approved' ? 'text-blue-400' :
-                project.status === 'To review' ? 'text-yellow-400' :
-                'text-red-400'
-              }`}>{project.status}</span>
-            </div>
-            <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-              <span className="block text-xs text-gray-400 uppercase font-semibold">Total Rooms</span>
-              <span className="block mt-1 font-bold text-gray-100">{project.totalRooms}</span>
-            </div>
-            <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-              <span className="block text-xs text-gray-400 uppercase font-semibold">Phase 1 (ICE)</span>
-              <span className="block mt-1 font-bold text-gray-100">{project.phase1Score ?? 'N/A'}</span>
-            </div>
-            <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-              <span className="block text-xs text-gray-400 uppercase font-semibold">Phase 2 (IFR)</span>
-              <span className="block mt-1 font-bold text-gray-100">{project.phase2Score ?? 'N/A'}</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
             
-            {/* Phase 1 Summary */}
-            <section className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-100 border-b border-gray-700 pb-2">Phase 1 Summary</h3>
+            {/* Left Column: Checklist & Complexity */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
               
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-gray-300">Checklist</h4>
-                <ul className="text-sm text-gray-400 space-y-2 bg-gray-800 p-3 rounded-lg border border-gray-700">
-                  {([
-                    { key: 'kcdFile', label: 'KCD File' },
-                    { key: 'jlContract', label: 'JL Contract' },
-                    { key: 'quoteComplete', label: 'Quote Complete' },
-                    { key: 'drawingsSigned', label: 'Drawings Signed' },
-                  ] as { key: keyof typeof project.checklist; label: string }[]).map(item => (
-                    <li key={item.key} className="flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-2">
-                        {project.checklist[item.key] !== false ? '✅' : '❌'}
-                        {item.label}
-                      </span>
-                      {project.checklist[item.key] !== false && (
-                        <span className="text-xs text-blue-400 bg-blue-900/20 border border-blue-800/30 px-2 py-0.5 rounded whitespace-nowrap">
-                          {new Date(project.checklist[item.key] as number).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                      )}
-                    </li>
+              <div>
+                <h3 style={{ color: T.textPrimary, fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <CheckSquare size={16} color={T.blue} /> Checklist
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {checklistItems.map(item => (
+                    <ChecklistItem key={item.key} label={item.label} checked={project.checklist[item.key] !== false} date={project.checklist[item.key]} />
                   ))}
                   {project.checklist.finalMeasurementsApplies !== false && (
-                    <li className="flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-2">
-                        {project.checklist.finalMeasurementsDelivered !== false ? '✅' : '❌'}
-                        Final Measurements Delivered
-                      </span>
-                      {project.checklist.finalMeasurementsDelivered !== false && (
-                        <span className="text-xs text-blue-400 bg-blue-900/20 border border-blue-800/30 px-2 py-0.5 rounded whitespace-nowrap">
-                          {new Date(project.checklist.finalMeasurementsDelivered as number).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                      )}
-                    </li>
+                    <ChecklistItem 
+                      label="Final Measurements Delivered" 
+                      checked={project.checklist.finalMeasurementsDelivered !== false} 
+                      date={project.checklist.finalMeasurementsDelivered} 
+                    />
                   )}
-                </ul>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-gray-300">Technical Complexity</h4>
-                <ul className="text-sm text-gray-400 space-y-1 bg-gray-800 p-3 rounded-lg border border-gray-700">
-                  <li>Colors Defined (+2): {project.complexity.colorsDefined ? '✅' : '❌'}</li>
-                  <li>Thermofoil/Elements (+1): {project.complexity.thermofoilDoors ? '✅' : '❌'}</li>
-                  <li>Custom Bore Holes (+4): {project.complexity.customBoreHoles ? '✅' : '❌'}</li>
-                  <li>Routing Required (+2): {project.complexity.routingRequired ? '✅' : '❌'}</li>
-                  <li>Custom Panels (+1): {project.complexity.customPanels ? '✅' : '❌'}</li>
-                </ul>
-              </div>
-            </section>
-
-            {/* Phase 2 Summary */}
-            <section className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-100 border-b border-gray-700 pb-2">Phase 2 Summary</h3>
-              
-              <div className="bg-blue-900/20 border border-blue-800/30 p-4 rounded-lg flex justify-between items-center">
-                <span className="text-blue-300 font-medium">Index of Complexity (ICP)</span>
-                <span className="text-xl font-bold text-blue-400">{project.icp}</span>
-              </div>
-
-              {project.phase2Data ? (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-gray-300">Friction Metrics</h4>
-                  <ul className="text-sm text-gray-400 space-y-1 bg-gray-800 p-3 rounded-lg border border-gray-700">
-                    <li>Total Red Flags: <span className="font-bold text-red-400">{project.phase2Data.totalRedFlags}</span></li>
-                    <li>Red Flags &gt; 4 Days: <span className="font-bold text-red-400">{project.phase2Data.redFlagsOver4Days}</span></li>
-                  </ul>
                 </div>
-              ) : (
-                <div className="p-4 bg-gray-800 border border-gray-700 rounded-lg text-center text-sm text-gray-500 italic">
-                  Project has not completed Phase 2 yet.
+              </div>
+
+              <div>
+                <h3 style={{ color: T.textPrimary, fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <Zap size={16} color={T.yellow} /> Project Elements
+                </h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {([
+                    { key: 'colorsDefined', label: 'Colors Defined' },
+                    { key: 'thermofoilDoors', label: 'Thermofoil' },
+                    { key: 'customBoreHoles', label: 'Custom Holes' },
+                    { key: 'routingRequired', label: 'Routing / Dovetail' },
+                    { key: 'customPanels', label: 'Custom Panels' },
+                  ] as const).map(item => {
+                    const active = project.complexity[item.key];
+                    return (
+                      <div key={item.key} style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '6px 12px', borderRadius: T.radiusPill,
+                        background: active ? 'rgba(16,185,129,0.1)' : T.bgSurface,
+                        border: `1px solid ${active ? 'rgba(16,185,129,0.3)' : T.cardBorder}`,
+                        color: active ? T.green : T.textSecondary, fontSize: '0.8rem',
+                      }}>
+                        {active && <CheckCircle2 size={12} />}
+                        {item.label}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Right Column: Scores & Metrics */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              
+              <div>
+                <h3 style={{ color: T.textPrimary, fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <Target size={16} color={T.blue} /> Performance Scores
+                </h3>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  {/* Phase 1 Score */}
+                  <div style={{ background: T.bgSurface, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: '16px' }}>
+                    <div style={{ color: T.textSecondary, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Phase 1 (ICE)</div>
+                    <div style={{ fontSize: '1.8rem', fontWeight: 700, color: project.phase1Score !== null ? T.textPrimary : T.textMuted }}>
+                      {project.phase1Score ?? '—'}
+                    </div>
+                  </div>
+                  
+                  {/* Phase 2 Score */}
+                  <div style={{ background: T.bgSurface, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: '16px' }}>
+                    <div style={{ color: T.textSecondary, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Phase 2 (IFR)</div>
+                    <div style={{ fontSize: '1.8rem', fontWeight: 700, color: project.phase2Score !== null ? T.textPrimary : T.textMuted }}>
+                      {project.phase2Score ?? '—'}
+                    </div>
+                  </div>
+                  
+                  {/* ICP */}
+                  <div style={{ gridColumn: '1 / -1', background: 'rgba(59,130,246,0.05)', border: `1px solid rgba(59,130,246,0.2)`, borderRadius: 16, padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ color: T.blue, fontSize: '0.85rem', fontWeight: 600 }}>Index of Complexity (ICP)</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 700, color: T.blue }}>{project.icp}</div>
+                  </div>
+                </div>
+              </div>
+
+              {project.phase2Data && (
+                <div>
+                  <h3 style={{ color: T.textPrimary, fontSize: '1rem', fontWeight: 600, marginBottom: 12 }}>Friction Metrics</h3>
+                  <div style={{ background: T.bgSurface, border: `1px solid ${T.cardBorder}`, borderRadius: 16, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: `1px solid ${T.cardBorder}` }}>
+                      <span style={{ color: T.textSecondary, fontSize: '0.85rem' }}>Total Red Flags</span>
+                      <span style={{ color: T.red, fontWeight: 600 }}>{project.phase2Data.totalRedFlags}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px' }}>
+                      <span style={{ color: T.textSecondary, fontSize: '0.85rem' }}>Red Flags &gt; 4 Days</span>
+                      <span style={{ color: T.red, fontWeight: 600 }}>{project.phase2Data.redFlagsOver4Days}</span>
+                    </div>
+                  </div>
                 </div>
               )}
-            </section>
 
+            </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-700 bg-gray-800 flex justify-end">
-          <button 
-            onClick={onClose}
-            className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-medium rounded-lg transition-colors border border-gray-600"
+        <div style={{ padding: '16px 32px', borderTop: `1px solid ${T.cardBorder}`, background: T.cardBg, display: 'flex', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{
+            background: 'rgba(255,255,255,0.05)', border: `1px solid rgba(255,255,255,0.1)`,
+            color: T.textPrimary, padding: '8px 20px', borderRadius: T.radiusPill,
+            fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
           >
             Close Details
           </button>
