@@ -13,6 +13,28 @@ interface KpiContextType {
   getProjectComplexity: (soNumber: string) => Partial<Project['complexity']>;
 }
 
+// Canonical list of designers — separate from engineers
+const CANONICAL_DESIGNERS: string[] = [
+  'Monica Gabriel',
+  'Natalie Ball',
+  'Marsha Diquez',
+  'Iris Lopes',
+  'Kat Baumgartner',
+  'Melissa Barker',
+  'Nicole Dugan',
+  'Tricia Hatton',
+  'Blerta Veseli',
+  'Lana Kravtchenko',
+  'Krisztina Vizi',
+  'Luana Tamagnone',
+  'Russell Reiner',
+  'Mauricio Dasso',
+  'Sarah Manev',
+  'Caryn Henslovitz',
+  'Michael Kaboskey',
+  'Malanie Dalfrey',
+];
+
 const KpiContext = createContext<KpiContextType | undefined>(undefined);
 
 export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; projectDesigners?: Record<string, string> }> = ({
@@ -22,22 +44,8 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
 }) => {
   const [performanceProjects, setPerformanceProjects] = useState<Record<string, Partial<Project>>>({});
   const [projects, setProjects] = useState<Project[]>([]);
-  const [allowedDesigners, setAllowedDesigners] = useState<string[]>([]);
 
-  // 1. Fetch allowed_designers list from Firebase
-  useEffect(() => {
-    if (!db) return;
-    const designersRef = ref(db, 'allowed_designers');
-    const unsub = onValue(designersRef, (snapshot) => {
-      const val = snapshot.val();
-      if (!val) return;
-      let names: string[] = [];
-      if (Array.isArray(val)) names = val.filter(Boolean);
-      else if (typeof val === 'object') names = Object.values(val).filter(Boolean) as string[];
-      setAllowedDesigners(names);
-    });
-    return () => unsub();
-  }, []);
+  // 1. Designer list is canonical (CANONICAL_DESIGNERS) — not read from allowed_designers (that node stores engineers)
 
   // 2. Fetch performance data from Firebase
   useEffect(() => {
@@ -97,12 +105,12 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
     setProjects(merged);
   }, [externalData, projectDesigners, performanceProjects]);
 
-  // Dynamic unique list of designers: from Firebase + from project assignments
+  // designerNames: canonical list + any extra assigned via projectDesigners
   const designerNames: string[] = React.useMemo(() => {
-    const set = new Set<string>(allowedDesigners);
-    Object.values(projectDesigners).forEach(name => { if (name) set.add(name); });
-    return Array.from(set).sort();
-  }, [allowedDesigners, projectDesigners]);
+    const s = new Set<string>(CANONICAL_DESIGNERS);
+    Object.values(projectDesigners).forEach(name => { if (name) s.add(name); });
+    return Array.from(s).sort();
+  }, [projectDesigners]);
 
   const designers: Designer[] = designerNames.map(name => calculateDesignerStats(name, projects));
 

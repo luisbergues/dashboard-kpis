@@ -25,7 +25,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView })
         borderRight: '1px solid rgba(255,255,255,0.07)',
         display: 'flex',
         flexDirection: 'column',
-        height: '100%',
+        height: 'calc(100% - 16px)',
+        margin: '8px 0 8px 8px',
+        borderRadius: 16,
+        overflow: 'hidden',
       }}
     >
       {/* Header */}
