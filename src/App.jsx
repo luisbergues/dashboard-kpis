@@ -13,6 +13,7 @@ import LoginView from './views/LoginView'
 import MyProjectsView from './views/MyProjectsView'
 import DesignQualityView from './views/DesignQualityView'
 import ProjectDetailView from './views/ProjectDetailView'
+import DesignerPerformanceApp from './designer-performance/App'
 import ErrorBoundary from './components/ErrorBoundary'
 import NotificationBubble from './components/NotificationBubble'
 import ProjectChatbot from './components/ProjectChatbot'
@@ -480,7 +481,7 @@ function App() {
     const isDesigner = userProfile?.role === 'designer';
 
     // Redirect designer away from restricted tabs
-    if (isDesigner && !['pipeline', 'calendar'].includes(activeTab)) {
+    if (isDesigner && !['pipeline', 'calendar', 'designer-performance'].includes(activeTab)) {
       setTimeout(() => setActiveTab('pipeline'), 0);
       return <div className="loading-state">Loading...</div>;
     }
@@ -499,6 +500,8 @@ function App() {
           return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
         }
         return isDesigner ? null : <DesignQualityView data={mergedData} />;
+      case 'designer-performance':
+        return <DesignerPerformanceApp data={mergedData} projectDesigners={projectDesigners} />;
       default: return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
     }
   };

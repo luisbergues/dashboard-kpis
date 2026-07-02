@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User, Briefcase, ChevronDown, Award, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User, Briefcase, ChevronDown, Award, Sun, Moon, Activity } from 'lucide-react';
 import { auth, db, ref, set, signOut } from '../utils/firebase';
 import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
@@ -17,13 +17,15 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
   const tabs = isDesigner ? [
     { id: 'pipeline', label: t('navbar.pipeline'), icon: ListTodo },
     { id: 'calendar', label: t('navbar.calendar'), icon: CalendarDays },
+    { id: 'designer-performance', label: 'Designer Perf.', icon: Activity },
   ] : [
     { id: 'dashboard', label: t('navbar.dashboard'), icon: LayoutDashboard },
     { id: 'calendar', label: t('navbar.calendar'), icon: CalendarDays },
     ...(userProfile ? [{ id: 'my-projects', label: t('navbar.myProjects'), icon: Briefcase }] : []),
     { id: 'pipeline', label: t('navbar.pipeline'), icon: ListTodo },
     { id: 'materials', label: t('navbar.materials'), icon: Hammer },
-    ...(userProfile?.role !== 'administrative' ? [{ id: 'quality', label: 'Team Stats', icon: Award }] : [])
+    ...(userProfile?.role !== 'administrative' ? [{ id: 'quality', label: 'Team Stats', icon: Award }] : []),
+    { id: 'designer-performance', label: 'Designer Perf.', icon: Activity }
   ];
 
   const openModal = () => {

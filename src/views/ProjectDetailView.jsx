@@ -160,7 +160,7 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
         <h3 style={styles.sectionTitle}>Process Timeline</h3>
         <div style={styles.stagesRow}>
           {STAGES.map((stage, idx) => {
-            const isCompleted = stages.includes(stage.id);
+            const isCompleted = stages[idx]?.completed;
             return (
               <div key={stage.id} style={styles.stageItem}>
                 <div style={{
@@ -173,7 +173,7 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
                 {idx < STAGES.length - 1 && (
                   <div style={{
                     ...styles.stageConnector,
-                    background: isCompleted && stages.includes(STAGES[idx + 1]?.id) ? '#10b981' : 'rgba(255,255,255,0.1)'
+                    background: isCompleted && stages[idx + 1]?.completed ? '#10b981' : 'rgba(255,255,255,0.1)'
                   }} />
                 )}
                 <span style={{ ...styles.stageLabel, color: isCompleted ? '#10b981' : '#94a3b8' }}>
