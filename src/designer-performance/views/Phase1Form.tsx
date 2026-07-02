@@ -119,8 +119,34 @@ export const Phase1Form: React.FC = () => {
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
 
   const updatableProjects = projects.filter(p => p.status === 'Rejected' || p.status === 'To review');
+  // Active projects = Pending (not yet evaluated in Phase 1)
+  const activeProjects = projects.filter(p => p.status === 'Pending');
 
-  /* auto-fill complexity from project elements when SO typed */
+  /* When selecting an active project in New mode, auto-fill name + designer */
+  const handleNewProjectSelect = (selectedSo: string) => {
+    setSoNumber(selectedSo);
+    if (!selectedSo) { resetForm(); return; }
+    const proj = projects.find(p => p.id === selectedSo);
+    if (proj) {
+      setProjectName(proj.projectName);
+      if (proj.designerName && proj.designerName !== 'Unassigned') setDesignerName(proj.designerName);
+    }
+    // auto-fill complexity from project elements
+    const auto = getProjectComplexity(selectedSo);
+    if (Object.keys(auto).length > 0) {
+      const filled = new Set<string>();
+      setComplexity(prev => {
+        const updated = { ...prev };
+        (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(k => {
+          if (auto[k] !== undefined) { updated[k] = auto[k] as boolean; if (auto[k]) filled.add(k); }
+        });
+        return updated;
+      });
+      setAutoFilledFields(filled);
+    }
+  };
+
+  /* auto-fill complexity from project elements when SO is typed (fallback for manual entry) */
   useEffect(() => {
     if (mode === 'New' && soNumber && soNumber.length > 3) {
       const auto = getProjectComplexity(soNumber);
@@ -253,17 +279,32 @@ export const Phase1Form: React.FC = () => {
                 ))}
               </select>
             </Field>
+          // NEW MODE: dropdown of active (Pending) projects
           ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
-              <Field label="SO Number" half>
-                <input value={soNumber} onChange={e => setSoNumber(e.target.value)}
-                  placeholder="e.g., 12345" style={inputStyle} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <Field label="SO Number — Active Project">
+                <select
+                  value={soNumber}
+                  onChange={e => handleNewProjectSelect(e.target.value)}
+                  style={{ ...selectStyle, cursor: 'pointer', appearance: 'none' }}
+                >
+                  <option value="">Select an active project…</option>
+                  {activeProjects.map(p => (
+                    <option key={p.id} value={p.id}>
+                      #{p.id} — {p.projectName}{p.designerName && p.designerName !== 'Unassigned' ? ` (${p.designerName})` : ''}
+                    </option>
+                  ))}
+                </select>
               </Field>
-              <Field label="Total Rooms" half>
-                <input type="number" min="1" value={totalRooms}
-                  onChange={e => setTotalRooms(e.target.value === '' ? '' : Number(e.target.value))}
-                  style={inputStyle} />
-              </Field>
+              {activeProjects.length === 0 && (
+                <div style={{
+                  padding: '10px 16px', borderRadius: T.radiusMd,
+                  background: 'rgba(234,179,8,0.07)', border: '1px solid rgba(234,179,8,0.2)',
+                  color: T.yellow, fontSize: '0.8rem',
+                }}>
+                  No pending active projects found. Projects appear here once loaded from the pipeline.
+                </div>
+              )}
             </div>
           )}
 
