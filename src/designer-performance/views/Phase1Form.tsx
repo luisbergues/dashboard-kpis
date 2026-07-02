@@ -325,7 +325,7 @@ export const Phase1Form: React.FC = () => {
             </Field>
             <Field label="Designer" half>
               <select value={designerName} onChange={e => setDesignerName(e.target.value)}
-                disabled={mode === 'Update'} style={{ ...selectStyle, opacity: mode === 'Update' ? 0.5 : 1 }}>
+                style={selectStyle}>
                 <option value="">Select a designer…</option>
                 {designerNames.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
