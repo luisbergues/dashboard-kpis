@@ -3,8 +3,89 @@ import { useKpi } from '../context/KpiContext';
 import { calculatePhase1ScoreAndStatus, calculateTechnicalPoints } from '../utils/scoreCalculator';
 import toast from 'react-hot-toast';
 import type { Project, ProjectStatus } from '../types';
-import { Link2 } from 'lucide-react';
+import { Link2, FileText, CheckSquare, Zap, RefreshCw, Send } from 'lucide-react';
 
+/* ── shared design tokens matching the main app ─────────────────────── */
+const T = {
+  cardBg:     '#1C1C22',
+  cardBorder: '#26272C',
+  cardHover:  '#202128',
+  bgDeep:     '#0A0A0C',
+  bgSurface:  '#0F0F12',
+  textPrimary:   '#FFFFFF',
+  textSecondary: '#94A3B8',
+  textMuted:     '#64748B',
+  blue:    '#3B82F6',
+  blueDeep:'#1D4ED8',
+  green:   '#10B981',
+  yellow:  '#FFE600',
+  red:     '#EF4444',
+  radiusLg: 28,
+  radiusMd: 20,
+  radiusPill: 100,
+};
+
+/* ── tiny primitives ─────────────────────────────────────────────────── */
+const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => (
+  <div style={{
+    background: T.cardBg, border: `1px solid ${T.cardBorder}`,
+    borderRadius: T.radiusLg, padding: '24px 28px',
+    ...style,
+  }}>
+    {children}
+  </div>
+);
+
+const SectionTitle: React.FC<{ icon: React.ReactNode; title: string; subtitle?: string; badge?: React.ReactNode }> = ({ icon, title, subtitle, badge }) => (
+  <div style={{ marginBottom: 18 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{
+          width: 32, height: 32, borderRadius: 10,
+          background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.2)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>
+          {icon}
+        </span>
+        <h3 style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: '1.0rem', color: T.textPrimary, margin: 0 }}>
+          {title}
+        </h3>
+      </div>
+      {badge}
+    </div>
+    {subtitle && <p style={{ color: T.textMuted, fontSize: '0.78rem', marginTop: 6, paddingLeft: 40 }}>{subtitle}</p>}
+    <div style={{ height: 1, background: T.cardBorder, marginTop: 12 }} />
+  </div>
+);
+
+const Field: React.FC<{ label: string; children: React.ReactNode; half?: boolean }> = ({ label, children, half }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, ...(half ? { flex: '1 1 45%', minWidth: 140 } : {}) }}>
+    <label style={{ color: T.textSecondary, fontSize: '0.76rem', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+      {label}
+    </label>
+    {children}
+  </div>
+);
+
+const inputStyle: React.CSSProperties = {
+  background: T.bgSurface,
+  border: `1px solid ${T.cardBorder}`,
+  borderRadius: T.radiusPill,
+  color: T.textPrimary,
+  padding: '10px 16px',
+  fontSize: '0.88rem',
+  outline: 'none',
+  width: '100%',
+  fontFamily: "'Inter',sans-serif",
+};
+
+const selectStyle: React.CSSProperties = {
+  ...inputStyle,
+  cursor: 'pointer',
+  appearance: 'none' as const,
+};
+
+/* ── types ───────────────────────────────────────────────────────────── */
 type ChecklistState = {
   kcdFile: number | false;
   jlContract: number | false;
@@ -15,38 +96,31 @@ type ChecklistState = {
 };
 
 const emptyChecklist: ChecklistState = {
-  kcdFile: false,
-  jlContract: false,
-  quoteComplete: false,
-  drawingsSigned: false,
-  finalMeasurementsApplies: false,
-  finalMeasurementsDelivered: false,
+  kcdFile: false, jlContract: false, quoteComplete: false,
+  drawingsSigned: false, finalMeasurementsApplies: false, finalMeasurementsDelivered: false,
 };
 
 const emptyComplexity = {
-  colorsDefined: false,
-  thermofoilDoors: false,
-  customBoreHoles: false,
-  routingRequired: false,
-  customPanels: false,
+  colorsDefined: false, thermofoilDoors: false, customBoreHoles: false,
+  routingRequired: false, customPanels: false,
 };
 
+/* ── main component ──────────────────────────────────────────────────── */
 export const Phase1Form: React.FC = () => {
-  const { designers, designerNames, projects, addProject, updateProject, getProjectComplexity } = useKpi();
+  const { designerNames, projects, addProject, updateProject, getProjectComplexity } = useKpi();
 
   const [mode, setMode] = useState<'New' | 'Update'>('New');
-  const [soNumber, setSoNumber] = useState('');
+  const [soNumber, setSoNumber]       = useState('');
   const [projectName, setProjectName] = useState('');
   const [designerName, setDesignerName] = useState('');
-  const [totalRooms, setTotalRooms] = useState<number | ''>('');
-  const [checklist, setChecklist] = useState<ChecklistState>(emptyChecklist);
-  const [complexity, setComplexity] = useState(emptyComplexity);
-  // Track which complexity fields were auto-populated (to show sync badge)
+  const [totalRooms, setTotalRooms]   = useState<number | ''>('');
+  const [checklist, setChecklist]     = useState<ChecklistState>(emptyChecklist);
+  const [complexity, setComplexity]   = useState(emptyComplexity);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
 
   const updatableProjects = projects.filter(p => p.status === 'Rejected' || p.status === 'To review');
 
-  // In New mode: when SO number is typed, auto-fill complexity from project elements
+  /* auto-fill complexity from project elements when SO typed */
   useEffect(() => {
     if (mode === 'New' && soNumber && soNumber.length > 3) {
       const auto = getProjectComplexity(soNumber);
@@ -54,11 +128,8 @@ export const Phase1Form: React.FC = () => {
         const filled = new Set<string>();
         setComplexity(prev => {
           const updated = { ...prev };
-          (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(key => {
-            if (auto[key] !== undefined) {
-              updated[key] = auto[key] as boolean;
-              if (auto[key]) filled.add(key);
-            }
+          (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(k => {
+            if (auto[k] !== undefined) { updated[k] = auto[k] as boolean; if (auto[k]) filled.add(k); }
           });
           return updated;
         });
@@ -67,349 +138,349 @@ export const Phase1Form: React.FC = () => {
     }
   }, [soNumber, mode]);
 
-  // In Update mode: pre-fill from existing project
   useEffect(() => {
     if (mode === 'Update' && soNumber) {
-      const existing = projects.find(p => p.id === soNumber && (p.status === 'Rejected' || p.status === 'To review'));
+      const existing = projects.find(p => p.id === soNumber);
       if (existing) {
         setProjectName(existing.projectName);
         setDesignerName(existing.designerName);
         setTotalRooms(existing.totalRooms);
         setChecklist(existing.checklist);
         setComplexity(existing.complexity);
-        // Also refresh auto-fill indicators
         const auto = getProjectComplexity(soNumber);
         const filled = new Set<string>();
-        (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(key => {
-          if (auto[key]) filled.add(key);
-        });
+        (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(k => { if (auto[k]) filled.add(k); });
         setAutoFilledFields(filled);
       }
     }
   }, [mode, soNumber, projects]);
 
-  useEffect(() => {
-    if (mode === 'New') resetForm();
-  }, [mode]);
+  useEffect(() => { if (mode === 'New') resetForm(); }, [mode]);
 
   const resetForm = () => {
-    setSoNumber('');
-    setProjectName('');
-    setDesignerName('');
-    setTotalRooms('');
-    setChecklist(emptyChecklist);
-    setComplexity(emptyComplexity);
-    setAutoFilledFields(new Set());
+    setSoNumber(''); setProjectName(''); setDesignerName('');
+    setTotalRooms(''); setChecklist(emptyChecklist);
+    setComplexity(emptyComplexity); setAutoFilledFields(new Set());
   };
 
   const handleChecklistToggle = (field: keyof ChecklistState) => {
-    setChecklist(prev => ({
-      ...prev,
-      [field]: prev[field] === false ? Date.now() : false,
-    }));
+    setChecklist(prev => ({ ...prev, [field]: prev[field] === false ? Date.now() : false }));
   };
 
   const handleComplexityChange = (field: keyof typeof complexity) => {
     setComplexity(prev => ({ ...prev, [field]: !prev[field] }));
-    // If user manually changes, remove the "auto" indicator for that field
-    setAutoFilledFields(prev => {
-      const next = new Set(prev);
-      next.delete(field);
-      return next;
-    });
+    setAutoFilledFields(prev => { const n = new Set(prev); n.delete(field); return n; });
   };
 
-  const handleSubmit = (e: React.FormEvent, forceReviewStatus: boolean = false) => {
+  const handleSubmit = (e: React.FormEvent, forceReview = false) => {
     e.preventDefault();
-
     if (!soNumber || !projectName || !designerName || totalRooms === '') {
-      toast.error('Please fill in all basic project details (including SO Number).');
-      return;
+      toast.error('Please fill in all basic project details.'); return;
     }
-
     if (mode === 'New' && projects.some(p => p.id === soNumber)) {
-      toast.error('A project with this SO Number already exists.');
-      return;
+      toast.error('A project with this SO Number already exists.'); return;
     }
+    let finalStatus: ProjectStatus, score: number | null;
+    if (forceReview) { finalStatus = 'To review'; score = null; }
+    else { const r = calculatePhase1ScoreAndStatus(checklist); finalStatus = r.status; score = r.score; }
 
-    let finalStatus: ProjectStatus;
-    let score: number | null;
-
-    if (forceReviewStatus) {
-      finalStatus = 'To review';
-      score = null;
-    } else {
-      const result = calculatePhase1ScoreAndStatus(checklist);
-      finalStatus = result.status;
-      score = result.score;
-    }
-
-    const technicalPoints = calculateTechnicalPoints(complexity);
-    const icp = Number(totalRooms) + technicalPoints;
+    const icp = Number(totalRooms) + calculateTechnicalPoints(complexity);
     const now = Date.now();
-    const approvedAt = finalStatus === 'Approved' ? now : null;
 
     if (mode === 'New') {
-      const newProject: Project = {
-        id: soNumber,
-        createdAt: now,
-        approvedAt,
-        projectName,
-        designerName,
-        status: finalStatus,
-        totalRooms: Number(totalRooms),
-        icp,
-        phase1Score: score,
-        phase2Score: null,
-        checklist,
-        complexity,
-      };
-      addProject(newProject);
-      if (finalStatus === 'To review') toast.success('Project saved for later review.');
-      else if (finalStatus === 'Approved') toast.success('Project Registered & Approved!');
-      else toast.success('Project Registered but Rejected (Missing Docs)');
+      addProject({ id: soNumber, createdAt: now, approvedAt: finalStatus === 'Approved' ? now : null,
+        projectName, designerName, status: finalStatus, totalRooms: Number(totalRooms), icp,
+        phase1Score: score, phase2Score: null, checklist, complexity });
+      toast.success(finalStatus === 'Approved' ? 'Project Approved! ✓' : finalStatus === 'To review' ? 'Saved for review.' : 'Registered (missing docs).');
       resetForm();
     } else {
       const existing = projects.find(p => p.id === soNumber);
       if (!existing) return;
-      const updatedProject: Project = {
-        ...existing,
-        projectName,
-        designerName,
-        status: finalStatus,
-        totalRooms: Number(totalRooms),
-        icp,
-        phase1Score: score,
-        checklist,
-        complexity,
-        approvedAt: finalStatus === 'Approved' ? now : existing.approvedAt,
-      };
-      updateProject(updatedProject);
-      if (finalStatus === 'Approved') {
-        toast.success('Project Updated & Approved!');
-        resetForm();
-        setMode('New');
-      } else if (finalStatus === 'To review') {
-        toast.success('Project saved as "To review".');
-      } else {
-        toast.success('Project updated – still Rejected.');
-      }
+      updateProject({ ...existing, projectName, designerName, status: finalStatus,
+        totalRooms: Number(totalRooms), icp, phase1Score: score, checklist, complexity,
+        approvedAt: finalStatus === 'Approved' ? now : existing.approvedAt });
+      toast.success(finalStatus === 'Approved' ? 'Updated & Approved! ✓' : 'Saved.');
+      if (finalStatus === 'Approved') { resetForm(); setMode('New'); }
     }
   };
 
-  const formatDate = (ts: number | false) =>
+  const fmtDate = (ts: number | false) =>
     ts ? new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
 
+  /* ── render ──────────────────────────────────────────────────────────── */
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <header>
-        <h2 className="text-2xl font-bold text-gray-100">Phase 1: Project Intake</h2>
-        <p className="text-gray-400 mt-1">Register a new project or update documentation for a rejected one.</p>
-      </header>
+    <div style={{ fontFamily: "'Inter',sans-serif", maxWidth: 700, margin: '0 auto', paddingBottom: 32 }}>
 
-      {/* Mode Selector */}
-      <div className="flex bg-gray-800 rounded-lg border border-gray-700 p-1 shadow-sm w-fit">
-        <button
-          onClick={() => setMode('New')}
-          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-            mode === 'New' ? 'bg-blue-600/20 text-blue-400' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-200'
-          }`}
-        >
-          Register New Project
-        </button>
-        <button
-          onClick={() => setMode('Update')}
-          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-            mode === 'Update' ? 'bg-blue-600/20 text-blue-400' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-200'
-          }`}
-        >
-          Update Project
-        </button>
+      {/* Page Header */}
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: '1.5rem', color: T.textPrimary, margin: 0 }}>
+          Phase 1: Project Intake
+        </h2>
+        <p style={{ color: T.textMuted, fontSize: '0.85rem', marginTop: 4 }}>
+          Register a new project or update documentation for a rejected one.
+        </p>
       </div>
 
-      <form className="space-y-8 bg-gray-800 p-8 rounded-xl border border-gray-700 shadow-xl">
+      {/* Mode toggle — pill style matching the main app tabs */}
+      <div style={{
+        display: 'inline-flex', background: T.bgDeep, border: `1px solid ${T.cardBorder}`,
+        borderRadius: T.radiusPill, padding: 4, marginBottom: 22, gap: 4,
+      }}>
+        {(['New', 'Update'] as const).map(m => (
+          <button key={m} onClick={() => setMode(m)} style={{
+            padding: '8px 20px', borderRadius: T.radiusPill, border: 'none', cursor: 'pointer',
+            fontSize: '0.82rem', fontWeight: 600, transition: 'all 0.2s',
+            background: mode === m ? T.blue : 'transparent',
+            color: mode === m ? '#fff' : T.textMuted,
+          }}>
+            {m === 'New' ? 'Register New' : 'Update Project'}
+          </button>
+        ))}
+      </div>
 
-        {/* Basic Info */}
-        <section className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-100 border-b border-gray-700 pb-2">Basic Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {mode === 'Update' ? (
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-300 mb-1">Select Project (SO Number)</label>
-                <select
-                  value={soNumber}
-                  onChange={e => setSoNumber(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-100 outline-none"
-                >
-                  <option value="">Select a project...</option>
-                  {updatableProjects.map(p => (
-                    <option key={p.id} value={p.id}>{p.id} – {p.projectName} ({p.status})</option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">SO Number</label>
-                <input
-                  type="text"
-                  value={soNumber}
-                  onChange={e => setSoNumber(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-100 outline-none"
-                  placeholder="e.g., 12345"
-                />
-              </div>
-            )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            <div className={mode === 'Update' ? 'opacity-60 pointer-events-none' : ''}>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Project Name</label>
-              <input
-                type="text"
-                value={projectName}
-                onChange={e => setProjectName(e.target.value)}
-                readOnly={mode === 'Update'}
-                className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-100 outline-none"
-                placeholder="e.g., Smith Residence"
-              />
-            </div>
+        {/* ── Basic Info ──────────────────────────────────────────── */}
+        <Card>
+          <SectionTitle icon={<FileText size={15} color={T.blue} />} title="Basic Information" />
 
-            <div className={mode === 'Update' ? 'opacity-60 pointer-events-none' : ''}>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Designer</label>
-              <select
-                value={designerName}
-                onChange={e => setDesignerName(e.target.value)}
-                disabled={mode === 'Update'}
-                className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-100 outline-none"
-              >
-                <option value="">Select a designer...</option>
-                {designerNames.map(d => (
-                  <option key={d} value={d}>{d}</option>
+          {mode === 'Update' ? (
+            <Field label="Select Project (SO Number)">
+              <select value={soNumber} onChange={e => setSoNumber(e.target.value)} style={selectStyle}>
+                <option value="">Choose a project to update…</option>
+                {updatableProjects.map(p => (
+                  <option key={p.id} value={p.id}>{p.id} — {p.projectName} ({p.status})</option>
                 ))}
               </select>
+            </Field>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+              <Field label="SO Number" half>
+                <input value={soNumber} onChange={e => setSoNumber(e.target.value)}
+                  placeholder="e.g., 12345" style={inputStyle} />
+              </Field>
+              <Field label="Total Rooms" half>
+                <input type="number" min="1" value={totalRooms}
+                  onChange={e => setTotalRooms(e.target.value === '' ? '' : Number(e.target.value))}
+                  style={inputStyle} />
+              </Field>
             </div>
+          )}
 
-            <div className={mode === 'Update' ? 'opacity-60 pointer-events-none' : ''}>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Total Rooms</label>
-              <input
-                type="number"
-                min="1"
-                value={totalRooms}
-                onChange={e => setTotalRooms(e.target.value === '' ? '' : Number(e.target.value))}
-                readOnly={mode === 'Update'}
-                className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-100 outline-none"
-              />
-            </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 14 }}>
+            <Field label="Project Name" half>
+              <input value={projectName} onChange={e => setProjectName(e.target.value)}
+                readOnly={mode === 'Update'} placeholder="e.g., Smith Residence"
+                style={{ ...inputStyle, opacity: mode === 'Update' ? 0.5 : 1 }} />
+            </Field>
+            <Field label="Designer" half>
+              <select value={designerName} onChange={e => setDesignerName(e.target.value)}
+                disabled={mode === 'Update'} style={{ ...selectStyle, opacity: mode === 'Update' ? 0.5 : 1 }}>
+                <option value="">Select a designer…</option>
+                {designerNames.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </Field>
           </div>
-        </section>
 
-        {/* Go/No-Go Checklist */}
-        <section className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-100 border-b border-gray-700 pb-2">Strict Go/No-Go Checklist</h3>
-          <p className="text-sm text-gray-400">Check each item when the documentation is received. The date will be recorded automatically.</p>
+          {mode === 'Update' && (
+            <div style={{ display: 'flex', gap: 14, marginTop: 14, flexWrap: 'wrap' }}>
+              <Field label="Total Rooms" half>
+                <input type="number" min="1" value={totalRooms} readOnly
+                  style={{ ...inputStyle, opacity: 0.5 }} />
+              </Field>
+            </div>
+          )}
+        </Card>
 
-          <div className="space-y-3">
+        {/* ── Checklist ───────────────────────────────────────────── */}
+        <Card>
+          <SectionTitle
+            icon={<CheckSquare size={15} color={T.blue} />}
+            title="Strict Go / No-Go Checklist"
+            subtitle="Check each item when the documentation is received. Date is recorded automatically."
+          />
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {([
-              { id: 'kcdFile', label: 'KCD file (complete & latest)' },
-              { id: 'jlContract', label: 'JL Contract (complete & signed)' },
-              { id: 'quoteComplete', label: 'Quote (complete by room)' },
-              { id: 'drawingsSigned', label: 'Drawings (signed by client)' },
-              { id: 'finalMeasurementsApplies', label: 'Does "Final Measurements" apply here?' },
-            ] as { id: keyof ChecklistState; label: string }[]).map(item => (
-              <div key={item.id} className="flex items-center justify-between group">
-                <label className="flex items-center space-x-3 cursor-pointer w-fit">
-                  <input
-                    type="checkbox"
-                    checked={checklist[item.id] !== false}
-                    onChange={() => handleChecklistToggle(item.id)}
-                    className="w-5 h-5 text-blue-500 bg-gray-900 border-gray-600 rounded focus:ring-blue-500 focus:ring-offset-gray-800"
-                  />
-                  <span className="text-gray-300 group-hover:text-gray-100 transition-colors">{item.label}</span>
+              { id: 'kcdFile',                   label: 'KCD file (complete & latest)' },
+              { id: 'jlContract',                label: 'JL Contract (complete & signed)' },
+              { id: 'quoteComplete',             label: 'Quote (complete by room)' },
+              { id: 'drawingsSigned',            label: 'Drawings (signed by client)' },
+              { id: 'finalMeasurementsApplies',  label: 'Does "Final Measurements" apply here?' },
+            ] as { id: keyof ChecklistState; label: string }[]).map(item => {
+              const checked = checklist[item.id] !== false;
+              return (
+                <label key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {/* custom checkbox */}
+                    <div onClick={() => handleChecklistToggle(item.id)} style={{
+                      width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                      border: `2px solid ${checked ? T.blue : T.cardBorder}`,
+                      background: checked ? T.blue : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s', cursor: 'pointer',
+                    }}>
+                      {checked && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                    </div>
+                    <span style={{ color: checked ? T.textPrimary : T.textSecondary, fontSize: '0.85rem', transition: 'color 0.2s' }}>
+                      {item.label}
+                    </span>
+                  </div>
+                  {checked && (
+                    <span style={{
+                      fontSize: '0.72rem', color: T.blue, background: 'rgba(59,130,246,0.1)',
+                      border: '1px solid rgba(59,130,246,0.2)', borderRadius: T.radiusPill,
+                      padding: '2px 10px', whiteSpace: 'nowrap',
+                    }}>
+                      ✓ {fmtDate(checklist[item.id])}
+                    </span>
+                  )}
                 </label>
-                {checklist[item.id] !== false && (
-                  <span className="text-xs text-blue-400 bg-blue-900/20 border border-blue-800/30 px-2 py-1 rounded-md ml-4 whitespace-nowrap">
-                    ✓ {formatDate(checklist[item.id])}
-                  </span>
-                )}
-              </div>
-            ))}
+              );
+            })}
 
+            {/* sub-item for Final Measurements */}
             {checklist.finalMeasurementsApplies !== false && (
-              <div className="flex items-center justify-between ml-8 p-3 bg-blue-900/20 rounded-lg border border-blue-800/30">
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={checklist.finalMeasurementsDelivered !== false}
-                    onChange={() => handleChecklistToggle('finalMeasurementsDelivered')}
-                    className="w-5 h-5 text-blue-500 bg-gray-900 border-gray-600 rounded focus:ring-blue-500 focus:ring-offset-gray-800"
-                  />
-                  <span className="text-blue-400 font-medium">Final Measurements delivered?</span>
+              <div style={{
+                marginLeft: 30, padding: '12px 16px',
+                background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)',
+                borderRadius: T.radiusMd,
+              }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div onClick={() => handleChecklistToggle('finalMeasurementsDelivered')} style={{
+                      width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                      border: `2px solid ${checklist.finalMeasurementsDelivered !== false ? T.blue : T.cardBorder}`,
+                      background: checklist.finalMeasurementsDelivered !== false ? T.blue : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s', cursor: 'pointer',
+                    }}>
+                      {checklist.finalMeasurementsDelivered !== false && (
+                        <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>
+                      )}
+                    </div>
+                    <span style={{ color: T.blue, fontSize: '0.85rem', fontWeight: 600 }}>
+                      Final Measurements delivered?
+                    </span>
+                  </div>
+                  {checklist.finalMeasurementsDelivered !== false && (
+                    <span style={{
+                      fontSize: '0.72rem', color: T.blue, background: 'rgba(59,130,246,0.1)',
+                      border: '1px solid rgba(59,130,246,0.2)', borderRadius: T.radiusPill,
+                      padding: '2px 10px', whiteSpace: 'nowrap',
+                    }}>
+                      ✓ {fmtDate(checklist.finalMeasurementsDelivered)}
+                    </span>
+                  )}
                 </label>
-                {checklist.finalMeasurementsDelivered !== false && (
-                  <span className="text-xs text-blue-400 bg-blue-900/30 border border-blue-800/30 px-2 py-1 rounded-md ml-4 whitespace-nowrap">
-                    ✓ {formatDate(checklist.finalMeasurementsDelivered)}
-                  </span>
-                )}
               </div>
             )}
           </div>
-        </section>
+        </Card>
 
-        {/* Technical Complexity */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-700 pb-2">
-            <h3 className="text-lg font-semibold text-gray-100">Technical Complexity</h3>
-            {autoFilledFields.size > 0 && (
-              <span className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-900/20 border border-emerald-800/30 px-2.5 py-1 rounded-full">
-                <Link2 size={11} />
-                {autoFilledFields.size} auto-synced from Project Elements
+        {/* ── Complexity ──────────────────────────────────────────── */}
+        <Card>
+          <SectionTitle
+            icon={<Zap size={15} color={T.blue} />}
+            title="Technical Complexity"
+            subtitle="Pre-filled from Project Elements — editable if needed. Affects the ICP score."
+            badge={autoFilledFields.size > 0 ? (
+              <span style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                fontSize: '0.72rem', color: T.green,
+                background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)',
+                borderRadius: T.radiusPill, padding: '3px 10px',
+              }}>
+                <Link2 size={11} color={T.green} />
+                {autoFilledFields.size} synced
               </span>
-            )}
-          </div>
-          <p className="text-sm text-gray-400">
-            These items add points to the Index of Complexity (ICP). Pre-filled from Project Elements — editable if needed.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {([
-              { id: 'colorsDefined',   label: 'Colors per room defined? (+2)',        synced: false },
-              { id: 'thermofoilDoors', label: 'Thermofoil / Elements doors? (+1)',    synced: true },
-              { id: 'customBoreHoles', label: 'Custom bore holes / No Holes? (+4)',   synced: true },
-              { id: 'routingRequired', label: 'Routing / Dovetail required? (+2)',    synced: true },
-              { id: 'customPanels',    label: 'Custom panels / Extra elements? (+1)', synced: true },
-            ] as { id: keyof typeof complexity; label: string; synced: boolean }[]).map(item => (
-              <label key={item.id} className="flex items-center space-x-3 cursor-pointer group w-fit">
-                <input
-                  type="checkbox"
-                  checked={complexity[item.id]}
-                  onChange={() => handleComplexityChange(item.id)}
-                  className="w-5 h-5 text-indigo-500 bg-gray-900 border-gray-600 rounded focus:ring-indigo-500 focus:ring-offset-gray-800"
-                />
-                <span className="text-gray-300 group-hover:text-gray-100 transition-colors">{item.label}</span>
-                {item.synced && autoFilledFields.has(item.id) && (
-                  <span title="Auto-synced from Project Elements" className="text-emerald-400">
-                    <Link2 size={12} />
-                  </span>
-                )}
-              </label>
-            ))}
-          </div>
-        </section>
+            ) : undefined}
+          />
 
-        <div className="pt-6 border-t border-gray-700 flex flex-col sm:flex-row gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {([
+              { id: 'colorsDefined',   label: 'Colors per room defined?',       pts: '+2', synced: false },
+              { id: 'thermofoilDoors', label: 'Thermofoil / Element doors?',    pts: '+1', synced: true },
+              { id: 'customBoreHoles', label: 'Custom bore holes / No Holes?',  pts: '+4', synced: true },
+              { id: 'routingRequired', label: 'Routing / Dovetail required?',   pts: '+2', synced: true },
+              { id: 'customPanels',    label: 'Custom panels / Elements?',      pts: '+1', synced: true },
+            ] as { id: keyof typeof complexity; label: string; pts: string; synced: boolean }[]).map(item => {
+              const checked = complexity[item.id];
+              const isAutoSynced = item.synced && autoFilledFields.has(item.id);
+              return (
+                <label key={item.id} onClick={() => handleComplexityChange(item.id)} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                  padding: '10px 12px', borderRadius: T.radiusMd,
+                  background: checked ? 'rgba(59,130,246,0.07)' : T.bgSurface,
+                  border: `1px solid ${checked ? 'rgba(59,130,246,0.2)' : T.cardBorder}`,
+                  transition: 'all 0.2s',
+                }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                    border: `2px solid ${checked ? T.blue : T.textMuted}`,
+                    background: checked ? T.blue : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s',
+                  }}>
+                    {checked && <span style={{ color: '#fff', fontSize: 10, fontWeight: 700 }}>✓</span>}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ fontSize: '0.8rem', color: checked ? T.textPrimary : T.textSecondary }}>
+                        {item.label}
+                      </span>
+                      {isAutoSynced && <Link2 size={10} color={T.green} />}
+                    </div>
+                    <span style={{
+                      fontSize: '0.68rem', fontWeight: 700,
+                      color: checked ? T.blue : T.textMuted,
+                      background: checked ? 'rgba(59,130,246,0.12)' : 'transparent',
+                      borderRadius: 4, padding: checked ? '1px 5px' : 0,
+                    }}>
+                      {item.pts}
+                    </span>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </Card>
+
+        {/* ── Actions ─────────────────────────────────────────────── */}
+        <div style={{ display: 'flex', gap: 12 }}>
           <button
-            type="button"
-            onClick={(e) => handleSubmit(e, true)}
-            className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium py-3 px-4 rounded-lg transition-colors border border-gray-600"
+            onClick={e => handleSubmit(e, true)}
+            style={{
+              flex: 1, padding: '13px 20px', borderRadius: T.radiusPill,
+              border: `1px solid ${T.cardBorder}`, background: T.bgSurface,
+              color: T.textSecondary, fontSize: '0.88rem', fontWeight: 600,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = T.cardHover; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = T.bgSurface; }}
           >
+            <RefreshCw size={15} />
             Save for Later Review
           </button>
           <button
-            type="button"
-            onClick={(e) => handleSubmit(e, false)}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors focus:ring-4 focus:ring-blue-900"
+            onClick={e => handleSubmit(e, false)}
+            style={{
+              flex: 1, padding: '13px 20px', borderRadius: T.radiusPill,
+              border: 'none', background: T.blue,
+              color: '#fff', fontSize: '0.88rem', fontWeight: 600,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              boxShadow: '0 4px 16px rgba(59,130,246,0.35)',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = T.blueDeep; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = T.blue; }}
           >
-            {mode === 'New' ? 'Submit Project Intake' : 'Save Updates & Validate'}
+            <Send size={15} />
+            {mode === 'New' ? 'Submit Project Intake' : 'Save & Validate'}
           </button>
         </div>
-      </form>
+      </div>
     </div>
   );
 };
