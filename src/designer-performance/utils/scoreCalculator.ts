@@ -55,9 +55,11 @@ export const calculateDesignerStats = (designerName: string, projects: Project[]
     globalKpi = avgPhase1;
   }
 
+  const evaluatedProjects = designerProjects.filter(p => p.status !== 'Pending');
+
   return {
     name: designerName,
-    totalProjects: completedProjects.length,
+    totalProjects: evaluatedProjects.length,
     avgPhase1Score: Math.round(avgPhase1 * 10) / 10,
     avgPhase2Score: Math.round(avgPhase2 * 10) / 10,
     globalKpi: Math.round(globalKpi * 10) / 10,
