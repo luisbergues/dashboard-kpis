@@ -346,6 +346,17 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     }
   };
 
+  // Same priority order as "My Projects" (soonest install date first, undated last),
+  // so the Kanban board lays cards out left-to-right / top-to-bottom by importance.
+  const kanbanOrderedProjects = [...projects].sort((a, b) => {
+    const dateA = a.install ? new Date(a.install).getTime() : null;
+    const dateB = b.install ? new Date(b.install).getTime() : null;
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    return dateA - dateB;
+  });
+
   const KANBAN_COLUMNS = [
     { id: 'procurement', label: 'PROCUREMENT' },
     { id: 'material', label: 'MATERIAL' },
@@ -440,7 +451,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
       {filter === 'KANBAN' ? (
         <div className="kanban-board">
           {KANBAN_COLUMNS.map(col => {
-            const columnProjects = projects.filter(p => (kanbanState[p.so] || 'projects') === col.id);
+            const columnProjects = kanbanOrderedProjects.filter(p => (kanbanState[p.so] || 'projects') === col.id);
             return (
               <div 
                 key={col.id} 

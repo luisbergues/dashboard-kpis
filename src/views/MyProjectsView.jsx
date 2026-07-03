@@ -5,8 +5,8 @@ import { sendOnHoldEvent, sendReleaseHoldEvent, sendQAChecklistEvent } from '../
 import { saveMaterialOverride } from '../utils/materialOverrides';
 import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';
-import { 
-  Briefcase, Calendar, Check, Clock, 
+import {
+  Briefcase, Calendar, Check, Clock,
   AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag, Users, User,
   ChevronDown, ChevronUp, ArrowUpDown, TrendingUp, CheckCircle2, Image as ImageIcon, Loader2, FileText, Paperclip
 } from 'lucide-react';
@@ -103,7 +103,6 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [materialOverrides, setMaterialOverrides] = useState({});
   const [kanbanState, setKanbanState] = useState({});
   const [projectDesigners, setProjectDesigners] = useState({});
-  const [kanbanFilter, setKanbanFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
 
   // Project Notes State
@@ -175,13 +174,16 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
   const isAdmin = userProfile && (userProfile.role === 'administrative' || userProfile.role === 'admin');
 
+  // Same column order as Pipeline's Kanban board
+  const KANBAN_ORDER = { procurement: 0, material: 1, nesting: 2, projects: 3 };
+
   const myProjects = [...myProjectsRaw]
-    .filter(p => {
-      if (kanbanFilter === 'ALL') return true;
-      return (kanbanState[p.so] || 'projects') === kanbanFilter;
-    })
     .sort((a, b) => {
-      // Always push no-date projects to the bottom
+      const kanbanA = KANBAN_ORDER[kanbanState[a.so] || 'projects'];
+      const kanbanB = KANBAN_ORDER[kanbanState[b.so] || 'projects'];
+      if (kanbanA !== kanbanB) return kanbanA - kanbanB;
+
+      // Within the same Kanban stage, always push no-date projects to the bottom
       const dateA = a.install ? new Date(a.install).getTime() : null;
       const dateB = b.install ? new Date(b.install).getTime() : null;
       if (!dateA && !dateB) return 0;
@@ -1159,19 +1161,6 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       <div className="projects-list-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <h2 className="section-title" style={{ margin: 0 }}>Active Projects</h2>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {[{id:'ALL',label:'All'},{id:'projects',label:'Projects'},{id:'nesting',label:'Nesting'},{id:'material',label:'Material'},{id:'procurement',label:'Procurement'}].map(col => (
-              <button
-                key={col.id}
-                className={`btn-sm ${kanbanFilter === col.id ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setKanbanFilter(col.id)}
-                style={{ fontSize: '0.72rem', padding: '4px 10px' }}
-              >
-                {col.label}
-              </button>
-            ))}
-          </div>
-          <div style={{ width: '1px', height: '20px', background: 'var(--card-border)' }} />
           <button
             className={`btn-sm ${sortBy === 'date' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => { setSortBy('date'); setSortDesc(prev => sortBy === 'date' ? !prev : false); }}
