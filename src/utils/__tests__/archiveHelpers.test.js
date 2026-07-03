@@ -17,7 +17,7 @@ const readArchiveMap = vi.fn(async (path) => {
 const writeArchiveMap = vi.fn(async (path, map) => {
   storageStore.set(path, JSON.parse(JSON.stringify(map)));
 });
-vi.mock('../storageArchive', () => ({
+vi.mock('../archiveStore', () => ({
   // Inlined (not the outer const) because vi.mock is hoisted above it.
   ARCHIVE_PATHS: {
     completed: 'archive/completed_projects.json',

@@ -70,7 +70,7 @@ function App() {
           parsedData.projectSpecificMaterials = projectMaterialsData;
 
           // All archive writes go through a single-writer lease so concurrent
-          // clients can't clobber each other's read-modify-write on the Storage blobs.
+          // clients can't clobber each other's read-modify-write on the archive nodes.
           await withArchiveLease(async () => {
             if (cached && cached.parsedData) {
               await archiveMissingCompletedProjects(cached.parsedData, parsedData);

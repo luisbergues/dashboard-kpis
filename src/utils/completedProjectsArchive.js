@@ -1,5 +1,5 @@
-import { storage } from './firebase';
-import { readArchiveMap, writeArchiveMap, ARCHIVE_PATHS } from './storageArchive';
+import { db } from './firebase';
+import { readArchiveMap, writeArchiveMap, ARCHIVE_PATHS } from './archiveStore';
 
 // Cutoff date for keeping archived projects: 6 calendar months ago.
 function sixMonthsAgo() {
@@ -17,7 +17,7 @@ function sixMonthsAgo() {
 // backup as soon as a project is marked Completed, whether or not it's ever
 // later removed from the sheet.
 export async function archiveCurrentlyCompletedProjects(newData) {
-  if (!storage || !newData) return;
+  if (!db || !newData) return;
 
   try {
     const completed = (newData.priorityAnalysis || []).filter(p =>
@@ -46,7 +46,7 @@ export async function archiveCurrentlyCompletedProjects(newData) {
 }
 
 export async function archiveMissingCompletedProjects(previousData, newData) {
-  if (!storage || !previousData || !newData) return;
+  if (!db || !previousData || !newData) return;
 
   try {
     const prevProjects = previousData.priorityAnalysis || [];
@@ -61,7 +61,7 @@ export async function archiveMissingCompletedProjects(previousData, newData) {
 
     if (completedAndDeleted.length === 0) return;
 
-    console.log(`📦 Archiving ${completedAndDeleted.length} completed projects to Storage...`);
+    console.log(`📦 Archiving ${completedAndDeleted.length} completed projects...`);
     const map = await readArchiveMap(ARCHIVE_PATHS.completed);
     completedAndDeleted.forEach((project) => {
       const key = project.so.toString();
@@ -82,7 +82,7 @@ export async function archiveMissingCompletedProjects(previousData, newData) {
 // leftover Realtime Database data (project_history, project_designers, etc.)
 // that's no longer in the live sheet nor already archived — see OrphanedProjectsPanel.
 export async function manuallyArchiveProject(project) {
-  if (!storage || !project?.so) return;
+  if (!db || !project?.so) return;
   const map = await readArchiveMap(ARCHIVE_PATHS.completed);
   const key = project.so.toString();
   map[key] = {
@@ -95,7 +95,7 @@ export async function manuallyArchiveProject(project) {
 }
 
 export async function fetchArchivedCompletedProjects() {
-  if (!storage) return [];
+  if (!db) return [];
 
   try {
     // NOTE: purging (a destructive write) is NOT triggered here anymore — it runs
@@ -115,7 +115,7 @@ export async function fetchArchivedCompletedProjects() {
 }
 
 export async function purgeExpiredArchives() {
-  if (!storage) return;
+  if (!db) return;
 
   try {
     const map = await readArchiveMap(ARCHIVE_PATHS.completed);
