@@ -52,6 +52,13 @@ export default function CalendarView({ data, currentUser, userProfile }) {
   const [sidebarTab, setSidebarTab] = useState('installs');
   const [projectDesigners, setProjectDesigners] = useState({});
 
+  // Notes are visible to everyone, but only their author (or an admin) can edit/delete them
+  const canManageNote = (note) => {
+    if (!note) return true; // creating a brand-new note
+    if (userProfile?.role === 'administrative' || userProfile?.role === 'admin') return true;
+    return note.authorUid && currentUser && note.authorUid === currentUser.uid;
+  };
+
   // Real-Time Database listener hook — notes are shared across all users
   useEffect(() => {
     if (!db || !currentUser) return;
@@ -288,7 +295,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                   <div 
                     key={idx} 
                     className="cal-event cal-note-event" 
-                    title={`Note: ${n.text}${linkedProj ? ` (Linked: ${linkedProj.name})` : ''}`}
+                    title={`${n.authorName ? `${n.authorName}: ` : ''}${n.text}${linkedProj ? ` (Linked: ${linkedProj.name})` : ''}`}
                     onClick={(e) => {
                       e.stopPropagation(); // prevent opening add modal
                       handleEditNote(n);
@@ -425,6 +432,11 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                         )}
                       </div>
                       <div className="sidebar-note-text">{n.text}</div>
+                      {n.authorName && (
+                        <div className="text-muted" style={{ fontSize: '0.72rem', marginTop: 4 }}>
+                          {language === 'es' ? 'Por' : 'By'} {n.authorName}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -443,7 +455,9 @@ export default function CalendarView({ data, currentUser, userProfile }) {
       </div>
 
       {/* Modern Dialog Form Modal */}
-      {isModalOpen && (
+      {isModalOpen && (() => {
+        const readOnlyNote = selectedNote && !canManageNote(selectedNote);
+        return (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -454,24 +468,31 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                 <X size={18} />
               </button>
             </div>
+            {selectedNote?.authorName && (
+              <p className="text-muted" style={{ padding: '0 20px', marginTop: -8 }}>
+                {language === 'es' ? 'Nota de' : 'Note by'} {selectedNote.authorName}
+              </p>
+            )}
             <form onSubmit={handleSaveNote} className="modal-form">
               <div className="form-group">
                 <label className="form-label">{language === 'es' ? 'Fecha' : 'Date'}</label>
-                <input 
-                  type="date" 
+                <input
+                  type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   className="form-input"
+                  disabled={readOnlyNote}
                   required
                 />
               </div>
 
               <div className="form-group">
                 <label className="form-label">{t('calendar.linkProject')}</label>
-                <select 
-                  value={linkedSo} 
+                <select
+                  value={linkedSo}
                   onChange={(e) => setLinkedSo(e.target.value)}
                   className="form-select"
+                  disabled={readOnlyNote}
                 >
                   <option value="">{t('calendar.selectProject')}</option>
                   {allProjects.map(proj => (
@@ -484,20 +505,21 @@ export default function CalendarView({ data, currentUser, userProfile }) {
 
               <div className="form-group">
                 <label className="form-label">{t('calendar.noteLabel')}</label>
-                <textarea 
+                <textarea
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
                   placeholder={t('calendar.notePlaceholder')}
                   className="form-textarea"
                   rows={4}
+                  disabled={readOnlyNote}
                   required
                 />
               </div>
 
               <div className="form-actions">
-                {selectedNote && (
-                  <button 
-                    type="button" 
+                {selectedNote && canManageNote(selectedNote) && (
+                  <button
+                    type="button"
                     className="btn-danger"
                     onClick={() => handleDeleteNote(selectedNote.id)}
                   >
@@ -506,22 +528,25 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                   </button>
                 )}
                 <div className="form-actions-right">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn-secondary"
                     onClick={() => setIsModalOpen(false)}
                   >
-                    {t('common.cancel')}
+                    {readOnlyNote ? t('common.close') : t('common.cancel')}
                   </button>
-                  <button type="submit" className="btn-primary">
-                    {t('common.save')}
-                  </button>
+                  {!readOnlyNote && (
+                    <button type="submit" className="btn-primary">
+                      {t('common.save')}
+                    </button>
+                  )}
                 </div>
               </div>
             </form>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
