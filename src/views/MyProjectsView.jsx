@@ -8,7 +8,8 @@ import { useLanguage } from '../utils/LanguageContext';
 import {
   Briefcase, Calendar, Check, Clock,
   AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag, Users, User,
-  ChevronDown, ChevronUp, ArrowUpDown, TrendingUp, CheckCircle2, Image as ImageIcon, Loader2, FileText, Paperclip
+  ChevronDown, ChevronUp, ArrowUpDown, TrendingUp, CheckCircle2, Image as ImageIcon, Loader2, FileText, Paperclip,
+  LayoutGrid
 } from 'lucide-react';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
@@ -182,26 +183,26 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
   const isAdmin = userProfile && (userProfile.role === 'administrative' || userProfile.role === 'admin');
 
-  // Same column order/labels as Pipeline's Kanban board
-  const KANBAN_ORDER = { procurement: 0, material: 1, nesting: 2, projects: 3 };
-  const KANBAN_LABELS = { procurement: 'Procurement', material: 'Material', nesting: 'Nesting', projects: 'Projects' };
+  // Kanban priority order: Procurement first, then Material, then Projects.
+  // Nesting is treated the same as Projects — by that stage it's essentially done.
+  const KANBAN_ORDER = { procurement: 0, material: 1, projects: 2, nesting: 2 };
 
   const myProjects = [...myProjectsRaw]
     .sort((a, b) => {
-      const kanbanA = KANBAN_ORDER[kanbanState[a.so] || 'projects'];
-      const kanbanB = KANBAN_ORDER[kanbanState[b.so] || 'projects'];
-      if (kanbanA !== kanbanB) return kanbanA - kanbanB;
-
-      // Within the same Kanban stage, always push no-date projects to the bottom
       const dateA = a.install ? new Date(a.install).getTime() : null;
       const dateB = b.install ? new Date(b.install).getTime() : null;
+
+      if (sortBy === 'kanban') {
+        const kanbanA = KANBAN_ORDER[kanbanState[a.so] || 'projects'] ?? 2;
+        const kanbanB = KANBAN_ORDER[kanbanState[b.so] || 'projects'] ?? 2;
+        if (kanbanA !== kanbanB) return kanbanA - kanbanB;
+      }
+
+      // Tie-break (or default "Date" mode): install date ascending, no-date last
       if (!dateA && !dateB) return 0;
       if (!dateA) return 1;
       if (!dateB) return -1;
-      if (sortBy === 'date') {
-        return sortDesc ? dateB - dateA : dateA - dateB;
-      }
-      return dateA - dateB; // default: ascending date
+      return sortBy === 'date' && sortDesc ? dateB - dateA : dateA - dateB;
     });
 
   // Calculate analytics
@@ -1177,6 +1178,13 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
           >
             <Calendar size={14} /> Date {sortBy === 'date' ? (sortDesc ? '↓' : '↑') : ''}
           </button>
+          <button
+            className={`btn-sm ${sortBy === 'kanban' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setSortBy('kanban')}
+            title={language === 'es' ? 'Ordenar por prioridad: Procurement → Material → Projects' : 'Sort by priority: Procurement → Material → Projects'}
+          >
+            <LayoutGrid size={14} /> Kanban
+          </button>
         </div>
       </div>
 
@@ -1218,13 +1226,6 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div className="header-status-controls" onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span
-                            className="status-badge-inline"
-                            title={language === 'es' ? 'Etapa en el Kanban de Pipeline' : 'Stage on the Pipeline Kanban board'}
-                            style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.25)' }}
-                          >
-                            {KANBAN_LABELS[kanbanState[project.so] || 'projects']}
-                          </span>
                           <span className={`status-badge-inline ${currentStatus.toLowerCase().replace(' ', '-')}`}>
                             {getStatusLabelPdf(currentStatus)}
                           </span>
