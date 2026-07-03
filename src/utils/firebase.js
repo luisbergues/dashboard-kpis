@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getDatabase, ref, set, remove, onValue, get, child } from 'firebase/database';
+import { getDatabase, ref, set, update, remove, onValue, get, child } from 'firebase/database';
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
@@ -59,10 +59,11 @@ export {
   auth,
   storage,
   initError,
-  ref, 
+  ref,
   storageRef,
-  set, 
-  remove, 
+  set,
+  update,
+  remove,
   onValue, 
   get, 
   child,

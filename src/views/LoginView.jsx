@@ -12,6 +12,7 @@ import {
 } from '../utils/firebase';
 import { useLanguage } from '../utils/LanguageContext';
 import { Mail, Lock, User, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import LoginIntroBackground from './LoginIntroBackground';
 import './LoginView.css';
 
 const DEFAULT_DESIGNERS = ['Joaquin', 'Jose', 'Luis', 'Santiago', 'Julieta', 'Andres', 'Delfina', 'Josema'];
@@ -36,21 +37,6 @@ export default function LoginView({ data }) {
   const [loading, setLoading] = useState(false);
   const [allowedDesigners, setAllowedDesigners] = useState(DEFAULT_DESIGNERS);
   const [designers, setDesigners] = useState([]);
-  const [mousePos, setMousePos] = useState({ x: -1000, y: -1000, xPct: 0.5, yPct: 0.5 });
-
-  useEffect(() => {
-    setMousePos({ x: window.innerWidth * 0.25, y: window.innerHeight * 0.5, xPct: 0.25, yPct: 0.5 });
-  }, []);
-
-  const handleMouseMove = (e) => {
-    const xPct = e.clientX / window.innerWidth;
-    const yPct = e.clientY / window.innerHeight;
-    setMousePos({ x: e.clientX, y: e.clientY, xPct, yPct });
-  };
-
-  const handleMouseLeave = () => {
-    setMousePos({ x: window.innerWidth * 0.25, y: window.innerHeight * 0.5, xPct: 0.25, yPct: 0.5 });
-  };
 
   useEffect(() => {
     if (!auth && initError) {
@@ -112,6 +98,7 @@ export default function LoginView({ data }) {
             email: user.email,
             designerName: designerName,
             role: signupRole,
+            status: 'pending',
             createdAt: new Date().toISOString()
           });
         }
@@ -169,23 +156,8 @@ export default function LoginView({ data }) {
   };
 
   return (
-    <div 
-      className="login-view animate-fade-in"
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        '--mouse-x': `${mousePos.x}px`,
-        '--mouse-y': `${mousePos.y}px`,
-        '--mouse-xp': mousePos.xPct,
-        '--mouse-yp': mousePos.yPct
-      }}
-    >
-      {/* Interactive Background Organic Glow */}
-      <div className="organic-glow-container">
-        <div className="organic-glow-wrapper">
-          <div className="organic-glow" />
-        </div>
-      </div>
+    <div className="login-view animate-fade-in">
+      <LoginIntroBackground />
 
       {/* Floating Login Card */}
       <div className="login-container glass-card">

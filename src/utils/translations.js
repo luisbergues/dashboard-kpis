@@ -13,7 +13,10 @@ export const translations = {
       signOut: "Sign Out",
       cancel: "Cancel",
       save: "Save",
-      cargandoDashboard: "Loading Dashboard..."
+      cargandoDashboard: "Loading Dashboard...",
+      pendingApprovalTitle: "Your account is pending approval",
+      pendingApprovalBody: "An administrator needs to approve your account before you can access the dashboard. Please check back later.",
+      revoked: "Revoked"
     },
     navbar: {
       dashboard: "Dashboard",
@@ -21,7 +24,8 @@ export const translations = {
       myProjects: "My Projects",
       pipeline: "Pipeline",
       costs: "Cost Analysis",
-      materials: "Materials"
+      materials: "Materials",
+      admin: "Admin"
     },
     login: {
       titleSignIn: "Welcome Back",
@@ -219,6 +223,28 @@ export const translations = {
         dovetail: "Dovetail",
         element: "Element"
       }
+    },
+    admin: {
+      title: "User Management",
+      subtitle: "Approve new accounts and manage roles",
+      pendingSection: "Pending Approval",
+      activeSection: "Active Users",
+      noPending: "No accounts waiting for approval.",
+      name: "Name",
+      email: "Email",
+      requestedRole: "Requested Role",
+      role: "Role",
+      status: "Status",
+      approve: "Approve",
+      revoke: "Revoke Access",
+      revokeConfirm: "Revoke this user's access? They will no longer be able to see any data.",
+      statusPending: "Pending",
+      statusApproved: "Approved",
+      statusRejected: "Revoked",
+      roleEngineer: "Engineer",
+      roleAdministrative: "Administrative",
+      roleEngineerNester: "Engineer - Nester",
+      roleDesigner: "Designer"
     }
   },
   es: {
@@ -235,7 +261,10 @@ export const translations = {
       signOut: "Cerrar Sesión",
       cancel: "Cancelar",
       save: "Guardar",
-      cargandoDashboard: "Cargando Dashboard..."
+      cargandoDashboard: "Cargando Dashboard...",
+      pendingApprovalTitle: "Tu cuenta está pendiente de aprobación",
+      pendingApprovalBody: "Un administrador debe aprobar tu cuenta antes de que puedas acceder al dashboard. Por favor, volvé a intentarlo más tarde.",
+      revoked: "Revocado"
     },
     navbar: {
       dashboard: "Dashboard",
@@ -243,7 +272,8 @@ export const translations = {
       myProjects: "Mis Proyectos",
       pipeline: "Pipeline",
       costs: "Análisis de Costos",
-      materials: "Materiales"
+      materials: "Materiales",
+      admin: "Admin"
     },
     login: {
       titleSignIn: "Iniciar Sesión",
@@ -441,6 +471,28 @@ export const translations = {
         dovetail: "Cola de Milano",
         element: "Elemento"
       }
+    },
+    admin: {
+      title: "Gestión de Usuarios",
+      subtitle: "Aprobá cuentas nuevas y gestioná roles",
+      pendingSection: "Pendientes de Aprobación",
+      activeSection: "Usuarios Activos",
+      noPending: "No hay cuentas esperando aprobación.",
+      name: "Nombre",
+      email: "Email",
+      requestedRole: "Rol Solicitado",
+      role: "Rol",
+      status: "Estado",
+      approve: "Aprobar",
+      revoke: "Revocar Acceso",
+      revokeConfirm: "¿Revocar el acceso de este usuario? Ya no podrá ver ningún dato.",
+      statusPending: "Pendiente",
+      statusApproved: "Aprobado",
+      statusRejected: "Revocado",
+      roleEngineer: "Ingeniero",
+      roleAdministrative: "Administrativo",
+      roleEngineerNester: "Ingeniero - Nester",
+      roleDesigner: "Diseñador"
     }
   }
 };

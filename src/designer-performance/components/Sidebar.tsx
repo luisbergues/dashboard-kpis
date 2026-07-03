@@ -1,6 +1,5 @@
 import React from 'react';
 import { LayoutDashboard, FileText, CheckSquare, FolderOpen, Activity } from 'lucide-react';
-import clsx from 'clsx';
 
 interface SidebarProps {
   currentView: string;
@@ -8,11 +7,21 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
-  const navItems = [
-    { id: 'dashboard', label: 'Leaderboard',         icon: LayoutDashboard },
-    { id: 'projects',  label: 'Projects Directory',  icon: FolderOpen },
-    { id: 'phase1',    label: 'Phase 1: Intake',     icon: FileText },
-    { id: 'phase2',    label: 'Phase 2: Closure',    icon: CheckSquare },
+  const navGroups = [
+    {
+      label: 'Overview',
+      items: [
+        { id: 'dashboard', label: 'Leaderboard',        icon: LayoutDashboard },
+        { id: 'projects',  label: 'Projects Directory', icon: FolderOpen },
+      ],
+    },
+    {
+      label: 'Workflow',
+      items: [
+        { id: 'phase1', label: 'Phase 1: Intake',  icon: FileText },
+        { id: 'phase2', label: 'Phase 2: Closure', icon: CheckSquare },
+      ],
+    },
   ];
 
   return (
@@ -44,47 +53,70 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView })
 
       {/* Nav */}
       <nav style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = currentView === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setCurrentView(item.id)}
+        {navGroups.map((group, groupIdx) => (
+          <div
+            key={group.label}
+            style={{
+              paddingTop: groupIdx === 0 ? 0 : 12,
+              marginTop: groupIdx === 0 ? 0 : 12,
+              borderTop: groupIdx === 0 ? 'none' : '1px solid rgba(255,255,255,0.07)',
+            }}
+          >
+            <div
               style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '10px 14px',
-                borderRadius: 10,
-                border: isActive ? '1px solid rgba(59,130,246,0.25)' : '1px solid transparent',
-                background: isActive ? 'rgba(59,130,246,0.12)' : 'transparent',
-                color: isActive ? '#60a5fa' : '#94a3b8',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                fontWeight: isActive ? 600 : 400,
-                textAlign: 'left',
-                transition: 'all 0.15s',
-              }}
-              onMouseEnter={e => {
-                if (!isActive) {
-                  (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.04)';
-                  (e.currentTarget as HTMLButtonElement).style.color = '#e2e8f0';
-                }
-              }}
-              onMouseLeave={e => {
-                if (!isActive) {
-                  (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                  (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8';
-                }
+                padding: '0 14px 6px',
+                color: '#475569',
+                fontSize: '0.68rem',
+                fontWeight: 600,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
               }}
             >
-              <Icon size={16} color={isActive ? '#3b82f6' : '#64748b'} />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
+              {group.label}
+            </div>
+            {group.items.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentView === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setCurrentView(item.id)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 14px',
+                    borderRadius: 10,
+                    border: isActive ? '1px solid rgba(59,130,246,0.25)' : '1px solid transparent',
+                    background: isActive ? 'rgba(59,130,246,0.12)' : 'transparent',
+                    color: isActive ? '#60a5fa' : '#94a3b8',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    fontWeight: isActive ? 600 : 400,
+                    textAlign: 'left',
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => {
+                    if (!isActive) {
+                      (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.04)';
+                      (e.currentTarget as HTMLButtonElement).style.color = '#e2e8f0';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isActive) {
+                      (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                      (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8';
+                    }
+                  }}
+                >
+                  <Icon size={16} color={isActive ? '#3b82f6' : '#64748b'} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.07)', color: '#334155', fontSize: '0.72rem', textAlign: 'center' }}>

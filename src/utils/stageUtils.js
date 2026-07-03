@@ -1,8 +1,8 @@
 export const STAGES = [
   { id: 'ingenieria', label: 'Ingeniería' },
-  { id: 'check1', label: 'Check' },
+  { id: 'check1', label: 'Eng. Check' },
   { id: 'paperwork', label: 'Paperwork' },
-  { id: 'check2', label: 'Check' },
+  { id: 'check2', label: 'PW Check' },
   { id: 'nesting', label: 'Nesting' },
   { id: 'install', label: 'Install' }
 ];

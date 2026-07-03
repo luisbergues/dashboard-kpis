@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, ref, set, onValue, get, child } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
+import { sendOnHoldEvent, sendReleaseHoldEvent, sendQAChecklistEvent } from '../utils/n8nService';
 import { saveMaterialOverride } from '../utils/materialOverrides';
 import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';
@@ -28,9 +29,9 @@ const getStageLabel = (stageId, language) => {
   if (language === 'es') {
     switch (stageId) {
       case 'ingenieria': return 'Ingeniería';
-      case 'check1': return 'Check';
+      case 'check1': return 'Eng. Check';
       case 'paperwork': return 'Paperwork';
-      case 'check2': return 'Check';
+      case 'check2': return 'PW Check';
       case 'nesting': return 'Nesting';
       case 'install': return 'Install';
       default: return stageId;
@@ -38,9 +39,9 @@ const getStageLabel = (stageId, language) => {
   } else {
     switch (stageId) {
       case 'ingenieria': return 'Engineering';
-      case 'check1': return 'Check';
+      case 'check1': return 'Eng. Check';
       case 'paperwork': return 'Paperwork';
-      case 'check2': return 'Check';
+      case 'check2': return 'PW Check';
       case 'nesting': return 'Nesting';
       case 'install': return 'Install';
       default: return stageId;
@@ -444,6 +445,9 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       } else {
         localStorage.setItem(`project_qa_${so}_${STAGES[stageIndex].id}`, JSON.stringify(qaLog));
       }
+
+      // 📡 Notificar a n8n → Google Sheets
+      sendQAChecklistEvent(so, STAGES[stageIndex].id, qaType, qaLog.checkedBy);
     }
 
     setIsQAModalOpen(false);
@@ -548,6 +552,11 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       }
     }
 
+    // 📡 Notificar a n8n → Google Sheets
+    const projectData = priorityAnalysis?.find(p => String(p.so) === String(activeProjectSo));
+    const changedBy = userProfile?.designerName || currentUser?.email || 'Unknown';
+    sendOnHoldEvent(projectData || { so: activeProjectSo }, holdReason, changedBy);
+
     setIsHoldModalOpen(false);
     setActiveProjectSo(null);
     setHoldReason('');
@@ -588,6 +597,11 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
         console.error('Failed to release hold on localStorage:', err);
       }
     }
+
+    // 📡 Notificar a n8n → Google Sheets
+    const projectData = priorityAnalysis?.find(p => String(p.so) === String(so));
+    const changedBy = userProfile?.designerName || currentUser?.email || 'Unknown';
+    sendReleaseHoldEvent(projectData || { so }, changedBy);
   };
 
   const handleAddNote = async (so) => {

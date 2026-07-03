@@ -52,11 +52,11 @@ export default function CalendarView({ data, currentUser, userProfile }) {
   const [sidebarTab, setSidebarTab] = useState('installs');
   const [projectDesigners, setProjectDesigners] = useState({});
 
-  // Real-Time Database listener hook
+  // Real-Time Database listener hook — notes are shared across all users
   useEffect(() => {
     if (!db || !currentUser) return;
 
-    const notesRef = ref(db, `calendar_notes/${currentUser.uid}`);
+    const notesRef = ref(db, 'calendar_notes');
     const unsubscribe = onValue(notesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -180,16 +180,18 @@ export default function CalendarView({ data, currentUser, userProfile }) {
     e.preventDefault();
     if (!noteText.trim()) return;
 
-    const noteId = selectedNote ? selectedNote.id : `note-${Date.now()}`;
+    const noteId = selectedNote ? selectedNote.id : `note-${Date.now()}-${currentUser?.uid || 'guest'}`;
     const noteData = {
       date: selectedDate,
       text: noteText,
-      so: linkedSo || null
+      so: linkedSo || null,
+      authorUid: selectedNote ? selectedNote.authorUid : currentUser?.uid || null,
+      authorName: selectedNote ? selectedNote.authorName : (userProfile?.designerName || currentUser?.email || 'Unknown'),
     };
 
     if (db && currentUser) {
       try {
-        set(ref(db, `calendar_notes/${currentUser.uid}/${noteId}`), noteData);
+        set(ref(db, `calendar_notes/${noteId}`), noteData);
         setIsModalOpen(false);
       } catch (err) {
         console.error('Failed to save note to Firebase:', err);
@@ -210,7 +212,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
   const handleDeleteNote = (noteId) => {
     if (db && currentUser) {
       try {
-        remove(ref(db, `calendar_notes/${currentUser.uid}/${noteId}`));
+        remove(ref(db, `calendar_notes/${noteId}`));
         setIsModalOpen(false);
       } catch (err) {
         console.error('Failed to delete note from Firebase:', err);

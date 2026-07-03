@@ -5,15 +5,16 @@ import { db, ref, onValue, set } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
+import { sendStageEvent } from '../utils/n8nService';
 import './PipelineView.css';
 
 const getStageLabel = (stageId, language) => {
   if (language === 'es') {
     switch (stageId) {
       case 'ingenieria': return 'Ingeniería';
-      case 'check1': return 'Check';
+      case 'check1': return 'Eng. Check';
       case 'paperwork': return 'Paperwork';
-      case 'check2': return 'Check';
+      case 'check2': return 'PW Check';
       case 'nesting': return 'Nesting';
       case 'install': return 'Install';
       default: return stageId;
@@ -21,9 +22,9 @@ const getStageLabel = (stageId, language) => {
   } else {
     switch (stageId) {
       case 'ingenieria': return 'Engineering';
-      case 'check1': return 'Check 1';
+      case 'check1': return 'Eng. Check';
       case 'paperwork': return 'Paperwork';
-      case 'check2': return 'Check 2';
+      case 'check2': return 'PW Check';
       case 'nesting': return 'Nesting';
       case 'install': return 'Install';
       default: return stageId;
@@ -207,6 +208,8 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     if (db) {
       await set(ref(db, `nesting_checks/${so}`), updatedCheck);
     }
+    // 📡 Notificar a n8n → Google Sheets
+    sendStageEvent(so, 'nesting', 'started', userName);
   };
 
   const handleNestingFinish = async (so) => {
@@ -221,6 +224,8 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     if (db) {
       await set(ref(db, `nesting_checks/${so}`), updatedCheck);
     }
+    // 📡 Notificar a n8n → Google Sheets
+    sendStageEvent(so, 'nesting', 'finished', userName);
   };
 
   const handleEngineeringStart = async (so) => {
@@ -233,6 +238,8 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     };
     setEngineeringChecks(prev => ({ ...prev, [so]: updatedCheck }));
     await saveEngineeringCheck(so, updatedCheck);
+    // 📡 Notificar a n8n → Google Sheets
+    sendStageEvent(so, 'check_eng', 'started', userName);
   };
 
   const handleEngineeringFinish = async (so) => {
@@ -245,6 +252,8 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     };
     setEngineeringChecks(prev => ({ ...prev, [so]: updatedCheck }));
     await saveEngineeringCheck(so, updatedCheck);
+    // 📡 Notificar a n8n → Google Sheets
+    sendStageEvent(so, 'check_eng', 'finished', userName);
   };
 
   const { priorityAnalysis, onHoldNotes } = data;

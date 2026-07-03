@@ -107,7 +107,7 @@ const emptyComplexity = {
 
 /* ── main component ──────────────────────────────────────────────────── */
 export const Phase1Form: React.FC = () => {
-  const { designerNames, projects, addProject, updateProject, getProjectComplexity } = useKpi();
+  const { designerNames, projects, projectDesigners, addProject, updateProject, getProjectComplexity } = useKpi();
 
   const [mode, setMode] = useState<'New' | 'Update'>('New');
   const [soNumber, setSoNumber]       = useState('');
@@ -130,7 +130,11 @@ export const Phase1Form: React.FC = () => {
     const proj = projects.find(p => p.id === selectedSo);
     if (proj) {
       setProjectName(proj.projectName);
-      if (proj.designerName && proj.designerName !== 'Unassigned') setDesignerName(proj.designerName);
+      // Pull the designer from My Projects/Pipeline (the source of truth), not
+      // from whatever may already be stored on the Designer Perf. project record.
+      const assignedDesigner = projectDesigners[selectedSo];
+      if (assignedDesigner) setDesignerName(assignedDesigner);
+      else if (proj.designerName && proj.designerName !== 'Unassigned') setDesignerName(proj.designerName);
       // Removed auto-fill for totalRooms per user request so it must be entered manually
       setTotalRooms('');
     }
@@ -172,7 +176,7 @@ export const Phase1Form: React.FC = () => {
       const existing = projects.find(p => p.id === soNumber);
       if (existing) {
         setProjectName(existing.projectName);
-        setDesignerName(existing.designerName);
+        setDesignerName(projectDesigners[soNumber] || existing.designerName);
         setTotalRooms(existing.totalRooms);
         setChecklist(existing.checklist);
         setComplexity(existing.complexity);
@@ -182,7 +186,7 @@ export const Phase1Form: React.FC = () => {
         setAutoFilledFields(filled);
       }
     }
-  }, [mode, soNumber, projects]);
+  }, [mode, soNumber, projects, projectDesigners]);
 
   useEffect(() => { if (mode === 'New') resetForm(); }, [mode]);
 

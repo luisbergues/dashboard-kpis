@@ -17,9 +17,13 @@ import DesignerPerformanceApp from './designer-performance/App'
 import ErrorBoundary from './components/ErrorBoundary'
 import NotificationBubble from './components/NotificationBubble'
 import ProjectChatbot from './components/ProjectChatbot'
-import { auth, db, onAuthStateChanged, ref, onValue, set, get, child } from './utils/firebase'
+import AdminUsersView from './views/AdminUsersView'
+import { useLanguage } from './utils/LanguageContext'
+import { isSuperAdminRole } from './utils/adminConfig'
+import { auth, db, onAuthStateChanged, ref, onValue, set, get, child, signOut } from './utils/firebase'
 
 function App() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('active_tab') || 'dashboard';
   });
@@ -478,6 +482,16 @@ function App() {
       return <LoginView data={data} />;
     }
 
+    if (userProfile?.status !== 'approved' && !isSuperAdminRole(userProfile?.role)) {
+      return (
+        <div className="loading-state pending-approval-state">
+          <h2>{t('common.pendingApprovalTitle')}</h2>
+          <p>{t('common.pendingApprovalBody')}</p>
+          <button className="btn-secondary" onClick={() => signOut(auth)}>{t('common.signOut')}</button>
+        </div>
+      );
+    }
+
     const isDesigner = userProfile?.role === 'designer';
 
     // Redirect designer away from restricted tabs
@@ -502,30 +516,36 @@ function App() {
         return isDesigner ? null : <DesignQualityView data={mergedData} />;
       case 'designer-performance':
         return <DesignerPerformanceApp data={mergedData} projectDesigners={projectDesigners} />;
+      case 'admin':
+        return isSuperAdminRole(userProfile?.role) ? <AdminUsersView userProfile={userProfile} /> : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
       default: return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
     }
   };
 
+  const isApproved = userProfile?.status === 'approved';
+  const isSuperAdmin = isSuperAdminRole(userProfile?.role);
+
   return (
     <div className="app-container">
-      {(!loading && !authLoading && currentUser) && (
-        <Navbar 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
+      {(!loading && !authLoading && currentUser && (isApproved || isSuperAdmin)) && (
+        <Navbar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
           userProfile={userProfile}
+          isSuperAdmin={isSuperAdmin}
         />
       )}
-      <main className={`main-content ${!currentUser ? 'no-sidebar' : ''}`}>
+      <main className={`main-content ${(!currentUser || !(isApproved || isSuperAdmin)) ? 'no-sidebar' : ''}`}>
         <ErrorBoundary>
           {renderView()}
         </ErrorBoundary>
       </main>
-      {currentUser && (
-        <ProjectChatbot 
-          projects={mergedData?.priorityAnalysis} 
+      {currentUser && (isApproved || isSuperAdmin) && (
+        <ProjectChatbot
+          projects={mergedData?.priorityAnalysis}
           materialsMatrix={mergedData?.materialsMatrix}
-          currentUser={currentUser} 
-          userProfile={userProfile} 
+          currentUser={currentUser}
+          userProfile={userProfile}
         />
       )}
       <NotificationBubble 

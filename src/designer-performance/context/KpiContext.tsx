@@ -8,6 +8,7 @@ interface KpiContextType {
   projects: Project[];
   designers: Designer[];
   designerNames: string[];
+  projectDesigners: Record<string, string>;
   addProject: (project: Project) => void;
   updateProject: (project: Project) => void;
   getProjectComplexity: (soNumber: string) => Partial<Project['complexity']>;
@@ -129,15 +130,21 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
   const addProject = (project: Project) => {
     if (!db) return;
     set(ref(db, `designer_performance_projects/${project.id}`), project);
+    if (project.designerName) {
+      set(ref(db, `project_designers/${project.id}`), project.designerName);
+    }
   };
 
   const updateProject = (updatedProject: Project) => {
     if (!db) return;
     set(ref(db, `designer_performance_projects/${updatedProject.id}`), updatedProject);
+    if (updatedProject.designerName) {
+      set(ref(db, `project_designers/${updatedProject.id}`), updatedProject.designerName);
+    }
   };
 
   return (
-    <KpiContext.Provider value={{ projects, designers, designerNames, addProject, updateProject, getProjectComplexity }}>
+    <KpiContext.Provider value={{ projects, designers, designerNames, projectDesigners, addProject, updateProject, getProjectComplexity }}>
       {children}
     </KpiContext.Provider>
   );

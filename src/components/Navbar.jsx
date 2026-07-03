@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User, Briefcase, ChevronDown, Award, Sun, Moon, Activity } from 'lucide-react';
+import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User, Briefcase, ChevronDown, Award, Sun, Moon, Activity, ShieldCheck } from 'lucide-react';
 import { auth, db, ref, set, signOut } from '../utils/firebase';
 import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
 import './Navbar.css';
 
-export default function Navbar({ activeTab, setActiveTab, userProfile }) {
+export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAdmin }) {
   const { t, language, setLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newRole, setNewRole] = useState('engineer');
 
   const isDesigner = userProfile?.role === 'designer';
 
@@ -25,12 +24,12 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
     { id: 'pipeline', label: t('navbar.pipeline'), icon: ListTodo },
     { id: 'materials', label: t('navbar.materials'), icon: Hammer },
     ...(userProfile?.role !== 'administrative' ? [{ id: 'quality', label: 'Team Stats', icon: Award }] : []),
-    { id: 'designer-performance', label: 'Designer Perf.', icon: Activity }
+    { id: 'designer-performance', label: 'Designer Perf.', icon: Activity },
+    ...(isSuperAdmin ? [{ id: 'admin', label: t('navbar.admin'), icon: ShieldCheck }] : [])
   ];
 
   const openModal = () => {
     setNewName(userProfile?.designerName || '');
-    setNewRole(userProfile?.role || 'engineer');
     setIsProfileModalOpen(true);
   };
 
@@ -38,12 +37,8 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
     e.preventDefault();
     if (!auth.currentUser || !db) return;
     try {
-      const userRef = ref(db, `users/${auth.currentUser.uid}`);
-      await set(userRef, {
-        ...userProfile,
-        designerName: newName,
-        role: newRole
-      });
+      const nameRef = ref(db, `users/${auth.currentUser.uid}/designerName`);
+      await set(nameRef, newName);
       setIsProfileModalOpen(false);
     } catch (error) {
       alert("Error saving profile: " + error.message);
@@ -212,15 +207,15 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
           <div className="profile-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="profile-modal-header">
               <h3>{language === 'es' ? 'Configuración de Perfil' : 'Profile Settings'}</h3>
-              <p>{language === 'es' ? 'Ajusta tu nombre o tu rol en la aplicación' : 'Adjust your name or app role'}</p>
+              <p>{language === 'es' ? 'Ajusta tu nombre en la aplicación' : 'Adjust your name'}</p>
             </div>
             <form onSubmit={handleSaveProfile} className="profile-modal-form">
               <div className="form-group">
                 <label className="form-label">{language === 'es' ? 'Nombre del Diseñador' : 'Designer Name'}</label>
-                <input 
-                  type="text" 
-                  value={newName} 
-                  onChange={(e) => setNewName(e.target.value)} 
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
                   className="form-input"
                   placeholder={language === 'es' ? 'Tu nombre de diseñador' : 'Your designer name'}
                   required
@@ -228,16 +223,10 @@ export default function Navbar({ activeTab, setActiveTab, userProfile }) {
               </div>
               <div className="form-group">
                 <label className="form-label">{language === 'es' ? 'Rol' : 'Role'}</label>
-                <select 
-                  value={newRole} 
-                  onChange={(e) => setNewRole(e.target.value)} 
-                  className="form-input form-select"
-                  disabled={userProfile?.role === 'administrative'}
-                >
-                  <option value="engineer">{language === 'es' ? 'Ingeniero (Engineer)' : 'Engineer'}</option>
-                  <option value="administrative">{language === 'es' ? 'Administrativo (Administrative)' : 'Administrative'}</option>
-                  <option value="engineer_nester">{language === 'es' ? 'Ingeniero - Nester (Engineer - Nester)' : 'Engineer - Nester'}</option>
-                </select>
+                <p className="form-static-value">{getRoleLabel()}</p>
+                <p className="text-muted" style={{ fontSize: '0.8em', marginTop: '4px' }}>
+                  {language === 'es' ? 'Solo un administrador puede cambiar tu rol.' : 'Only an administrator can change your role.'}
+                </p>
               </div>
               <div className="modal-actions">
                 <button 
