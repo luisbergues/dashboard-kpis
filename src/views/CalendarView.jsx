@@ -120,16 +120,18 @@ export default function CalendarView({ data, currentUser, userProfile }) {
   // Extract unique active projects for the linking selector
   const allProjects = Array.from(
     new Map(
-      priorityAnalysis.map(p => [
-        p.so, 
-        {
-          so: p.so,
-          name: p.name.split(':')[0].trim(),
-          status: p.status
-        }
-      ])
+      priorityAnalysis
+        .filter(p => p.so)
+        .map(p => [
+          p.so,
+          {
+            so: p.so,
+            name: p.name.split(':')[0].trim(),
+            status: p.status
+          }
+        ])
     ).values()
-  ).sort((a, b) => a.so.localeCompare(b.so));
+  ).sort((a, b) => String(a.so).localeCompare(String(b.so)));
 
   // Calendar month state navigation
   const initialDate = projectsWithDates.length > 0 ? projectsWithDates[0].dateObj : new Date();
@@ -415,7 +417,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
             <div className="sidebar-notes-list">
               {notes
                 .slice()
-                .sort((a, b) => a.date.localeCompare(b.date))
+                .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')))
                 .map((n, idx) => {
                   const linkedProj = priorityAnalysis.find(p => p.so === n.so);
                   const noteDate = new Date(n.date + 'T00:00:00');

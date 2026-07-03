@@ -3,10 +3,11 @@ import { CheckCircle2, ShieldOff } from 'lucide-react';
 import { db, ref, onValue, update } from '../utils/firebase';
 import { useLanguage } from '../utils/LanguageContext';
 import { isSuperAdminRole } from '../utils/adminConfig';
+import OrphanedProjectsPanel from '../components/OrphanedProjectsPanel';
 
 const ROLES = ['engineer', 'engineer_nester', 'administrative', 'designer'];
 
-export default function AdminUsersView({ userProfile }) {
+export default function AdminUsersView({ userProfile, data }) {
   const { t } = useLanguage();
   const [users, setUsers] = useState({});
   const [pendingRoleChoice, setPendingRoleChoice] = useState({});
@@ -86,14 +87,14 @@ export default function AdminUsersView({ userProfile }) {
                   <td>
                     <select
                       className="form-input form-select"
-                      value={pendingRoleChoice[uid] || u.role || 'engineer'}
+                      value={pendingRoleChoice[uid] || u.requestedRole || 'engineer'}
                       onChange={(e) => setPendingRoleChoice(prev => ({ ...prev, [uid]: e.target.value }))}
                     >
                       {ROLES.map(r => <option key={r} value={r}>{roleLabel(r)}</option>)}
                     </select>
                   </td>
                   <td>
-                    <button className="btn-sm btn-primary" onClick={() => handleApprove(uid, u.role)}>
+                    <button className="btn-sm btn-primary" onClick={() => handleApprove(uid, u.requestedRole)}>
                       <CheckCircle2 size={14} /> {t('admin.approve')}
                     </button>
                   </td>
@@ -144,6 +145,8 @@ export default function AdminUsersView({ userProfile }) {
           </tbody>
         </table>
       </div>
+
+      <OrphanedProjectsPanel data={data} />
     </div>
   );
 }

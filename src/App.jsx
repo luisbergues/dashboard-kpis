@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchAndParseData, fetchAndParseProjectMaterials } from './utils/sheetParser'
 import { getCachedData, setCachedData, isCacheFresh } from './utils/dbCache'
 import { checkDbSizeAndArchive } from './utils/archiveHelpers'
-import { archiveMissingCompletedProjects, fetchArchivedCompletedProjects } from './utils/completedProjectsArchive'
+import { archiveMissingCompletedProjects, archiveCurrentlyCompletedProjects, fetchArchivedCompletedProjects, purgeExpiredArchives } from './utils/completedProjectsArchive'
+import { withArchiveLease } from './utils/archiveCoordinator'
 import Navbar from './components/Navbar'
 import DashboardView from './views/DashboardView'
 import PipelineView from './views/PipelineView'
@@ -68,12 +69,18 @@ function App() {
           
           parsedData.projectSpecificMaterials = projectMaterialsData;
 
-          if (cached && cached.parsedData) {
-            await archiveMissingCompletedProjects(cached.parsedData, parsedData);
-          }
-          
+          // All archive writes go through a single-writer lease so concurrent
+          // clients can't clobber each other's read-modify-write on the Storage blobs.
+          await withArchiveLease(async () => {
+            if (cached && cached.parsedData) {
+              await archiveMissingCompletedProjects(cached.parsedData, parsedData);
+            }
+            await archiveCurrentlyCompletedProjects(parsedData);
+            await checkDbSizeAndArchive();
+            await purgeExpiredArchives();
+          }).catch(console.error);
+
           await setCachedData(parsedData);
-          checkDbSizeAndArchive().catch(console.error);
           dataToReturn = parsedData;
           dataToReturn.archivedProjects = await fetchArchivedCompletedProjects();
         } catch (err) {
@@ -517,7 +524,7 @@ function App() {
       case 'designer-performance':
         return <DesignerPerformanceApp data={mergedData} projectDesigners={projectDesigners} />;
       case 'admin':
-        return isSuperAdminRole(userProfile?.role) ? <AdminUsersView userProfile={userProfile} /> : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
+        return isSuperAdminRole(userProfile?.role) ? <AdminUsersView userProfile={userProfile} data={mergedData} /> : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
       default: return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
     }
   };

@@ -1,0 +1,60 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "users": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      "$uid": {
+        ".read": "auth.uid === $uid",
+
+        "email":        { ".write": "auth.uid === $uid && !data.exists()" },
+        "designerName": { ".write": "auth.uid === $uid" },
+        "createdAt":    { ".write": "auth.uid === $uid && !data.exists()" },
+
+        "requestedRole": {
+          ".write": "auth.uid === $uid && !data.exists()",
+          ".validate": "newData.isString() && newData.val().matches(/^(engineer|engineer_nester|administrative|designer)$/)"
+        },
+
+        "role": {
+          ".write": "root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+          ".validate": "newData.isString() && newData.val().matches(/^(engineer|engineer_nester|administrative|designer)$/)"
+        },
+
+        "status": {
+          ".write": "root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+          ".validate": "newData.isString() && newData.val().matches(/^(pending|approved|rejected)$/)"
+        },
+
+        "readNotes": { "$so": { ".write": "auth.uid === $uid" } }
+      }
+    },
+
+    "project_overrides": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
+    },
+    "project_stages": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
+    },
+    "project_qa_checklist": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
+    },
+    "weekly_history": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
+    },
+    "deleted_projects": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
+    },
+
+    "$other": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'"
+    }
+  }
+}

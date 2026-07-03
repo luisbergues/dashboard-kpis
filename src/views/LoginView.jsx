@@ -92,13 +92,15 @@ export default function LoginView({ data }) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
-        // Save the user profile to Realtime Database
+        // Save the user profile to Realtime Database.
+        // NOTE: role/status are authorization fields and are NOT written here —
+        // Firebase rules only allow an engineer-admin to set them. The user's
+        // choice is stored as requestedRole for the admin to review on approval.
         if (db) {
           await set(ref(db, `users/${user.uid}`), {
             email: user.email,
             designerName: designerName,
-            role: signupRole,
-            status: 'pending',
+            requestedRole: signupRole,
             createdAt: new Date().toISOString()
           });
         }
@@ -155,6 +157,14 @@ export default function LoginView({ data }) {
     }
   };
 
+  const isDesignerRole = signupRole === 'designer';
+  const isEngineerRole = signupRole === 'engineer' || signupRole === 'engineer_nester';
+  const nameFieldLabel = isDesignerRole
+    ? (language === 'es' ? 'Tu nombre como diseñador' : 'Your designer name')
+    : isEngineerRole
+      ? t('login.linkDesigner')
+      : (language === 'es' ? 'Tu nombre completo' : 'Your full name');
+
   return (
     <div className="login-view animate-fade-in">
       <LoginIntroBackground />
@@ -201,22 +211,11 @@ export default function LoginView({ data }) {
                 </div>
               </div>
 
-              <div 
-                className="form-group"
-                style={{ 
-                  opacity: signupRole === 'administrative' ? 0.5 : 1,
-                  pointerEvents: signupRole === 'administrative' ? 'none' : 'auto'
-                }}
-              >
-                <label className="form-label">
-                  {signupRole === 'designer'
-                    ? (language === 'es' ? 'Tu nombre como diseñador' : 'Your designer name')
-                    : t('login.linkDesigner')
-                  }
-                </label>
+              <div className="form-group">
+                <label className="form-label">{nameFieldLabel}</label>
                 <div className="input-wrapper">
                   <User size={18} className="input-icon" />
-                  {signupRole === 'designer' ? (
+                  {isDesignerRole ? (
                     <select
                       value={designerName}
                       onChange={(e) => setDesignerName(e.target.value)}
@@ -228,19 +227,26 @@ export default function LoginView({ data }) {
                         <option key={name} value={name}>{name}</option>
                       ))}
                     </select>
-                  ) : (
+                  ) : isEngineerRole ? (
                     <select
                       value={designerName}
                       onChange={(e) => setDesignerName(e.target.value)}
                       className="form-input form-select has-icon"
-                      required={isSignUp && (signupRole === 'engineer' || signupRole === 'engineer_nester')}
-                      disabled={signupRole === 'administrative'}
+                      required={isSignUp}
                     >
                       <option value="">{t('login.selectName')}</option>
                       {designers.map(name => (
                         <option key={name} value={name}>{name}</option>
                       ))}
                     </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={designerName}
+                      onChange={(e) => setDesignerName(e.target.value)}
+                      className="form-input has-icon"
+                      placeholder={language === 'es' ? 'Nombre y apellido' : 'First and last name'}
+                    />
                   )}
                 </div>
               </div>
