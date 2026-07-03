@@ -172,10 +172,19 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     return p.eng && p.eng.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
   });
 
+  // "Completed Projects" should show every finished project: ones already removed
+  // from the sheet (myArchivedProjects, from Firestore) AND ones still sitting in
+  // the sheet with status Completed (myProjectsRaw) that haven't been removed yet.
+  const myCompletedProjects = [
+    ...myProjectsRaw.filter(p => p.status && p.status.toLowerCase() === 'completed'),
+    ...myArchivedProjects,
+  ].filter((p, idx, arr) => arr.findIndex(x => x.so === p.so) === idx);
+
   const isAdmin = userProfile && (userProfile.role === 'administrative' || userProfile.role === 'admin');
 
-  // Same column order as Pipeline's Kanban board
+  // Same column order/labels as Pipeline's Kanban board
   const KANBAN_ORDER = { procurement: 0, material: 1, nesting: 2, projects: 3 };
+  const KANBAN_LABELS = { procurement: 'Procurement', material: 'Material', nesting: 'Nesting', projects: 'Projects' };
 
   const myProjects = [...myProjectsRaw]
     .sort((a, b) => {
@@ -1209,6 +1218,13 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div className="header-status-controls" onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span
+                            className="status-badge-inline"
+                            title={language === 'es' ? 'Etapa en el Kanban de Pipeline' : 'Stage on the Pipeline Kanban board'}
+                            style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.25)' }}
+                          >
+                            {KANBAN_LABELS[kanbanState[project.so] || 'projects']}
+                          </span>
                           <span className={`status-badge-inline ${currentStatus.toLowerCase().replace(' ', '-')}`}>
                             {getStatusLabelPdf(currentStatus)}
                           </span>
@@ -1833,8 +1849,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
       {/* Completed Projects Modal */}
       {isCompletedProjectsModalOpen && (
-        <CompletedProjectsModal 
-          projects={data.archivedProjects || []}
+        <CompletedProjectsModal
+          projects={myCompletedProjects}
           onClose={() => setIsCompletedProjectsModalOpen(false)}
         />
       )}

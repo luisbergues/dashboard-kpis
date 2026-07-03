@@ -22,10 +22,12 @@ export default function CompletedProjectsModal({ projects, onClose }) {
         }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#fff' }}>
-              {language === 'es' ? 'Proyectos Completados (Archivo 6 Meses)' : 'Completed Projects (6-Month Archive)'}
+              {language === 'es' ? 'Proyectos Completados' : 'Completed Projects'}
             </h2>
             <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#94A3B8' }}>
-              {language === 'es' ? 'Proyectos finalizados y removidos del drive activo.' : 'Finished projects removed from the active drive.'}
+              {language === 'es'
+                ? 'Todos los proyectos finalizados: en la hoja activa o ya archivados (hasta 6 meses tras ser removidos).'
+                : 'All finished projects: still in the active sheet, or already archived (kept up to 6 months after removal).'}
             </p>
           </div>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer' }}>
@@ -48,7 +50,7 @@ export default function CompletedProjectsModal({ projects, onClose }) {
                 <tbody>
                   {projects.map(p => {
                     // Try to parse archivedAt if it's a Firestore timestamp
-                    let archivedDate = 'N/A';
+                    let archivedDate = language === 'es' ? 'Aún en la hoja' : 'Still in sheet';
                     if (p.archivedAt && typeof p.archivedAt.toDate === 'function') {
                       archivedDate = p.archivedAt.toDate().toLocaleDateString(language === 'es' ? 'es-AR' : 'en-US');
                     } else if (p.archivedAt && p.archivedAt.seconds) {
