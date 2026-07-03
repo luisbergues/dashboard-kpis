@@ -1,5 +1,37 @@
 import { backupDb } from './firebaseBackup';
-import { collection, doc, setDoc, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, getDocs, Timestamp } from 'firebase/firestore';
+
+// Proactively back up every currently-Completed project the moment we see it,
+// instead of only reacting when a row disappears from the sheet between two
+// fetches (archiveMissingCompletedProjects below). That disappearance-based
+// approach has a gap: if the row gets deleted from the sheet in between the
+// exact snapshots being diffed, the project is never archived and its data
+// is effectively lost. This function makes that impossible by upserting a
+// backup as soon as a project is marked Completed, whether or not it's ever
+// later removed from the sheet.
+export async function archiveCurrentlyCompletedProjects(newData) {
+  if (!backupDb || !newData) return;
+
+  try {
+    const completed = (newData.priorityAnalysis || []).filter(p =>
+      p.status && p.status.toLowerCase() === 'completed'
+    );
+    if (completed.length === 0) return;
+
+    await Promise.all(completed.map(async (project) => {
+      const docRef = doc(collection(backupDb, 'completed_projects_archive'), project.so.toString());
+      const existing = await getDoc(docRef);
+      if (existing.exists()) {
+        // Keep the backed-up data fresh, but don't reset the original archivedAt timestamp
+        await setDoc(docRef, { ...project }, { merge: true });
+      } else {
+        await setDoc(docRef, { ...project, archivedAt: Timestamp.now() }, { merge: true });
+      }
+    }));
+  } catch (error) {
+    console.error('❌ Error proactively archiving completed projects:', error);
+  }
+}
 
 export async function archiveMissingCompletedProjects(previousData, newData) {
   if (!backupDb || !previousData || !newData) return;
