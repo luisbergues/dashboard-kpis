@@ -166,12 +166,12 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
         const top = manualMatches[0];
         const runnerUp = manualMatches[1];
         let reply = isES
-          ? `📐 **${top.title}** (Manual Técnico §${top.section})\n\n${top.answer}`
-          : `📐 **${top.title}** (Technical Manual §${top.section})\n\n${top.answer}`;
+          ? `📐 **${top.titleES}** (Manual Técnico §${top.section})\n\n${top.answerES}`
+          : `📐 **${top.titleEN}** (Technical Manual §${top.section})\n\n${top.answerEN}`;
         if (runnerUp) {
           reply += isES
-            ? `\n\n_¿Buscabas algo sobre "${runnerUp.title}" en cambio? Preguntame de nuevo si es así._`
-            : `\n\n_Were you asking about "${runnerUp.title}" instead? Ask again if so._`;
+            ? `\n\n_¿Buscabas algo sobre "${runnerUp.titleES}" en cambio? Preguntame de nuevo si es así._`
+            : `\n\n_Were you asking about "${runnerUp.titleEN}" instead? Ask again if so._`;
         }
         return { text: reply };
       }
