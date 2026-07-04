@@ -239,6 +239,39 @@
   background: linear-gradient(135deg, rgba(9, 209, 199, 0.04) 0%, rgba(128, 238, 152, 0.03) 100%);
 }
 
+/* ─── Compact Financial Impact pill (next to the Week over Week chart) ──── */
+.fi-summary-pill {
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fi-summary-pill-total {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fi-summary-pill-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--card-border);
+}
+
+.fi-summary-pill-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.fi-summary-pill-row .fi-card-value {
+  font-size: 1rem;
+}
+
 /* ─── Summaries Row ─────────────────────────────────────── */
 .dashboard-summaries-row {
   display: grid;
@@ -678,5 +711,11 @@
 .project-carousel-card.small-card .proj-status-badge {
   font-size: 0.68rem;
   padding: 1px 6px;
+}
+
+@media (max-width: 900px) {
+  .chart-and-fi-row {
+    grid-template-columns: 1fr !important;
+  }
 }
 

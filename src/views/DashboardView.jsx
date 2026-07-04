@@ -399,23 +399,61 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
         )}
       </section>
 
-      {/* Week over Week Comparison — Historical Chart (full width) */}
-      <SectionErrorBoundary title="Historical Data Error">
-        <section className="glass-card chart-section-full">
-          <div className="chart-section-header">
-            <h3 className="section-title">
-              <TrendingUp className="text-mint" size={20} />
-              {t('dashboard.wowTitle')}
-            </h3>
-            <span className="history-badge">
-              {weeklyHistory.length > 0 ? `${weeklyHistory.length} ${t('dashboard.trackedWeeks')}` : t('dashboard.currentData')}
-            </span>
-          </div>
-          <div className="mixed-chart-container-wide">
-            <Chart type="bar" data={historicalChartData} options={chartOptions} />
-          </div>
-        </section>
-      </SectionErrorBoundary>
+      {/* Week over Week Comparison (2/3 width, under Budget Deviation + Avg Validation Time)
+          alongside a compact Financial Impact Analysis pill (1/3 width, under Conversion Rate) */}
+      <div className="chart-and-fi-row" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px', marginBottom: '24px', alignItems: 'stretch' }}>
+        {fiTotal && (
+          <SectionErrorBoundary title="Financial Analysis Error">
+            <section className="glass-card fi-summary-pill">
+              <h3 className="section-title">
+                <DollarSign className="text-neon-green" size={18} />
+                {t('dashboard.financialTitle')}
+              </h3>
+              <div className="fi-summary-pill-total">
+                <span className="pipeline-label">{t('dashboard.totalPipeline')}</span>
+                <span className="pipeline-value">{formatCurrency(fiTotal.value)}</span>
+              </div>
+              <div className="fi-summary-pill-rows">
+                {fiOnHold && (
+                  <div className="fi-summary-pill-row">
+                    <span className="fi-card-label">{t('dashboard.onHoldValue')}</span>
+                    <span className="fi-card-value fi-hold">{formatCurrency(fiOnHold.value)}</span>
+                  </div>
+                )}
+                {fiInProgress && (
+                  <div className="fi-summary-pill-row">
+                    <span className="fi-card-label">{t('dashboard.inProgressValue')}</span>
+                    <span className="fi-card-value fi-progress">{formatCurrency(fiInProgress.value)}</span>
+                  </div>
+                )}
+                {fiDelayedRisk && (
+                  <div className="fi-summary-pill-row">
+                    <span className="fi-card-label">{fiDelayedRisk.status}</span>
+                    <span className="fi-card-value fi-risk">{formatCurrency(fiDelayedRisk.value)}</span>
+                  </div>
+                )}
+              </div>
+            </section>
+          </SectionErrorBoundary>
+        )}
+
+        <SectionErrorBoundary title="Historical Data Error">
+          <section className="glass-card chart-section-full">
+            <div className="chart-section-header">
+              <h3 className="section-title">
+                <TrendingUp className="text-mint" size={20} />
+                {t('dashboard.wowTitle')}
+              </h3>
+              <span className="history-badge">
+                {weeklyHistory.length > 0 ? `${weeklyHistory.length} ${t('dashboard.trackedWeeks')}` : t('dashboard.currentData')}
+              </span>
+            </div>
+            <div className="mixed-chart-container-wide">
+              <Chart type="bar" data={historicalChartData} options={chartOptions} />
+            </div>
+          </section>
+        </SectionErrorBoundary>
+      </div>
 
       {/* Financial Impact Analysis (from Sheet) */}
       {fiRows.length > 0 && (
