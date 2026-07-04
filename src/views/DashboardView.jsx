@@ -277,7 +277,6 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
   // ─── Financial Impact Analysis (from Sheet) ─────────────────────────────
   const processCost = (costStr) => parseFloat(costStr.replace(/[^0-9.-]+/g, ""));
   const fiRows = financialImpact?.rows || [];
-  const fiDescription = financialImpact?.description || '';
 
   // Extract key values for display
   const fiOnHold = fiRows.find(r => r.status === 'ON HOLD');
@@ -415,19 +414,19 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
               </div>
               <div className="fi-summary-pill-rows">
                 {fiOnHold && (
-                  <div className="fi-summary-pill-row">
+                  <div className="fi-summary-mini-card fi-card-hold">
                     <span className="fi-card-label">{t('dashboard.onHoldValue')}</span>
                     <span className="fi-card-value fi-hold">{formatCurrency(fiOnHold.value)}</span>
                   </div>
                 )}
                 {fiInProgress && (
-                  <div className="fi-summary-pill-row">
+                  <div className="fi-summary-mini-card fi-card-progress">
                     <span className="fi-card-label">{t('dashboard.inProgressValue')}</span>
                     <span className="fi-card-value fi-progress">{formatCurrency(fiInProgress.value)}</span>
                   </div>
                 )}
                 {fiDelayedRisk && (
-                  <div className="fi-summary-pill-row">
+                  <div className="fi-summary-mini-card fi-card-risk">
                     <span className="fi-card-label">{fiDelayedRisk.status}</span>
                     <span className="fi-card-value fi-risk">{formatCurrency(fiDelayedRisk.value)}</span>
                   </div>
@@ -454,59 +453,6 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
           </section>
         </SectionErrorBoundary>
       </div>
-
-      {/* Financial Impact Analysis (from Sheet) */}
-      {fiRows.length > 0 && (
-        <SectionErrorBoundary title="Financial Analysis Error">
-          <section className="glass-card financial-section">
-            <div className="financial-header">
-              <div>
-                <h3 className="section-title">
-                  <DollarSign className="text-neon-green" size={20} />
-                  {t('dashboard.financialTitle')}
-                </h3>
-                {fiDescription && <p className="text-muted financial-subtitle">{fiDescription}</p>}
-              </div>
-              {fiTotal && (
-                <div className="total-pipeline-badge">
-                  <span className="pipeline-label">{t('dashboard.totalPipeline')}</span>
-                  <span className="pipeline-value">{formatCurrency(fiTotal.value)}</span>
-                </div>
-              )}
-            </div>
-            <div className="financial-cards-row">
-              {fiOnHold && (
-                <div className="fi-card fi-card-hold">
-                  <span className="fi-card-label">{t('dashboard.onHoldValue')}</span>
-                  <span className="fi-card-value fi-hold">{formatCurrency(fiOnHold.value)}</span>
-                  <span className="fi-card-note">{t('dashboard.atRiskNote')}</span>
-                </div>
-              )}
-              {fiInProgress && (
-                <div className="fi-card fi-card-progress">
-                  <span className="fi-card-label">{t('dashboard.inProgressValue')}</span>
-                  <span className="fi-card-value fi-progress">{formatCurrency(fiInProgress.value)}</span>
-                  <span className="fi-card-note">{t('dashboard.activeNote')}</span>
-                </div>
-              )}
-              {fiDelayedRisk && (
-                <div className="fi-card fi-card-risk">
-                  <span className="fi-card-label">{t('dashboard.delayedRiskValue')}</span>
-                  <span className="fi-card-value fi-risk">{formatCurrency(fiDelayedRisk.value)}</span>
-                  <span className="fi-card-note">{t('dashboard.delayNote')}</span>
-                </div>
-              )}
-              {fiTotal && (
-                <div className="fi-card fi-card-total">
-                  <span className="fi-card-label">{t('dashboard.totalPipeline')}</span>
-                  <span className="fi-card-value fi-total">{formatCurrency(fiTotal.value)}</span>
-                  <span className="fi-card-note">{t('dashboard.combinedNote')}</span>
-                </div>
-              )}
-            </div>
-          </section>
-        </SectionErrorBoundary>
-      )}
 
       {/* Summaries Row */}
       <div className="dashboard-summaries-row">
