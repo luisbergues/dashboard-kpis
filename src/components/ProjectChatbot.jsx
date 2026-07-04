@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Send, X, Bot, User, StickyNote, HelpCircle } from 'lucide-react';
 import { addProjectNote } from '../utils/notesHelper';
 import { useLanguage } from '../utils/LanguageContext';
+import { searchEngineeringManual } from '../utils/engineeringManual';
 import './ProjectChatbot.css';
 
 const DESIGNERS_CONTACTS = [
@@ -49,9 +50,9 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       {
         id: 'welcome',
         sender: 'bot',
-        text: isES 
-          ? '¡Hola! Soy tu asistente de proyectos. 🤖\n\n¿En qué puedo ayudarte hoy? Puedes preguntarme cosas como:\n• "¿Cómo está el proyecto Eindar Khant?"\n• "Proyectos de Russell"\n• "¿Qué proyectos están ON HOLD?"\n• "Instalaciones de esta semana"\n\nTambién puedes decir "agregar nota" para escribir una nota en la bitácora de algún proyecto.'
-          : 'Hi! I am your project assistant. 🤖\n\nHow can I help you today? You can ask me things like:\n• "How is Eindar Khant?"\n• "Projects of Russell"\n• "Which projects are ON HOLD?"\n• "Install dates"\n\nOr say "add note" to log a new note on a project.',
+        text: isES
+          ? '¡Hola! Soy tu asistente de proyectos. 🤖\n\n¿En qué puedo ayudarte hoy? Puedes preguntarme cosas como:\n• "¿Cómo está el proyecto Eindar Khant?"\n• "Proyectos de Russell"\n• "¿Qué proyectos están ON HOLD?"\n• "Instalaciones de esta semana"\n• "¿Cuál es el reveal de half overlay?" (Manual Técnico de Ingeniería)\n\nTambién puedes decir "agregar nota" para escribir una nota en la bitácora de algún proyecto.'
+          : 'Hi! I am your project assistant. 🤖\n\nHow can I help you today? You can ask me things like:\n• "How is Eindar Khant?"\n• "Projects of Russell"\n• "Which projects are ON HOLD?"\n• "Install dates"\n• "What is the half overlay reveal?" (Technical Engineering Manual)\n\nOr say "add note" to log a new note on a project.',
         timestamp: new Date()
       }
     ]);
@@ -153,6 +154,27 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
           ? 'Perfecto. ¿A qué proyecto (escribe el nombre o el número de SO) deseas agregarle la nota?'
           : 'Perfect. Which project (type the name or SO number) do you want to add the note to?'
       };
+    }
+
+    // Engineering Manual Query (shop specs, design rules, ESS/IP conventions).
+    // Skip if the text mentions something that looks like an SO number — that
+    // almost certainly means a live-project question, not a spec lookup.
+    const looksLikeSO = /\d{4,}/.test(cleanText);
+    if (!looksLikeSO) {
+      const manualMatches = searchEngineeringManual(text);
+      if (manualMatches.length > 0) {
+        const top = manualMatches[0];
+        const runnerUp = manualMatches[1];
+        let reply = isES
+          ? `📐 **${top.title}** (Manual Técnico §${top.section})\n\n${top.answer}`
+          : `📐 **${top.title}** (Technical Manual §${top.section})\n\n${top.answer}`;
+        if (runnerUp) {
+          reply += isES
+            ? `\n\n_¿Buscabas algo sobre "${runnerUp.title}" en cambio? Preguntame de nuevo si es así._`
+            : `\n\n_Were you asking about "${runnerUp.title}" instead? Ask again if so._`;
+        }
+        return { text: reply };
+      }
     }
 
     // Materials Matrix Query
