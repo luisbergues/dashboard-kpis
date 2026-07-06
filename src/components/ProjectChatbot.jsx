@@ -154,8 +154,9 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
   useEffect(() => {
     try {
       localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages));
-    } catch {
-      // localStorage unavailable (private browsing, quota) — history just won't persist.
+      console.log('[chatbot debug] saved', messages.length, 'messages to localStorage');
+    } catch (err) {
+      console.error('[chatbot debug] localStorage.setItem failed:', err);
     }
   }, [messages]);
 
@@ -338,22 +339,33 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     }
 
     // Complex/Multi-condition Query Pipeline
-    const mentionedStaff = [];
-    projects.forEach(p => {
-      if (p.designer && p.designer.trim() !== '') {
-        const dName = p.designer.toLowerCase().split(' ')[0];
-        if (cleanText.includes(dName) && !mentionedStaff.includes(dName)) mentionedStaff.push(dName);
-      }
-      if (p.eng && p.eng.trim() !== '') {
-        const eName = p.eng.toLowerCase().split(' ')[0];
-        if (cleanText.includes(eName) && !mentionedStaff.includes(eName)) mentionedStaff.push(eName);
-      }
-    });
+    // Guard against long, unrelated paragraphs: a real domain question is
+    // short and to the point. Word-boundary match on a handful of common
+    // words (e.g. "fecha", "cuando") is easy to trigger by coincidence in a
+    // long rant, so this pipeline only runs for reasonably short inputs.
+    const wordCount = cleanText.split(/\s+/).filter(Boolean).length;
+    const isPlausibleQuery = wordCount > 0 && wordCount <= 12;
 
-    const isHold = cleanText.includes('hold') || cleanText.includes('espera') || cleanText.includes('frenado') || cleanText.includes('parado');
-    const isSoonest = cleanText.includes('sooner') || cleanText.includes('soonest') || cleanText.includes('próximo') || cleanText.includes('proximo') || cleanText.includes('first');
-    const isInstall = cleanText.includes('install') || cleanText.includes('fecha') || cleanText.includes('instal') || cleanText.includes('cuando') || isSoonest;
-    const isProjectMention = cleanText.includes('proyect') || cleanText.includes('project') || cleanText.includes('trabaj') || cleanText.includes('tiene');
+    const hasWord = (str, word) => new RegExp(`\\b${word}\\b`, 'i').test(str);
+
+    const mentionedStaff = [];
+    if (isPlausibleQuery) {
+      projects.forEach(p => {
+        if (p.designer && p.designer.trim() !== '') {
+          const dName = p.designer.toLowerCase().split(' ')[0];
+          if (hasWord(cleanText, dName) && !mentionedStaff.includes(dName)) mentionedStaff.push(dName);
+        }
+        if (p.eng && p.eng.trim() !== '') {
+          const eName = p.eng.toLowerCase().split(' ')[0];
+          if (hasWord(cleanText, eName) && !mentionedStaff.includes(eName)) mentionedStaff.push(eName);
+        }
+      });
+    }
+
+    const isHold = isPlausibleQuery && (cleanText.includes('hold') || cleanText.includes('espera') || cleanText.includes('frenado') || cleanText.includes('parado'));
+    const isSoonest = isPlausibleQuery && (cleanText.includes('sooner') || cleanText.includes('soonest') || cleanText.includes('próximo') || cleanText.includes('proximo') || hasWord(cleanText, 'first'));
+    const isInstall = isPlausibleQuery && (cleanText.includes('install') || hasWord(cleanText, 'fecha') || cleanText.includes('instal') || hasWord(cleanText, 'cuando') || isSoonest);
+    const isProjectMention = isPlausibleQuery && (cleanText.includes('proyect') || cleanText.includes('project') || cleanText.includes('trabaj') || hasWord(cleanText, 'tiene'));
 
     let appliedFilters = 0;
     let filteredProjects = [...projects];
@@ -411,7 +423,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     // just the entity name instead of the whole sentence as one blob.
     const entityQuery = extractEntityQuery(text);
     const searchWord = entityQuery.replace(/\s+/g, '');
-    if (searchWord.length >= 3) {
+    if (isPlausibleQuery && searchWord.length >= 3) {
       let options = [];
       let optionIdCounter = 1;
 
