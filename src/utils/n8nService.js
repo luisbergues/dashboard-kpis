@@ -7,7 +7,7 @@
  * Configuración: VITE_N8N_WEBHOOK_URL en .env.local
  */
 
-const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
+const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL || 'https://jl-kpi-dashboard.app.n8n.cloud/webhook-test/f7d526bb-fe4d-4eb8-8e43-876782bbaa82';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Mapa de estado de la app → valor exacto del dropdown en Google Sheets
