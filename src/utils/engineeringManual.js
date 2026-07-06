@@ -333,6 +333,14 @@ export function searchEngineeringManual(rawQuery) {
   const queryWords = query.split(' ').filter(w => w.length >= 3);
   if (queryWords.length === 0) return [];
 
+  // Long, unrelated paragraphs shouldn't trigger a manual answer just
+  // because 2 of their many words happen to overlap with some keyword
+  // vocabulary. Require both an absolute floor (>=2 matches) AND a minimum
+  // match ratio relative to the query's meaningful word count, so a 40-word
+  // rant needs far more than 2 coincidental hits to qualify.
+  const MIN_ABSOLUTE_SCORE = 2;
+  const MIN_MATCH_RATIO = 0.35;
+
   const scored = ENGINEERING_MANUAL.map(entry => {
     const vocab = new Set();
     entry.keywords.forEach(kw => {
@@ -346,7 +354,7 @@ export function searchEngineeringManual(rawQuery) {
       }
     });
     return { entry, score };
-  }).filter(s => s.score >= 2);
+  }).filter(s => s.score >= MIN_ABSOLUTE_SCORE && (s.score / queryWords.length) >= MIN_MATCH_RATIO);
 
   scored.sort((a, b) => b.score - a.score);
   return scored.map(s => s.entry);

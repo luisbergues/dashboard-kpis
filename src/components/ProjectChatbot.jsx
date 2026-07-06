@@ -2,9 +2,90 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Send, X, Bot, User, StickyNote, HelpCircle } from 'lucide-react';
 import { addProjectNote } from '../utils/notesHelper';
 import { useLanguage } from '../utils/LanguageContext';
-import { searchEngineeringManual } from '../utils/engineeringManual';
+import { searchEngineeringManual, normalizeText } from '../utils/engineeringManual';
 import { askLLM, buildProjectContext } from '../utils/llmChat';
 import './ProjectChatbot.css';
+
+// Trigger phrases that precede an entity name in a status/lookup question.
+// Stripped out before entity search so "How is Eindar Khant?" searches for
+// "eindar khant" instead of the whole sentence glued together.
+const ENTITY_QUERY_TRIGGERS = [
+  'how is', 'hows', 'how are', 'status of', 'what is the status of',
+  'projects of', 'project of', 'projects for', 'project for',
+  'como esta el proyecto', 'como esta', 'como van', 'estado de',
+  'estado del proyecto', 'proyectos de', 'proyecto de', 'que tal',
+];
+
+// Extracts the entity name a user is asking about by stripping known
+// trigger phrases and punctuation, leaving just the name/SO to search for.
+function extractEntityQuery(rawText) {
+  let t = normalizeText(rawText);
+  ENTITY_QUERY_TRIGGERS.forEach(trigger => {
+    t = t.replace(normalizeText(trigger), ' ');
+  });
+  return t.replace(/\s+/g, ' ').trim();
+}
+
+// Renders the tiny markdown subset the bot's own templates use
+// (**bold**, *italic*/_italic_) as React elements — no dangerouslySetInnerHTML,
+// so arbitrary project/client names in the text can't inject HTML.
+function renderInlineMarkdown(line, keyPrefix) {
+  const parts = line.split(/(\*\*.+?\*\*|\*.+?\*|_.+?_)/g).filter(p => p !== '');
+  return parts.map((part, i) => {
+    const key = `${keyPrefix}_${i}`;
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={key}>{part.slice(2, -2)}</strong>;
+    }
+    if ((part.startsWith('*') && part.endsWith('*')) || (part.startsWith('_') && part.endsWith('_'))) {
+      return <em key={key}>{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
+}
+
+function FormattedMessage({ text }) {
+  const lines = text.split('\n');
+  return (
+    <>
+      {lines.map((line, i) => (
+        <React.Fragment key={i}>
+          {renderInlineMarkdown(line, i)}
+          {i < lines.length - 1 && <br />}
+        </React.Fragment>
+      ))}
+    </>
+  );
+}
+
+function getHelpText(isES) {
+  return isES
+    ? 'No entendí del todo tu consulta. 🤖\n\nIntenta preguntarme:\n• *"¿Cómo está el proyecto Perez?"*\n• *"Proyectos de Russell"*\n• *"¿Qué está On Hold?"*\n• *o escribe "agregar nota" para agregar una nota a un proyecto.*'
+    : 'I didn\'t quite catch that. 🤖\n\nTry asking me:\n• *"How is Perez?"*\n• *"Projects of Russell"*\n• *"What is On Hold?"*\n• *or write "add note" to log a new note.*';
+}
+
+// Builds the reply for a single resolved entity (designer/engineer/project),
+// shared between the auto-answer path (single unambiguous match) and the
+// multi-option picker's click handler.
+function buildEntityAnswer(opt, projects, isES) {
+  let text = '';
+  if (opt.type === 'designer') {
+    const activeProjects = projects.filter(p => p.designer === opt.name && p.status !== 'COMPLETED' && p.status !== 'CANCELLED');
+    text = isES
+      ? `**Proyectos activos de ${opt.name}:**\n\n${activeProjects.length > 0 ? activeProjects.map(p => `• **${p.name}** (SO #${p.so}) - ${p.status}`).join('\n') : 'No tiene proyectos activos.'}`
+      : `**Active projects for ${opt.name}:**\n\n${activeProjects.length > 0 ? activeProjects.map(p => `• **${p.name}** (SO #${p.so}) - ${p.status}`).join('\n') : 'No active projects.'}`;
+  } else if (opt.type === 'engineer') {
+    const activeProjects = projects.filter(p => p.eng === opt.name && p.status !== 'COMPLETED' && p.status !== 'CANCELLED');
+    text = isES
+      ? `**Proyectos activos de ${opt.name}:**\n\n${activeProjects.length > 0 ? activeProjects.map(p => `• **${p.name}** (SO #${p.so}) - ${p.status}`).join('\n') : 'No tiene proyectos activos.'}`
+      : `**Active projects for ${opt.name}:**\n\n${activeProjects.length > 0 ? activeProjects.map(p => `• **${p.name}** (SO #${p.so}) - ${p.status}`).join('\n') : 'No active projects.'}`;
+  } else if (opt.type === 'project') {
+    const matched = opt.data;
+    text = isES
+      ? `📋 **Proyecto Encontrado:**\n**${matched.name}**\n\n• **SO:** #${matched.so}\n• **Etapa actual:** ${matched.status || 'Activo'}\n• **Diseñador:** ${matched.designer || 'N/A'}\n• **Ingeniero:** ${matched.eng || 'Sin asignar'}\n• **Instalación:** ${matched.install || 'Sin fecha'}`
+      : `📋 **Project Found:**\n**${matched.name}**\n\n• **SO:** #${matched.so}\n• **Current Stage:** ${matched.status || 'Active'}\n• **Designer:** ${matched.designer || 'N/A'}\n• **Engineer:** ${matched.eng || 'Unassigned'}\n• **Installation:** ${matched.install || 'No date'}`;
+  }
+  return { text };
+}
 
 const DESIGNERS_CONTACTS = [
   { name: 'Monica Gabriel', phone: '954-678-8432', email: 'mgabriel@jlclosets.com', city: 'BOCA RATON' },
@@ -27,10 +108,35 @@ const DESIGNERS_CONTACTS = [
   { name: 'Malanie Dalfrey', phone: '772-278-6949', email: 'mdalfrey@jlclosets.com', city: 'PORT ST. LUCIE' }
 ];
 
+const CHAT_HISTORY_KEY = 'jl_chatbot_history';
+
+function loadStoredMessages() {
+  try {
+    const raw = localStorage.getItem(CHAT_HISTORY_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    return parsed.map(m => ({ ...m, timestamp: new Date(m.timestamp) }));
+  } catch {
+    return null;
+  }
+}
+
+function buildWelcomeMessage(isES) {
+  return {
+    id: 'welcome',
+    sender: 'bot',
+    text: isES
+      ? '¡Hola! Soy tu asistente de proyectos. 🤖\n\n¿En qué puedo ayudarte hoy? Puedes preguntarme cosas como:\n• "¿Cómo está el proyecto Eindar Khant?"\n• "Proyectos de Russell"\n• "¿Qué proyectos están ON HOLD?"\n• "Instalaciones de esta semana"\n• "¿Cuál es el reveal de half overlay?" (Manual Técnico de Ingeniería)\n\nTambién puedes decir "agregar nota" para escribir una nota en la bitácora de algún proyecto.'
+      : 'Hi! I am your project assistant. 🤖\n\nHow can I help you today? You can ask me things like:\n• "How is Eindar Khant?"\n• "Projects of Russell"\n• "Which projects are ON HOLD?"\n• "Install dates"\n• "What is the half overlay reveal?" (Technical Engineering Manual)\n\nOr say "add note" to log a new note on a project.',
+    timestamp: new Date()
+  };
+}
+
 export default function ProjectChatbot({ projects = [], materialsMatrix = [], currentUser, userProfile }) {
   const { language } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => loadStoredMessages() || [buildWelcomeMessage(language === 'es')]);
   const [inputValue, setInputValue] = useState('');
   const [chatState, setChatState] = useState('IDLE'); // IDLE, AWAITING_PROJECT_FOR_NOTE, AWAITING_NOTE_TEXT
   const [targetSO, setTargetSO] = useState(null);
@@ -44,20 +150,14 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Initial welcome message
+  // Persist history across page reloads / widget close-reopen (session-lasting).
   useEffect(() => {
-    const isES = language === 'es';
-    setMessages([
-      {
-        id: 'welcome',
-        sender: 'bot',
-        text: isES
-          ? '¡Hola! Soy tu asistente de proyectos. 🤖\n\n¿En qué puedo ayudarte hoy? Puedes preguntarme cosas como:\n• "¿Cómo está el proyecto Eindar Khant?"\n• "Proyectos de Russell"\n• "¿Qué proyectos están ON HOLD?"\n• "Instalaciones de esta semana"\n• "¿Cuál es el reveal de half overlay?" (Manual Técnico de Ingeniería)\n\nTambién puedes decir "agregar nota" para escribir una nota en la bitácora de algún proyecto.'
-          : 'Hi! I am your project assistant. 🤖\n\nHow can I help you today? You can ask me things like:\n• "How is Eindar Khant?"\n• "Projects of Russell"\n• "Which projects are ON HOLD?"\n• "Install dates"\n• "What is the half overlay reveal?" (Technical Engineering Manual)\n\nOr say "add note" to log a new note on a project.',
-        timestamp: new Date()
-      }
-    ]);
-  }, [language]);
+    try {
+      localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages));
+    } catch {
+      // localStorage unavailable (private browsing, quota) — history just won't persist.
+    }
+  }, [messages]);
 
   // Get current username
   const getUserName = () => {
@@ -145,6 +245,11 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     // Cancel command
     if (cleanText === 'cancelar' || cleanText === 'cancel') {
       return { text: isES ? 'No hay ninguna operación activa.' : 'No active operation to cancel.' };
+    }
+
+    // Help command (also used by the "Help"/"Ayuda" quick-action chip)
+    if (cleanText === 'ayuda' || cleanText === 'help' || cleanText === '?') {
+      return { text: getHelpText(isES) };
     }
 
     // Add note trigger
@@ -301,11 +406,20 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     }
 
     // Specific SO or Project name query (Status check)
-    // Entity Search (Designer, Engineer, Project)
-    const searchWord = cleanText.replace(/[^a-z0-9]/g, '');
+    // Entity Search (Designer, Engineer, Project) — strips trigger phrases
+    // like "how is"/"projects of" first, so natural questions search for
+    // just the entity name instead of the whole sentence as one blob.
+    const entityQuery = extractEntityQuery(text);
+    const searchWord = entityQuery.replace(/\s+/g, '');
     if (searchWord.length >= 3) {
       let options = [];
       let optionIdCounter = 1;
+
+      // Check Designers
+      const matchedDesigners = [...new Set(projects.filter(p => p.designer && p.designer.toLowerCase().replace(/[^a-z0-9]/g, '').includes(searchWord)).map(p => p.designer))];
+      matchedDesigners.forEach(d => {
+        options.push({ id: optionIdCounter++, type: 'designer', name: d, label: isES ? `Ver proyectos de ${d} (Diseñador)` : `View projects for ${d} (Designer)` });
+      });
 
       // Check Engineers
       const matchedEngineers = [...new Set(projects.filter(p => p.eng && p.eng.toLowerCase().replace(/[^a-z0-9]/g, '').includes(searchWord)).map(p => p.eng))];
@@ -313,7 +427,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
         options.push({ id: optionIdCounter++, type: 'engineer', name: e, label: isES ? `Ver proyectos de ${e} (Ingeniero)` : `View projects for ${e} (Engineer)` });
       });
 
-      // Check Projects
+      // Check Projects (by client name or SO)
       const matchedProjects = projects.filter(p => {
         const cleanName = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
         const cleanSo = p.so.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -323,7 +437,13 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
         options.push({ id: optionIdCounter++, type: 'project', data: p, label: isES ? `Ver proyecto ${p.name} (SO #${p.so})` : `View project ${p.name} (SO #${p.so})` });
       });
 
-      if (options.length > 0) {
+      // Single unambiguous match: answer directly instead of showing a
+      // 1-option picker (this is the common case for "How is X?" queries).
+      if (options.length === 1) {
+        return buildEntityAnswer(options[0], projects, isES);
+      }
+
+      if (options.length > 1) {
         return {
           text: isES ? `Encontré resultados para "${text.trim()}". Selecciona una opción:` : `Found results for "${text.trim()}". Select an option:`,
           options: options
@@ -344,11 +464,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       console.error('LLM fallback failed:', err);
     }
 
-    return {
-      text: isES
-        ? 'No entendí del todo tu consulta. 🤖\n\nIntenta preguntarme:\n• *"¿Cómo está el proyecto Perez?"*\n• *"Proyectos de Russell"*\n• *"¿Qué está On Hold?"*\n• *o escribe "agregar nota" para agregar una nota a un proyecto.*'
-        : 'I didn\'t quite catch that. 🤖\n\nTry asking me:\n• *"How is Perez?"*\n• *"Projects of Russell"*\n• *"What is On Hold?"*\n• *or write "add note" to log a new note.*'
-    };
+    return { text: getHelpText(isES) };
   };
 
   const handleSendMessage = async (textToSend) => {
@@ -384,21 +500,9 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
 
   const handleOptionClick = (opt) => {
     const isES = language === 'es';
-    let responseText = '';
+    const { text: responseText } = buildEntityAnswer(opt, projects, isES);
 
-    if (opt.type === 'engineer') {
-      const activeProjects = projects.filter(p => p.eng === opt.name && p.status !== 'COMPLETED' && p.status !== 'CANCELLED');
-      responseText = isES 
-        ? `**Proyectos activos de ${opt.name}:**\n\n${activeProjects.length > 0 ? activeProjects.map(p => `• **${p.name}** (SO #${p.so}) - ${p.status}`).join('\n') : 'No tiene proyectos activos.'}`
-        : `**Active projects for ${opt.name}:**\n\n${activeProjects.length > 0 ? activeProjects.map(p => `• **${p.name}** (SO #${p.so}) - ${p.status}`).join('\n') : 'No active projects.'}`;
-    } else if (opt.type === 'project') {
-      const matched = opt.data;
-      responseText = isES
-        ? `📋 **Proyecto Encontrado:**\n**${matched.name}**\n\n• **SO:** #${matched.so}\n• **Etapa actual:** ${matched.status || 'Activo'}\n• **Diseñador:** ${matched.designer || 'N/A'}\n• **Ingeniero:** ${matched.eng || 'Sin asignar'}\n• **Instalación:** ${matched.install || 'Sin fecha'}`
-        : `📋 **Project Found:**\n**${matched.name}**\n\n• **SO:** #${matched.so}\n• **Current Stage:** ${matched.status || 'Active'}\n• **Designer:** ${matched.designer || 'N/A'}\n• **Engineer:** ${matched.eng || 'Unassigned'}\n• **Installation:** ${matched.install || 'No date'}`;
-    }
-
-    setMessages(prev => [...prev, 
+    setMessages(prev => [...prev,
       { id: Date.now().toString() + '_user', sender: 'user', text: opt.label, timestamp: new Date() },
       { id: Date.now().toString() + '_bot', sender: 'bot', text: responseText, timestamp: new Date() }
     ]);
@@ -455,7 +559,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
                   {m.sender === 'bot' ? <Bot size={14} /> : <User size={14} />}
                 </div>
                 <div className="message-content">
-                  <pre className="message-pre">{m.text}</pre>
+                  <div className="message-pre"><FormattedMessage text={m.text} /></div>
                   {m.options && m.options.length > 0 && (
                     <div className="message-options">
                       {m.options.map((opt) => (

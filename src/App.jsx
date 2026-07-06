@@ -282,6 +282,7 @@ function App() {
         ...p,
         status,
         onHoldReason,
+        designer: projectDesigners[p.so] || p.designer || '',
         totalAmt: costData ? costData.cost : '$0'
       };
     });

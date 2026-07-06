@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Clock, CheckCircle, AlertTriangle, ChevronLeft, ChevronRight, ListTodo, DollarSign, TrendingUp, Download } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
@@ -30,6 +30,7 @@ import {
   calculateGlobalValidationTime
 } from '../services/kpiCalculator';
 import { db, ref, onValue } from '../utils/firebase';
+import { translateText } from '../utils/translateContent';
 import './DashboardView.css';
 
 ChartJS.register(
@@ -61,7 +62,26 @@ const STACKED_METRICS = Object.keys(METRIC_COLORS);
 export default function DashboardView({ data, weeklyHistory = [] }) {
   const { t, language } = useLanguage();
   const { theme } = useTheme();
-  
+
+  // The Executive/Weekly Summary is free text sourced straight from the
+  // spreadsheet (not a catalogued UI string), so the static i18n system
+  // can't translate it. Translate it on the fly via Gemini when viewing in
+  // Spanish; fall back to the original English text while it loads or if
+  // the translation call fails.
+  const [translatedInsights, setTranslatedInsights] = useState({ executive: '', weekly: '', forLang: null });
+  useEffect(() => {
+    if (!data?.insights || language !== 'es') return;
+    let cancelled = false;
+    Promise.all([
+      translateText(data.insights.executive, 'es'),
+      translateText(data.insights.weekly, 'es'),
+    ]).then(([executive, weekly]) => {
+      if (!cancelled) setTranslatedInsights({ executive, weekly, forLang: 'es' });
+    });
+    return () => { cancelled = true; };
+  }, [data?.insights?.executive, data?.insights?.weekly, language]);
+  const showTranslatedInsights = language === 'es' && translatedInsights.forLang === 'es';
+
   if (!data) {
     return (
       <div className="dashboard-view animate-fade-in">
@@ -462,15 +482,15 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
               <Clock className="text-mint" size={20} />
               {t('dashboard.execSummary')}
             </h3>
-            <p className="insight-text">{insights.executive}</p>
+            <p className="insight-text">{(showTranslatedInsights && translatedInsights.executive) || insights.executive}</p>
           </div>
-          
+
           <div className="summary-block mt-lg">
             <h3 className="section-title">
               <CheckCircle className="text-neon-green" size={20} />
               {t('dashboard.weeklySummary')}
             </h3>
-            <p className="insight-text">{insights.weekly}</p>
+            <p className="insight-text">{(showTranslatedInsights && translatedInsights.weekly) || insights.weekly}</p>
           </div>
         </section>
       </div>
