@@ -46,7 +46,18 @@ export default function NotificationBubble({ alerts = [], activeTab, onAlertClic
         <div className="notification-window animate-slide-down">
           <div className="notification-header">
             <h3>{language === 'es' ? 'Notificaciones' : 'Notifications'}</h3>
-            <span className="notification-count">{alerts.length} {language === 'es' ? 'nuevas' : 'new'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span className="notification-count">{alerts.length} {language === 'es' ? 'nuevas' : 'new'}</span>
+              {activeTab !== 'dashboard' && (
+                <button
+                  className="notification-dismiss-btn-inline"
+                  onClick={() => { setIsOpen(false); setIsSuppressed(true); }}
+                  title={language === 'es' ? 'Ocultar notificaciones' : 'Hide notifications'}
+                >
+                  {language === 'es' ? 'Ocultar' : 'Dismiss'}
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="notification-list">

@@ -832,7 +832,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     doc.text(project.install || (language === 'es' ? 'No asignada' : 'Unassigned'), 45, 74);
 
     doc.setFont('Helvetica', 'bold');
-    const currentStatus = projectOverrides[project.so]?.status || project.status;
+    const currentStatus = project.status;
     doc.text(t('myProjects.pdfStatus'), 110, 67);
     doc.setFont('Helvetica', 'normal');
     doc.text(getStatusLabelPdf(currentStatus), 140, 67);
@@ -1094,10 +1094,10 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
             {t('myProjects.subtitle')}
           </p>
         </div>
-        <button 
-          className="btn-primary btn-sm" 
+        <button
+          className="btn-primary btn-sm"
           onClick={() => setIsCompletedProjectsModalOpen(true)}
-          style={{ background: 'var(--color-cyan)', color: '#fff', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}
+          style={{ background: 'var(--color-cyan)', color: '#fff', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '90px' }}
         >
           <CheckCircle2 size={14} />
           <span>Completed Projects</span>
@@ -1203,9 +1203,11 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
           {myProjects.map((project) => {
             const progress = calculateAutomaticStages(project);
             const percent = calculateProgress(progress);
-            const overridden = projectOverrides[project.so];
-            const currentStatus = overridden ? overridden.status : project.status;
-            const currentReason = overridden ? overridden.onHoldReason : getOnHoldNote(project.name);
+            // project.status/onHoldReason already reflect project_overrides —
+            // App.jsx's getMergedData() merges them in before this view ever
+            // sees the data, so Pipeline/Dashboard/My Projects all agree.
+            const currentStatus = project.status;
+            const currentReason = project.onHoldReason || getOnHoldNote(project.name);
             const isCollapsed = !expandedProjects[project.so];
 
             return (
@@ -1222,7 +1224,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                           onClick={e => e.stopPropagation()}
                           style={{ textDecoration: 'none', cursor: 'pointer' }}
                         >SO #{project.so}</a>
-                        <h3 className="project-name-title" style={{ margin: 0 }}>{project.name}</h3>
+                        <h3 className="project-name-title" style={{ margin: 0 }}>{project.name.split(':')[0].trim()}</h3>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div className="header-status-controls" onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

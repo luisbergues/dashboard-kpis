@@ -304,6 +304,12 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
   const fiTotal = fiRows.find(r => r.status === 'Total');
   const fiDelayedRisk = fiRows.find(r => r.status.includes('Delayed Risk'));
 
+  // Real pipeline total — computed live from topCostProjects, the same
+  // data the "Cost Analysis" section below sums up. Previously the pill
+  // above used fiTotal.value (a snapshot figure from the sheet) while Cost
+  // Analysis computed its own total live, so the two could drift apart.
+  const realPipelineTotal = topCostProjects.reduce((sum, p) => sum + parseFloat(p.cost.replace(/[^0-9.-]+/g, "")), 0);
+
   const formatCurrency = (str) => {
     if (!str) return '$0';
     const num = processCost(str);
@@ -358,6 +364,21 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
       actionTakeaways.push(point);
     }
   });
+
+  // Real "On Hold" list — filtered directly from data.priorityAnalysis
+  // (the same source Pipeline uses), instead of parsing the AI-generated
+  // actionPlan text. That text is a curated summary and can omit projects
+  // the AI didn't mention, causing the Dashboard's On Hold count to
+  // undercount vs. Pipeline's live filter.
+  const realOnHoldProjects = filteredProjects
+    .filter(p => (p.status || '').toUpperCase().includes('HOLD'))
+    .map(p => ({
+      so: p.so,
+      name: p.name.split(':')[0].trim(),
+      status: p.status,
+      install: p.install || 'TBD',
+      notes: p.onHoldReason || '',
+    }));
 
   // Carousel Pagination
   const itemsPerPage = 10;
@@ -430,7 +451,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
               </h3>
               <div className="fi-summary-pill-total">
                 <span className="pipeline-label">{t('dashboard.totalPipeline')}</span>
-                <span className="pipeline-value">{formatCurrency(fiTotal.value)}</span>
+                <span className="pipeline-value">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(realPipelineTotal)}</span>
               </div>
               <div className="fi-summary-pill-rows">
                 {fiOnHold && (
@@ -509,19 +530,20 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
           </div>
 
           <div className="carousel-content">
-            {actionProjects.length === 0 ? (
+            {actionProjects.length === 0 && realOnHoldProjects.length === 0 ? (
               <p className="text-muted">{t('dashboard.noPriority')}</p>
             ) : (
               <div className="action-plan-split-container">
-                {/* Sector 1: ON HOLD */}
+                {/* Sector 1: ON HOLD — computed live from data.priorityAnalysis
+                    (same source as Pipeline), not from the AI-generated
+                    actionPlan summary, so the count/list can't undercount. */}
                 <div className="action-plan-sector">
                   <h4 className="sector-heading text-yellow">
                     <span className="sector-dot bg-yellow"></span>
-                    {language === 'es' ? 'Proyectos En Pausa (On Hold)' : 'On Hold Projects'} ({actionProjects.filter(p => p.status.toUpperCase().includes('HOLD') || p.status.toUpperCase().includes('PAUSA')).length})
+                    {language === 'es' ? 'Proyectos En Pausa (On Hold)' : 'On Hold Projects'} ({realOnHoldProjects.length})
                   </h4>
                   <div className="projects-carousel-grid small-cards">
-                    {actionProjects
-                      .filter(p => p.status.toUpperCase().includes('HOLD') || p.status.toUpperCase().includes('PAUSA'))
+                    {realOnHoldProjects
                       .map((project, idx) => (
                         <div key={idx} className={`project-carousel-card small-card ${getStatusColorClass(project.status)}`}>
                           <div className="proj-card-header">
@@ -540,7 +562,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
                           )}
                         </div>
                       ))}
-                    {actionProjects.filter(p => p.status.toUpperCase().includes('HOLD') || p.status.toUpperCase().includes('PAUSA')).length === 0 && (
+                    {realOnHoldProjects.length === 0 && (
                       <p className="text-muted" style={{ fontSize: '0.85rem' }}>{language === 'es' ? 'No hay proyectos en pausa' : 'No projects on hold'}</p>
                     )}
                   </div>

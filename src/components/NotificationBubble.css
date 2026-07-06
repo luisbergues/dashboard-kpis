@@ -55,6 +55,7 @@
   top: 70px;
   right: 0;
   width: 320px;
+  max-width: calc(100vw - 48px);
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 16px;
@@ -99,6 +100,22 @@
 :root.light-theme .notification-header {
   background: #F9FAFB !important;
   border-bottom: 1px solid var(--card-border) !important;
+}
+
+.notification-dismiss-btn-inline {
+  background: none;
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.notification-dismiss-btn-inline:hover {
+  color: var(--text-primary);
+  background: var(--card-hover);
 }
 
 .notification-header h3 {

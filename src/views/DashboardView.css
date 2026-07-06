@@ -551,7 +551,14 @@
 }
 
 .animate-fade-in {
+  /* Promote to its own compositor layer up front (will-change) instead of
+     the browser discovering mid-animation that it needs to, which forces
+     a full repaint of the subtree on the first animated frame — this is
+     part of what produces the brief giant blank/black block seen when
+     this runs at the same time as Firebase's initial data flush and
+     Chart.js's canvas render. */
   animation: fadeIn 0.4s ease-out forwards;
+  will-change: opacity, transform;
 }
 
 .text-success { color: var(--color-neon-green); }
