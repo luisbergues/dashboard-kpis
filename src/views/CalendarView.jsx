@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import './CalendarView.css';
 import { db, ref, set, remove, onValue } from '../utils/firebase';
+import { sendCalendarNoteEvent } from '../utils/n8nService';
 
 export default function CalendarView({ data, currentUser, userProfile }) {
   const { t, language } = useLanguage();
@@ -201,6 +202,11 @@ export default function CalendarView({ data, currentUser, userProfile }) {
     if (db && currentUser) {
       try {
         set(ref(db, `calendar_notes/${noteId}`), noteData);
+        // 📡 Notificar a n8n → Google Sheets
+        sendCalendarNoteEvent(
+          { ...noteData, authorName: noteData.authorName },
+          !!selectedNote   // true = edición, false = nueva nota
+        );
         setIsModalOpen(false);
       } catch (err) {
         console.error('Failed to save note to Firebase:', err);

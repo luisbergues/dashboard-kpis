@@ -528,15 +528,21 @@
 }
 
 .priority-toggle.is-priority {
-  background: rgba(255, 59, 48, 0.12);
-  color: #FF3B30;
-  border-color: rgba(255, 59, 48, 0.25);
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-danger);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.priority-toggle.is-obs {
+  background: rgba(156, 163, 175, 0.15);
+  color: #9ca3af;
+  border-color: rgba(156, 163, 175, 0.3);
 }
 
 .priority-toggle.not-priority {
-  background: rgba(9, 209, 199, 0.08);
-  color: var(--color-cyan);
-  border-color: rgba(9, 209, 199, 0.15);
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.3);
 }
 
 .btn-add-note {

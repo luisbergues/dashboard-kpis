@@ -474,43 +474,6 @@
 .pipeline-notes-input-title {
   font-size: 0.78rem;
   font-weight: 600;
-  color: #09D1C7;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.pipeline-priority-toggle {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #94A3B8;
-  font-size: 0.65rem;
-  font-weight: bold;
-  padding: 4px 10px;
-  border-radius: 100px; /* pill shape */
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.2s ease;
-}
-
-.pipeline-priority-toggle.is-priority {
-  background: rgba(255, 59, 48, 0.15);
-  border-color: #FF3B30;
-  color: #FF3B30;
-}
-
-.pipeline-note-input-row {
-  display: flex;
-  gap: 8px;
-  height: 36px;
-  align-items: center;
-  margin-top: 4px;
-}
-
-.pipeline-note-input-field {
-  flex: 2.2;
-  padding: 8px 14px;
   border-radius: 12px;
   border: 1px solid var(--card-border);
   background: rgba(255, 255, 255, 0.03);

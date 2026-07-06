@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, ref, set, onValue, get, child } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
-import { sendOnHoldEvent, sendReleaseHoldEvent, sendQAChecklistEvent } from '../utils/n8nService';
+import { sendOnHoldEvent, sendReleaseHoldEvent, sendQAChecklistEvent, sendNoteEvent } from '../utils/n8nService';
 import { saveMaterialOverride } from '../utils/materialOverrides';
 import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';
@@ -108,7 +108,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
 
   // Project Notes State
   const [projectNotes, setProjectNotes] = useState({});
-  const [noteInputs, setNoteInputs] = useState({}); // { [so]: { text: '', priority: false } }
+  const [noteInputs, setNoteInputs] = useState({}); // { [so]: { text: '', noteType: 'normal' } }
   const [noteImages, setNoteImages] = useState({}); // { [so]: File }
   const [isUploadingImage, setIsUploadingImage] = useState({}); // { [so]: boolean }
 
@@ -568,6 +568,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     const projectData = priorityAnalysis?.find(p => String(p.so) === String(activeProjectSo));
     const changedBy = userProfile?.designerName || currentUser?.email || 'Unknown';
     sendOnHoldEvent(projectData || { so: activeProjectSo }, holdReason, changedBy);
+    // Además enviar como observación (obs) para que se sume a la columna OBS / ACCESSORIES / NOTES
+    sendNoteEvent(activeProjectSo, `ON HOLD: ${holdReason}`, changedBy, projectData || { so: activeProjectSo }, 'obs');
 
     setIsHoldModalOpen(false);
     setActiveProjectSo(null);
@@ -614,6 +616,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     const projectData = priorityAnalysis?.find(p => String(p.so) === String(so));
     const changedBy = userProfile?.designerName || currentUser?.email || 'Unknown';
     sendReleaseHoldEvent(projectData || { so }, changedBy);
+    // Además enviar como observación (obs) para que quede registro
+    sendNoteEvent(so, `HOLD RELEASED`, changedBy, projectData || { so }, 'obs');
   };
 
   const handleAddNote = async (so) => {
@@ -659,7 +663,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     const newNote = {
       id: Date.now().toString(),
       text: input?.text?.trim() || '',
-      priority: input?.priority || false,
+      noteType: input?.noteType || 'normal',
+      priority: input?.noteType === 'priority', // Backward compatibility para UI
       createdAt: new Date().toISOString(),
       createdBy: userName
     };
@@ -682,7 +687,13 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       setProjectNotes(prev => ({ ...prev, [so]: currentNotes }));
     }
 
-    setNoteInputs(prev => ({ ...prev, [so]: { text: '', priority: false } }));
+    // 📡 Notificar a n8n → Google Sheets (columna Obs/Notes) solo si es 'obs'
+    if (newNote.noteType === 'obs') {
+      const project = priorityAnalysis?.find(p => String(p.so) === String(so));
+      sendNoteEvent(so, newNote.text, newNote.createdBy, project || {}, 'obs');
+    }
+
+    setNoteInputs(prev => ({ ...prev, [so]: { text: '', noteType: 'normal' } }));
     setNoteImages(prev => ({ ...prev, [so]: null }));
     setIsUploadingImage(prev => ({ ...prev, [so]: false }));
   };
@@ -1484,17 +1495,23 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                             <div style={{ display: 'flex', gap: '8px' }}>
                               <button
                                 type="button"
-                                className={`priority-toggle ${noteInputs[project.so]?.priority ? 'is-priority' : 'not-priority'}`}
-                                onClick={() => setNoteInputs(prev => ({
-                                  ...prev,
-                                  [project.so]: { ...prev[project.so], priority: !prev[project.so]?.priority }
-                                }))}
+                                className={`priority-toggle ${noteInputs[project.so]?.noteType === 'priority' ? 'is-priority' : noteInputs[project.so]?.noteType === 'obs' ? 'is-obs' : 'not-priority'}`}
+                                onClick={() => setNoteInputs(prev => {
+                                  const currentType = prev[project.so]?.noteType || 'normal';
+                                  const nextType = currentType === 'normal' ? 'priority' : currentType === 'priority' ? 'obs' : 'normal';
+                                  return {
+                                    ...prev,
+                                    [project.so]: { ...prev[project.so], noteType: nextType }
+                                  };
+                                })}
                                 disabled={isUploadingImage[project.so]}
                               >
                                 <Flag size={12} />
-                                {noteInputs[project.so]?.priority 
+                                {noteInputs[project.so]?.noteType === 'priority' 
                                   ? (language === 'es' ? 'Prioritaria' : 'Priority')
-                                  : (language === 'es' ? 'Normal' : 'Normal')}
+                                  : noteInputs[project.so]?.noteType === 'obs'
+                                    ? (language === 'es' ? 'Observación' : 'Obs')
+                                    : (language === 'es' ? 'Normal' : 'Normal')}
                               </button>
                               
                               <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '12px', fontSize: '0.75rem', color: '#94A3B8' }} title={language === 'es' ? 'Adjuntar Imagen o Documento (Máx 1MB)' : 'Attach Image or Document (Max 1MB)'}>

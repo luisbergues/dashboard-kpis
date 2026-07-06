@@ -5,7 +5,7 @@ import { db, ref, onValue, set } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
-import { sendStageEvent } from '../utils/n8nService';
+import { sendStageEvent, sendNoteEvent, sendEngineerAssignEvent } from '../utils/n8nService';
 import './PipelineView.css';
 
 const getStageLabel = (stageId, language) => {
@@ -46,7 +46,8 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   const [projectDesigners, setProjectDesigners] = useState({});
   const [newNoteTexts, setNewNoteTexts] = useState({});
   const [nestingChecks, setNestingChecks] = useState({});
-  const [commentPriorities, setCommentPriorities] = useState({});
+  const [commentTypes, setCommentTypes] = useState({});
+  const [assignedEngineers, setAssignedEngineers] = useState({}); // Optimistic UI for assigned engineers
   const [noteImages, setNoteImages] = useState({});
   const [isUploadingImage, setIsUploadingImage] = useState({});
   const [selectedImage, setSelectedImage] = useState(null);
@@ -129,7 +130,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     }
   }, [focusedProjectSo, clearFocusedProjectSo]);
 
-  const handleAddNote = async (so, engName, isPriority = false) => {
+  const handleAddNote = async (so, engName, noteType = 'normal') => {
     const text = newNoteTexts[so];
     const files = noteImages[so] || [];
     
@@ -169,8 +170,9 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
 
     const newNote = {
       id: Date.now().toString(),
-      text: text?.trim() || '',
-      priority: isPriority,
+      text: text.trim(),
+      noteType: noteType,
+      priority: noteType === 'priority', // Backward compat
       createdAt: new Date().toISOString(),
       createdBy: userName
     };
@@ -184,9 +186,12 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
 
     if (db) {
       try {
+        if (noteType === 'obs') {
+          sendNoteEvent(so, newNote.text, newNote.createdBy, { name: '', eng: engName }, 'obs');
+        }
         await set(ref(db, `project_notes/${so}`), currentNotes);
         setNewNoteTexts(prev => ({ ...prev, [so]: '' }));
-        setCommentPriorities(prev => ({ ...prev, [so]: false }));
+        setCommentTypes(prev => ({ ...prev, [so]: 'normal' }));
         setNoteImages(prev => ({ ...prev, [so]: null }));
         setIsUploadingImage(prev => ({ ...prev, [so]: false }));
       } catch (err) {
@@ -231,15 +236,31 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   const handleEngineeringStart = async (so) => {
     const currentCheck = engineeringChecks[so] || {};
     const userName = userProfile?.designerName || currentUser?.email || 'Unknown User';
+    
+    // Check if it's a second person starting a check
+    const isSecondCheck = currentCheck.started && currentCheck.user && currentCheck.user !== userName;
+
     const updatedCheck = { 
       ...currentCheck, 
-      started: new Date().toISOString(),
-      user: userName
     };
+
+    if (isSecondCheck) {
+      updatedCheck.started2 = new Date().toISOString();
+      updatedCheck.user2 = userName;
+    } else {
+      updatedCheck.started = new Date().toISOString();
+      updatedCheck.user = userName;
+    }
+
     setEngineeringChecks(prev => ({ ...prev, [so]: updatedCheck }));
     await saveEngineeringCheck(so, updatedCheck);
+    
     // 📡 Notificar a n8n → Google Sheets
-    sendStageEvent(so, 'check_eng', 'started', userName);
+    if (isSecondCheck) {
+      sendStageEvent(so, 'check_eng2', 'started', userName);
+    } else {
+      sendStageEvent(so, 'check_eng', 'started', userName);
+    }
   };
 
   const handleEngineeringFinish = async (so) => {
@@ -343,6 +364,18 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     const so = e.dataTransfer.getData('text/plain');
     if (so && db) {
       await set(ref(db, `project_kanban_state/${so}`), columnId);
+    }
+  };
+
+  const handleAssignEngineer = async (so, engineerName) => {
+    if (!engineerName) return;
+    try {
+      const project = data?.priorityAnalysis?.find(p => String(p.so) === String(so));
+      sendEngineerAssignEvent(so, engineerName, project || {});
+      // Guardar optimísticamente en UI
+      setAssignedEngineers(prev => ({ ...prev, [so]: engineerName }));
+    } catch (error) {
+      console.error('Failed to assign engineer:', error);
     }
   };
 
@@ -565,9 +598,27 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                         <Calendar size={14} />
                         {project.install}
                       </span>
-                      <span className="meta-item eng-badge">
-                        ENG: {project.eng}
-                      </span>
+                      {(project.eng || assignedEngineers[project.so]) ? (
+                        <span className="meta-item eng-badge">
+                          ENG: {assignedEngineers[project.so] || project.eng}
+                        </span>
+                      ) : (
+                        <select
+                          className="meta-item eng-badge"
+                          style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', cursor: 'pointer', outline: 'none' }}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleAssignEngineer(project.so, e.target.value);
+                          }}
+                          value=""
+                        >
+                          <option value="" disabled>{language === 'es' ? 'Asignar ING' : 'Assign ENG'}</option>
+                          {['Joaquin', 'Jose', 'Luis', 'Santiago', 'Julieta', 'Andres', 'Delfina', 'Josema'].map(d => (
+                            <option key={d} value={d} style={{ color: '#000' }}>{d}</option>
+                          ))}
+                        </select>
+                      )}
                       {projectDesigners[project.so] && (
                         <span className="meta-item eng-badge">
                           DES: {projectDesigners[project.so]}
@@ -698,15 +749,24 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                           <span className="pipeline-notes-input-title">
                             {language === 'es' ? 'Agregar Nota' : 'Add Note'}
                           </span>
-                          <button 
-                            onClick={() => setCommentPriorities(prev => ({ ...prev, [project.so]: !prev[project.so] }))}
-                            className={`pipeline-priority-toggle ${commentPriorities[project.so] ? 'is-priority' : 'not-priority'}`}
+                          <button
+                            type="button"
+                            className={`pipeline-priority-toggle ${commentTypes[project.so] === 'priority' ? 'is-priority' : commentTypes[project.so] === 'obs' ? 'is-obs' : 'not-priority'}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCommentTypes(prev => {
+                                const current = prev[project.so] || 'normal';
+                                const nextType = current === 'normal' ? 'priority' : current === 'priority' ? 'obs' : 'normal';
+                                return { ...prev, [project.so]: nextType };
+                              });
+                            }}
                           >
-                            <Flag size={10} />
-                            {commentPriorities[project.so] 
-                              ? (language === 'es' ? 'Prioritario' : 'Priority')
-                              : (language === 'es' ? 'Normal' : 'Normal')
-                            }
+                            <Flag size={12} />
+                            {commentTypes[project.so] === 'priority' 
+                              ? (language === 'es' ? 'Prioritaria' : 'Priority')
+                              : commentTypes[project.so] === 'obs'
+                                ? (language === 'es' ? 'Observación' : 'Obs')
+                                : (language === 'es' ? 'Normal' : 'Normal')}
                           </button>
                         </div>
                         <div className="pipeline-note-input-row" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -749,7 +809,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                               disabled={isUploadingImage[project.so]}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
-                                  handleAddNote(project.so, project.eng, commentPriorities[project.so]);
+                                  handleAddNote(project.so, project.eng, commentTypes[project.so]);
                                 }
                               }}
                             />
@@ -777,7 +837,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                               />
                             </label>
                             <button 
-                              onClick={() => handleAddNote(project.so, project.eng, commentPriorities[project.so])}
+                              onClick={() => handleAddNote(project.so, project.eng, commentTypes[project.so])}
                               disabled={(!(newNoteTexts[project.so] || '').trim() && (!noteImages[project.so] || noteImages[project.so].length === 0)) || isUploadingImage[project.so]}
                               className="btn-sm btn-primary pipeline-add-note-btn"
                               style={{ opacity: isUploadingImage[project.so] ? 0.7 : 1 }}
