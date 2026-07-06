@@ -3,6 +3,7 @@ import { MessageSquare, Send, X, Bot, User, StickyNote, HelpCircle } from 'lucid
 import { addProjectNote } from '../utils/notesHelper';
 import { useLanguage } from '../utils/LanguageContext';
 import { searchEngineeringManual } from '../utils/engineeringManual';
+import { askLLM, buildProjectContext } from '../utils/llmChat';
 import './ProjectChatbot.css';
 
 const DESIGNERS_CONTACTS = [
@@ -329,7 +330,20 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
         };
       }
     }
-    // Help/Fallback
+    // Fallback: hand off to the Gemini-backed LLM proxy, grounded with a
+    // context snippet of the projects most relevant to the query. If the
+    // proxy is unavailable (no API key configured, network error), fall
+    // back to the static help message instead of failing silently.
+    try {
+      const projectContext = buildProjectContext(projects, text);
+      const llmReply = await askLLM({ message: text, language, context: projectContext });
+      if (llmReply) {
+        return { text: llmReply };
+      }
+    } catch (err) {
+      console.error('LLM fallback failed:', err);
+    }
+
     return {
       text: isES
         ? 'No entendí del todo tu consulta. 🤖\n\nIntenta preguntarme:\n• *"¿Cómo está el proyecto Perez?"*\n• *"Proyectos de Russell"*\n• *"¿Qué está On Hold?"*\n• *o escribe "agregar nota" para agregar una nota a un proyecto.*'
