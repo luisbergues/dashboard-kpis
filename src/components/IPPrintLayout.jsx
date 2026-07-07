@@ -45,7 +45,16 @@ export default function IPPrintLayout({ data }) {
           <tr>
             <td className="ip-label-cell" style={{ verticalAlign: 'top' }}>Observations:</td>
             <td className="ip-value-cell ip-observations-cell">
-              <pre className="ip-observations-pre">{observations}</pre>
+              <pre className="ip-observations-pre">
+                {observations.split('\n').map((line, i) => (
+                  <React.Fragment key={i}>
+                    <span className={/^\s*\d+\s*ROOM/i.test(line) ? 'ip-observations-heading' : undefined}>
+                      {line}
+                    </span>
+                    {i < observations.split('\n').length - 1 && '\n'}
+                  </React.Fragment>
+                ))}
+              </pre>
             </td>
           </tr>
         </tbody>

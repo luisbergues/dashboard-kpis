@@ -325,8 +325,15 @@ export async function fetchAndParseQualityData() {
         continue;
       }
 
-      // Detect KPI Distribution Analysis section
-      if (rowString.toLowerCase().includes('kpi distribution analysis')) {
+      // Detect the analysis section. The sheet originally had a "KPI
+      // Distribution Analysis" section (one team-wide paragraph); it has
+      // since been replaced with "PROJECT DEEP DIVE ANALYSIS" (a per-project
+      // paragraph driven by a dropdown in the sheet). Support both headers
+      // so this keeps working whichever one is present.
+      if (
+        rowString.toLowerCase().includes('kpi distribution analysis') ||
+        rowString.toLowerCase().includes('project deep dive analysis')
+      ) {
         readingTable = false;
         readingAnalysis = true;
         continue;
@@ -369,10 +376,15 @@ export async function fetchAndParseQualityData() {
           });
         }
       } else if (readingAnalysis) {
-        // Find the paragraph text (Analysis corresponding to...)
-        // Typically it is a long text in one of the cells
+        // Find the paragraph text. Older sheets phrased it "analysis
+        // corresponding to..."; the current "PROJECT DEEP DIVE ANALYSIS"
+        // section phrases it "Analysis for Project ...".
         const fullRowText = row.join(' ').trim();
-        if (fullRowText.toLowerCase().includes('analysis corresponding to')) {
+        const lowerText = fullRowText.toLowerCase();
+        if (
+          lowerText.includes('analysis corresponding to') ||
+          lowerText.includes('analysis for project')
+        ) {
           result.analysisText = fullRowText;
           readingAnalysis = false; // We got the main text, stop reading analysis text
         }

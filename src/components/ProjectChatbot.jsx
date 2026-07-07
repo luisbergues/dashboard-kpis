@@ -4,6 +4,7 @@ import { addProjectNote } from '../utils/notesHelper';
 import { useLanguage } from '../utils/LanguageContext';
 import { searchEngineeringManual, normalizeText } from '../utils/engineeringManual';
 import { askLLM, buildProjectContext } from '../utils/llmChat';
+import { useDesignerContacts } from '../utils/useDesignerContacts';
 import './ProjectChatbot.css';
 
 // Trigger phrases that precede an entity name in a status/lookup question.
@@ -87,27 +88,6 @@ function buildEntityAnswer(opt, projects, isES) {
   return { text };
 }
 
-const DESIGNERS_CONTACTS = [
-  { name: 'Monica Gabriel', phone: '954-678-8432', email: 'mgabriel@jlclosets.com', city: 'BOCA RATON' },
-  { name: 'Natalie Ball', phone: '954-899-7307', email: 'nball@jlclosets.com', city: 'CORAL SPRINGS' },
-  { name: 'Marsha Diquez', phone: '754-779-0502', email: 'mdiquez@jlclosets.com', city: 'COCONUT CK' },
-  { name: 'Iris Lopes', phone: '786-280-4004', email: 'ilopes@jlclosets.com', city: 'DEERFIELD BCH' },
-  { name: 'Kat Baumgartner', phone: '270-991-1002', email: 'kbaumgartner@jlclosets.com', city: 'DANIA BEACH' },
-  { name: 'Melissa Barker', phone: '561-587-0632', email: 'mbarker@jlclosets.com', city: 'DELRAY BEACH' },
-  { name: 'Nicole Dugan', phone: '239-788-4114', email: 'ndugan@jlclosets.com', city: 'FORT MYERS' },
-  { name: 'Tricia Hatton', phone: '561-324-0033', email: 'thatton@jlclosets.com', city: 'LAKE WORTH' },
-  { name: 'Blerta Veseli', phone: '561-971-0525', email: 'bveseli@jlclosets.com', city: 'MIAMI' },
-  { name: 'Lana Kravtchenko', phone: '646-309-5301', email: 'lkravtchenko@jlclosets.com', city: 'MIAMI' },
-  { name: 'Krisztina Vizi', phone: '561-537-6787', email: 'kvizi@jlclosets.com', city: 'PALM BEACH' },
-  { name: 'Luana Tamagnone', phone: '561-816-1779', email: 'ltamagnone@jlclosets.com', city: 'W. PALM BEACH' },
-  { name: 'Russell Reiner', phone: '561-350-7999', email: 'rreiner@jlclosets.com', city: 'PALM BEACH' },
-  { name: 'Mauricio Dasso', phone: '203-561-9581', email: 'mdasso@jlclosets.com', city: 'PALM BEACH' },
-  { name: 'Sarah Manev', phone: '561-306-6192', email: 'smanev@jlclosets.com', city: 'PARKLAND' },
-  { name: 'Caryn Henslovitz', phone: '945-290-7997', email: 'chenslovitz@jlclosets.com', city: 'PARKLAND' },
-  { name: 'Michael Kaboskey', phone: '954-257-5087', email: 'mkaboskey@jlclosets.com', city: 'PORT ST. LUCIE' },
-  { name: 'Malanie Dalfrey', phone: '772-278-6949', email: 'mdalfrey@jlclosets.com', city: 'PORT ST. LUCIE' }
-];
-
 const CHAT_HISTORY_KEY = 'jl_chatbot_history';
 
 function loadStoredMessages() {
@@ -135,6 +115,7 @@ function buildWelcomeMessage(isES) {
 
 export default function ProjectChatbot({ projects = [], materialsMatrix = [], currentUser, userProfile }) {
   const { language } = useLanguage();
+  const { contacts: designerContacts } = useDesignerContacts();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState(() => loadStoredMessages() || [buildWelcomeMessage(language === 'es')]);
   const [inputValue, setInputValue] = useState('');
@@ -315,7 +296,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
 
     // Designer Contact Query
     if (cleanText.includes('contacto') || cleanText.includes('telefono') || cleanText.includes('email') || cleanText.includes('diseñador') || cleanText.includes('designer') || cleanText.includes('contact')) {
-      const mentionedDesigner = DESIGNERS_CONTACTS.find(d => {
+      const mentionedDesigner = designerContacts.find(d => {
         const firstName = d.name.split(' ')[0].toLowerCase();
         const lastName = d.name.split(' ')[1].toLowerCase();
         return cleanText.includes(firstName) || cleanText.includes(lastName);
@@ -332,8 +313,8 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       if (cleanText.includes('lista') || cleanText.includes('list') || cleanText.includes('todos') || cleanText.includes('all')) {
          return {
            text: isES
-             ? `Tengo el contacto de ${DESIGNERS_CONTACTS.length} diseñadores. Pregúntame por el nombre de uno en específico (Ej: "contacto de Russell").`
-             : `I have contact info for ${DESIGNERS_CONTACTS.length} designers. Ask me for a specific name (e.g., "contact Russell").`
+             ? `Tengo el contacto de ${designerContacts.length} diseñadores. Pregúntame por el nombre de uno en específico (Ej: "contacto de Russell").`
+             : `I have contact info for ${designerContacts.length} designers. Ask me for a specific name (e.g., "contact Russell").`
          }
       }
     }

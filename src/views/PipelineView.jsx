@@ -533,7 +533,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                           {getStatusLabel(project.status)}
                         </span>
                       </div>
-                      <h4 className="kanban-project-name">{project.name}</h4>
+                      <h4 className="kanban-project-name">{project.name.split(':')[0].trim()}</h4>
                       <div className="kanban-card-meta">
                         <span className="meta-item" style={{ fontSize: '0.75rem' }}><Calendar size={12}/> {project.install}</span>
                         <span className="meta-item eng-badge" style={{ fontSize: '0.75rem' }}>ENG: {project.eng}</span>
@@ -591,7 +591,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                         onClick={e => e.stopPropagation()}
                         style={{ textDecoration: 'none', cursor: 'pointer' }}
                       >#{project.so}</a>
-                      <h3 className="project-name">{project.name}</h3>
+                      <h3 className="project-name">{project.name.split(':')[0].trim()}</h3>
                     </div>
                     <div className="project-meta">
                       <span className="meta-item">

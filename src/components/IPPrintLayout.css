@@ -11,7 +11,7 @@
   margin: 0 auto;
   background-color: white;
   color: black;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Calibri, Arial, Helvetica, sans-serif;
   box-sizing: border-box;
 }
 
@@ -27,7 +27,7 @@
 }
 
 .ip-main-title {
-  font-size: 64px;
+  font-size: 78px;
   font-weight: normal;
   letter-spacing: 2px;
   margin: 10px 0;
@@ -45,7 +45,7 @@
 .ip-info-table td {
   border: 1.5px solid black;
   padding: 12px 16px;
-  font-size: 18px; /* Slightly larger, readable print size */
+  font-size: 24px;
   color: black;
   vertical-align: middle;
 }
@@ -72,10 +72,15 @@
 
 .ip-observations-pre {
   margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 18px;
-  font-weight: bold;
+  font-family: Calibri, Arial, Helvetica, sans-serif;
+  font-size: 24px;
+  font-weight: normal;
   line-height: 1.4;
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+.ip-observations-heading {
+  font-size: 20px;
+  font-weight: bold;
 }

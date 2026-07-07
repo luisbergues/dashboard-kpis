@@ -4,6 +4,7 @@ import { useReactToPrint } from 'react-to-print';
 import IPPrintLayout from './IPPrintLayout';
 import { saveIPData, loadIPData } from '../utils/ipData';
 import { useLanguage } from '../utils/LanguageContext';
+import { useDesignerContacts } from '../utils/useDesignerContacts';
 import './PDFGeneratorModal.css'; // Re-use the modal styles for consistency
 
 const getClientName = (projectName) => {
@@ -16,50 +17,26 @@ const getClientName = (projectName) => {
   return projectName.trim();
 };
 
-const DESIGNER_PHONES = {
-  'Monica Gabriel': '954-678-8432',
-  'Natalie Ball': '954-899-7307',
-  'Marsha Diquez': '754-779-0502',
-  'Iris Lopes': '786-280-4004',
-  'Kat Baumgartner': '270-991-1002',
-  'Melissa Barker': '561-587-0632',
-  'Nicole Dugan': '239-788-4114',
-  'Tricia Hatton': '561-324-0033',
-  'Blerta Veseli': '561-971-0525',
-  'Lana Kravtchenko': '646-309-5301',
-  'Krisztina Vizi': '561-537-6787',
-  'Luana Tamagnone': '561-816-1779',
-  'Russell Reiner': '561-350-7999',
-  'Mauricio Dasso': '203-561-9581',
-  'Sarah Manev': '561-306-6192',
-  'Caryn': '945-290-7997',
-  'Caryn Henslovitz': '945-290-7997',
-  'Her Henslovitz': '945-290-7997',
-  'Caryn Heitlovitz': '945-290-7997',
-  'Her Heitlovitz': '945-290-7997',
-  'Michael Kaboskey': '954-257-5087',
-  'Malanie Dalfrey': '772-278-6949'
-};
-
-const getDesignerPhoneStr = (designerName) => {
+const getDesignerPhoneStr = (designerName, phoneLookup) => {
   if (!designerName) return '';
-  const phone = DESIGNER_PHONES[designerName] || 'xxx-xxx-xxxx';
+  const phone = phoneLookup[designerName] || 'xxx-xxx-xxxx';
   return `${phone} - ${designerName}`;
 };
 
-const createDefaultPage = (project) => ({
+const createDefaultPage = (project, phoneLookup) => ({
   clientName: project ? getClientName(project.name) : '',
   clientAddress: '',
   clientPhone: '',
-  designerPhone: getDesignerPhoneStr(project ? project.designer : ''),
+  designerPhone: getDesignerPhoneStr(project ? project.designer : '', phoneLookup),
   collectPayment: '',
   observations: ''
 });
 
 export default function IPGeneratorModal({ project, onClose }) {
   const { t } = useLanguage();
+  const { phoneLookup } = useDesignerContacts();
   // --- Multi-page State ---
-  const [pages, setPages] = useState([createDefaultPage(project)]);
+  const [pages, setPages] = useState([createDefaultPage(project, phoneLookup)]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -77,7 +54,7 @@ export default function IPGeneratorModal({ project, onClose }) {
             // Auto-fill designer phone if it's empty but project has a designer
             const pagesWithDesigner = sanitized.map(p => {
               if (!p.designerPhone && project && project.designer) {
-                return { ...p, designerPhone: getDesignerPhoneStr(project.designer) };
+                return { ...p, designerPhone: getDesignerPhoneStr(project.designer, phoneLookup) };
               }
               return p;
             });
@@ -89,6 +66,10 @@ export default function IPGeneratorModal({ project, onClose }) {
     };
     fetch();
     return () => { isMounted = false; };
+    // Intentionally re-run only on project.so change, not on phoneLookup —
+    // this is a load-once-per-project effect; picking up a later Firebase
+    // contacts update here would trigger an unwanted data refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.so]);
 
   // --- Auto-Save ---
@@ -104,7 +85,7 @@ export default function IPGeneratorModal({ project, onClose }) {
 
   // --- Page Management ---
   const addPage = () => {
-    setPages([...pages, createDefaultPage(project)]);
+    setPages([...pages, createDefaultPage(project, phoneLookup)]);
     setCurrentPageIndex(pages.length);
   };
 

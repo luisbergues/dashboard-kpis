@@ -2,30 +2,7 @@ import { useState, useEffect } from 'react';
 import { Copy, Check, ExternalLink, Calendar, User, AlertTriangle, Clock } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
-
-const DESIGNER_PHONES = {
-  'Monica Gabriel': '954-678-8432',
-  'Natalie Ball': '954-899-7307',
-  'Marsha Diquez': '754-779-0502',
-  'Iris Lopes': '786-280-4004',
-  'Kat Baumgartner': '270-991-1002',
-  'Melissa Barker': '561-587-0632',
-  'Nicole Dugan': '239-788-4114',
-  'Tricia Hatton': '561-324-0033',
-  'Blerta Veseli': '561-971-0525',
-  'Lana Kravtchenko': '646-309-5301',
-  'Krisztina Vizi': '561-537-6787',
-  'Luana Tamagnone': '561-816-1779',
-  'Russell Reiner': '561-350-7999',
-  'Mauricio Dasso': '203-561-9581',
-  'Sarah Manev': '561-306-6192',
-  'Caryn Henslovitz': '945-290-7997',
-  'Her Henslovitz': '945-290-7997',
-  'Caryn Heitlovitz': '945-290-7997',
-  'Her Heitlovitz': '945-290-7997',
-  'Michael Kaboskey': '954-257-5087',
-  'Malanie Dalfrey': '772-278-6949'
-};
+import { useDesignerContacts } from '../utils/useDesignerContacts';
 
 function getStatusColor(status) {
   switch (status) {
@@ -44,6 +21,7 @@ function getStatusColor(status) {
 
 export default function ProjectDetailView({ data, projectNotes = {}, projectDesigners = {}, overrides = {} }) {
   const { language } = useLanguage();
+  const { phoneLookup } = useDesignerContacts();
   const [copied, setCopied] = useState(false);
 
   const params = new URLSearchParams(window.location.search);
@@ -54,7 +32,7 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
   const status = override?.status || project?.status || 'N/A';
   const onHoldReason = override?.onHoldReason || null;
   const designer = projectDesigners[so];
-  const designerPhone = designer ? (DESIGNER_PHONES[designer] || 'N/A') : null;
+  const designerPhone = designer ? (phoneLookup[designer] || 'N/A') : null;
   const notes = projectNotes[so] || [];
   const stages = project ? calculateAutomaticStages(project) : [];
 
