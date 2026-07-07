@@ -5,7 +5,7 @@ import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
 import './Navbar.css';
 
-export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAdmin }) {
+export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAdmin, pendingUsersCount = 0 }) {
   const { t, language, setLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -25,7 +25,7 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
     { id: 'materials', label: t('navbar.materials'), icon: Hammer },
     ...(userProfile?.role !== 'administrative' ? [{ id: 'quality', label: 'Team Stats', icon: Award }] : []),
     { id: 'designer-performance', label: 'Designer Perf.', icon: Activity },
-    ...(isSuperAdmin ? [{ id: 'admin', label: t('navbar.admin'), icon: ShieldCheck }] : [])
+    ...(isSuperAdmin ? [{ id: 'admin', label: t('navbar.admin'), icon: ShieldCheck, badge: pendingUsersCount > 0 }] : [])
   ];
 
   const openModal = () => {
@@ -136,11 +136,14 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
             const Icon = tab.icon;
             return (
               <li key={tab.id}>
-                <button 
+                <button
                   className={`nav-btn ${activeTab === tab.id ? 'active' : ''}`}
                   onClick={() => setActiveTab(tab.id)}
                 >
-                  <Icon className="nav-icon" size={20} />
+                  <span className="nav-icon-wrapper">
+                    <Icon className="nav-icon" size={20} />
+                    {tab.badge && <span className="nav-badge-dot" />}
+                  </span>
                   <span className="nav-label">{tab.label}</span>
                 </button>
               </li>

@@ -21,6 +21,7 @@ import ProjectChatbot from './components/ProjectChatbot'
 import AdminUsersView from './views/AdminUsersView'
 import { useLanguage } from './utils/LanguageContext'
 import { isSuperAdminRole } from './utils/adminConfig'
+import { usePendingUsersCount } from './utils/usePendingUsersCount'
 import { auth, db, onAuthStateChanged, ref, onValue, set, get, child, signOut } from './utils/firebase'
 
 function App() {
@@ -49,6 +50,7 @@ function App() {
   const [weeklyHistory, setWeeklyHistory] = useState([]);
   const [focusedProjectSo, setFocusedProjectSo] = useState(null);
   const [projectDesigners, setProjectDesigners] = useState({});
+  const pendingUsersCount = usePendingUsersCount(userProfile?.role);
 
   const { data, isLoading: loading, error } = useQuery({
     queryKey: ['dashboardData'],
@@ -334,6 +336,15 @@ function App() {
     if (!mergedData || !userProfile?.designerName) return [];
     const alerts = [];
     const projects = mergedData.priorityAnalysis || [];
+
+    if (isSuperAdminRole(userProfile.role) && pendingUsersCount > 0) {
+      alerts.push({
+        type: 'admin_request',
+        text: pendingUsersCount === 1
+          ? 'Hay 1 solicitud de cuenta pendiente de aprobación'
+          : `Hay ${pendingUsersCount} solicitudes de cuenta pendientes de aprobación`
+      });
+    }
     const myDesignerName = userProfile.designerName.trim().toLowerCase();
     const isGlobalRole = userProfile.role === 'engineer_nester' || userProfile.role === 'administrative' || userProfile.role === 'admin';
 
@@ -465,7 +476,7 @@ function App() {
     }
 
     return alerts;
-  }, [mergedData, userProfile, projectNotes, currentUser]);
+  }, [mergedData, userProfile, projectNotes, currentUser, pendingUsersCount]);
 
   const renderView = () => {
     // Standalone shareable project detail page
@@ -541,6 +552,7 @@ function App() {
           setActiveTab={setActiveTab}
           userProfile={userProfile}
           isSuperAdmin={isSuperAdmin}
+          pendingUsersCount={pendingUsersCount}
         />
       )}
       <main className={`main-content ${(!currentUser || !(isApproved || isSuperAdmin)) ? 'no-sidebar' : ''}`}>
@@ -560,6 +572,10 @@ function App() {
         alerts={realAlerts} 
         activeTab={activeTab}
         onAlertClick={(alert) => {
+          if (alert.type === 'admin_request') {
+            setActiveTab('admin');
+            return;
+          }
           if (alert.type === 'note' && currentUser && db) {
             // Update read timestamp to dismiss the notification
             const refPath = `users/${currentUser.uid}/readNotes/${alert.so}`;
@@ -567,7 +583,7 @@ function App() {
           }
           setFocusedProjectSo(alert.so);
           setActiveTab('pipeline');
-        }} 
+        }}
       />
     </div>
   )
