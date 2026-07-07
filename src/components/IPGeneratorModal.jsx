@@ -109,6 +109,23 @@ export default function IPGeneratorModal({ project, onClose }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === 'observations') {
+      const input = e.target;
+      const cursorPos = input.selectionStart;
+      const upperValue = value
+        .split('\n')
+        .map(line => (/^\s*\d+\s*ROOM/i.test(line) ? line.toUpperCase() : line))
+        .join('\n');
+      updateCurrentPage(p => ({ ...p, observations: upperValue }));
+      // Uppercasing can change character count (accented letters), so restore
+      // the cursor position after React re-renders with the new value.
+      requestAnimationFrame(() => {
+        input.setSelectionRange(cursorPos, cursorPos);
+      });
+      return;
+    }
+
     updateCurrentPage(p => ({ ...p, [name]: value }));
   };
 

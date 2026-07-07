@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Send, X, Bot, User, StickyNote, HelpCircle } from 'lucide-react';
 import { addProjectNote } from '../utils/notesHelper';
 import { useLanguage } from '../utils/LanguageContext';
-import { searchEngineeringManual, normalizeText } from '../utils/engineeringManual';
-import { askLLM, buildProjectContext } from '../utils/llmChat';
+import { normalizeText } from '../utils/engineeringManual';
+import { askLLM, buildLLMContext } from '../utils/llmChat';
 import { useDesignerContacts } from '../utils/useDesignerContacts';
 import './ProjectChatbot.css';
 
@@ -244,164 +244,15 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       };
     }
 
-    // Engineering Manual Query (shop specs, design rules, ESS/IP conventions).
-    // Skip if the text mentions something that looks like an SO number — that
-    // almost certainly means a live-project question, not a spec lookup.
-    const looksLikeSO = /\d{4,}/.test(cleanText);
-    if (!looksLikeSO) {
-      const manualMatches = searchEngineeringManual(text);
-      if (manualMatches.length > 0) {
-        const top = manualMatches[0];
-        const runnerUp = manualMatches[1];
-        let reply = isES
-          ? `📐 **${top.titleES}** (Manual Técnico §${top.section})\n\n${top.answerES}`
-          : `📐 **${top.titleEN}** (Technical Manual §${top.section})\n\n${top.answerEN}`;
-        if (runnerUp) {
-          reply += isES
-            ? `\n\n_¿Buscabas algo sobre "${runnerUp.titleES}" en cambio? Preguntame de nuevo si es así._`
-            : `\n\n_Were you asking about "${runnerUp.titleEN}" instead? Ask again if so._`;
-        }
-        return { text: reply };
-      }
-    }
-
-    // Materials Matrix Query
-    if (cleanText.includes('matrix') || cleanText.includes('materials') || cleanText.includes('materiales') || cleanText.includes('matriz') || cleanText.includes('meterial') || cleanText.includes('material')) {
-      const matchedMaterial = materialsMatrix.find(m => {
-        const cleanName = (m.projectName || '').toLowerCase().trim();
-        const cleanSo = (m.so || '').toLowerCase().trim();
-        
-        if (cleanSo && cleanText.includes(cleanSo)) return true;
-        
-        const nameParts = cleanName.split(' ').filter(part => part.length >= 3);
-        if (nameParts.length > 0 && nameParts.some(part => cleanText.includes(part))) return true;
-        
-        return false;
-      });
-
-      if (matchedMaterial) {
-        return {
-          text: isES
-            ? `🪵 **Materiales para ${matchedMaterial.projectName} (SO #${matchedMaterial.so})**:\n• **Thermofoil:** ${matchedMaterial.thermofoil || 'No'}\n• **No Holes:** ${matchedMaterial.noHoles || 'No'}\n• **Dovetail:** ${matchedMaterial.dovetail || 'No'}\n• **Element:** ${matchedMaterial.element || 'No'}`
-            : `🪵 **Materials for ${matchedMaterial.projectName} (SO #${matchedMaterial.so})**:\n• **Thermofoil:** ${matchedMaterial.thermofoil || 'No'}\n• **No Holes:** ${matchedMaterial.noHoles || 'No'}\n• **Dovetail:** ${matchedMaterial.dovetail || 'No'}\n• **Element:** ${matchedMaterial.element || 'No'}`
-        };
-      }
-
-      return {
-        text: isES 
-          ? 'Para consultar la Matrix de Materiales, dime el nombre o SO del proyecto. (Ej: "materiales del proyecto 12510" o "materials matrix Perez")'
-          : 'To check the Materials Matrix, tell me the project name or SO. (e.g. "materials for 12510" or "materials matrix Perez")'
-      };
-    }
-
-    // Designer Contact Query
-    if (cleanText.includes('contacto') || cleanText.includes('telefono') || cleanText.includes('email') || cleanText.includes('diseñador') || cleanText.includes('designer') || cleanText.includes('contact')) {
-      const mentionedDesigner = designerContacts.find(d => {
-        const firstName = d.name.split(' ')[0].toLowerCase();
-        const lastName = d.name.split(' ')[1].toLowerCase();
-        return cleanText.includes(firstName) || cleanText.includes(lastName);
-      });
-
-      if (mentionedDesigner) {
-        return {
-          text: isES
-            ? `📞 **Contacto de ${mentionedDesigner.name}**:\n• **Tel:** ${mentionedDesigner.phone}\n• **Email:** ${mentionedDesigner.email}\n• **Ciudad:** ${mentionedDesigner.city}`
-            : `📞 **Contact for ${mentionedDesigner.name}**:\n• **Phone:** ${mentionedDesigner.phone}\n• **Email:** ${mentionedDesigner.email}\n• **City:** ${mentionedDesigner.city}`
-        };
-      }
-      
-      if (cleanText.includes('lista') || cleanText.includes('list') || cleanText.includes('todos') || cleanText.includes('all')) {
-         return {
-           text: isES
-             ? `Tengo el contacto de ${designerContacts.length} diseñadores. Pregúntame por el nombre de uno en específico (Ej: "contacto de Russell").`
-             : `I have contact info for ${designerContacts.length} designers. Ask me for a specific name (e.g., "contact Russell").`
-         }
-      }
-    }
-
-    // Complex/Multi-condition Query Pipeline
-    // Guard against long, unrelated paragraphs: a real domain question is
-    // short and to the point. Word-boundary match on a handful of common
-    // words (e.g. "fecha", "cuando") is easy to trigger by coincidence in a
-    // long rant, so this pipeline only runs for reasonably short inputs.
-    const wordCount = cleanText.split(/\s+/).filter(Boolean).length;
-    const isPlausibleQuery = wordCount > 0 && wordCount <= 12;
-
-    const hasWord = (str, word) => new RegExp(`\\b${word}\\b`, 'i').test(str);
-
-    const mentionedStaff = [];
-    if (isPlausibleQuery) {
-      projects.forEach(p => {
-        if (p.designer && p.designer.trim() !== '') {
-          const dName = p.designer.toLowerCase().split(' ')[0];
-          if (hasWord(cleanText, dName) && !mentionedStaff.includes(dName)) mentionedStaff.push(dName);
-        }
-        if (p.eng && p.eng.trim() !== '') {
-          const eName = p.eng.toLowerCase().split(' ')[0];
-          if (hasWord(cleanText, eName) && !mentionedStaff.includes(eName)) mentionedStaff.push(eName);
-        }
-      });
-    }
-
-    const isHold = isPlausibleQuery && (cleanText.includes('hold') || cleanText.includes('espera') || cleanText.includes('frenado') || cleanText.includes('parado'));
-    const isSoonest = isPlausibleQuery && (cleanText.includes('sooner') || cleanText.includes('soonest') || cleanText.includes('próximo') || cleanText.includes('proximo') || hasWord(cleanText, 'first'));
-    const isInstall = isPlausibleQuery && (cleanText.includes('install') || hasWord(cleanText, 'fecha') || cleanText.includes('instal') || hasWord(cleanText, 'cuando') || isSoonest);
-    const isProjectMention = isPlausibleQuery && (cleanText.includes('proyect') || cleanText.includes('project') || cleanText.includes('trabaj') || hasWord(cleanText, 'tiene'));
-
-    let appliedFilters = 0;
-    let filteredProjects = [...projects];
-
-    if (mentionedStaff.length > 0) {
-      filteredProjects = filteredProjects.filter(p => {
-        return mentionedStaff.every(staff => 
-          (p.designer && p.designer.toLowerCase().includes(staff)) || 
-          (p.eng && p.eng.toLowerCase().includes(staff))
-        );
-      });
-      appliedFilters++;
-    }
-
-    if (isHold) {
-      filteredProjects = filteredProjects.filter(p => p.status === 'ON HOLD');
-      appliedFilters++;
-    }
-
-    if (isInstall) {
-      filteredProjects = filteredProjects.filter(p => p.install && p.install !== '0' && p.install.toLowerCase() !== 'sin fecha');
-      filteredProjects.sort((a, b) => new Date(a.install) - new Date(b.install));
-      appliedFilters++;
-    }
-
-    if (appliedFilters > 0 && (isHold || isInstall || (mentionedStaff.length > 0 && isProjectMention))) {
-      if (filteredProjects.length === 0) {
-        return {
-          text: isES ? 'No encontré ningún proyecto que cumpla con todos esos criterios.' : 'I found no projects matching all those criteria.'
-        };
-      }
-
-      if (isSoonest) {
-        const p = filteredProjects[0];
-        return {
-          text: isES 
-            ? `El proyecto que cumple tus criterios con la fecha de instalación más próxima es:\n\n• **${p.name}**\n  *SO:* #${p.so}\n  *Instalación:* ${p.install}\n  *Etapa:* ${p.status}`
-            : `The project matching your criteria with the soonest installation date is:\n\n• **${p.name}**\n  *SO:* #${p.so}\n  *Install:* ${p.install}\n  *Stage:* ${p.status}`
-        };
-      }
-
-      const limit = 5;
-      const displayProjects = filteredProjects.slice(0, limit);
-      
-      return {
-        text: isES
-          ? `Encontré ${filteredProjects.length} proyectos con esos criterios. ${filteredProjects.length > limit ? `(Mostrando los primeros ${limit})` : ''}\n\n${displayProjects.map(p => `• **SO #${p.so}**: ${p.name}\n  *Instalación:* ${p.install || 'Sin fecha'}\n  *Etapa:* ${p.status}`).join('\n\n')}`
-          : `I found ${filteredProjects.length} projects matching those criteria. ${filteredProjects.length > limit ? `(Showing first ${limit})` : ''}\n\n${displayProjects.map(p => `• **SO #${p.so}**: ${p.name}\n  *Install:* ${p.install || 'No date'}\n  *Stage:* ${p.status}`).join('\n\n')}`
-      };
-    }
-
     // Specific SO or Project name query (Status check)
     // Entity Search (Designer, Engineer, Project) — strips trigger phrases
     // like "how is"/"projects of" first, so natural questions search for
     // just the entity name instead of the whole sentence as one blob.
+    // Guard against long, unrelated paragraphs: a real entity lookup is
+    // short and to the point.
+    const wordCount = cleanText.split(/\s+/).filter(Boolean).length;
+    const isPlausibleQuery = wordCount > 0 && wordCount <= 12;
+
     const entityQuery = extractEntityQuery(text);
     const searchWord = entityQuery.replace(/\s+/g, '');
     if (isPlausibleQuery && searchWord.length >= 3) {
@@ -443,13 +294,19 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
         };
       }
     }
-    // Fallback: hand off to the Gemini-backed LLM proxy, grounded with a
-    // context snippet of the projects most relevant to the query. If the
-    // proxy is unavailable (no API key configured, network error), fall
-    // back to the static help message instead of failing silently.
+    // Main path: hand off to the Gemini-backed LLM proxy, grounded with a
+    // context block covering projects, the engineering manual, the materials
+    // matrix, and designer contacts — plus recent conversation history so
+    // follow-up questions ("and the designer?") stay coherent. If the proxy
+    // is unavailable (no API key configured, network error), fall back to
+    // the static help message instead of failing silently.
     try {
-      const projectContext = buildProjectContext(projects, text);
-      const llmReply = await askLLM({ message: text, language, context: projectContext });
+      const context = buildLLMContext({ query: text, projects, materialsMatrix, designerContacts, isES });
+      const history = messages
+        .filter(m => m.id !== 'welcome' && m.id !== 'loading' && m.text !== '...')
+        .slice(-6)
+        .map(m => ({ role: m.sender === 'user' ? 'user' : 'model', text: m.text }));
+      const llmReply = await askLLM({ message: text, language, context, history });
       if (llmReply) {
         return { text: llmReply };
       }

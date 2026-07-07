@@ -17,6 +17,11 @@ import { db, ref, get, set } from '../utils/firebase';
 
 ChartJS.register(LinearScale, CategoryScale, BarElement, Legend, Tooltip, BarController);
 
+// Weeks of history the chart is sized for — bar width is capped so a single
+// loaded week already renders at its "full capacity" width (see
+// weeklyChartData's maxBarThickness) instead of stretching to fill the axis.
+const WEEKLY_CHART_CAPACITY = 16;
+
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 };
@@ -99,7 +104,7 @@ export default function DesignQualityView() {
           const weeksArray = Object.entries(allWeeks)
             .map(([key, val]) => ({ key, ...val }))
             .sort((a, b) => a.key.localeCompare(b.key));
-          setWeeklyEngineerHistory(weeksArray.slice(-8)); // last 8 weeks
+          setWeeklyEngineerHistory(weeksArray.slice(-WEEKLY_CHART_CAPACITY));
         }
       } catch (err) {
         console.error('Error managing weekly engineer KPI history:', err);
@@ -125,6 +130,11 @@ export default function DesignQualityView() {
         backgroundColor: colorForEngineer(engineer, index),
         borderRadius: 3,
         stack: 'engineers',
+        // Cap each bar at 1/WEEKLY_CHART_CAPACITY of the plotted width so a
+        // single loaded week renders at the same width it will have once
+        // all WEEKLY_CHART_CAPACITY weeks are present, instead of Chart.js's
+        // default of stretching the lone category to fill the axis.
+        maxBarThickness: (ctx) => (ctx.chart.chartArea?.width || 0) / WEEKLY_CHART_CAPACITY,
       })),
     };
   }, [weeklyEngineerHistory]);

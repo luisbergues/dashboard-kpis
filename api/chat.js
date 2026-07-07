@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { message, language, context } = req.body || {};
+  const { message, language, context, history } = req.body || {};
   if (!message || typeof message !== 'string') {
     res.status(400).json({ error: 'Missing "message" string' });
     return;
@@ -23,16 +23,23 @@ export default async function handler(req, res) {
 
   const isES = language === 'es';
   const systemInstruction = isES
-    ? 'Eres el asistente virtual de JL Closets, una empresa de closets a medida. Respondé de forma breve, clara y profesional en español. Usá únicamente los datos de contexto provistos para hablar de proyectos, diseñadores o especificaciones; si el contexto no alcanza, decilo honestamente en vez de inventar datos.'
-    : 'You are the virtual assistant for JL Closets, a custom closet company. Reply briefly, clearly, and professionally in English. Use only the provided context data to talk about projects, designers, or specs; if the context is insufficient, say so honestly instead of making things up.';
+    ? 'Eres el asistente virtual de JL Closets, una empresa de closets a medida. Respondé de forma breve, clara y profesional en español. El contexto provisto puede incluir varias secciones (proyectos, manual técnico de ingeniería, matriz de materiales, contactos de diseñadores) — usá únicamente esos datos para responder; si el contexto no alcanza, decilo honestamente en vez de inventar datos.'
+    : 'You are the virtual assistant for JL Closets, a custom closet company. Reply briefly, clearly, and professionally in English. The provided context may include several sections (projects, technical engineering manual, materials matrix, designer contacts) — use only that data to answer; if the context is insufficient, say so honestly instead of making things up.';
 
   const contextBlock = context && String(context).trim().length > 0
     ? `\n\n${isES ? 'Contexto relevante' : 'Relevant context'}:\n${String(context).slice(0, 6000)}`
     : '';
 
+  const validHistory = Array.isArray(history)
+    ? history.filter(h => h && (h.role === 'user' || h.role === 'model') && typeof h.text === 'string')
+    : [];
+
   const body = {
     system_instruction: { parts: [{ text: systemInstruction + contextBlock }] },
-    contents: [{ role: 'user', parts: [{ text: message }] }],
+    contents: [
+      ...validHistory.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
+      { role: 'user', parts: [{ text: message }] },
+    ],
     generationConfig: { maxOutputTokens: 500, temperature: 0.4 },
   };
 
