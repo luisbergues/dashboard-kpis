@@ -52,7 +52,7 @@ const getStageLabel = (stageId, language) => {
 };
 
 
-export default function MyProjectsView({ data, currentUser, userProfile }) {
+export default function MyProjectsView({ data, currentUser, userProfile, setActiveTab, setFocusedProjectSo }) {
   const { t, language } = useLanguage();
   const { theme } = useTheme();
   if (!data) return null;
@@ -185,6 +185,18 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     ...myProjectsRaw.filter(p => p.status && p.status.toLowerCase() === 'completed'),
     ...myArchivedProjects,
   ].filter((p, idx, arr) => arr.findIndex(x => x.so === p.so) === idx);
+
+  // Only projects still present in the active sheet (priorityAnalysis) exist in
+  // Pipeline's data — archived ones were already removed from the sheet, so
+  // there's nothing to open/highlight there.
+  const activeProjectSos = new Set(priorityAnalysis.map(p => String(p.so)));
+
+  const handleOpenCompletedProjectInPipeline = (so) => {
+    if (!activeProjectSos.has(String(so)) || !setActiveTab || !setFocusedProjectSo) return;
+    setIsCompletedProjectsModalOpen(false);
+    setFocusedProjectSo(so);
+    setActiveTab('pipeline');
+  };
 
   const isAdmin = userProfile && (userProfile.role === 'administrative' || userProfile.role === 'admin');
 
@@ -1888,6 +1900,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       {isCompletedProjectsModalOpen && (
         <CompletedProjectsModal
           projects={myCompletedProjects}
+          activeProjectSos={activeProjectSos}
+          onOpenProject={handleOpenCompletedProjectInPipeline}
           onClose={() => setIsCompletedProjectsModalOpen(false)}
         />
       )}

@@ -524,7 +524,7 @@ function App() {
         return isDesigner ? null : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
       case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
       case 'my-projects':
-        return isDesigner ? null : <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
+        return isDesigner ? null : <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} setActiveTab={setActiveTab} setFocusedProjectSo={setFocusedProjectSo} />;
       case 'pipeline': return <PipelineView data={mergedData} currentUser={currentUser} userProfile={userProfile} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} />;
       case 'materials':
         return isDesigner ? null : <MaterialsView data={mergedData} />;
