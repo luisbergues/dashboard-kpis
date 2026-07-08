@@ -66,9 +66,12 @@ function getHelpText(isES) {
 
 // Builds the reply for a single resolved entity (designer/engineer/project),
 // shared between the auto-answer path (single unambiguous match) and the
-// multi-option picker's click handler.
+// multi-option picker's click handler. Also returns `mentionedSO` when the
+// entity is a single project, so callers can anchor Gemini's context to it
+// for subsequent follow-up questions (see lastMentionedSO).
 function buildEntityAnswer(opt, projects, isES) {
   let text = '';
+  let mentionedSO = null;
   if (opt.type === 'designer') {
     const activeProjects = projects.filter(p => p.designer === opt.name && p.status !== 'COMPLETED' && p.status !== 'CANCELLED');
     text = isES
@@ -81,11 +84,12 @@ function buildEntityAnswer(opt, projects, isES) {
       : `**Active projects for ${opt.name}:**\n\n${activeProjects.length > 0 ? activeProjects.map(p => `• **${p.name}** (SO #${p.so}) - ${p.status}`).join('\n') : 'No active projects.'}`;
   } else if (opt.type === 'project') {
     const matched = opt.data;
+    mentionedSO = matched.so;
     text = isES
       ? `📋 **Proyecto Encontrado:**\n**${matched.name}**\n\n• **SO:** #${matched.so}\n• **Etapa actual:** ${matched.status || 'Activo'}\n• **Diseñador:** ${matched.designer || 'N/A'}\n• **Ingeniero:** ${matched.eng || 'Sin asignar'}\n• **Instalación:** ${matched.install || 'Sin fecha'}`
       : `📋 **Project Found:**\n**${matched.name}**\n\n• **SO:** #${matched.so}\n• **Current Stage:** ${matched.status || 'Active'}\n• **Designer:** ${matched.designer || 'N/A'}\n• **Engineer:** ${matched.eng || 'Unassigned'}\n• **Installation:** ${matched.install || 'No date'}`;
   }
-  return { text };
+  return { text, mentionedSO };
 }
 
 const CHAT_HISTORY_KEY = 'jl_chatbot_history';
@@ -113,6 +117,17 @@ function buildWelcomeMessage(isES) {
   };
 }
 
+// Builds the reply for a designer contact lookup (phone/email/city), shared
+// so "natalie contact" resolves locally and instantly instead of depending
+// on the Gemini proxy (which silently falls back to the help message if
+// GEMINI_API_KEY isn't configured — see buildContactsSection in llmChat.js
+// for the equivalent match used to ground the LLM context).
+function buildContactAnswer(contact, isES) {
+  return isES
+    ? `📇 **Contacto de Diseñador:**\n**${contact.name}**\n\n• **Tel:** ${contact.phone || 'N/A'}\n• **Email:** ${contact.email || 'N/A'}\n• **Ciudad:** ${contact.city || 'N/A'}`
+    : `📇 **Designer Contact:**\n**${contact.name}**\n\n• **Phone:** ${contact.phone || 'N/A'}\n• **Email:** ${contact.email || 'N/A'}\n• **City:** ${contact.city || 'N/A'}`;
+}
+
 export default function ProjectChatbot({ projects = [], materialsMatrix = [], currentUser, userProfile }) {
   const { language } = useLanguage();
   const { contacts: designerContacts } = useDesignerContacts();
@@ -123,6 +138,12 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
   const [targetSO, setTargetSO] = useState(null);
   const [targetProjectName, setTargetProjectName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // Tracks the last project the user was shown (single-match answer or picker
+  // selection), so short follow-up questions ("¿cuándo instala?") can anchor
+  // Gemini's context to that project instead of relying on it inferring the
+  // subject purely from free-text history — see buildLLMContext's
+  // `anchoredProject` param.
+  const [lastMentionedSO, setLastMentionedSO] = useState(null);
 
   const messagesEndRef = useRef(null);
 
@@ -153,6 +174,19 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
 
     // 1. Multi-turn State Machine for Adding Notes
     if (chatState === 'AWAITING_PROJECT_FOR_NOTE') {
+      // Cancel must be checked BEFORE attempting a project-name match, same as
+      // AWAITING_NOTE_TEXT below — otherwise "cancelar"/"cancel" gets treated
+      // as a failed project search and the bot loops forever suggesting the
+      // user type "cancelar" (which never actually gets checked).
+      if (cleanText === 'cancelar' || cleanText === 'cancel') {
+        setChatState('IDLE');
+        setTargetSO(null);
+        setTargetProjectName('');
+        return {
+          text: isES ? 'Acción cancelada.' : 'Action cancelled.'
+        };
+      }
+
       // Look for project matches
       const query = cleanText.replace(/[^a-z0-9]/g, '');
       const matches = projects.filter(p => {
@@ -281,10 +315,25 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
         options.push({ id: optionIdCounter++, type: 'project', data: p, label: isES ? `Ver proyecto ${p.name} (SO #${p.so})` : `View project ${p.name} (SO #${p.so})` });
       });
 
+      // Check Designer Contacts (by name or alias) — resolves lookups like
+      // "natalie contact" locally instead of only via the Gemini proxy.
+      const matchedContacts = designerContacts.filter(d => {
+        const names = [d.name, ...(d.aliases || [])];
+        return names.some(n => n && n.toLowerCase().replace(/[^a-z0-9]/g, '').includes(searchWord));
+      });
+      matchedContacts.forEach(c => {
+        options.push({ id: optionIdCounter++, type: 'contact', data: c, label: isES ? `Ver contacto de ${c.name} (Diseñador)` : `View contact for ${c.name} (Designer)` });
+      });
+
       // Single unambiguous match: answer directly instead of showing a
       // 1-option picker (this is the common case for "How is X?" queries).
       if (options.length === 1) {
-        return buildEntityAnswer(options[0], projects, isES);
+        if (options[0].type === 'contact') {
+          return { text: buildContactAnswer(options[0].data, isES) };
+        }
+        const { text: answerText, mentionedSO } = buildEntityAnswer(options[0], projects, isES);
+        if (mentionedSO) setLastMentionedSO(mentionedSO);
+        return { text: answerText };
       }
 
       if (options.length > 1) {
@@ -301,7 +350,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     // is unavailable (no API key configured, network error), fall back to
     // the static help message instead of failing silently.
     try {
-      const context = buildLLMContext({ query: text, projects, materialsMatrix, designerContacts, isES });
+      const context = buildLLMContext({ query: text, projects, materialsMatrix, designerContacts, isES, anchoredSO: lastMentionedSO });
       const history = messages
         .filter(m => m.id !== 'welcome' && m.id !== 'loading' && m.text !== '...')
         .slice(-6)
@@ -350,7 +399,15 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
 
   const handleOptionClick = (opt) => {
     const isES = language === 'es';
-    const { text: responseText } = buildEntityAnswer(opt, projects, isES);
+    if (opt.type === 'contact') {
+      setMessages(prev => [...prev,
+        { id: Date.now().toString() + '_user', sender: 'user', text: opt.label, timestamp: new Date() },
+        { id: Date.now().toString() + '_bot', sender: 'bot', text: buildContactAnswer(opt.data, isES), timestamp: new Date() }
+      ]);
+      return;
+    }
+    const { text: responseText, mentionedSO } = buildEntityAnswer(opt, projects, isES);
+    if (mentionedSO) setLastMentionedSO(mentionedSO);
 
     setMessages(prev => [...prev,
       { id: Date.now().toString() + '_user', sender: 'user', text: opt.label, timestamp: new Date() },

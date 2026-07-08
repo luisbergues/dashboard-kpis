@@ -33,6 +33,20 @@ function buildProjectsSection(projects, words) {
   ).join('\n');
 }
 
+// Short follow-up questions ("¿cuándo instala?", "and the designer?") don't
+// mention the project by name, so buildProjectsSection's keyword match finds
+// nothing project-specific and falls back to an unrelated slice(0, 5). This
+// explicitly re-includes the project the user was just shown (tracked as
+// lastMentionedSO in ProjectChatbot.jsx) as its own labeled section, so
+// Gemini doesn't have to infer the subject purely from free-text history.
+function buildAnchoredProjectSection(anchoredProject, isES) {
+  if (!anchoredProject) return '';
+  const p = anchoredProject;
+  return isES
+    ? `(Este es el proyecto que el usuario está consultando en este momento — asumí que las preguntas de seguimiento se refieren a él salvo que mencionen otro proyecto)\nSO #${p.so} — ${p.name} | Etapa: ${p.status || 'N/A'} | Diseñador: ${p.designer || 'N/A'} | Ingeniero: ${p.eng || 'N/A'} | Instalación: ${p.install || 'N/A'}`
+    : `(This is the project the user is currently asking about — assume follow-up questions refer to it unless another project is named)\nSO #${p.so} — ${p.name} | Stage: ${p.status || 'N/A'} | Designer: ${p.designer || 'N/A'} | Engineer: ${p.eng || 'N/A'} | Install: ${p.install || 'N/A'}`;
+}
+
 function buildManualSection(query, isES) {
   const matches = searchEngineeringManual(query);
   if (matches.length === 0) return '';
@@ -74,11 +88,22 @@ function buildContactsSection(designerContacts, words) {
 // engineering manual, materials matrix, designer contacts). Each section is
 // only included when it actually has a match, so irrelevant queries don't
 // inflate the prompt with unrelated data.
-export function buildLLMContext({ query, projects = [], materialsMatrix = [], designerContacts = [], isES = true }) {
+//
+// `anchoredSO`: SO of the project the user was last shown (single-match
+// answer or picker selection — see lastMentionedSO in ProjectChatbot.jsx).
+// When set, that project is always included as its own section regardless
+// of whether the current query mentions it by name, so short follow-ups
+// stay grounded in the right project instead of falling back to an
+// unrelated slice of projects.
+export function buildLLMContext({ query, projects = [], materialsMatrix = [], designerContacts = [], isES = true, anchoredSO = null }) {
   const cleanQuery = (query || '').toLowerCase();
   const words = cleanQuery.split(/\s+/).filter(w => w.length >= 3);
+  const anchoredProject = anchoredSO
+    ? projects.find(p => String(p.so) === String(anchoredSO))
+    : null;
 
   const sections = [
+    { label: isES ? 'Proyecto en Foco' : 'Project in Focus', text: buildAnchoredProjectSection(anchoredProject, isES) },
     { label: isES ? 'Proyectos' : 'Projects', text: buildProjectsSection(projects, words) },
     { label: isES ? 'Manual de Ingeniería' : 'Engineering Manual', text: buildManualSection(query, isES) },
     { label: isES ? 'Matriz de Materiales' : 'Materials Matrix', text: buildMaterialsSection(materialsMatrix, cleanQuery, words) },
