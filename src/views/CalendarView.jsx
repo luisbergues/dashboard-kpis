@@ -340,8 +340,9 @@ export default function CalendarView({ data, currentUser, userProfile }) {
         <div className="view-header-actions">
           {userProfile?.role !== 'administrative' && userProfile?.role !== 'admin' && !isDesigner && (
             <label className="toggle-switch-container">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
+                name="showMyProjectsOnly"
                 checked={showMyProjectsOnly}
                 onChange={(e) => setShowMyProjectsOnly(e.target.checked)}
                 className="toggle-checkbox"
@@ -486,6 +487,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                 <label className="form-label">{language === 'es' ? 'Fecha' : 'Date'}</label>
                 <input
                   type="date"
+                  name="selectedDate"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   className="form-input"
@@ -497,6 +499,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
               <div className="form-group">
                 <label className="form-label">{t('calendar.linkProject')}</label>
                 <select
+                  name="linkedSo"
                   value={linkedSo}
                   onChange={(e) => setLinkedSo(e.target.value)}
                   className="form-select"
@@ -514,6 +517,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
               <div className="form-group">
                 <label className="form-label">{t('calendar.noteLabel')}</label>
                 <textarea
+                  name="noteText"
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
                   placeholder={t('calendar.notePlaceholder')}

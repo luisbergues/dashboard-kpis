@@ -348,7 +348,7 @@
   background: rgba(9, 209, 199, 0.05);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .card-header-main {
     flex-direction: column;
     align-items: flex-start;

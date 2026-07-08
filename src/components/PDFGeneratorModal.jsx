@@ -262,12 +262,12 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
                 <tbody>
                   {drawers.map((d, i) => (
                     <tr key={i}>
-                      <td><input value={d.front} onChange={e => updateDrawer(i, 'front', e.target.value)} /></td>
-                      <td><input type="number" style={{width: '60px'}} value={d.qty} onChange={e => updateDrawer(i, 'qty', e.target.value)} /></td>
-                      <td><input value={d.open} onChange={e => updateDrawer(i, 'open', e.target.value)} /></td>
-                      <td><input value={d.box} onChange={e => updateDrawer(i, 'box', e.target.value)} /></td>
-                      <td><input value={d.room} onChange={e => updateDrawer(i, 'room', e.target.value)} /></td>
-                      <td><input value={d.handles} onChange={e => updateDrawer(i, 'handles', e.target.value)} /></td>
+                      <td><input name={`drawerFront-${i}`} value={d.front} onChange={e => updateDrawer(i, 'front', e.target.value)} /></td>
+                      <td><input name={`drawerQty-${i}`} type="number" style={{width: '60px'}} value={d.qty} onChange={e => updateDrawer(i, 'qty', e.target.value)} /></td>
+                      <td><input name={`drawerOpen-${i}`} value={d.open} onChange={e => updateDrawer(i, 'open', e.target.value)} /></td>
+                      <td><input name={`drawerBox-${i}`} value={d.box} onChange={e => updateDrawer(i, 'box', e.target.value)} /></td>
+                      <td><input name={`drawerRoom-${i}`} value={d.room} onChange={e => updateDrawer(i, 'room', e.target.value)} /></td>
+                      <td><input name={`drawerHandles-${i}`} value={d.handles} onChange={e => updateDrawer(i, 'handles', e.target.value)} /></td>
                       <td><button className="btn-icon danger" onClick={() => removeDrawer(i)}><Trash2 size={16} /></button></td>
                     </tr>
                   ))}
@@ -289,10 +289,10 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
                 <tbody>
                   {rods.map((r, i) => (
                     <tr key={i}>
-                      <td><input value={r.room} onChange={e => updateRod(i, 'room', e.target.value)} /></td>
-                      <td><input value={r.type} onChange={e => updateRod(i, 'type', e.target.value)} /></td>
-                      <td><input type="number" style={{width: '60px'}} value={r.qty} onChange={e => updateRod(i, 'qty', e.target.value)} /></td>
-                      <td><input value={r.size} onChange={e => updateRod(i, 'size', e.target.value)} /></td>
+                      <td><input name={`rodRoom-${i}`} value={r.room} onChange={e => updateRod(i, 'room', e.target.value)} /></td>
+                      <td><input name={`rodType-${i}`} value={r.type} onChange={e => updateRod(i, 'type', e.target.value)} /></td>
+                      <td><input name={`rodQty-${i}`} type="number" style={{width: '60px'}} value={r.qty} onChange={e => updateRod(i, 'qty', e.target.value)} /></td>
+                      <td><input name={`rodSize-${i}`} value={r.size} onChange={e => updateRod(i, 'size', e.target.value)} /></td>
                       <td><button className="btn-icon danger" onClick={() => removeRod(i)}><Trash2 size={16} /></button></td>
                     </tr>
                   ))}
@@ -307,11 +307,11 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
             <div className="misc-columns">
               <div style={{flex: 1}}>
                 <label>{t('myProjects.leftColumn')}</label>
-                <textarea value={miscCol1} onChange={e => setMiscCol1(e.target.value)} rows={6} style={{width:'100%', padding:'8px'}}></textarea>
+                <textarea name="miscCol1" value={miscCol1} onChange={e => setMiscCol1(e.target.value)} rows={6} style={{width:'100%', padding:'8px'}}></textarea>
               </div>
               <div style={{flex: 1}}>
                 <label>{t('myProjects.rightColumn')}</label>
-                <textarea value={miscCol2} onChange={e => setMiscCol2(e.target.value)} rows={6} style={{width:'100%', padding:'8px'}}></textarea>
+                <textarea name="miscCol2" value={miscCol2} onChange={e => setMiscCol2(e.target.value)} rows={6} style={{width:'100%', padding:'8px'}}></textarea>
               </div>
             </div>
           </div>

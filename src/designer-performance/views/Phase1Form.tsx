@@ -285,7 +285,7 @@ export const Phase1Form: React.FC = () => {
 
           {mode === 'Update' ? (
             <Field label="Select Project (SO Number)">
-              <select value={soNumber} onChange={e => setSoNumber(e.target.value)} style={selectStyle}>
+              <select name="soNumber" value={soNumber} onChange={e => setSoNumber(e.target.value)} style={selectStyle}>
                 <option value="">Choose a project to update…</option>
                 {updatableProjects.map(p => (
                   <option key={p.id} value={p.id}>{p.id} — {p.projectName} ({p.status})</option>
@@ -297,6 +297,7 @@ export const Phase1Form: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <Field label="SO Number — Active Project">
                 <select
+                  name="soNumber"
                   value={soNumber}
                   onChange={e => handleNewProjectSelect(e.target.value)}
                   style={{ ...selectStyle, cursor: 'pointer', appearance: 'none' }}
@@ -323,12 +324,12 @@ export const Phase1Form: React.FC = () => {
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 14 }}>
             <Field label="Project Name" half>
-              <input value={projectName} onChange={e => setProjectName(e.target.value)}
+              <input name="projectName" value={projectName} onChange={e => setProjectName(e.target.value)}
                 readOnly={mode === 'Update'} placeholder="e.g., Smith Residence"
                 style={{ ...inputStyle, opacity: mode === 'Update' ? 0.5 : 1 }} />
             </Field>
             <Field label="Designer" half>
-              <select value={designerName} onChange={e => setDesignerName(e.target.value)}
+              <select name="designerName" value={designerName} onChange={e => setDesignerName(e.target.value)}
                 style={selectStyle}>
                 <option value="">Select a designer…</option>
                 {designerNames.map(d => <option key={d} value={d}>{d}</option>)}
@@ -338,7 +339,7 @@ export const Phase1Form: React.FC = () => {
 
           <div style={{ display: 'flex', gap: 14, marginTop: 14, flexWrap: 'wrap' }}>
             <Field label="Total Rooms" half>
-              <input type="number" min="1" value={totalRooms}
+              <input name="totalRooms" type="number" min="1" value={totalRooms}
                 onChange={e => setTotalRooms(e.target.value === '' ? '' : Number(e.target.value))}
                 style={inputStyle} />
             </Field>

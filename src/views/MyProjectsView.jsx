@@ -1487,6 +1487,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                           )}
                           <textarea
                             className="note-input"
+                            name={`myProjectsNote-${project.so}`}
                             placeholder={language === 'es' ? 'Agregar nota...' : 'Add note...'}
                             value={noteInputs[project.so]?.text || ''}
                             onChange={(e) => setNoteInputs(prev => ({
@@ -1527,10 +1528,11 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                               
                               <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '12px', fontSize: '0.75rem', color: '#94A3B8' }} title={language === 'es' ? 'Adjuntar Imagen o Documento (Máx 1MB)' : 'Attach Image or Document (Max 1MB)'}>
                                 <Paperclip size={14} />
-                                <input 
-                                  type="file" 
+                                <input
+                                  type="file"
+                                  name={`myProjectsAttachments-${project.so}`}
                                   multiple
-                                  accept="image/*,.pdf,.doc,.docx" 
+                                  accept="image/*,.pdf,.doc,.docx"
                                   style={{ display: 'none' }}
                                   onChange={(e) => {
                                     if (e.target.files) {
@@ -1654,7 +1656,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
             <form onSubmit={submitHold} className="modal-form">
               <div className="form-group">
                 <label className="form-label">{t('myProjects.modalHoldReasonLabel')}</label>
-                <textarea 
+                <textarea
+                  name="holdReason"
                   value={holdReason}
                   onChange={(e) => setHoldReason(e.target.value)}
                   placeholder={t('myProjects.modalHoldPlaceholder')}
@@ -1695,7 +1698,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
             </div>
             <div className="modal-body" style={{ padding: '20px' }}>
               <form onSubmit={handleSaveDesigner} className="collab-add-form" style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-                <select 
+                <select
+                  name="designerSearchTerm"
                   value={designerSearchTerm}
                   onChange={(e) => setDesignerSearchTerm(e.target.value)}
                   className="form-input"
@@ -1733,7 +1737,8 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
             </div>
             <div className="modal-body" style={{ padding: '20px' }}>
               <form onSubmit={handleAddCollab} className="collab-add-form" style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-                <select 
+                <select
+                  name="collabSearchTerm"
                   value={collabSearchTerm}
                   onChange={(e) => setCollabSearchTerm(e.target.value)}
                   className="form-input"
@@ -1812,8 +1817,9 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                   <label key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', color: '#fff', fontSize: '0.92rem', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}
                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}>
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
+                      name={`qaCheck-${qaType}-${idx}`}
                       checked={!!qaChecks[idx]}
                       onChange={(e) => setQAChecks(prev => ({ ...prev, [idx]: e.target.checked }))}
                       style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: '#09D1C7', flexShrink: 0 }}

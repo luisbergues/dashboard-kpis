@@ -601,6 +601,12 @@
     flex: 1 1 auto;
     min-width: 0;
   }
+  .chip {
+    padding: 10px 14px;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+  }
 }
 
 /* ─── Glow effect for redirected project card ───────────── */

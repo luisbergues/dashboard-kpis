@@ -788,6 +788,12 @@
 
 /* Mobile status dots and circular grid cells */
 @media (max-width: 767px) {
+  .cal-nav-btn {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+
   .cal-cell {
     min-height: 52px;
     height: 52px;

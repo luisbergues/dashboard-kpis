@@ -59,8 +59,9 @@ export default function GlobalFilterBar({ filters, onChange, projects = [], onHo
         {/* Date Filter */}
         <div className="filter-input-group">
           <Calendar size={14} className="input-icon" />
-          <select 
-            value={filters.dateRange} 
+          <select
+            name="dateRangeFilter"
+            value={filters.dateRange}
             onChange={(e) => handleFilterChange('dateRange', e.target.value)}
             className="filter-select"
           >
@@ -74,8 +75,9 @@ export default function GlobalFilterBar({ filters, onChange, projects = [], onHo
         {/* Location Filter */}
         <div className="filter-input-group">
           <MapPin size={14} className="input-icon" />
-          <select 
-            value={filters.location} 
+          <select
+            name="locationFilter"
+            value={filters.location}
             onChange={(e) => handleFilterChange('location', e.target.value)}
             className="filter-select"
           >
@@ -89,8 +91,9 @@ export default function GlobalFilterBar({ filters, onChange, projects = [], onHo
         {/* Designer Filter */}
         <div className="filter-input-group">
           <User size={14} className="input-icon" />
-          <select 
-            value={filters.designer} 
+          <select
+            name="designerFilter"
+            value={filters.designer}
             onChange={(e) => handleFilterChange('designer', e.target.value)}
             className="filter-select"
           >

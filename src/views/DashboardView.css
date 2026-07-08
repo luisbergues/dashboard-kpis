@@ -654,3 +654,25 @@
   }
 }
 
+/* ─── Mobile refinements (<=767px, matches app-wide breakpoint) ─── */
+@media (max-width: 767px) {
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .kpi-metrics-row {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .projects-carousel-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .carousel-btn {
+    width: 40px;
+    height: 40px;
+  }
+}
+

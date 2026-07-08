@@ -483,8 +483,9 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
         <div className="controls">
           <div className="search-bar glass-card">
             <Search size={18} className="text-muted" />
-            <input 
-              type="text" 
+            <input
+              type="text"
+              name="pipelineSearch"
               placeholder={t('pipeline.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -493,9 +494,8 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
           <div className="filter-chips">
             {!isDesigner && (
               <>
-                <label className="pipeline-my-projects-toggle" htmlFor="my-projects-toggle">
+                <label className="pipeline-my-projects-toggle">
                   <div
-                    id="my-projects-toggle"
                     className={`pipeline-toggle-btn ${showMyProjects ? 'on' : 'off'}`}
                     onClick={() => setShowMyProjects(!showMyProjects)}
                     role="switch"
@@ -885,8 +885,9 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                             </div>
                           )}
                           <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                            <input 
+                            <input
                               type="text"
+                              name={`pipelineNote-${project.so}`}
                               placeholder={language === 'es' ? 'Escribe una nota...' : 'Write a note...'}
                               value={newNoteTexts[project.so] || ''}
                               onChange={(e) => setNewNoteTexts(prev => ({ ...prev, [project.so]: e.target.value }))}
@@ -900,8 +901,9 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                             />
                             <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', padding: '0 10px', borderRadius: '8px', color: '#94A3B8' }} title={language === 'es' ? 'Adjuntar Imagen o Documento (Máx 1MB)' : 'Attach Image or Document (Max 1MB)'}>
                               <Paperclip size={14} />
-                              <input 
-                                type="file" 
+                              <input
+                                type="file"
+                                name={`pipelineAttachments-${project.so}`}
                                 multiple
                                 accept="image/*,.pdf,.doc,.docx" 
                                 style={{ display: 'none' }}
