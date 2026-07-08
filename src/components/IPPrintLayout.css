@@ -51,6 +51,8 @@
 }
 
 .ip-label-cell {
+  font-family: Calibri, Arial, Helvetica, sans-serif;
+  font-size: 20px;
   font-weight: normal;
   text-align: left;
 }
@@ -81,7 +83,5 @@
 }
 
 .ip-observations-heading {
-  font-size: 20px;
   font-weight: bold;
-  text-transform: uppercase;
 }

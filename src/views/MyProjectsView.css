@@ -29,6 +29,10 @@
   overflow: hidden;
 }
 
+.project-card.is-expanded {
+  min-height: calc(100vh - 160px);
+}
+
 .card-header-main {
   display: flex;
   justify-content: space-between;
@@ -424,6 +428,8 @@
   display: flex;
   gap: 24px;
   width: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .project-card-main {
@@ -442,6 +448,7 @@
   gap: 12px;
   border-left: 1px solid var(--card-border);
   padding-left: 20px;
+  align-self: stretch;
 }
 
 .notes-panel-header {
@@ -576,7 +583,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 280px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -677,6 +685,9 @@
 }
 
 @media (max-width: 900px) {
+  .project-card.is-expanded {
+    min-height: 0;
+  }
   .project-card-layout {
     flex-direction: column;
   }
@@ -687,6 +698,10 @@
     padding-left: 0;
     border-top: 1px solid var(--card-border);
     padding-top: 16px;
+  }
+  .notes-list {
+    flex: none;
+    max-height: 280px;
   }
 }
 

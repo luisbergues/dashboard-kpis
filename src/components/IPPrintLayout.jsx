@@ -13,6 +13,11 @@ export default function IPPrintLayout({ data }) {
 
   return (
     <div className="ip-print-container">
+      {/* Inlined so styles survive react-to-print's DOM clone regardless of stylesheet copying */}
+      <style>{`
+        .ip-label-cell { font-family: Calibri, Arial, Helvetica, sans-serif !important; font-size: 20px !important; font-weight: normal !important; }
+        .ip-observations-heading { font-weight: bold !important; }
+      `}</style>
       {/* Title */}
       <div className="ip-title-block">
         <h1 className="ip-main-title">INSTALLER</h1>

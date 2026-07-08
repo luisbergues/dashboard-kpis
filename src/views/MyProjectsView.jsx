@@ -1230,7 +1230,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
             const isCollapsed = !expandedProjects[project.so];
 
             return (
-              <div key={project.so} className="project-card glass-card" style={{ paddingBottom: isCollapsed ? '12px' : '24px' }}>
+              <div key={project.so} className={`project-card glass-card ${isCollapsed ? '' : 'is-expanded'}`} style={{ paddingBottom: isCollapsed ? '12px' : '24px' }}>
                 <div className="project-card-layout">
                   <div className="project-card-main">
                     <div className="card-header-main" onClick={() => toggleCollapse(project.so)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
