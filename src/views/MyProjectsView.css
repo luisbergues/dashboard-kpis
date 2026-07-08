@@ -693,25 +693,13 @@
 /* Projects Analytics Grid */
 .projects-analytics-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 300px;
+  grid-template-columns: 1fr 300px;
   gap: 24px;
-}
-
-@media (max-width: 1024px) {
-  .projects-analytics-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .deadlines-card {
-    grid-column: span 2;
-  }
 }
 
 @media (max-width: 767px) {
   .projects-analytics-grid {
     grid-template-columns: 1fr;
-  }
-  .deadlines-card {
-    grid-column: span 1;
   }
 }
 

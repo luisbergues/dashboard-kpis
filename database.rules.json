@@ -52,6 +52,15 @@
       ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
     },
 
+    "project_kanban_state": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && (root.child('users').child(auth.uid).child('role').val() === 'engineer_nester' || root.child('users').child(auth.uid).child('role').val() === 'engineer-admin')"
+    },
+    "project_kanban_order": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && (root.child('users').child(auth.uid).child('role').val() === 'engineer_nester' || root.child('users').child(auth.uid).child('role').val() === 'engineer-admin')"
+    },
+
     "$other": {
       ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
       ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'"

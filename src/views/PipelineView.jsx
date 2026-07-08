@@ -54,6 +54,12 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   const [expandedProjects, setExpandedProjects] = useState({});
   const [materialOverrides, setMaterialOverrides] = useState({});
   const [kanbanState, setKanbanState] = useState({});
+  // Manual within-column ordering: { [columnId]: [so, so, ...] }. Projects not
+  // yet present in a column's array fall back to date-based ordering (see
+  // kanbanOrderedProjects below) so existing boards don't jump around before
+  // anyone has dragged a card within a column.
+  const [kanbanOrder, setKanbanOrder] = useState({});
+  const [draggedOverSo, setDraggedOverSo] = useState(null);
 
   const toggleCollapse = (so) => {
     setExpandedProjects(prev => ({ ...prev, [so]: !prev[so] }));
@@ -97,6 +103,11 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
       setKanbanState(snapshot.val() || {});
     });
 
+    const kanbanOrderRef = ref(db, 'project_kanban_order');
+    const unsubscribeKanbanOrder = onValue(kanbanOrderRef, (snapshot) => {
+      setKanbanOrder(snapshot.val() || {});
+    });
+
     return () => {
       unsubscribeNotes();
       unsubscribeEngChecks();
@@ -105,6 +116,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
       unsubscribeNesting();
       unsubscribeMatOverrides();
       unsubscribeKanban();
+      unsubscribeKanbanOrder();
     };
   }, []);
 
@@ -346,11 +358,14 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     return note ? note.notes : null;
   };
 
-  const canEditKanban = userProfile?.role === 'engineer_nester' || userProfile?.role === 'admin' || userProfile?.role === 'administrative';
+  // Matches database.rules.json's write restriction on project_kanban_state /
+  // project_kanban_order (nester or super admin only) — kept in sync so the
+  // UI never offers drag-and-drop to a role whose write would be rejected.
+  const canEditKanban = userProfile?.role === 'engineer_nester' || userProfile?.role === 'engineer-admin';
 
   const handleDragStart = (e, so) => {
     if (!canEditKanban) return;
-    e.dataTransfer.setData('text/plain', so);
+    e.dataTransfer.setData('text/plain', String(so));
   };
 
   const handleDragOver = (e) => {
@@ -358,13 +373,57 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     e.preventDefault();
   };
 
+  // Persists both the column assignment (project_kanban_state, unchanged) and
+  // an explicit within-column position (project_kanban_order/{columnId} = [so, ...]),
+  // so a manual drag order survives reloads and is what My Projects reads for
+  // its 'Kanban' sort — instead of that view re-deriving an order on its own.
+  const persistColumnOrder = async (columnId, columnSos) => {
+    if (!db) return;
+    await set(ref(db, `project_kanban_order/${columnId}`), columnSos);
+  };
+
+  // Dropping on empty column space (below the last card): append to the end
+  // of that column's order, moving column if needed.
   const handleDrop = async (e, columnId) => {
     if (!canEditKanban) return;
     e.preventDefault();
+    setDraggedOverSo(null);
     const so = e.dataTransfer.getData('text/plain');
-    if (so && db) {
+    if (!so || !db) return;
+
+    if (kanbanState[so] !== columnId) {
       await set(ref(db, `project_kanban_state/${so}`), columnId);
     }
+
+    const currentColumnProjects = kanbanOrderedProjects.filter(
+      p => (kanbanState[p.so] || 'projects') === columnId
+    );
+    const nextOrder = currentColumnProjects.map(p => String(p.so)).filter(s => s !== String(so));
+    nextOrder.push(String(so));
+    await persistColumnOrder(columnId, nextOrder);
+  };
+
+  // Dropping directly on a card: insert the dragged project right before it
+  // (moving column too if the card was dragged in from elsewhere).
+  const handleDropOnCard = async (e, columnId, targetSo) => {
+    if (!canEditKanban) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggedOverSo(null);
+    const so = e.dataTransfer.getData('text/plain');
+    if (!so || !db || String(so) === String(targetSo)) return;
+
+    if (kanbanState[so] !== columnId) {
+      await set(ref(db, `project_kanban_state/${so}`), columnId);
+    }
+
+    const currentColumnProjects = kanbanOrderedProjects.filter(
+      p => (kanbanState[p.so] || 'projects') === columnId
+    );
+    const nextOrder = currentColumnProjects.map(p => String(p.so)).filter(s => s !== String(so));
+    const targetIndex = nextOrder.indexOf(String(targetSo));
+    nextOrder.splice(targetIndex === -1 ? nextOrder.length : targetIndex, 0, String(so));
+    await persistColumnOrder(columnId, nextOrder);
   };
 
   const handleAssignEngineer = async (so, engineerName) => {
@@ -379,8 +438,9 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     }
   };
 
-  // Same priority order as "My Projects" (soonest install date first, undated last),
-  // so the Kanban board lays cards out left-to-right / top-to-bottom by importance.
+  // Default fallback order (soonest install date first, undated last) for
+  // projects that don't yet have a manually-dragged position saved in
+  // project_kanban_order for their column.
   const kanbanOrderedProjects = [...projects].sort((a, b) => {
     const dateA = a.install ? new Date(a.install).getTime() : null;
     const dateB = b.install ? new Date(b.install).getTime() : null;
@@ -389,6 +449,25 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
     if (!dateB) return -1;
     return dateA - dateB;
   });
+
+  // Applies each column's persisted manual order (project_kanban_order) on
+  // top of the date-based fallback: projects with a saved position are placed
+  // in that exact order; any project not yet in the saved array keeps its
+  // fallback (date-based) relative position, appended after the saved ones.
+  // This is what both the Kanban board and My Projects' 'Kanban' sort use, so
+  // a nester's manual drag order is the single source of truth for both.
+  const orderProjectsForColumn = (columnProjects, columnId) => {
+    const savedOrder = kanbanOrder[columnId];
+    if (!savedOrder || savedOrder.length === 0) return columnProjects;
+
+    const savedIndex = new Map(savedOrder.map((so, i) => [String(so), i]));
+    return [...columnProjects].sort((a, b) => {
+      const idxA = savedIndex.has(String(a.so)) ? savedIndex.get(String(a.so)) : Infinity;
+      const idxB = savedIndex.has(String(b.so)) ? savedIndex.get(String(b.so)) : Infinity;
+      if (idxA !== idxB) return idxA - idxB;
+      return 0; // both unsaved: keep existing (date-based) relative order
+    });
+  };
 
   const KANBAN_COLUMNS = [
     { id: 'procurement', label: 'PROCUREMENT' },
@@ -484,7 +563,10 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
       {filter === 'KANBAN' ? (
         <div className="kanban-board">
           {KANBAN_COLUMNS.map(col => {
-            const columnProjects = kanbanOrderedProjects.filter(p => (kanbanState[p.so] || 'projects') === col.id);
+            const columnProjects = orderProjectsForColumn(
+              kanbanOrderedProjects.filter(p => (kanbanState[p.so] || 'projects') === col.id),
+              col.id
+            );
             return (
               <div 
                 key={col.id} 
@@ -514,11 +596,14 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                     const hasNonSnowWhiteMaterial = projectMaterials.some(m => m.material && m.material.toLowerCase() !== 'snow white') && ov.ordered !== 'Yes';
 
                     return (
-                    <div 
+                    <div
                       key={project.so}
-                      className={`kanban-card glass-card ${canEditKanban ? 'kanban-card-draggable' : ''}`}
+                      className={`kanban-card glass-card ${canEditKanban ? 'kanban-card-draggable' : ''} ${draggedOverSo === project.so ? 'kanban-card-drag-over' : ''}`}
                       draggable={canEditKanban}
                       onDragStart={canEditKanban ? (e) => handleDragStart(e, project.so) : undefined}
+                      onDragOver={canEditKanban ? (e) => { e.preventDefault(); e.stopPropagation(); if (draggedOverSo !== project.so) setDraggedOverSo(project.so); } : undefined}
+                      onDragLeave={canEditKanban ? () => setDraggedOverSo(prev => (prev === project.so ? null : prev)) : undefined}
+                      onDrop={canEditKanban ? (e) => handleDropOnCard(e, col.id, project.so) : undefined}
                     >
                       <div className="kanban-card-top">
                         <a

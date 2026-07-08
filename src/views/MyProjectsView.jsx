@@ -12,9 +12,9 @@ import {
   LayoutGrid
 } from 'lucide-react';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
-import { Bar, Line } from 'react-chartjs-2';
-import { calculatePersonalStageAverages, calculateMonthlyCompletions, getUpcomingDeadlines } from '../services/kpiCalculator';
+import { Chart as ChartJS, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
+import { Line } from 'react-chartjs-2';
+import { calculateWeeklyCompletions, getUpcomingDeadlines } from '../services/kpiCalculator';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import PDFGeneratorModal from '../components/PDFGeneratorModal';
 import IPGeneratorModal from '../components/IPGeneratorModal';
@@ -22,9 +22,10 @@ import CompletedProjectsModal from '../components/CompletedProjectsModal';
 import { cleanupESSData } from '../utils/essData';
 import { cleanupIPData } from '../utils/ipData';
 import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
+import { useTheme } from '../utils/ThemeContext';
 import './MyProjectsView.css';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, ChartTooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Title, ChartTooltip, Legend, Filler);
 
 const getStageLabel = (stageId, language) => {
   if (language === 'es') {
@@ -53,6 +54,7 @@ const getStageLabel = (stageId, language) => {
 
 export default function MyProjectsView({ data, currentUser, userProfile }) {
   const { t, language } = useLanguage();
+  const { theme } = useTheme();
   if (!data) return null;
 
   const { priorityAnalysis, onHoldNotes } = data;
@@ -103,6 +105,9 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
   const [nestingChecks, setNestingChecks] = useState({});
   const [materialOverrides, setMaterialOverrides] = useState({});
   const [kanbanState, setKanbanState] = useState({});
+  // Manual within-column order set by nesters dragging cards in the Pipeline
+  // Kanban board: { [columnId]: [so, so, ...] }. See PipelineView.jsx.
+  const [kanbanOrder, setKanbanOrder] = useState({});
   const [projectDesigners, setProjectDesigners] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -193,9 +198,25 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       const dateB = b.install ? new Date(b.install).getTime() : null;
 
       if (sortBy === 'kanban') {
-        const kanbanA = KANBAN_ORDER[kanbanState[a.so] || 'projects'] ?? 2;
-        const kanbanB = KANBAN_ORDER[kanbanState[b.so] || 'projects'] ?? 2;
+        const columnA = kanbanState[a.so] || 'projects';
+        const columnB = kanbanState[b.so] || 'projects';
+        const kanbanA = KANBAN_ORDER[columnA] ?? 2;
+        const kanbanB = KANBAN_ORDER[columnB] ?? 2;
         if (kanbanA !== kanbanB) return kanbanA - kanbanB;
+
+        // Same column: respect the nester's manual drag order from Pipeline
+        // (project_kanban_order) — this is the single source of truth for
+        // "Kanban order", not a locally re-derived date sort. Projects not
+        // yet in the saved order fall back to install date, same as Pipeline.
+        if (columnA === columnB) {
+          const savedOrder = kanbanOrder[columnA];
+          if (savedOrder && savedOrder.length > 0) {
+            const savedIndex = new Map(savedOrder.map((so, i) => [String(so), i]));
+            const idxA = savedIndex.has(String(a.so)) ? savedIndex.get(String(a.so)) : Infinity;
+            const idxB = savedIndex.has(String(b.so)) ? savedIndex.get(String(b.so)) : Infinity;
+            if (idxA !== idxB) return idxA - idxB;
+          }
+        }
       }
 
       // Tie-break (or default "Date" mode): install date ascending, no-date last
@@ -216,38 +237,28 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
     return obj;
   }, [myProjectsRaw, myArchivedProjects]);
 
-  const stageAverages = calculatePersonalStageAverages(derivedProjectStages, myProjectsRaw, projectHistory, engineeringChecks);
-  const monthlyData = calculateMonthlyCompletions(derivedProjectStages, [...myProjectsRaw, ...myArchivedProjects]);
+  const weeklyData = calculateWeeklyCompletions(derivedProjectStages, [...myProjectsRaw, ...myArchivedProjects]);
   const upcomingDeadlines = getUpcomingDeadlines(myProjectsRaw);
-
-  const stageAveragesChartData = {
-    labels: stageAverages.map(s => s.label),
-    datasets: [{
-      label: 'Avg Hours',
-      data: stageAverages.map(s => s.averageHours),
-      backgroundColor: stageAverages.map(s => s.isExternal ? 'rgba(255, 255, 255, 0.2)' : '#09D1C7'),
-      borderRadius: 4
-    }]
-  };
 
   const lineOptions = {
     responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { position: 'top', labels: { color: '#94A3B8' } } },
-    scales: {
-      x: { ticks: { color: '#94A3B8' }, grid: { display: false } },
-      y: { ticks: { color: '#94A3B8', precision: 0 }, grid: { color: 'rgba(148,163,184,0.2)' } }
-    }
-  };
-
-  const barOptions = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { 
-      legend: { display: false },
-      tooltip: { callbacks: { label: (ctx) => `${ctx.raw} Hours` } }
+    plugins: {
+      legend: { position: 'top', labels: { color: theme === 'light' ? '#374151' : '#94A3B8' } },
+      tooltip: {
+        backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.98)' : 'rgba(11, 21, 32, 0.95)',
+        titleColor: theme === 'light' ? '#10B981' : '#80EE98',
+        bodyColor: theme === 'light' ? '#111827' : '#fff',
+        borderColor: theme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        padding: 10,
+      },
     },
     scales: {
-      x: { ticks: { color: '#94A3B8', font: {size: 10} }, grid: { display: false } },
-      y: { ticks: { color: '#94A3B8' }, grid: { color: 'rgba(148,163,184,0.2)' } }
+      x: { ticks: { color: theme === 'light' ? '#374151' : '#94A3B8' }, grid: { display: false } },
+      y: {
+        ticks: { color: theme === 'light' ? '#374151' : '#94A3B8', precision: 0 },
+        grid: { color: theme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(148,163,184,0.2)' }
+      }
     }
   };
 
@@ -395,6 +406,12 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       setKanbanState(snapshot.val() || {});
     });
 
+    // Load Kanban manual within-column order (set by nesters in Pipeline)
+    const kanbanOrderRef = ref(db, 'project_kanban_order');
+    const unsubscribeKanbanOrder = onValue(kanbanOrderRef, (snapshot) => {
+      setKanbanOrder(snapshot.val() || {});
+    });
+
     return () => {
       unsubscribeStages();
       unsubscribeOverrides();
@@ -406,6 +423,7 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
       unsubscribeDesigners();
       unsubscribeMatOverrides();
       unsubscribeKanban();
+      unsubscribeKanbanOrder();
     };
   }, [currentUser, userProfile]);
 
@@ -1128,22 +1146,12 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
           
           {showAnalytics && (
             <div className="projects-analytics-grid">
-              <SectionErrorBoundary title="Stage Averages Error">
+              <SectionErrorBoundary title="Weekly Output Error">
                 <div className="analytics-card">
-                  <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Avg Time per Stage (Weighted by Size)</h4>
+                  <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Projects Completed (Weekly)</h4>
                   <div style={{ height: '220px' }}>
-                    <Bar data={stageAveragesChartData} options={barOptions} />
-                  </div>
-                  <p style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '8px', textAlign: 'center' }}>* Gray bars indicate external stages</p>
-                </div>
-              </SectionErrorBoundary>
-
-              <SectionErrorBoundary title="Monthly Output Error">
-                <div className="analytics-card">
-                  <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Projects Completed (Monthly)</h4>
-                  <div style={{ height: '220px' }}>
-                    {monthlyData.labels.length > 0 ? (
-                      <Line data={monthlyData} options={lineOptions} />
+                    {weeklyData.labels.length > 0 ? (
+                      <Line data={weeklyData} options={lineOptions} />
                     ) : (
                       <div className="text-muted" style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>No completed projects yet</div>
                     )}
@@ -1252,8 +1260,11 @@ export default function MyProjectsView({ data, currentUser, userProfile }) {
                               <span>Material</span>
                             </button>
                           )}
-                          {userProfile && (userProfile.role === 'engineer_nester' || userProfile.role === 'admin' || userProfile.role === 'administrative') && (
-                            <button 
+                          {/* Nester-only: procurement is a nester responsibility, not part of
+                              the super admin's role, so it's hidden there too even though
+                              engineer-admin technically has write access via Firebase rules. */}
+                          {userProfile && userProfile.role === 'engineer_nester' && (
+                            <button
                               onClick={() => handleToggleMaterial(project.so, 'procurement')}
                               className={`btn-hold-toggle ${getProjectMaterials(project.so).procurement === 'Yes' ? 'active-procurement' : ''}`}
                               title={getProjectMaterials(project.so).procurement === 'Yes' ? 'Procurement Done' : 'Procurement Pending'}

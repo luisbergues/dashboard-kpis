@@ -405,7 +405,7 @@ export function calculateMonthlyCompletions(projectStages, myProjects = []) {
 
     // Index 0 is Engineering
     processStage(stages[0], 'eng');
-    
+
     // Index 4 is Nesting
     processStage(stages[4], 'nesting');
 
@@ -423,6 +423,94 @@ export function calculateMonthlyCompletions(projectStages, myProjects = []) {
   const engData = sortedKeys.map(k => monthsData[k].eng);
   const nestingData = sortedKeys.map(k => monthsData[k].nesting);
   const completeData = sortedKeys.map(k => monthsData[k].complete);
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: 'Engineering Completed',
+        data: engData,
+        borderColor: '#09D1C7',
+        backgroundColor: 'rgba(9, 209, 199, 0.1)',
+        tension: 0.4,
+        fill: true
+      },
+      {
+        label: 'Nesting Completed',
+        data: nestingData,
+        borderColor: '#FF2E93',
+        backgroundColor: 'rgba(255, 46, 147, 0.1)',
+        tension: 0.4,
+        fill: true
+      },
+      {
+        label: 'Fully Completed',
+        data: completeData,
+        borderColor: '#80EE98',
+        backgroundColor: 'rgba(128, 238, 152, 0.1)',
+        tension: 0.4,
+        fill: true
+      }
+    ]
+  };
+}
+
+// ISO week key (e.g. "2026-W28") so grouping is stable regardless of which
+// day of the week a stage happened to be completed on.
+function isoWeekKey(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return { key: `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`, weekStart: d };
+}
+
+/**
+ * Same shape and stage semantics as calculateMonthlyCompletions, but grouped
+ * by ISO week instead of calendar month — used for the "recent weekly trend"
+ * view where month-level granularity is too coarse.
+ * @param {Object} projectStages
+ * @param {Array} myProjects
+ * @param {number} weekCount - how many of the most recent weeks (with data) to keep
+ */
+export function calculateWeeklyCompletions(projectStages, myProjects = [], weekCount = 8) {
+  const weeksData = {};
+
+  const myProjectSos = new Set(myProjects.map(p => p.so));
+
+  Object.entries(projectStages).forEach(([so, stages]) => {
+    if (!myProjectSos.has(so)) return;
+
+    const processStage = (stageObj, stageKey) => {
+      if (stageObj && stageObj.completed && stageObj.timestamp) {
+        const d = new Date(stageObj.timestamp);
+        if (!isNaN(d)) {
+          const { key: weekKey, weekStart } = isoWeekKey(d);
+          if (!weeksData[weekKey]) {
+            weeksData[weekKey] = { eng: 0, nesting: 0, complete: 0, weekStart };
+          }
+          if (weeksData[weekKey][stageKey] !== undefined) {
+            weeksData[weekKey][stageKey]++;
+          }
+        }
+      }
+    };
+
+    processStage(stages[0], 'eng');
+    processStage(stages[4], 'nesting');
+    processStage(stages[5], 'complete');
+  });
+
+  const sortedKeys = Object.keys(weeksData).sort().slice(-weekCount);
+  const labels = sortedKeys.map(k => {
+    const { weekStart } = weeksData[k];
+    return weekStart.toLocaleString('default', { month: 'short', day: 'numeric' });
+  });
+
+  const engData = sortedKeys.map(k => weeksData[k].eng);
+  const nestingData = sortedKeys.map(k => weeksData[k].nesting);
+  const completeData = sortedKeys.map(k => weeksData[k].complete);
 
   return {
     labels,

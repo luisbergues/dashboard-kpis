@@ -807,3 +807,7 @@
   transition: transform 0.1s, opacity 0.1s;
 }
 
+.kanban-card-drag-over {
+  box-shadow: 0 -3px 0 0 var(--color-cyan, #09D1C7);
+}
+
