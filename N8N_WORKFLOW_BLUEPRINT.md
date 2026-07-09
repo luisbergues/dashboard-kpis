@@ -1,125 +1,77 @@
-# Blueprint — Workflow n8n: App → Google Sheets (Switch por eventType)
+# Blueprint — Workflow n8n: App → pestaña `copy testing` (por columna)
 
-Flujo **App → n8n → Google Sheets** (escritura). El sentido inverso (Sheet → App) **no usa n8n**: la app lee la Sheet directo por CSV en `sheetParser.js`.
+Flujo **App → n8n → Google Sheets** (escritura por columna, match por `SO#`). El sentido inverso (Sheet → App) no usa n8n.
 
-Archivo importable: **`n8n-workflow-app-to-sheet.json`** → en n8n: *⋮ → Import from File*.
+- **Sheet:** `APP JL Project Status for app` (ID `1rzZn9J2p6Plz7Xxy9-JwgdijFkqGg7WC2rFpNnxUreY`)
+- **Pestaña:** `copy testing` (header en fila 1, datos desde fila 2)
+- **Archivo importable:** `n8n-workflow-app-to-sheet.json`
 
-> **Diseño de pestaña espejo:** n8n escribe en pestañas **con header en la fila 1** (`App_Sync` y `Log`), NO en la tabla del dashboard que empieza en la fila 27. Esto evita el problema de `headerRow` y no toca tu dashboard KPI. La app sigue leyendo la hoja principal como siempre.
+> **Clave — match por SO#:** todos los nodos usan `appendOrUpdate` con match por columna `SO#`. n8n encuentra la fila por el VALOR de SO#, no por número de fila. Si reordenás/filtrás la hoja, los datos siguen al proyecto correcto.
 
 ---
 
-## Arquitectura (wiring corregido — un solo Respond por evento)
+## Columnas de `copy testing` y comportamiento
+
+| Col | Header | Se modifica desde |
+|-----|--------|-------------------|
+| B | SO# | 🔑 referencia (match) — no se escribe, se usa para ubicar |
+| C | NAME | ❌ no se toca |
+| D | INSTALL | ❌ no se toca |
+| E | MATERIAL | ❌ no se toca |
+| F | MEETING | ❌ no se toca |
+| G | SIGN | ❌ no se toca |
+| H | SENT BY | ❌ no se toca |
+| I | ENG | ✏️ `ENGINEER_ASSIGNED` (assign eng en Pipeline) |
+| J | START DATE | ✏️ `STAGE_UPDATE` con `startDate` (sacar de review→engineering) |
+| K | Check Date 1 | ✏️ `STAGE_UPDATE` con `checkDate1` (start check 1er ing.) |
+| L | Check Date 2 | ✏️ `STAGE_UPDATE` con `checkDate2` (start check 2do ing.) |
+| M | COMPLETION DATE | ✏️ `STAGE_UPDATE` con `completionDate` (paperwork check) |
+| N | STATUS | ✏️ `STAGE_UPDATE`(finished) y `ON_HOLD` (cambio de status en My Projects) |
+| O | OBS / ACCESSORIES / NOTES | ✏️ `NOTE_ADDED` con `noteType='obs'` — **append con ` - `**, no borra lo previo |
+
+---
+
+## Arquitectura
 
 ```
-[App] --POST--> [Webhook /jlclosets-changes]
-                        │
-                 [Switch: eventType]
-        ┌───────────────┬────────────────────┬──────────────┐
-     ON_HOLD        STAGE_UPDATE           (fallback)
-        │               │                      │
-   [Upsert App_Sync] [IF sheetStatus≠'']      │
-        │            ┌──┴──┐                   │
-        │        finished  started            │
-        │            │      │                  │
-        │      [Upsert]     │                  │
-        │            │      │                  │
-        └────────────┴──────┴──────────────────┤
-                                               ▼
-                                     [Append to Log]  ◄── TODOS los eventos
-                                               │
-                                        [Respond 200]
+Webhook(/jl-sync) → Switch(eventType)
+   ├─0 ENGINEER_ASSIGNED → Set ENG (upsert col I)
+   ├─1 STAGE_UPDATE ─────→ Set Stage Dates+Status (upsert J,K,L,M,N — solo las que traen valor)
+   ├─2 ON_HOLD ──────────→ Set STATUS (upsert N)
+   ├─3 NOTE_ADDED+obs ───→ Get row for OBS (read) → Append OBS note (concat + upsert O)
+   └─4 fallback ─────────→ Respond (ignora)
+                              → Respond 200
 ```
 
-**Punto clave del wiring:** con `responseMode: responseNode`, el webhook responde UNA sola vez. Por eso **todas las ramas convergen primero en `Append to Log`** (el nodo común a todo evento) y solo Log conecta a Respond. Si Upsert y Log conectaran ambos a Respond, se dispararía dos veces → error "Respond already called". Corregido: cada evento tiene un camino único.
+- **Un evento → un camino → un Respond.** (evita el bug "Respond already called").
+- Cada rama toca **solo sus columnas**; `appendOrUpdate` deja intactas las demás (NAME, INSTALL, etc.).
+- **OBS**: el nodo Read trae el valor actual de la columna; el Append concatena `previo + ' - ' + nuevo`. Si estaba vacío, escribe solo la nota nueva.
 
-**Regla central (respeta tu `n8nService.js`):** `sheetStatus` vacío (`''`) → **no** se toca STATUS; con valor → se actualiza. STAGE_UPDATE pasa por un IF (solo `action:'finished'` trae `sheetStatus`).
+### Detalle STAGE_UPDATE
+El payload ya trae `startDate`/`checkDate1`/`checkDate2`/`completionDate` calculados por la app (`n8nService.js`), y solo uno tiene valor por evento. Los vacíos (`''`) sobrescriben con vacío — ⚠️ ver nota abajo.
 
----
-
-## Nodos
-
-| Nodo | Tipo (typeVersion) | Qué hace |
-|------|------|----------|
-| **Webhook** | `webhook` v2 (POST `/jlclosets-changes`) | Recibe el evento. `responseMode: responseNode`. |
-| **Switch by eventType** | `switch` v3 | Enruta por `{{ $json.body.eventType }}`: ON_HOLD / STAGE_UPDATE / fallback (`fallbackOutput: extra`). |
-| **IF sheetStatus not empty** | `if` v2 | Solo deja pasar STAGE_UPDATE al Upsert cuando `sheetStatus ≠ ''`. |
-| **Upsert App_Sync (STATUS)** | `googleSheets` v4.5 `appendOrUpdate` | Busca por `SO` en pestaña `App_Sync` y escribe Status/Engineer/InstallDate/Reason/UpdatedBy/Timestamp. |
-| **Append to Log** | `googleSheets` v4.5 `append` | Registra TODO evento en pestaña `Log`. |
-| **Respond 200** | `respondToWebhook` v1 | Devuelve `{ ok, eventType, so }`. |
+> **⚠️ Posible ajuste STAGE_UPDATE:** como el nodo mapea las 5 columnas y las que no aplican van `''`, un `STAGE_UPDATE` de "check 1" escribiría `''` en START DATE / Completion, borrándolas. Si eso molesta, hay que separar en sub-ramas por stage o usar expresiones que solo escriban cuando hay valor. Se decide tras la primera prueba real.
 
 ---
 
-## Pestañas a crear en tu Google Sheet
+## Cómo importar (n8n Cloud plan free — sin API)
 
-### Pestaña `App_Sync` (header en fila 1)
-Espejo de estado que escribe la app. NO es tu tabla del dashboard.
+1. En n8n → **Create Workflow** → **⋮ → Import from File** → `n8n-workflow-app-to-sheet.json`
+2. En **cada** nodo Google Sheets (6 nodos): re-seleccioná de la lista:
+   - **Document** = "APP JL Project Status for app"
+   - **Sheet** = "copy testing"
+   - Verificá "Column to match on" = **SO#** en los que hacen upsert
+3. Seleccioná la **credencial** Google Sheets en cada nodo
+4. **Guardá** y **activá**
 
-| A | B | C | D | E | F | G |
-|---|---|---|---|---|---|---|
-| SO | Status | Engineer | InstallDate | Reason | UpdatedBy | Timestamp |
-
-El nodo hace `appendOrUpdate` con match por `SO`: si el SO ya existe, actualiza esa fila; si no, agrega una nueva.
-
-### Pestaña `Log` (header en fila 1)
-Historial de todo evento, auditable.
-
-| A | B | C | D | E | F | G |
-|---|---|---|---|---|---|---|
-| Timestamp | SO | Event Type | Stage/Status | Changed By | Detail | Source |
+### Webhook
+- Path: `/jl-sync` → Production URL: `https://jl-kpi-dashboard.app.n8n.cloud/webhook/jl-sync`
+- Esa URL va en `VITE_N8N_WEBHOOK_URL` (`.env.local` + Vercel) tras activar.
 
 ---
 
-## ⚠️ Qué hacer tras importar
+## Estado de validación (MCP)
+`validate_workflow` → **valid: true**, 8 nodos, 11 conexiones, 19 expresiones, 0 errores. typeVersions confirmadas: webhook v2, switch v3, googleSheets v4.7, respondToWebhook v1.
 
-1. **Crear las 2 pestañas** `App_Sync` y `Log` con los headers de arriba (fila 1).
-2. **Credencial Google Sheets** — conecta tu cuenta de Google (OAuth2) en los 2 nodos googleSheets. Funciona en n8n Cloud plan gratis (es OAuth normal, no API key).
-3. **Activar el workflow** (toggle arriba a la derecha) y copiar la **Production URL** del Webhook.
-4. En la app: `VITE_N8N_WEBHOOK_URL` = esa Production URL (hoy `n8nService.js:10` apunta a una URL `webhook-test/...`, solo de test).
-
----
-
-## Cómo importar (n8n Cloud plan gratis — sin API key)
-
-El plan gratis **no tiene API pública**, así que se importa a mano (funciona igual):
-
-1. Abre `https://jl-kpi-dashboard.app.n8n.cloud`
-2. **Create Workflow** (nuevo canvas)
-3. Menú **⋮** (arriba dcha) → **Import from File...** → elige `n8n-workflow-app-to-sheet.json`
-4. Alternativa: abre el JSON, copia todo, y `Ctrl+V` en el canvas vacío — n8n pega los nodos.
-
----
-
-## Mapeo evento → columnas
-
-### Upsert App_Sync (solo ON_HOLD y STAGE finished)
-| Columna | Expresión |
-|---|---|
-| SO (match) | `{{ $json.body.so }}` |
-| Status | `{{ $json.body.sheetStatus }}` |
-| Engineer | `{{ $json.body.engineer \|\| '' }}` |
-| InstallDate | `{{ $json.body.installDate \|\| '' }}` |
-| Reason | `{{ $json.body.onHoldReason \|\| '' }}` |
-| UpdatedBy | `{{ $json.body.changedBy \|\| $json.body.engineer \|\| '' }}` |
-| Timestamp | `{{ $json.body.timestamp }}` |
-
-### Append Log (todo evento)
-| Columna | Expresión |
-|---|---|
-| Timestamp | `{{ $json.body.timestamp }}` |
-| SO | `{{ $json.body.so }}` |
-| Event Type | `{{ $json.body.eventType }}` |
-| Stage/Status | `{{ $json.body.stage \|\| $json.body.sheetStatus \|\| '' }}` |
-| Changed By | `{{ $json.body.changedBy \|\| $json.body.engineer \|\| $json.body.createdBy \|\| '' }}` |
-| Detail | `{{ $json.body.onHoldReason \|\| $json.body.noteText \|\| $json.body.checklistType \|\| '' }}` |
-| Source | `{{ $json.body.source }}` |
-
----
-
-## Validación pendiente con n8n-mcp
-
-Cuando el MCP `n8n-mcp` conecte (`/mcp reconnect all` en la terminal), puedo:
-- `validate_workflow` sobre este JSON contra el esquema real de tu versión de n8n
-- Confirmar/corregir `typeVersion` de cada nodo (Switch v3, IF v2, googleSheets v4.5) por si tu instancia trae otra
-- Confirmar la forma exacta de `appendOrUpdate` / `matchingColumns` en googleSheets v4.5
-
-Estas versiones se escribieron según el esquema conocido; el MCP es para verificarlas contra tu instancia exacta y evitar un import degradado.
+## Pendiente conocido: registro webhook de producción
+En pruebas anteriores, la instancia n8n Cloud no registraba la Production URL (404) aunque el workflow funcionaba por Test URL. Este workflow es NUEVO (path `/jl-sync`, IDs UUID nuevos) → debería registrar limpio. Si vuelve a dar 404 en prod, es bug de la instancia; usar Test URL o abrir ticket con soporte n8n.

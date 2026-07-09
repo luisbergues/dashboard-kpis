@@ -1,19 +1,19 @@
 {
-  "name": "JL Closets — App → Google Sheets (Switch by eventType)",
+  "name": "JL Closets — App → copy testing (por columna)",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "jlclosets-changes",
+        "path": "jl-sync",
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "ce51557c-b138-4de8-ab4f-e7d6a733d5df",
+      "id": "77c8a38d-b482-469e-963e-bc8efa5e6679",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [-420, 300],
-      "webhookId": "jlclosets-changes"
+      "position": [-720, 400],
+      "webhookId": "77c8a38d-b482-469e-963e-bc8efa5e6679"
     },
     {
       "parameters": {
@@ -22,157 +22,302 @@
             {
               "conditions": {
                 "options": { "caseSensitive": true, "typeValidation": "strict", "version": 2 },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.eventType }}",
-                    "rightValue": "ON_HOLD",
-                    "operator": { "type": "string", "operation": "equals" }
-                  }
-                ],
+                "conditions": [ { "leftValue": "={{ $json.body.eventType }}", "rightValue": "ENGINEER_ASSIGNED", "operator": { "type": "string", "operation": "equals" } } ],
                 "combinator": "and"
               },
-              "renameOutput": true,
-              "outputKey": "ON_HOLD"
+              "renameOutput": true, "outputKey": "ENGINEER_ASSIGNED"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "typeValidation": "strict", "version": 2 },
+                "conditions": [ { "leftValue": "={{ $json.body.eventType }}", "rightValue": "STAGE_UPDATE", "operator": { "type": "string", "operation": "equals" } } ],
+                "combinator": "and"
+              },
+              "renameOutput": true, "outputKey": "STAGE_UPDATE"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "typeValidation": "strict", "version": 2 },
+                "conditions": [ { "leftValue": "={{ $json.body.eventType }}", "rightValue": "ON_HOLD", "operator": { "type": "string", "operation": "equals" } } ],
+                "combinator": "and"
+              },
+              "renameOutput": true, "outputKey": "ON_HOLD"
             },
             {
               "conditions": {
                 "options": { "caseSensitive": true, "typeValidation": "strict", "version": 2 },
                 "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.eventType }}",
-                    "rightValue": "STAGE_UPDATE",
-                    "operator": { "type": "string", "operation": "equals" }
-                  }
+                  { "leftValue": "={{ $json.body.eventType }}", "rightValue": "NOTE_ADDED", "operator": { "type": "string", "operation": "equals" } },
+                  { "leftValue": "={{ $json.body.noteType }}", "rightValue": "obs", "operator": { "type": "string", "operation": "equals" } }
                 ],
                 "combinator": "and"
               },
-              "renameOutput": true,
-              "outputKey": "STAGE_UPDATE"
+              "renameOutput": true, "outputKey": "NOTE_OBS"
             }
           ]
         },
         "options": { "fallbackOutput": "extra" }
       },
-      "id": "1f55afdb-cff3-4875-8c78-a8aedbdefb6b",
+      "id": "cb80d293-1d06-464d-8931-825254d79391",
       "name": "Switch by eventType",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
-      "position": [-180, 300]
+      "position": [-480, 400]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "typeValidation": "strict", "version": 2 },
-          "conditions": [
+        "rules": {
+          "values": [
             {
-              "leftValue": "={{ $json.body.sheetStatus }}",
-              "rightValue": "",
-              "operator": { "type": "string", "operation": "notEmpty", "singleValue": true }
+              "conditions": {
+                "options": { "caseSensitive": true, "typeValidation": "strict", "version": 2 },
+                "conditions": [ { "leftValue": "={{ $json.body.startDate }}", "rightValue": "", "operator": { "type": "string", "operation": "notEmpty", "singleValue": true } } ],
+                "combinator": "and"
+              },
+              "renameOutput": true, "outputKey": "startDate"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "typeValidation": "strict", "version": 2 },
+                "conditions": [ { "leftValue": "={{ $json.body.checkDate1 }}", "rightValue": "", "operator": { "type": "string", "operation": "notEmpty", "singleValue": true } } ],
+                "combinator": "and"
+              },
+              "renameOutput": true, "outputKey": "checkDate1"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "typeValidation": "strict", "version": 2 },
+                "conditions": [ { "leftValue": "={{ $json.body.checkDate2 }}", "rightValue": "", "operator": { "type": "string", "operation": "notEmpty", "singleValue": true } } ],
+                "combinator": "and"
+              },
+              "renameOutput": true, "outputKey": "checkDate2"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "typeValidation": "strict", "version": 2 },
+                "conditions": [ { "leftValue": "={{ $json.body.completionDate }}", "rightValue": "", "operator": { "type": "string", "operation": "notEmpty", "singleValue": true } } ],
+                "combinator": "and"
+              },
+              "renameOutput": true, "outputKey": "completionDate"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "typeValidation": "strict", "version": 2 },
+                "conditions": [ { "leftValue": "={{ $json.body.sheetStatus }}", "rightValue": "", "operator": { "type": "string", "operation": "notEmpty", "singleValue": true } } ],
+                "combinator": "and"
+              },
+              "renameOutput": true, "outputKey": "status"
             }
-          ],
-          "combinator": "and"
+          ]
         },
-        "options": {}
+        "options": { "fallbackOutput": "none" }
       },
-      "id": "70fe2c44-59b1-44f9-97ba-62604e0c1a62",
-      "name": "IF sheetStatus not empty",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [60, 200]
+      "id": "45ff02dd-7bd9-4015-b912-b5d8b45e786a",
+      "name": "Switch stage field",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [-240, 300]
     },
     {
       "parameters": {
         "operation": "appendOrUpdate",
-        "documentId": {
-          "__rl": true,
-          "value": "1rzZn9J2p6Plz7Xxy9-JwgdijFkqGg7WC2rFpNnxUreY",
-          "mode": "list",
-          "cachedResultName": "APP JL Project Status for app"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "App_Sync",
-          "mode": "list",
-          "cachedResultName": "App_Sync"
-        },
+        "documentId": { "__rl": true, "value": "1rzZn9J2p6Plz7Xxy9-JwgdijFkqGg7WC2rFpNnxUreY", "mode": "list", "cachedResultName": "APP JL Project Status for app" },
+        "sheetName": { "__rl": true, "value": "copy testing", "mode": "list", "cachedResultName": "copy testing" },
         "columns": {
           "mappingMode": "defineBelow",
-          "value": {
-            "SO": "={{ $json.body.so }}",
-            "Status": "={{ $json.body.sheetStatus || '' }}",
-            "Engineer": "={{ $json.body.engineer || '' }}",
-            "InstallDate": "={{ $json.body.installDate || '' }}",
-            "Reason": "={{ $json.body.onHoldReason || '' }}",
-            "UpdatedBy": "={{ $json.body.changedBy || $json.body.engineer || '' }}",
-            "Timestamp": "={{ $json.body.timestamp || '' }}"
-          },
-          "matchingColumns": ["SO"],
+          "value": { "SO#": "={{ $json.body.so }}", "ENG": "={{ $json.body.engineer || '' }}" },
+          "matchingColumns": ["SO#"],
           "schema": [
-            { "id": "SO", "type": "string", "display": true, "required": false, "displayName": "SO", "defaultMatch": true, "canBeUsedToMatch": true },
-            { "id": "Status", "type": "string", "display": true, "required": false, "displayName": "Status", "defaultMatch": false, "canBeUsedToMatch": true },
-            { "id": "Engineer", "type": "string", "display": true, "required": false, "displayName": "Engineer", "defaultMatch": false, "canBeUsedToMatch": true },
-            { "id": "InstallDate", "type": "string", "display": true, "required": false, "displayName": "InstallDate", "defaultMatch": false, "canBeUsedToMatch": true },
-            { "id": "Reason", "type": "string", "display": true, "required": false, "displayName": "Reason", "defaultMatch": false, "canBeUsedToMatch": true },
-            { "id": "UpdatedBy", "type": "string", "display": true, "required": false, "displayName": "UpdatedBy", "defaultMatch": false, "canBeUsedToMatch": true },
-            { "id": "Timestamp", "type": "string", "display": true, "required": false, "displayName": "Timestamp", "defaultMatch": false, "canBeUsedToMatch": true }
+            { "id": "SO#", "type": "string", "display": true, "required": false, "displayName": "SO#", "defaultMatch": true, "canBeUsedToMatch": true },
+            { "id": "ENG", "type": "string", "display": true, "required": false, "displayName": "ENG", "defaultMatch": false, "canBeUsedToMatch": true }
           ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": true
+          "attemptToConvertTypes": false, "convertFieldsToString": true
         },
         "options": {}
       },
-      "id": "9ae2893e-48b4-4512-91d9-ffa7a9d022df",
-      "name": "Upsert App_Sync (STATUS)",
+      "id": "c100fb8e-238d-4e06-8c55-9f29d211f155",
+      "name": "Set ENG",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [300, 200]
+      "position": [0, 60]
     },
     {
       "parameters": {
-        "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "value": "1rzZn9J2p6Plz7Xxy9-JwgdijFkqGg7WC2rFpNnxUreY",
-          "mode": "list",
-          "cachedResultName": "APP JL Project Status for app"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "Log",
-          "mode": "list",
-          "cachedResultName": "Log"
-        },
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "1rzZn9J2p6Plz7Xxy9-JwgdijFkqGg7WC2rFpNnxUreY", "mode": "list", "cachedResultName": "APP JL Project Status for app" },
+        "sheetName": { "__rl": true, "value": "copy testing", "mode": "list", "cachedResultName": "copy testing" },
         "columns": {
           "mappingMode": "defineBelow",
-          "value": {
-            "Timestamp": "={{ $json.body.timestamp || '' }}",
-            "SO": "={{ $json.body.so || '' }}",
-            "Event Type": "={{ $json.body.eventType || '' }}",
-            "Stage/Status": "={{ $json.body.stage || $json.body.sheetStatus || '' }}",
-            "Changed By": "={{ $json.body.changedBy || $json.body.engineer || $json.body.createdBy || '' }}",
-            "Detail": "={{ $json.body.onHoldReason || $json.body.noteText || $json.body.checklistType || '' }}",
-            "Source": "={{ $json.body.source || '' }}"
-          },
-          "matchingColumns": [],
+          "value": { "SO#": "={{ $json.body.so }}", "START DATE": "={{ $json.body.startDate }}" },
+          "matchingColumns": ["SO#"],
           "schema": [
-            { "id": "Timestamp", "type": "string", "display": true, "required": false, "displayName": "Timestamp", "defaultMatch": false, "canBeUsedToMatch": true },
-            { "id": "SO", "type": "string", "display": true, "required": false, "displayName": "SO", "defaultMatch": false, "canBeUsedToMatch": true },
-            { "id": "Event Type", "type": "string", "display": true, "required": false, "displayName": "Event Type", "defaultMatch": false, "canBeUsedToMatch": true },
-            { "id": "Stage/Status", "type": "string", "display": true, "required": false, "displayName": "Stage/Status", "defaultMatch": false, "canBeUsedToMatch": true },
-            { "id": "Changed By", "type": "string", "display": true, "required": false, "displayName": "Changed By", "defaultMatch": false, "canBeUsedToMatch": true },
-            { "id": "Detail", "type": "string", "display": true, "required": false, "displayName": "Detail", "defaultMatch": false, "canBeUsedToMatch": true },
-            { "id": "Source", "type": "string", "display": true, "required": false, "displayName": "Source", "defaultMatch": false, "canBeUsedToMatch": true }
+            { "id": "SO#", "type": "string", "display": true, "required": false, "displayName": "SO#", "defaultMatch": true, "canBeUsedToMatch": true },
+            { "id": "START DATE", "type": "string", "display": true, "required": false, "displayName": "START DATE", "defaultMatch": false, "canBeUsedToMatch": true }
           ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": true
+          "attemptToConvertTypes": false, "convertFieldsToString": true
         },
         "options": {}
       },
-      "id": "0943af35-5e5f-48e5-b410-e4730f54fde7",
-      "name": "Append to Log",
+      "id": "11127c1e-0d67-46d4-8c2f-f18ecdad37ba",
+      "name": "Set START DATE",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [300, 440]
+      "position": [0, 200]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "1rzZn9J2p6Plz7Xxy9-JwgdijFkqGg7WC2rFpNnxUreY", "mode": "list", "cachedResultName": "APP JL Project Status for app" },
+        "sheetName": { "__rl": true, "value": "copy testing", "mode": "list", "cachedResultName": "copy testing" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": { "SO#": "={{ $json.body.so }}", "Check Date 1": "={{ $json.body.checkDate1 }}" },
+          "matchingColumns": ["SO#"],
+          "schema": [
+            { "id": "SO#", "type": "string", "display": true, "required": false, "displayName": "SO#", "defaultMatch": true, "canBeUsedToMatch": true },
+            { "id": "Check Date 1", "type": "string", "display": true, "required": false, "displayName": "Check Date 1", "defaultMatch": false, "canBeUsedToMatch": true }
+          ],
+          "attemptToConvertTypes": false, "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "0ee9ad19-5574-4f19-9adc-6884a835c75b",
+      "name": "Set Check 1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [0, 340]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "1rzZn9J2p6Plz7Xxy9-JwgdijFkqGg7WC2rFpNnxUreY", "mode": "list", "cachedResultName": "APP JL Project Status for app" },
+        "sheetName": { "__rl": true, "value": "copy testing", "mode": "list", "cachedResultName": "copy testing" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": { "SO#": "={{ $json.body.so }}", "Check Date 2": "={{ $json.body.checkDate2 }}" },
+          "matchingColumns": ["SO#"],
+          "schema": [
+            { "id": "SO#", "type": "string", "display": true, "required": false, "displayName": "SO#", "defaultMatch": true, "canBeUsedToMatch": true },
+            { "id": "Check Date 2", "type": "string", "display": true, "required": false, "displayName": "Check Date 2", "defaultMatch": false, "canBeUsedToMatch": true }
+          ],
+          "attemptToConvertTypes": false, "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "87b712b7-5d95-4ca7-bceb-67cd354262d1",
+      "name": "Set Check 2",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [0, 480]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "1rzZn9J2p6Plz7Xxy9-JwgdijFkqGg7WC2rFpNnxUreY", "mode": "list", "cachedResultName": "APP JL Project Status for app" },
+        "sheetName": { "__rl": true, "value": "copy testing", "mode": "list", "cachedResultName": "copy testing" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": { "SO#": "={{ $json.body.so }}", "COMPLETION DATE": "={{ $json.body.completionDate }}" },
+          "matchingColumns": ["SO#"],
+          "schema": [
+            { "id": "SO#", "type": "string", "display": true, "required": false, "displayName": "SO#", "defaultMatch": true, "canBeUsedToMatch": true },
+            { "id": "COMPLETION DATE", "type": "string", "display": true, "required": false, "displayName": "COMPLETION DATE", "defaultMatch": false, "canBeUsedToMatch": true }
+          ],
+          "attemptToConvertTypes": false, "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "61879256-5468-461f-86d1-5872787fa634",
+      "name": "Set COMPLETION",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [0, 620]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "1rzZn9J2p6Plz7Xxy9-JwgdijFkqGg7WC2rFpNnxUreY", "mode": "list", "cachedResultName": "APP JL Project Status for app" },
+        "sheetName": { "__rl": true, "value": "copy testing", "mode": "list", "cachedResultName": "copy testing" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": { "SO#": "={{ $json.body.so }}", "STATUS": "={{ $json.body.sheetStatus }}" },
+          "matchingColumns": ["SO#"],
+          "schema": [
+            { "id": "SO#", "type": "string", "display": true, "required": false, "displayName": "SO#", "defaultMatch": true, "canBeUsedToMatch": true },
+            { "id": "STATUS", "type": "string", "display": true, "required": false, "displayName": "STATUS", "defaultMatch": false, "canBeUsedToMatch": true }
+          ],
+          "attemptToConvertTypes": false, "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "37a2c26d-bf89-49c5-97e5-f55e3bb5d82b",
+      "name": "Set STATUS (stage)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [0, 760]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "1rzZn9J2p6Plz7Xxy9-JwgdijFkqGg7WC2rFpNnxUreY", "mode": "list", "cachedResultName": "APP JL Project Status for app" },
+        "sheetName": { "__rl": true, "value": "copy testing", "mode": "list", "cachedResultName": "copy testing" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": { "SO#": "={{ $json.body.so }}", "STATUS": "={{ $json.body.sheetStatus || '' }}" },
+          "matchingColumns": ["SO#"],
+          "schema": [
+            { "id": "SO#", "type": "string", "display": true, "required": false, "displayName": "SO#", "defaultMatch": true, "canBeUsedToMatch": true },
+            { "id": "STATUS", "type": "string", "display": true, "required": false, "displayName": "STATUS", "defaultMatch": false, "canBeUsedToMatch": true }
+          ],
+          "attemptToConvertTypes": false, "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "db9178d9-6752-4be9-805a-50a261b2e141",
+      "name": "Set STATUS (ON_HOLD)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-240, 760]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "value": "1rzZn9J2p6Plz7Xxy9-JwgdijFkqGg7WC2rFpNnxUreY", "mode": "list", "cachedResultName": "APP JL Project Status for app" },
+        "sheetName": { "__rl": true, "value": "copy testing", "mode": "list", "cachedResultName": "copy testing" },
+        "filtersUI": { "values": [ { "lookupColumn": "SO#", "lookupValue": "={{ $json.body.so }}" } ] },
+        "options": {}
+      },
+      "id": "e3ac600e-d8ce-43ba-be3a-52156d7350c9",
+      "name": "Get row for OBS",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-240, 940]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "1rzZn9J2p6Plz7Xxy9-JwgdijFkqGg7WC2rFpNnxUreY", "mode": "list", "cachedResultName": "APP JL Project Status for app" },
+        "sheetName": { "__rl": true, "value": "copy testing", "mode": "list", "cachedResultName": "copy testing" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "SO#": "={{ $('Webhook').item.json.body.so }}",
+            "OBS / ACCESSORIES / NOTES": "={{ ($json['OBS / ACCESSORIES / NOTES'] ? $json['OBS / ACCESSORIES / NOTES'] + ' - ' : '') + $('Webhook').item.json.body.noteText }}"
+          },
+          "matchingColumns": ["SO#"],
+          "schema": [
+            { "id": "SO#", "type": "string", "display": true, "required": false, "displayName": "SO#", "defaultMatch": true, "canBeUsedToMatch": true },
+            { "id": "OBS / ACCESSORIES / NOTES", "type": "string", "display": true, "required": false, "displayName": "OBS / ACCESSORIES / NOTES", "defaultMatch": false, "canBeUsedToMatch": true }
+          ],
+          "attemptToConvertTypes": false, "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "29b9377d-8d65-4b83-9fb6-26ef686587f1",
+      "name": "Append OBS note",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [0, 940]
     },
     {
       "parameters": {
@@ -180,11 +325,11 @@
         "responseBody": "={{ { \"ok\": true, \"eventType\": $('Webhook').item.json.body.eventType, \"so\": $('Webhook').item.json.body.so } }}",
         "options": {}
       },
-      "id": "5346cfec-a87e-41c2-a690-1dfd1a796d31",
+      "id": "db7d3ac9-40e6-4f1b-b297-22a0903dc5cb",
       "name": "Respond 200",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [560, 300]
+      "position": [320, 400]
     }
   ],
   "connections": {
@@ -193,23 +338,31 @@
     },
     "Switch by eventType": {
       "main": [
-        [{ "node": "Upsert App_Sync (STATUS)", "type": "main", "index": 0 }],
-        [{ "node": "IF sheetStatus not empty", "type": "main", "index": 0 }],
-        [{ "node": "Append to Log", "type": "main", "index": 0 }]
+        [{ "node": "Set ENG", "type": "main", "index": 0 }],
+        [{ "node": "Switch stage field", "type": "main", "index": 0 }],
+        [{ "node": "Set STATUS (ON_HOLD)", "type": "main", "index": 0 }],
+        [{ "node": "Get row for OBS", "type": "main", "index": 0 }],
+        [{ "node": "Respond 200", "type": "main", "index": 0 }]
       ]
     },
-    "IF sheetStatus not empty": {
+    "Switch stage field": {
       "main": [
-        [{ "node": "Upsert App_Sync (STATUS)", "type": "main", "index": 0 }],
-        [{ "node": "Append to Log", "type": "main", "index": 0 }]
+        [{ "node": "Set START DATE", "type": "main", "index": 0 }],
+        [{ "node": "Set Check 1", "type": "main", "index": 0 }],
+        [{ "node": "Set Check 2", "type": "main", "index": 0 }],
+        [{ "node": "Set COMPLETION", "type": "main", "index": 0 }],
+        [{ "node": "Set STATUS (stage)", "type": "main", "index": 0 }]
       ]
     },
-    "Upsert App_Sync (STATUS)": {
-      "main": [[{ "node": "Append to Log", "type": "main", "index": 0 }]]
-    },
-    "Append to Log": {
-      "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]]
-    }
+    "Set ENG": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "Set START DATE": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "Set Check 1": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "Set Check 2": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "Set COMPLETION": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "Set STATUS (stage)": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "Set STATUS (ON_HOLD)": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "Get row for OBS": { "main": [[{ "node": "Append OBS note", "type": "main", "index": 0 }]] },
+    "Append OBS note": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] }
   },
   "settings": { "executionOrder": "v1" },
   "pinData": {}
