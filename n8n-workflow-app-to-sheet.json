@@ -1,0 +1,289 @@
+{
+  "name": "JL Closets — App → Google Sheets (Switch by eventType)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jlclosets-changes",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ce51557c-b138-4de8-ab4f-e7d6a733d5df",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        300
+      ],
+      "webhookId": "jlclosets-changes"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.eventType }}",
+                    "rightValue": "ON_HOLD",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ON_HOLD"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.eventType }}",
+                    "rightValue": "STAGE_UPDATE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "STAGE_UPDATE"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "1f55afdb-cff3-4875-8c78-a8aedbdefb6b",
+      "name": "Switch by eventType",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.sheetStatus }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "70fe2c44-59b1-44f9-97ba-62604e0c1a62",
+      "name": "IF sheetStatus not empty",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        60,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1qENXOvlEEY70LQ4i4EQBA0rGpuDr9L1sQIPtEL-Rm1I",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "App_Sync",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "SO": "={{ $json.body.so }}",
+            "Status": "={{ $json.body.sheetStatus }}",
+            "Engineer": "={{ $json.body.engineer || '' }}",
+            "InstallDate": "={{ $json.body.installDate || '' }}",
+            "Reason": "={{ $json.body.onHoldReason || '' }}",
+            "UpdatedBy": "={{ $json.body.changedBy || $json.body.engineer || '' }}",
+            "Timestamp": "={{ $json.body.timestamp }}"
+          },
+          "matchingColumns": [
+            "SO"
+          ]
+        },
+        "options": {}
+      },
+      "id": "9ae2893e-48b4-4512-91d9-ffa7a9d022df",
+      "name": "Upsert App_Sync (STATUS)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        300,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1qENXOvlEEY70LQ4i4EQBA0rGpuDr9L1sQIPtEL-Rm1I",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Log",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.body.timestamp }}",
+            "SO": "={{ $json.body.so }}",
+            "Event Type": "={{ $json.body.eventType }}",
+            "Stage/Status": "={{ $json.body.stage || $json.body.sheetStatus || '' }}",
+            "Changed By": "={{ $json.body.changedBy || $json.body.engineer || $json.body.createdBy || '' }}",
+            "Detail": "={{ $json.body.onHoldReason || $json.body.noteText || $json.body.checklistType || '' }}",
+            "Source": "={{ $json.body.source }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "0943af35-5e5f-48e5-b410-e4730f54fde7",
+      "name": "Append to Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        300,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"eventType\": $('Webhook').item.json.body.eventType, \"so\": $('Webhook').item.json.body.so } }}",
+        "options": {}
+      },
+      "id": "5346cfec-a87e-41c2-a690-1dfd1a796d31",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        560,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch by eventType",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch by eventType": {
+      "main": [
+        [
+          {
+            "node": "Upsert App_Sync (STATUS)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF sheetStatus not empty",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append to Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF sheetStatus not empty": {
+      "main": [
+        [
+          {
+            "node": "Upsert App_Sync (STATUS)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append to Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert App_Sync (STATUS)": {
+      "main": [
+        [
+          {
+            "node": "Append to Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to Log": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
