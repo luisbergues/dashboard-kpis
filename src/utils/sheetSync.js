@@ -2,6 +2,8 @@
 // which writes them into the 'copy testing' Google Sheet tab (match by SO#).
 // Fire-and-forget: never throws to the UI; logs and moves on.
 
+import { authHeaders } from './firebase';
+
 const ENDPOINT = '/api/sync';
 
 // Exact dropdown values in the Sheet's STATUS column.
@@ -31,7 +33,7 @@ async function post(eventType, payload) {
   const body = { eventType, timestamp: new Date().toISOString(), source: 'jlclosets-dashboard', ...payload };
   try {
     const res = await fetch(ENDPOINT, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...(await authHeaders()) }, body: JSON.stringify(body),
     });
     if (res.ok) console.debug(`[sync] ✅ ${eventType} (SO ${payload.so || 'N/A'})`);
     else console.warn(`[sync] ⚠️ ${eventType} HTTP ${res.status}`);
@@ -105,7 +107,7 @@ export function sendInstallDateChangeEvent(so, oldDate, newDate, project = {}) {
 export async function testSync() {
   try {
     const res = await fetch(ENDPOINT, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
       body: JSON.stringify({ eventType: 'WEBHOOK_TEST', so: 'TEST-001', source: 'jlclosets-dashboard' }),
     });
     return { success: res.ok, status: res.status };

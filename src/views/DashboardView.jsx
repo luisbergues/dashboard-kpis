@@ -122,7 +122,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
 
   const avgValidationTime = calculateGlobalValidationTime(derivedProjectStages, filteredProjects);
   
-  const bottleneckAlerts = predictBottlenecks(filteredProjects);
+  const bottleneckAlerts = predictBottlenecks(filteredProjects, new Date().toISOString());
 
   const handleExportCSV = () => {
     // Map the projects to a nice flat structure for CSV

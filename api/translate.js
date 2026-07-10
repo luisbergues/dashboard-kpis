@@ -1,6 +1,8 @@
 // Vercel serverless function — translates free-text content (e.g. the
 // spreadsheet-sourced Executive/Weekly Summary) to Spanish via Gemini.
 // Keeps GEMINI_API_KEY server-side only (never exposed to the client bundle).
+import { requireAuth } from './lib/verifyAuth.js';
+
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
@@ -9,6 +11,8 @@ export default async function handler(req, res) {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
+
+  if (!(await requireAuth(req, res))) return;
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {

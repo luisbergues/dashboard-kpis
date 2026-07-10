@@ -2,6 +2,8 @@
 // Used for spreadsheet-sourced free text (e.g. Executive/Weekly Summary) that
 // isn't a catalogued UI string and so can't go through the static i18n system.
 
+import { authHeaders } from './firebase';
+
 const cache = new Map();
 
 export async function translateText(text, targetLanguage) {
@@ -14,7 +16,7 @@ export async function translateText(text, targetLanguage) {
   try {
     const res = await fetch('/api/translate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
       body: JSON.stringify({ text, targetLanguage }),
     });
     if (!res.ok) throw new Error(`translate proxy error: ${res.status}`);

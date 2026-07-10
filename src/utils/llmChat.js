@@ -1,11 +1,12 @@
 // Client-side helper for the Gemini-backed chat proxy (api/chat.js).
 // Never calls the LLM provider directly — the API key stays server-side.
 import { searchEngineeringManual } from './engineeringManual';
+import { authHeaders } from './firebase';
 
 export async function askLLM({ message, language, context, history }) {
   const res = await fetch('/api/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify({ message, language, context, history }),
   });
 

@@ -49,6 +49,14 @@ if (isConfigured) {
   initError = 'Credentials not fully configured in environment variables';
 }
 
+// Attaches the current user's Firebase ID token as a Bearer header for
+// calls to our own /api/* endpoints, which verify it server-side.
+export async function authHeaders() {
+  if (!auth || !auth.currentUser) return {};
+  const token = await auth.currentUser.getIdToken();
+  return { Authorization: `Bearer ${token}` };
+}
+
 // Export database reference and RTDB methods
 export {
   db,

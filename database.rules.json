@@ -61,9 +61,70 @@
       ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && (root.child('users').child(auth.uid).child('role').val() === 'engineer_nester' || root.child('users').child(auth.uid).child('role').val() === 'engineer-admin')"
     },
 
-    "$other": {
+    "allowed_designers": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' && root.child('users').child(auth.uid).child('status').val() === 'approved'"
+    },
+    "designer_contacts": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' && root.child('users').child(auth.uid).child('status').val() === 'approved'"
+    },
+    "calendar_notes": {
       ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
       ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'"
+    },
+    "project_notes": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'"
+    },
+    "project_designers": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'"
+    },
+    "designer_performance_projects": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'"
+    },
+    "engineering_checks": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
+    },
+    "nesting_checks": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
+    },
+    "project_collaborators": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
+    },
+    "project_history": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
+    },
+    "project_materials": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
+    },
+    "weekly_engineer_kpi": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
+    },
+    "essData": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "ipData": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "firebase_cache": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "$other": {
+      ".read": false,
+      ".write": false
     }
   }
 }

@@ -148,7 +148,7 @@ export function calculateFileRequestsPercentage(onHoldNotes, projects = []) {
  * @param {string} referenceDateStr - ISO date or date string to count from (default: now)
  * @returns {Array} List of bottleneck alerts { type, message, severity, date, projects: [] }
  */
-export function predictBottlenecks(projects, referenceDateStr = '2026-06-11') {
+export function predictBottlenecks(projects, referenceDateStr = new Date().toISOString()) {
   if (!Array.isArray(projects)) return [];
 
   const refDate = new Date(referenceDateStr);
@@ -234,7 +234,7 @@ export function predictBottlenecks(projects, referenceDateStr = '2026-06-11') {
  * @param {string} currentDateStr - current reference date
  * @returns {number}
  */
-export function getDelayedProjectsCount(projects, projectHistory = {}, currentDateStr = '2026-06-11T00:00:00.000Z') {
+export function getDelayedProjectsCount(projects, projectHistory = {}, currentDateStr = new Date().toISOString()) {
   if (!Array.isArray(projects)) return 0;
   
   const currentDate = new Date(currentDateStr);

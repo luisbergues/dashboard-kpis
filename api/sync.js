@@ -3,6 +3,7 @@
 // Secrets (GOOGLE_SERVICE_ACCOUNT_KEY, SYNC_SHEET_ID) stay server-side.
 import { google } from 'googleapis';
 import { mapEventToCells } from './lib/syncMapping.js';
+import { requireAuth } from './lib/verifyAuth.js';
 
 const TAB = 'copy testing';
 
@@ -22,16 +23,19 @@ function getAuth() {
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
+  if (!(await requireAuth(req, res))) return;
+
   const spreadsheetId = process.env.SYNC_SHEET_ID;
   const { auth, diag } = getAuth();
   if (!spreadsheetId || !auth) {
-    const nearMatches = Object.keys(process.env).filter(k => k.toUpperCase().includes('SYNC') || k.toUpperCase().includes('SHEET'));
-    res.status(500).json({
-      error: 'Sheets sync not configured (SYNC_SHEET_ID / GOOGLE_SERVICE_ACCOUNT_KEY)',
-      diag_sheetId: spreadsheetId ? `present (len=${spreadsheetId.length})` : 'MISSING',
-      diag_auth: diag,
-      diag_nearMatchKeys: nearMatches,
-    });
+    const payload = { error: 'Sheets sync not configured (SYNC_SHEET_ID / GOOGLE_SERVICE_ACCOUNT_KEY)' };
+    if (process.env.NODE_ENV !== 'production') {
+      const nearMatches = Object.keys(process.env).filter(k => k.toUpperCase().includes('SYNC') || k.toUpperCase().includes('SHEET'));
+      payload.diag_sheetId = spreadsheetId ? `present (len=${spreadsheetId.length})` : 'MISSING';
+      payload.diag_auth = diag;
+      payload.diag_nearMatchKeys = nearMatches;
+    }
+    res.status(500).json(payload);
     return;
   }
 

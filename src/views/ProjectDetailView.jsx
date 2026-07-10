@@ -137,23 +137,18 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
       <div style={styles.section}>
         <h3 style={styles.sectionTitle}>Process Timeline</h3>
         <div style={styles.stagesRow}>
+          <div style={styles.stagesConnectorTrack} />
           {STAGES.map((stage, idx) => {
             const isCompleted = stages[idx]?.completed;
             return (
               <div key={stage.id} style={styles.stageItem}>
                 <div style={{
                   ...styles.stageDot,
-                  background: isCompleted ? '#10b981' : 'rgba(255,255,255,0.08)',
+                  background: isCompleted ? 'rgba(16,185,129,0.12)' : '#0b1320',
                   border: isCompleted ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.15)',
                 }}>
-                  {isCompleted && <Check size={12} color="#fff" />}
+                  {isCompleted && <Check size={12} color="#10b981" />}
                 </div>
-                {idx < STAGES.length - 1 && (
-                  <div style={{
-                    ...styles.stageConnector,
-                    background: isCompleted && stages[idx + 1]?.completed ? '#10b981' : 'rgba(255,255,255,0.1)'
-                  }} />
-                )}
                 <span style={{ ...styles.stageLabel, color: isCompleted ? '#10b981' : '#94a3b8' }}>
                   {stage.label}
                 </span>
@@ -346,6 +341,16 @@ const styles = {
     gap: 0,
     overflowX: 'auto',
     paddingBottom: 4,
+    position: 'relative',
+  },
+  stagesConnectorTrack: {
+    position: 'absolute',
+    top: 14,
+    left: '5%',
+    right: '5%',
+    height: 2,
+    background: 'rgba(255,255,255,0.1)',
+    zIndex: 0,
   },
   stageItem: {
     display: 'flex',
@@ -365,14 +370,6 @@ const styles = {
     zIndex: 1,
     marginBottom: 8,
     transition: 'all 0.3s',
-  },
-  stageConnector: {
-    position: 'absolute',
-    top: 14,
-    left: '50%',
-    width: '100%',
-    height: 2,
-    zIndex: 0,
   },
   stageLabel: {
     fontSize: '0.7rem',
