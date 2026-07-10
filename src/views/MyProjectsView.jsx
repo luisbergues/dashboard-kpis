@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, ref, set, onValue, get, child } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
-import { sendOnHoldEvent, sendReleaseHoldEvent, sendQAChecklistEvent, sendNoteEvent } from '../utils/sheetSync';
+import { sendOnHoldEvent, sendReleaseHoldEvent, sendQAChecklistEvent, sendNoteEvent, sendStageEvent } from '../utils/sheetSync';
 import { saveMaterialOverride } from '../utils/materialOverrides';
 import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';
@@ -510,6 +510,26 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       ordered: (override?.ordered !== undefined) ? override.ordered : (sheetItem?.ordered || 'No'),
       procurement: (override?.procurement !== undefined) ? override.procurement : (sheetItem?.procurement || 'No')
     };
+  };
+
+  // Clicking the 'ingenieria' or 'paperwork' step in the stages timeline
+  // fires the matching STAGE_UPDATE event, which syncs START DATE / COMPLETION
+  // DATE and STATUS to the 'copy testing' Google Sheet tab (see sheetSync.js).
+  const handleStageStepClick = (so, stageId) => {
+    const userName = userProfile?.designerName || currentUser?.email || 'Engineer';
+    if (stageId === 'ingenieria') {
+      const confirmMsg = language === 'es'
+        ? '¿Marcar este proyecto como en Ingeniería?'
+        : 'Mark this project as Engineering?';
+      if (!window.confirm(confirmMsg)) return;
+      sendStageEvent(so, 'ingenieria', 'started', userName);
+    } else if (stageId === 'paperwork') {
+      const confirmMsg = language === 'es'
+        ? '¿Marcar Paperwork como completado?'
+        : 'Mark Paperwork as completed?';
+      if (!window.confirm(confirmMsg)) return;
+      sendStageEvent(so, 'paperwork', 'finished', userName);
+    }
   };
 
   const handleToggleMaterial = async (so, key) => {
@@ -1349,10 +1369,15 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                           {STAGES.map((stage, idx) => {
                             const stageData = progress[idx];
                             const isCompleted = stageData && stageData.completed;
+                            const isClickable = stage.id === 'ingenieria' || stage.id === 'paperwork';
                             return (
-                              <div 
-                                key={stage.id} 
-                                className={`stage-step ${isCompleted ? 'completed' : ''}`}
+                              <div
+                                key={stage.id}
+                                className={`stage-step ${isCompleted ? 'completed' : ''} ${isClickable ? 'clickable' : ''}`}
+                                onClick={isClickable ? () => handleStageStepClick(project.so, stage.id) : undefined}
+                                role={isClickable ? 'button' : undefined}
+                                title={isClickable ? (language === 'es' ? 'Click para marcar este stage' : 'Click to mark this stage') : undefined}
+                                style={isClickable ? { cursor: 'pointer' } : undefined}
                               >
                                 <div className="stage-connector-line"></div>
                                 <div className="stage-icon-container">
