@@ -1372,6 +1372,8 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                             const stageData = progress[idx];
                             const isCompleted = stageData && stageData.completed;
                             const isClickable = stage.id !== 'install';
+                            const nextStageData = progress[idx + 1];
+                            const isNextCompleted = nextStageData && nextStageData.completed;
                             return (
                               <div
                                 key={stage.id}
@@ -1381,7 +1383,9 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                                 title={isClickable ? (language === 'es' ? 'Click para marcar este stage' : 'Click to mark this stage') : undefined}
                                 style={isClickable ? { cursor: 'pointer' } : undefined}
                               >
-                                <div className="stage-connector-line"></div>
+                                {idx < STAGES.length - 1 && (
+                                  <div className={`stage-connector-line ${isCompleted && isNextCompleted ? 'filled' : ''}`}></div>
+                                )}
                                 <div className="stage-icon-container">
                                   {isCompleted ? (
                                     <Check size={16} className="icon-completed" />

@@ -137,14 +137,20 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
       <div style={styles.section}>
         <h3 style={styles.sectionTitle}>Process Timeline</h3>
         <div style={styles.stagesRow}>
-          <div style={styles.stagesConnectorTrack} />
           {STAGES.map((stage, idx) => {
             const isCompleted = stages[idx]?.completed;
+            const isNextCompleted = stages[idx + 1]?.completed;
             return (
               <div key={stage.id} style={styles.stageItem}>
+                {idx < STAGES.length - 1 && (
+                  <div style={{
+                    ...styles.stageConnectorLine,
+                    background: isCompleted && isNextCompleted ? '#10b981' : 'rgba(255,255,255,0.1)',
+                  }} />
+                )}
                 <div style={{
                   ...styles.stageDot,
-                  background: isCompleted ? 'rgba(16,185,129,0.12)' : '#0b1320',
+                  background: '#0b1320',
                   border: isCompleted ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.15)',
                 }}>
                   {isCompleted && <Check size={12} color="#10b981" />}
@@ -341,16 +347,6 @@ const styles = {
     gap: 0,
     overflowX: 'auto',
     paddingBottom: 4,
-    position: 'relative',
-  },
-  stagesConnectorTrack: {
-    position: 'absolute',
-    top: 14,
-    left: '5%',
-    right: '5%',
-    height: 2,
-    background: 'rgba(255,255,255,0.1)',
-    zIndex: 0,
   },
   stageItem: {
     display: 'flex',
@@ -359,6 +355,15 @@ const styles = {
     position: 'relative',
     flex: '1 1 0',
     minWidth: 70,
+  },
+  stageConnectorLine: {
+    position: 'absolute',
+    top: 14, /* Center of the 28px dot */
+    left: '50%',
+    width: '100%',
+    height: 2,
+    zIndex: 0,
+    transition: 'background 0.3s ease',
   },
   stageDot: {
     width: 28,
