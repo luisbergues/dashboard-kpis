@@ -8,22 +8,28 @@ const TAB = 'copy testing';
 
 function getAuth() {
   const raw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-  if (!raw) return null;
+  if (!raw) return { auth: null, diag: 'missing' };
   let creds;
-  try { creds = JSON.parse(raw); } catch { return null; }
-  return new google.auth.GoogleAuth({
+  try { creds = JSON.parse(raw); } catch (e) { return { auth: null, diag: 'parse_error: ' + e.message }; }
+  if (!creds.client_email || !creds.private_key) return { auth: null, diag: 'missing client_email or private_key field' };
+  const auth = new google.auth.GoogleAuth({
     credentials: creds,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
+  return { auth, diag: 'ok:' + creds.client_email };
 }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
   const spreadsheetId = process.env.SYNC_SHEET_ID;
-  const auth = getAuth();
+  const { auth, diag } = getAuth();
   if (!spreadsheetId || !auth) {
-    res.status(500).json({ error: 'Sheets sync not configured (SYNC_SHEET_ID / GOOGLE_SERVICE_ACCOUNT_KEY)' });
+    res.status(500).json({
+      error: 'Sheets sync not configured (SYNC_SHEET_ID / GOOGLE_SERVICE_ACCOUNT_KEY)',
+      diag_sheetId: spreadsheetId ? 'present' : 'MISSING',
+      diag_auth: diag,
+    });
     return;
   }
 
