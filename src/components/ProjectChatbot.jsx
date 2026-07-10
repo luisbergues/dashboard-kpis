@@ -361,6 +361,13 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       }
     } catch (err) {
       console.error('LLM fallback failed:', err);
+      if (err.status === 401) {
+        return {
+          text: isES
+            ? '⚠️ Tu sesión expiró. Recargá la página para volver a iniciar sesión.'
+            : '⚠️ Your session expired. Please reload the page to sign in again.'
+        };
+      }
     }
 
     return { text: getHelpText(isES) };

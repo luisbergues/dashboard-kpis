@@ -6,6 +6,16 @@ import { authHeaders } from './firebase';
 
 const ENDPOINT = '/api/sync';
 
+// Shows the expired-session alert at most once per page load — sync fires
+// on every stage/note/status change, and repeating the alert on each one
+// would be spammy once the session has expired.
+let sessionExpiredWarned = false;
+function warnSessionExpiredOnce() {
+  if (sessionExpiredWarned) return;
+  sessionExpiredWarned = true;
+  alert('Tu sesión expiró y este cambio NO se sincronizó con la hoja de cálculo. Recargá la página para volver a iniciar sesión.\n\nYour session expired and this change was NOT synced to the spreadsheet. Please reload the page to sign in again.');
+}
+
 // Exact dropdown values in the Sheet's STATUS column.
 const APP_STATUS_TO_SHEET = {
   'REVIEW': 'Review', 'ENGINEERING': 'Engineering', 'CHECK ENG.': 'Check', 'CHECK ENG': 'Check',
@@ -35,8 +45,12 @@ async function post(eventType, payload) {
     const res = await fetch(ENDPOINT, {
       method: 'POST', headers: { 'Content-Type': 'application/json', ...(await authHeaders()) }, body: JSON.stringify(body),
     });
-    if (res.ok) console.debug(`[sync] ✅ ${eventType} (SO ${payload.so || 'N/A'})`);
-    else console.warn(`[sync] ⚠️ ${eventType} HTTP ${res.status}`);
+    if (res.ok) {
+      console.debug(`[sync] ✅ ${eventType} (SO ${payload.so || 'N/A'})`);
+    } else {
+      console.warn(`[sync] ⚠️ ${eventType} HTTP ${res.status}`);
+      if (res.status === 401) warnSessionExpiredOnce();
+    }
   } catch (err) {
     console.warn(`[sync] ⚠️ ${eventType} network error:`, err.message);
   }

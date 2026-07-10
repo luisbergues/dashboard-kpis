@@ -11,7 +11,9 @@ export async function askLLM({ message, language, context, history }) {
   });
 
   if (!res.ok) {
-    throw new Error(`LLM proxy error: ${res.status}`);
+    const err = new Error(`LLM proxy error: ${res.status}`);
+    err.status = res.status;
+    throw err;
   }
 
   const data = await res.json();
