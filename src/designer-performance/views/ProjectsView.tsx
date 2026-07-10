@@ -198,10 +198,10 @@ export const ProjectsView: React.FC = () => {
                     >
                       {/* SO */}
                       <div style={{
-                        fontFamily: 'monospace', fontSize: '0.82rem', fontWeight: 700,
-                        color: '#3b82f6', background: 'rgba(59,130,246,0.08)',
-                        border: '1px solid rgba(59,130,246,0.2)', borderRadius: 6,
-                        padding: '2px 7px', display: 'inline-block', width: 'fit-content',
+                        fontFamily: "'Outfit', sans-serif", fontSize: '0.85rem', fontWeight: 600,
+                        color: '#09D1C7', background: 'rgba(9, 209, 199, 0.1)',
+                        borderRadius: 100,
+                        padding: '4px 10px', display: 'inline-block', width: 'fit-content',
                       }}>
                         #{project.id}
                       </div>

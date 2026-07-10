@@ -836,7 +836,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                           </span>
                           <button
                             type="button"
-                            className={`pipeline-priority-toggle ${commentTypes[project.so] === 'priority' ? 'is-priority' : commentTypes[project.so] === 'obs' ? 'is-obs' : 'not-priority'}`}
+                            className={`priority-toggle ${commentTypes[project.so] === 'priority' ? 'is-priority' : commentTypes[project.so] === 'obs' ? 'is-obs' : 'not-priority'}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setCommentTypes(prev => {
@@ -847,7 +847,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                             }}
                           >
                             <Flag size={12} />
-                            {commentTypes[project.so] === 'priority' 
+                            {commentTypes[project.so] === 'priority'
                               ? (language === 'es' ? 'Prioritaria' : 'Priority')
                               : commentTypes[project.so] === 'obs'
                                 ? (language === 'es' ? 'Observación' : 'Obs')

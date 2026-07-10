@@ -113,8 +113,9 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
           {/* Top pills */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
             <div style={{
-              background: 'rgba(59,130,246,0.15)', color: T.blue, border: `1px solid rgba(59,130,246,0.3)`,
-              padding: '6px 14px', borderRadius: T.radiusPill, fontSize: '0.85rem', fontWeight: 700,
+              fontFamily: "'Outfit', sans-serif",
+              background: 'rgba(9, 209, 199, 0.1)', color: '#09D1C7',
+              padding: '4px 14px', borderRadius: T.radiusPill, fontSize: '0.85rem', fontWeight: 600,
             }}>
               SO #{project.id}
             </div>
