@@ -25,10 +25,12 @@ export default async function handler(req, res) {
   const spreadsheetId = process.env.SYNC_SHEET_ID;
   const { auth, diag } = getAuth();
   if (!spreadsheetId || !auth) {
+    const nearMatches = Object.keys(process.env).filter(k => k.toUpperCase().includes('SYNC') || k.toUpperCase().includes('SHEET'));
     res.status(500).json({
       error: 'Sheets sync not configured (SYNC_SHEET_ID / GOOGLE_SERVICE_ACCOUNT_KEY)',
-      diag_sheetId: spreadsheetId ? 'present' : 'MISSING',
+      diag_sheetId: spreadsheetId ? `present (len=${spreadsheetId.length})` : 'MISSING',
       diag_auth: diag,
+      diag_nearMatchKeys: nearMatches,
     });
     return;
   }
