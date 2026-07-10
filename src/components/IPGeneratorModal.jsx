@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { X, Plus, Trash2, Printer } from 'lucide-react';
+import { useRef } from 'react';
+import { X, Plus, Printer } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import IPPrintLayout from './IPPrintLayout';
 import { saveIPData, loadIPData } from '../utils/ipData';
+import { usePagedModal } from '../utils/usePagedModal';
 import { useLanguage } from '../utils/LanguageContext';
 import { useDesignerContacts } from '../utils/useDesignerContacts';
 import './PDFGeneratorModal.css'; // Re-use the modal styles for consistency
@@ -35,77 +36,28 @@ const createDefaultPage = (project, phoneLookup) => ({
 export default function IPGeneratorModal({ project, onClose }) {
   const { t } = useLanguage();
   const { phoneLookup } = useDesignerContacts();
-  // --- Multi-page State ---
-  const [pages, setPages] = useState([createDefaultPage(project, phoneLookup)]);
-  const [currentPageIndex, setCurrentPageIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // --- Load Initial Data ---
-  useEffect(() => {
-    let isMounted = true;
-    const fetch = async () => {
-      const data = await loadIPData(project.so);
-      if (isMounted) {
-        if (data) {
-          // Normalize and filter out nulls or empty properties
-          const parsed = Array.isArray(data) ? data : Object.values(data);
-          const sanitized = parsed.filter(Boolean);
-          if (sanitized.length > 0) {
-            // Auto-fill designer phone if it's empty but project has a designer
-            const pagesWithDesigner = sanitized.map(p => {
-              if (!p.designerPhone && project && project.designer) {
-                return { ...p, designerPhone: getDesignerPhoneStr(project.designer, phoneLookup) };
-              }
-              return p;
-            });
-            setPages(pagesWithDesigner);
-          }
-        }
-        setIsLoading(false);
+  const {
+    pages,
+    currentPageIndex,
+    setCurrentPageIndex,
+    isLoading,
+    addPage,
+    removePage,
+    updateCurrentPage,
+  } = usePagedModal({
+    so: project.so,
+    createDefaultPage: () => createDefaultPage(project, phoneLookup),
+    loadData: loadIPData,
+    saveData: saveIPData,
+    // Auto-fill designer phone if it's empty but project has a designer
+    transformLoaded: (sanitized) => sanitized.map(p => {
+      if (!p.designerPhone && project && project.designer) {
+        return { ...p, designerPhone: getDesignerPhoneStr(project.designer, phoneLookup) };
       }
-    };
-    fetch();
-    return () => { isMounted = false; };
-    // Intentionally re-run only on project.so change, not on phoneLookup —
-    // this is a load-once-per-project effect; picking up a later Firebase
-    // contacts update here would trigger an unwanted data refetch.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.so]);
-
-  // --- Auto-Save ---
-  useEffect(() => {
-    if (isLoading) return; // Don't save on initial load
-    
-    const handler = setTimeout(() => {
-      saveIPData(project.so, pages);
-    }, 1000);
-    
-    return () => clearTimeout(handler);
-  }, [pages, project.so, isLoading]);
-
-  // --- Page Management ---
-  const addPage = () => {
-    setPages([...pages, createDefaultPage(project, phoneLookup)]);
-    setCurrentPageIndex(pages.length);
-  };
-
-  const removePage = (indexToRemove) => {
-    if (pages.length <= 1) return;
-    const newPages = pages.filter((_, i) => i !== indexToRemove);
-    setPages(newPages);
-    if (currentPageIndex >= newPages.length) {
-      setCurrentPageIndex(newPages.length - 1);
-    }
-  };
-
-  // --- Helpers to update current page state ---
-  const updateCurrentPage = (updater) => {
-    setPages(prevPages => {
-      const newPages = [...prevPages];
-      newPages[currentPageIndex] = updater(newPages[currentPageIndex]);
-      return newPages;
-    });
-  };
+      return p;
+    }),
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;

@@ -200,9 +200,10 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
 
   const isAdmin = userProfile && (userProfile.role === 'administrative' || userProfile.role === 'admin');
 
-  // Kanban priority order: Procurement first, then Material, then Projects.
-  // Nesting is treated the same as Projects — by that stage it's essentially done.
-  const KANBAN_ORDER = { procurement: 0, material: 1, projects: 2, nesting: 2 };
+  // Kanban priority order: must mirror Pipeline's KANBAN_COLUMNS order exactly
+  // (Procurement → Material → Nesting → Projects) so this sort reproduces the
+  // same left-to-right column order as the Kanban board in Pipeline.
+  const KANBAN_ORDER = { procurement: 0, material: 1, nesting: 2, projects: 3 };
 
   const myProjects = [...myProjectsRaw]
     .sort((a, b) => {

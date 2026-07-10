@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Plus, Trash2, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useRef } from 'react';
+import { X, Plus, Trash2, Printer } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import PDFPrintLayout from './PDFPrintLayout';
 import { saveESSData, loadESSData } from '../utils/essData';
+import { usePagedModal } from '../utils/usePagedModal';
 import { useLanguage } from '../utils/LanguageContext';
 import './PDFGeneratorModal.css';
 
@@ -39,70 +40,29 @@ const createDefaultPage = (project, materials) => ({
 
 export default function PDFGeneratorModal({ project, materials, onClose }) {
   const { t } = useLanguage();
-  // --- Multi-page State ---
-  const [pages, setPages] = useState([createDefaultPage(project, materials)]);
-  const [currentPageIndex, setCurrentPageIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // --- Load Initial Data ---
-  useEffect(() => {
-    let isMounted = true;
-    const fetch = async () => {
-      const data = await loadESSData(project.so);
-      if (isMounted) {
-        if (data && data.length > 0) {
-          const updatedPages = data.map(page => ({
-            ...page,
-            drawerOptions: {
-              ...page.drawerOptions,
-              fronts: materials?.thermofoil === 'Yes' ? 'THERMOFOIL' : (page.drawerOptions?.fronts || 'SLAB'),
-              box: materials?.dovetail === 'Yes' ? 'DOVETAIL' : (page.drawerOptions?.box || 'PRFV')
-            }
-          }));
-          setPages(updatedPages);
-        }
-        setIsLoading(false);
+  const {
+    pages,
+    currentPageIndex,
+    setCurrentPageIndex,
+    isLoading,
+    addPage,
+    removePage,
+    updateCurrentPage,
+  } = usePagedModal({
+    so: project.so,
+    createDefaultPage: () => createDefaultPage(project, materials),
+    loadData: loadESSData,
+    saveData: saveESSData,
+    transformLoaded: (sanitized) => sanitized.map(page => ({
+      ...page,
+      drawerOptions: {
+        ...page.drawerOptions,
+        fronts: materials?.thermofoil === 'Yes' ? 'THERMOFOIL' : (page.drawerOptions?.fronts || 'SLAB'),
+        box: materials?.dovetail === 'Yes' ? 'DOVETAIL' : (page.drawerOptions?.box || 'PRFV')
       }
-    };
-    fetch();
-    return () => { isMounted = false; };
-  }, [project.so]);
-
-  // --- Auto-Save ---
-  // Debounce the save to prevent excessive Firebase writes
-  useEffect(() => {
-    if (isLoading) return; // Don't save on initial load
-    
-    const handler = setTimeout(() => {
-      saveESSData(project.so, pages);
-    }, 1000);
-    
-    return () => clearTimeout(handler);
-  }, [pages, project.so, isLoading]);
-
-  // --- Page Management ---
-  const addPage = () => {
-    setPages([...pages, createDefaultPage(project, materials)]);
-    setCurrentPageIndex(pages.length);
-  };
-
-  const removePage = (indexToRemove) => {
-    if (pages.length <= 1) return; // Must have at least one page
-    const newPages = pages.filter((_, i) => i !== indexToRemove);
-    setPages(newPages);
-    if (currentPageIndex >= newPages.length) {
-      setCurrentPageIndex(newPages.length - 1);
-    }
-  };
-
-  // --- Helpers to update current page state ---
-  const updateCurrentPage = (updater) => {
-    setPages(prevPages => {
-      const newPages = [...prevPages];
-      newPages[currentPageIndex] = updater(newPages[currentPageIndex]);
-      return newPages;
-    });
-  };
+    })),
+  });
 
   const setHeaderData = (newData) => updateCurrentPage(p => ({ ...p, headerData: typeof newData === 'function' ? newData(p.headerData) : newData }));
   const setDrawerOptions = (newOpts) => updateCurrentPage(p => ({ ...p, drawerOptions: typeof newOpts === 'function' ? newOpts(p.drawerOptions) : newOpts }));
