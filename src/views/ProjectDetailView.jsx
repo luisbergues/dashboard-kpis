@@ -150,10 +150,10 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
                 )}
                 <div style={{
                   ...styles.stageDot,
-                  background: '#0b1320',
+                  background: isCompleted ? '#10b981' : '#0b1320',
                   border: isCompleted ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.15)',
                 }}>
-                  {isCompleted && <Check size={12} color="#10b981" />}
+                  {isCompleted && <Check size={14} color="#fff" strokeWidth={3} />}
                 </div>
                 <span style={{ ...styles.stageLabel, color: isCompleted ? '#10b981' : '#94a3b8' }}>
                   {stage.label}
