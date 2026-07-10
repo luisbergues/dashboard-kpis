@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, ref, set, onValue, get, child } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
-import { sendOnHoldEvent, sendReleaseHoldEvent, sendQAChecklistEvent, sendNoteEvent } from '../utils/n8nService';
+import { sendOnHoldEvent, sendReleaseHoldEvent, sendQAChecklistEvent, sendNoteEvent } from '../utils/sheetSync';
 import { saveMaterialOverride } from '../utils/materialOverrides';
 import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';

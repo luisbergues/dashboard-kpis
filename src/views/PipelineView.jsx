@@ -5,7 +5,7 @@ import { db, ref, onValue, set } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
-import { sendStageEvent, sendNoteEvent, sendEngineerAssignEvent } from '../utils/n8nService';
+import { sendStageEvent, sendNoteEvent, sendEngineerAssignEvent } from '../utils/sheetSync';
 import './PipelineView.css';
 
 const getStageLabel = (stageId, language) => {

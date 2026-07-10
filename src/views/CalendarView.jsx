@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import './CalendarView.css';
 import { db, ref, set, remove, onValue } from '../utils/firebase';
-import { sendCalendarNoteEvent } from '../utils/n8nService';
+import { sendCalendarNoteEvent } from '../utils/sheetSync';
 
 export default function CalendarView({ data, currentUser, userProfile }) {
   const { t, language } = useLanguage();
