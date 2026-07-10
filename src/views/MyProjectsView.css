@@ -246,13 +246,16 @@
   gap: 16px 0;
 }
 
-/* Timeline connecting bar */
+/* Timeline connecting bar: starts/ends at the center of the first/last
+   circle (each of the 6 equal-width .stage-step flex items is 1/6 of the
+   row, so its center sits at 100%/12), not at an arbitrary 5% margin that
+   overshot past Engineering and Nesting. */
 .stages-timeline::before {
   content: '';
   position: absolute;
   top: 34px; /* Exact center of the 36px circle with 16px top padding */
-  left: 5%;
-  right: 5%;
+  left: calc(100% / 12);
+  right: calc(100% / 12);
   height: 2px;
   background: rgba(255, 255, 255, 0.08);
   z-index: 1;
