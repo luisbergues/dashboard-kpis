@@ -337,7 +337,12 @@
 /* Completed styles */
 .stage-step.completed .stage-icon-container {
   border-color: var(--color-mint);
-  background: rgba(70, 223, 177, 0.08); /* Clean background highlight */
+  background: var(--color-mint); /* Solid fill, not a translucent ring */
+}
+
+.stage-step.completed .icon-completed {
+  color: #fff;
+  filter: none;
 }
 
 .stage-step.completed .stage-step-label {
