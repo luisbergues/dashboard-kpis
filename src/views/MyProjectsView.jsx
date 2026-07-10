@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, ref, set, onValue, get, child } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
-import { sendOnHoldEvent, sendReleaseHoldEvent, sendQAChecklistEvent, sendNoteEvent, sendStageEvent } from '../utils/sheetSync';
+import { sendOnHoldEvent, sendReleaseHoldEvent, sendQAChecklistEvent, sendNoteEvent, sendStageStatusOnlyEvent } from '../utils/sheetSync';
 import { saveMaterialOverride } from '../utils/materialOverrides';
 import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';
@@ -512,24 +512,26 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
     };
   };
 
-  // Clicking the 'ingenieria' or 'paperwork' step in the stages timeline
-  // fires the matching STAGE_UPDATE event, which syncs START DATE / COMPLETION
-  // DATE and STATUS to the 'copy testing' Google Sheet tab (see sheetSync.js).
+  // Clicking any step in the My Projects stages timeline changes ONLY the
+  // STATUS column (N) in the 'copy testing' Google Sheet tab. Date columns
+  // (J/K/L/M) are exclusively written by Pipeline's Start Check buttons
+  // (sendStageEvent, still in PipelineView.jsx) — the two views intentionally
+  // own different columns for the same underlying stage.
   const handleStageStepClick = (so, stageId) => {
-    const userName = userProfile?.designerName || currentUser?.email || 'Engineer';
-    if (stageId === 'ingenieria') {
-      const confirmMsg = language === 'es'
-        ? '¿Marcar este proyecto como en Ingeniería?'
-        : 'Mark this project as Engineering?';
-      if (!window.confirm(confirmMsg)) return;
-      sendStageEvent(so, 'ingenieria', 'started', userName);
-    } else if (stageId === 'paperwork') {
-      const confirmMsg = language === 'es'
-        ? '¿Marcar Paperwork como completado?'
-        : 'Mark Paperwork as completed?';
-      if (!window.confirm(confirmMsg)) return;
-      sendStageEvent(so, 'paperwork', 'finished', userName);
-    }
+    const stageLabelEs = {
+      ingenieria: 'Ingeniería', check1: 'Eng. Check', paperwork: 'Paperwork',
+      check2: 'PW Check', nesting: 'Nesting',
+    }[stageId];
+    const stageLabelEn = {
+      ingenieria: 'Engineering', check1: 'Eng. Check', paperwork: 'Paperwork',
+      check2: 'PW Check', nesting: 'Nesting',
+    }[stageId];
+    if (!stageLabelEs) return;
+    const confirmMsg = language === 'es'
+      ? `¿Marcar este proyecto como "${stageLabelEs}"?`
+      : `Mark this project as "${stageLabelEn}"?`;
+    if (!window.confirm(confirmMsg)) return;
+    sendStageStatusOnlyEvent(so, stageId);
   };
 
   const handleToggleMaterial = async (so, key) => {
@@ -1369,7 +1371,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                           {STAGES.map((stage, idx) => {
                             const stageData = progress[idx];
                             const isCompleted = stageData && stageData.completed;
-                            const isClickable = stage.id === 'ingenieria' || stage.id === 'paperwork';
+                            const isClickable = stage.id !== 'install';
                             return (
                               <div
                                 key={stage.id}

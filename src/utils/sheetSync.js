@@ -65,6 +65,17 @@ export function sendStageEvent(so, stageName, action, engineer) {
   return post('STAGE_UPDATE', { so, stage: stageName, action, engineer, sheetStatus, startDate, checkDate1, checkDate2, completionDate });
 }
 
+// Fires from the My Projects stages timeline: changes ONLY the STATUS column
+// (N), never the date columns (J/K/L/M). Those dates stay exclusively under
+// Pipeline's Start Check buttons (sendStageEvent above).
+export function sendStageStatusOnlyEvent(so, stageName) {
+  const sheetStatus = stageToStatus(stageName);
+  return post('STAGE_UPDATE', {
+    so, stage: stageName, sheetStatus,
+    startDate: '', checkDate1: '', checkDate2: '', completionDate: '',
+  });
+}
+
 export function sendQAChecklistEvent(so, stageId, qaType, checkedBy) {
   return post('QA_CHECKLIST', { so, stage: stageId, checklistType: qaType, checkedBy, sheetStatus: '' });
 }
