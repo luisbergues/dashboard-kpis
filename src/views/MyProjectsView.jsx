@@ -191,13 +191,6 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
   // there's nothing to open/highlight there.
   const activeProjectSos = new Set(priorityAnalysis.map(p => String(p.so)));
 
-  const handleOpenCompletedProjectInPipeline = (so) => {
-    if (!activeProjectSos.has(String(so)) || !setActiveTab || !setFocusedProjectSo) return;
-    setIsCompletedProjectsModalOpen(false);
-    setFocusedProjectSo(so);
-    setActiveTab('pipeline');
-  };
-
   const isAdmin = userProfile && (userProfile.role === 'administrative' || userProfile.role === 'admin');
 
   // Kanban priority order: must mirror Pipeline's KANBAN_COLUMNS order exactly
@@ -1933,7 +1926,6 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
         <CompletedProjectsModal
           projects={myCompletedProjects}
           activeProjectSos={activeProjectSos}
-          onOpenProject={handleOpenCompletedProjectInPipeline}
           onClose={() => setIsCompletedProjectsModalOpen(false)}
         />
       )}

@@ -1,8 +1,7 @@
-import React from 'react';
 import { X, Calendar } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 
-export default function CompletedProjectsModal({ projects, onClose, activeProjectSos, onOpenProject }) {
+export default function CompletedProjectsModal({ projects, onClose, activeProjectSos }) {
   const { language } = useLanguage();
 
   return (
@@ -57,25 +56,34 @@ export default function CompletedProjectsModal({ projects, onClose, activeProjec
                       archivedDate = new Date(p.archivedAt.seconds * 1000).toLocaleDateString(language === 'es' ? 'es-AR' : 'en-US');
                     }
 
-                    const isOpenable = activeProjectSos && activeProjectSos.has(String(p.so)) && onOpenProject;
+                    const isOpenable = activeProjectSos && activeProjectSos.has(String(p.so));
 
                     return (
                       <tr
                         key={p.so}
-                        onClick={isOpenable ? () => onOpenProject(p.so) : undefined}
-                        title={isOpenable
-                          ? (language === 'es' ? 'Abrir en Pipeline' : 'Open in Pipeline')
-                          : (language === 'es' ? 'Proyecto archivado: ya no está en Pipeline' : 'Archived project: no longer in Pipeline')}
+                        title={!isOpenable
+                          ? (language === 'es' ? 'Proyecto archivado: ya no está en Pipeline' : 'Archived project: no longer in Pipeline')
+                          : undefined}
                         style={{
                           borderBottom: '1px solid rgba(255,255,255,0.05)',
-                          cursor: isOpenable ? 'pointer' : 'default',
                           opacity: isOpenable ? 1 : 0.6,
                           transition: 'background 0.15s ease',
                         }}
-                        onMouseEnter={isOpenable ? (e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)' : undefined}
-                        onMouseLeave={isOpenable ? (e) => e.currentTarget.style.backgroundColor = 'transparent' : undefined}
                       >
-                        <td style={{ padding: '12px 8px', color: '#fff', fontWeight: '500' }}>{p.so}</td>
+                        <td style={{ padding: '12px 8px', color: '#fff', fontWeight: '500' }}>
+                          {isOpenable ? (
+                            <a
+                              href={`${window.location.origin}${window.location.pathname}?project=${p.so}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ color: '#09D1C7', textDecoration: 'none', cursor: 'pointer' }}
+                            >
+                              {p.so}
+                            </a>
+                          ) : (
+                            p.so
+                          )}
+                        </td>
                         <td style={{ padding: '12px 8px', color: '#E2E8F0' }}>{p.name}</td>
                         <td style={{ padding: '12px 8px', color: '#94A3B8' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
