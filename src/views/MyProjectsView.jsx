@@ -179,13 +179,36 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
     return p.eng && p.eng.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
   });
 
+  // Some Priority Analysis rows carry a placeholder like "SO #12480" in the
+  // Name column instead of the real project name (e.g. a test/incomplete
+  // sheet row). Cross-reference other sheet sections keyed by the same SO —
+  // Material Requirements and Status History — which independently carry
+  // their own Name column and are more likely to have the real value.
+  const isPlaceholderName = (so, name) => {
+    if (!name || !name.trim()) return true;
+    return name.trim().toLowerCase() === `so #${so}`.toLowerCase();
+  };
+
+  const resolveProjectName = (p) => {
+    if (!isPlaceholderName(p.so, p.name)) return p.name;
+    const fromMaterials = (data.materialRequirements || [])
+      .find(m => String(m.so) === String(p.so) && !isPlaceholderName(m.so, m.name));
+    if (fromMaterials) return fromMaterials.name;
+    const fromHistory = (data.statusHistory || [])
+      .find(h => String(h.so) === String(p.so) && !isPlaceholderName(h.so, h.name));
+    if (fromHistory) return fromHistory.name;
+    return p.name;
+  };
+
   // "Completed Projects" should show every finished project: ones already removed
   // from the sheet (myArchivedProjects, from Firestore) AND ones still sitting in
   // the sheet with status Completed (myProjectsRaw) that haven't been removed yet.
   const myCompletedProjects = [
     ...myProjectsRaw.filter(p => p.status && p.status.toLowerCase() === 'completed'),
     ...myArchivedProjects,
-  ].filter((p, idx, arr) => arr.findIndex(x => x.so === p.so) === idx);
+  ]
+    .filter((p, idx, arr) => arr.findIndex(x => x.so === p.so) === idx)
+    .map(p => ({ ...p, name: resolveProjectName(p) }));
 
   // Only projects still present in the active sheet (priorityAnalysis) exist in
   // Pipeline's data — archived ones were already removed from the sheet, so
