@@ -249,13 +249,14 @@ export default function LogbookView({ so: propSo }) {
 
   return (
     <div className="lb-root">
+      <div className="lb-window">
       <header className="lb-header">
         <h1>Design Project Order</h1>
         <div className="lb-header-actions">
           <span className="lb-autosave">Auto-save active</span>
           <button className="lb-btn-secondary" onClick={() => fileInputRef.current?.click()}>Upload Job</button>
           <button className="lb-btn-secondary" onClick={saveOrderJSON}>Save Job</button>
-          <button className="lb-btn-pdf" onClick={downloadPDF} disabled={!pdfLibLoaded}>Create PDF</button>
+          <button className="lb-btn-pdf" onClick={downloadPDF}>Create PDF</button>
           <input ref={fileInputRef} type="file" accept=".json,application/json" hidden onChange={loadOrderJSON} />
         </div>
       </header>
@@ -419,6 +420,7 @@ export default function LogbookView({ so: propSo }) {
           <span style={{ fontSize: '18px', fontWeight: 'normal' }}>+</span> Add New Room
         </button>
       </main>
+      </div>
     </div>
   );
 }
