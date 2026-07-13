@@ -684,7 +684,7 @@
 /* --- Kanban Board ----------------------------------------- */
 .kanban-board {
   display: grid;
-  grid-template-columns: repeat(4, minmax(260px, 1fr));
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
   gap: var(--spacing-lg);
   padding-bottom: 16px;
   min-height: 60vh;
@@ -692,7 +692,7 @@
 
 @media (max-width: 1200px) {
   .kanban-board {
-    grid-template-columns: repeat(2, minmax(260px, 1fr));
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
   }
 }
 
@@ -750,7 +750,7 @@
 
 .kanban-card {
   width: 100%;
-  padding: 8px 10px;
+  padding: 3px 4px;
   border-radius: var(--radius-md);
   cursor: grab;
   display: flex;

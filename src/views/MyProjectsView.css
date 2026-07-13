@@ -806,3 +806,17 @@
   background: var(--color-mint);
   color: #0b1320;
 }
+
+/* Static (non-toggleable) variant used for the read-only Materials pills,
+   reusing .material-toggle-btn's visual design without the pointer/hover
+   affordances since these spans aren't clickable. */
+.material-pill-static {
+  cursor: default;
+  display: inline-flex;
+}
+
+.material-pill-static:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  border-color: var(--card-border);
+}

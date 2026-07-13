@@ -1422,25 +1422,15 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                         </div>
 
                         {data.projectSpecificMaterials && data.projectSpecificMaterials[project.so] && data.projectSpecificMaterials[project.so].length > 0 && (
-                          <div className="project-materials-section" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+                          <div className="project-materials-section" style={{ marginTop: '4px' }}>
                             <h4 className="project-section-title">
                               {language === 'es' ? 'Materiales' : 'Materials'}
                             </h4>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                            <div className="materials-grid">
                               {data.projectSpecificMaterials[project.so].flatMap((mat, idx) => {
                                 const parts = mat.material ? mat.material.split(',').map(s => s.trim()).filter(Boolean) : [];
                                 return parts.map((part, partIdx) => (
-                                  <span key={`${idx}-${partIdx}`} style={{ 
-                                    backgroundColor: 'rgba(255, 255, 255, 0.05)', 
-                                    color: 'var(--text-secondary)', 
-                                    padding: '4px 12px', 
-                                    borderRadius: '100px', 
-                                    fontSize: '0.8rem',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    border: '1px solid rgba(255, 255, 255, 0.1)'
-                                  }}>
+                                  <span key={`${idx}-${partIdx}`} className="material-toggle-btn material-pill-static">
                                     {part}
                                     {mat.quantity && <span style={{ opacity: 0.6 }}>({mat.quantity})</span>}
                                     {mat.urgency === '⚠️' && <span title="Urgent">⚠️</span>}
