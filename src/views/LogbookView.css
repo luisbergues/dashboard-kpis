@@ -1,17 +1,19 @@
 .lb-root, .lb-root *, .lb-root *::before, .lb-root *::after { box-sizing: border-box; }
 
 .lb-root {
-  --lb-bg: #f7f7f6;
-  --lb-surface: #ffffff;
-  --lb-border: #e2e2df;
-  --lb-border-strong: #c8c8c4;
-  --lb-text: #1a1a18;
-  --lb-muted: #6b6b67;
-  --lb-accent: #1a1a18;
-  --lb-accent-light: #f0f0ee;
-  --lb-danger: #c0392b;
-  --lb-radius: 6px;
-  --lb-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  --lb-bg: var(--bg-deep, #0A0A0C);
+  --lb-surface: var(--card-bg, #1C1C22);
+  --lb-border: var(--card-border, #26272C);
+  --lb-border-strong: var(--card-border, #33343B);
+  --lb-text: var(--text-primary, #FFFFFF);
+  --lb-muted: var(--text-secondary, #94A3B8);
+  --lb-accent: var(--color-teal, #1D4ED8);
+  --lb-accent-2: var(--color-cyan, #3B82F6);
+  --lb-accent-light: #23242B;
+  --lb-danger: #FF5C5C;
+  --lb-radius: var(--radius-sm, 100px);
+  --lb-radius-card: var(--radius-md, 20px);
+  --lb-shadow: 0 2px 10px rgba(0,0,0,0.35);
 
   background: var(--lb-bg);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
@@ -24,7 +26,9 @@
 .lb-loading {
   padding: 40px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  color: #6b6b67;
+  color: var(--lb-muted, #94A3B8);
+  background: var(--bg-deep, #0A0A0C);
+  min-height: 100vh;
 }
 
 .lb-header {
@@ -43,6 +47,7 @@
   font-size: 18px;
   font-weight: 600;
   letter-spacing: -0.01em;
+  color: var(--lb-text);
 }
 
 .lb-header-actions {
@@ -58,16 +63,17 @@
 }
 
 .lb-btn-pdf, .lb-btn-secondary {
-  padding: 8px 16px;
+  padding: 9px 20px;
   border: none;
   border-radius: var(--lb-radius);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: opacity .15s;
+  transition: opacity .15s, transform .1s;
 }
+.lb-btn-pdf:active, .lb-btn-secondary:active { transform: scale(0.97); }
 
-.lb-btn-pdf { background: var(--lb-accent); color: #fff; }
+.lb-btn-pdf { background: linear-gradient(135deg, var(--lb-accent-2), var(--lb-accent)); color: #fff; }
 .lb-btn-pdf:disabled { opacity: 0.5; cursor: not-allowed; }
 .lb-btn-secondary { background: var(--lb-accent-light); color: var(--lb-text); border: 1px solid var(--lb-border-strong); }
 .lb-btn-pdf:hover:not(:disabled), .lb-btn-secondary:hover { opacity: 0.85; }
@@ -84,7 +90,7 @@
 .lb-section {
   background: var(--lb-surface);
   border: 1px solid var(--lb-border);
-  border-radius: 8px;
+  border-radius: var(--lb-radius-card);
   overflow: hidden;
   box-shadow: var(--lb-shadow);
 }
@@ -100,10 +106,10 @@
 
 .lb-section-header h2 {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--lb-muted);
+  color: var(--lb-text);
 }
 
 .lb-grid-row {
@@ -136,9 +142,9 @@
 }
 
 .lb-field input:not([type="checkbox"]), .lb-field select {
-  padding: 8px 12px;
+  padding: 9px 14px;
   border: 1px solid var(--lb-border-strong);
-  border-radius: var(--lb-radius);
+  border-radius: 10px;
   font-size: 13px;
   background: var(--lb-bg);
   color: var(--lb-text);
@@ -146,12 +152,15 @@
   transition: border-color .15s, background .15s;
   font-family: inherit;
   width: 100%;
+  color-scheme: dark;
 }
 
 .lb-field input:not([type="checkbox"]):focus, .lb-field select:focus {
-  border-color: var(--lb-accent);
+  border-color: var(--lb-accent-2);
   background: var(--lb-surface);
 }
+
+.lb-field input::placeholder { color: var(--lb-muted); opacity: 0.6; }
 
 .lb-checkbox-group {
   display: flex;
@@ -174,7 +183,7 @@
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: var(--lb-accent);
+  accent-color: var(--lb-accent-2);
 }
 
 .lb-dynamic-row {
@@ -205,12 +214,12 @@
   gap: 8px;
   width: 100%;
   padding: 16px;
-  background: var(--lb-accent);
+  background: linear-gradient(135deg, var(--lb-accent-2), var(--lb-accent));
   color: white;
   border: none;
-  border-radius: var(--lb-radius);
+  border-radius: var(--lb-radius-card);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: opacity 0.15s;
 }
@@ -219,25 +228,25 @@
 .lb-btn-add-row {
   width: 100%;
   padding: 10px;
-  background: #fafaf9;
+  background: transparent;
   border: none;
   border-top: 1px solid var(--lb-border);
   font-size: 12px;
   color: var(--lb-muted);
   cursor: pointer;
   text-align: center;
-  transition: background 0.12s;
-  font-weight: 500;
+  transition: background 0.12s, color 0.12s;
+  font-weight: 600;
 }
-.lb-btn-add-row:hover { background: var(--lb-border); color: var(--lb-text); }
+.lb-btn-add-row:hover { background: rgba(255,255,255,0.04); color: var(--lb-text); }
 
-.lb-subsection { border-top: 1px solid var(--lb-border); border-bottom: 1px solid var(--lb-border); background: #fafaf9; }
+.lb-subsection { border-top: 1px solid var(--lb-border); border-bottom: 1px solid var(--lb-border); background: rgba(255,255,255,0.02); }
 .lb-subsection:last-child { border-bottom: none; }
 .lb-subsection-title {
   padding: 10px 20px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  color: var(--lb-accent);
+  color: var(--lb-accent-2);
   border-bottom: 1px solid var(--lb-border);
 }

@@ -23,6 +23,19 @@ const emptyProjectInfo = () => ({
   designer: ['', '', '']
 });
 
+const normalizeRooms = (rooms) => (
+  Array.isArray(rooms) && rooms.length > 0
+    ? rooms.map(room => ({
+        ...emptyRoom(),
+        ...room,
+        tfl: Array.isArray(room?.tfl) ? room.tfl : [],
+        doors: Array.isArray(room?.doors) ? room.doors : [],
+        drawers: Array.isArray(room?.drawers) ? room.drawers : [],
+        notes: Array.isArray(room?.notes) ? room.notes : []
+      }))
+    : [emptyRoom()]
+);
+
 export default function LogbookView({ so: propSo }) {
   const so = propSo || new URLSearchParams(window.location.search).get('logbook');
 
@@ -49,8 +62,14 @@ export default function LogbookView({ so: propSo }) {
       if (!so) { setIsLoading(false); return; }
       const data = await loadLogbookData(so);
       if (isMounted && data) {
-        setProjectInfo({ ...emptyProjectInfo(), ...data.projectInfo, so: data.projectInfo?.so || so });
-        setRooms(data.rooms && data.rooms.length > 0 ? data.rooms : [emptyRoom()]);
+        setProjectInfo({
+          ...emptyProjectInfo(),
+          ...data.projectInfo,
+          so: data.projectInfo?.so || so,
+          client: Array.isArray(data.projectInfo?.client) ? data.projectInfo.client : ['', '', '', ''],
+          designer: Array.isArray(data.projectInfo?.designer) ? data.projectInfo.designer : ['', '', '']
+        });
+        setRooms(normalizeRooms(data.rooms));
       } else if (isMounted) {
         setProjectInfo(p => ({ ...p, so: so || '', date: new Date().toISOString().slice(0, 10) }));
       }
@@ -116,8 +135,13 @@ export default function LogbookView({ so: propSo }) {
     reader.onload = e => {
       try {
         const data = JSON.parse(e.target.result);
-        setProjectInfo({ ...emptyProjectInfo(), ...data.projectInfo });
-        setRooms(data.rooms && data.rooms.length > 0 ? data.rooms : [emptyRoom()]);
+        setProjectInfo({
+          ...emptyProjectInfo(),
+          ...data.projectInfo,
+          client: Array.isArray(data.projectInfo?.client) ? data.projectInfo.client : ['', '', '', ''],
+          designer: Array.isArray(data.projectInfo?.designer) ? data.projectInfo.designer : ['', '', '']
+        });
+        setRooms(normalizeRooms(data.rooms));
       } catch (err) {
         alert('Invalid file format.');
       }
