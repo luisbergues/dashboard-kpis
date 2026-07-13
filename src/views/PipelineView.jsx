@@ -477,7 +477,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   ];
 
   return (
-    <div className="pipeline-view animate-fade-in">
+    <div className={`pipeline-view animate-fade-in ${filter === 'KANBAN' ? 'pipeline-view-kanban' : ''}`}>
       <header className="view-header">
         <h1 className="page-title">{t('pipeline.title')}</h1>
         <div className="controls">

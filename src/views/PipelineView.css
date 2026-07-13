@@ -4,6 +4,27 @@
   gap: var(--spacing-lg);
 }
 
+/* In Kanban mode the view fills the available viewport height so the columns
+   can flex-grow to fill it, and the filters→columns gap tightens to 6px. */
+.pipeline-view-kanban {
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  /* Height available below the sticky elements above; the columns grow into
+     this, with min-height (5 cards) as the floor on shorter viewports. */
+  height: calc(100vh - 160px);
+}
+
+/* Tighten the gap between the bottom of the Kanban columns and the viewport
+   edge to 6px (only in Kanban mode, so other views keep their spacing). */
+.main-content:has(.pipeline-view-kanban) {
+  padding-bottom: 6px;
+}
+
+.pipeline-view-kanban .view-header {
+  flex: 0 0 auto;
+}
+
 .view-header {
   display: flex;
   flex-direction: column;
@@ -683,36 +704,19 @@
 
 /* --- Kanban Board ----------------------------------------- */
 .kanban-board {
-  /* Kanban sizing tokens: card height/gap are fixed so a column is always
-     exactly 5 cards tall regardless of viewport, and any 6th+ card wraps into
-     a new sub-column (horizontal scroll) instead of stretching/clipping. */
-  --kanban-card-height: 96px;
-  --kanban-card-gap: 6px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(200px, 1fr));
-  gap: var(--spacing-lg);
-  padding-bottom: 16px;
-}
-
-@media (max-width: 1200px) {
-  .kanban-board {
-    grid-template-columns: repeat(2, minmax(200px, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .kanban-board {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  display: flex;
+  gap: 24px;
+  padding-bottom: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto; /* Let the fixed-width columns scroll if the row is wider
+                       than the viewport, instead of squashing them. */
 }
 
 .kanban-column {
-  /* Fixed height = header (~46px) + 5 cards + 4 gaps + column padding (24px)
-     + the content's own bottom padding/scrollbar room (16px). Independent of
-     viewport, so a column is always exactly 5 cards tall. */
-  height: calc(46px + (var(--kanban-card-height) * 5) + (var(--kanban-card-gap) * 4) + 24px + 16px);
+  width: 260px;
+  flex: 0 0 260px; /* Fixed 260px column width, never grow or shrink. */
   min-width: 0;
-  min-height: 0;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-lg);
@@ -743,24 +747,24 @@
 }
 
 .kanban-column-content {
-  display: grid;
-  grid-template-rows: repeat(5, var(--kanban-card-height));
-  grid-auto-flow: column;
-  grid-auto-columns: 100%;
-  align-content: start;
-  gap: var(--kanban-card-gap);
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 8px;
+  /* Always a single vertical column of cards with vertical scroll, no matter
+     how many cards (1, 3 or 23). This is the fix for the PROJECTS bug where a
+     multi-column grid forced horizontal scroll and clipped the first card. */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center the 224px cards within the 260px column. */
+  gap: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
   flex: 1;
   min-width: 0;
   min-height: 0;
 }
 
-/* Subtle themed scrollbar for the horizontal "5 cards per page" scroll,
-   replacing the browser default so it matches the dark UI. */
+/* Subtle themed scrollbar for the vertical card scroll, matching the dark UI. */
 .kanban-column-content::-webkit-scrollbar {
-  height: 6px;
+  width: 6px;
 }
 
 .kanban-column-content::-webkit-scrollbar-track {
@@ -777,10 +781,11 @@
 }
 
 .kanban-card {
-  width: 100%;
-  height: 100%; /* Fill the fixed-height grid row so every card is identical. */
+  width: 224px;
+  height: 150px; /* Fixed card size per spec, identical everywhere. */
+  flex: 0 0 150px; /* Don't let the flex column shrink the card height. */
   box-sizing: border-box;
-  padding: 6px 8px;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
   cursor: grab;
   display: flex;
