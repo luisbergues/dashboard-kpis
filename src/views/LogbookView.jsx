@@ -1,6 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { ExternalLink } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { loadLogbookData, saveLogbookData } from '../utils/logbookData';
+import { db, ref, get, isConfigured } from '../utils/firebase';
+import { useDesignerContacts } from '../utils/useDesignerContacts';
+import { useLanguage } from '../utils/LanguageContext';
 import './LogbookView.css';
 
 const emptyRoom = () => ({
@@ -39,6 +43,9 @@ const normalizeRooms = (rooms) => (
 
 export default function LogbookView({ so: propSo }) {
   const so = propSo || new URLSearchParams(window.location.search).get('logbook');
+  const { contacts } = useDesignerContacts();
+  const { t } = useLanguage();
+  const lf = (key) => t(`myProjects.logbookForm.${key}`);
 
   const [projectInfo, setProjectInfo] = useState(emptyProjectInfo());
   const [rooms, setRooms] = useState([emptyRoom()]);
@@ -68,6 +75,30 @@ export default function LogbookView({ so: propSo }) {
     return () => { isMounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [so]);
+
+  // Auto-fill Designer's Name/Phone/Email from the project's assigned
+  // designer (Firebase `project_designers/{so}`) when those fields are
+  // still blank — never overwrites values the user already typed/loaded.
+  useEffect(() => {
+    if (isLoading || !so || !isConfigured || !db) return;
+    const hasDesignerInfo = projectInfo.designer.some(v => v && v.trim());
+    if (hasDesignerInfo) return;
+
+    let isMounted = true;
+    get(ref(db, `project_designers/${so}`)).then(snapshot => {
+      if (!isMounted) return;
+      const designerName = snapshot.val();
+      if (!designerName) return;
+      const contact = contacts.find(c => c.name === designerName || (c.aliases || []).includes(designerName));
+      setProjectInfo(p => {
+        if (p.designer.some(v => v && v.trim())) return p; // filled in meanwhile
+        return { ...p, designer: [designerName, contact?.phone || '', contact?.email || ''] };
+      });
+    }).catch(error => {
+      console.error('Failed to auto-fill designer info:', error);
+    });
+    return () => { isMounted = false; };
+  }, [isLoading, so, contacts]);
 
   // Auto-save (debounced)
   useEffect(() => {
@@ -104,40 +135,6 @@ export default function LogbookView({ so: propSo }) {
     if (i !== roomIdx) return room;
     return { ...room, [listKey]: room[listKey].filter((_, ri) => ri !== rowIdx) };
   }));
-
-  // --- Save / Load JSON (kept from original HTML) ---
-  const saveOrderJSON = () => {
-    const data = { projectInfo, rooms };
-    const fileName = `DesignProject_SO${projectInfo.so || 'New'}.json`;
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = fileName;
-    link.click();
-  };
-
-  const fileInputRef = useRef(null);
-  const loadOrderJSON = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const data = JSON.parse(e.target.result);
-        setProjectInfo({
-          ...emptyProjectInfo(),
-          ...data.projectInfo,
-          client: Array.isArray(data.projectInfo?.client) ? data.projectInfo.client : ['', '', '', ''],
-          designer: Array.isArray(data.projectInfo?.designer) ? data.projectInfo.designer : ['', '', '']
-        });
-        setRooms(normalizeRooms(data.rooms));
-      } catch (err) {
-        alert('Invalid file format.');
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-  };
 
   // --- PDF generation (ported from original HTML, same layout/logic) ---
   const downloadPDF = () => {
@@ -240,184 +237,184 @@ export default function LogbookView({ so: propSo }) {
   };
 
   if (isLoading) {
-    return <div className="lb-loading">Loading logbook...</div>;
+    return <div className="lb-loading">{lf('loading')}</div>;
   }
 
   if (!so) {
-    return <div className="lb-loading">Missing project SO number.</div>;
+    return <div className="lb-loading">{lf('missingSo')}</div>;
   }
 
   return (
     <div className="lb-root">
       <div className="lb-window">
       <header className="lb-header">
-        <h1>Design Project Order</h1>
+        <h1>{lf('title')}</h1>
         <div className="lb-header-actions">
-          <span className="lb-autosave">Auto-save active</span>
-          <button className="lb-btn-secondary" onClick={() => fileInputRef.current?.click()}>Upload Job</button>
-          <button className="lb-btn-secondary" onClick={saveOrderJSON}>Save Job</button>
-          <button className="lb-btn-pdf" onClick={downloadPDF}>Create PDF</button>
-          <input ref={fileInputRef} type="file" accept=".json,application/json" hidden onChange={loadOrderJSON} />
+          <span className="lb-autosave">{t('myProjects.autoSaveActive')}</span>
+          <a href={window.location.origin} className="lb-btn-secondary lb-btn-link">
+            <ExternalLink size={14} /> {lf('openDashboard')}
+          </a>
+          <button className="lb-btn-pdf" onClick={downloadPDF}>{lf('createPdf')}</button>
         </div>
       </header>
 
       <main className="lb-main">
         <div className="lb-section">
-          <div className="lb-section-header"><h2>Project Information</h2></div>
-          <div className="lb-grid-row"><div className="lb-field"><label>SO # (Sales Order)</label><input type="number" min="1" step="1" value={projectInfo.so} onChange={e => setField('so', e.target.value)} /></div></div>
-          <div className="lb-grid-row"><div className="lb-field"><label>Date</label><input type="date" value={projectInfo.date} onChange={e => setField('date', e.target.value)} /></div></div>
-          <div className="lb-grid-row"><div className="lb-field"><label>Project Name</label><input type="text" value={projectInfo.name} onChange={e => setField('name', e.target.value)} /></div></div>
-          <div className="lb-grid-row"><div className="lb-field"><label>Engineer in Charge</label><input type="text" value={projectInfo.engineer} onChange={e => setField('engineer', e.target.value)} /></div></div>
-          <div className="lb-grid-row"><div className="lb-field"><label>Client's Name</label><input type="text" value={projectInfo.client[0]} onChange={e => setClientField(0, e.target.value)} /></div></div>
-          <div className="lb-grid-row"><div className="lb-field"><label>Client's Address</label><input type="text" value={projectInfo.client[1]} onChange={e => setClientField(1, e.target.value)} /></div></div>
-          <div className="lb-grid-row"><div className="lb-field"><label>Client's Phone Number</label><input type="tel" value={projectInfo.client[2]} onChange={e => setClientField(2, e.target.value)} /></div></div>
-          <div className="lb-grid-row"><div className="lb-field"><label>Client's Email</label><input type="email" value={projectInfo.client[3]} onChange={e => setClientField(3, e.target.value)} /></div></div>
-          <div className="lb-grid-row"><div className="lb-field"><label>Designer's Name</label><input type="text" value={projectInfo.designer[0]} onChange={e => setDesignerField(0, e.target.value)} /></div></div>
-          <div className="lb-grid-row"><div className="lb-field"><label>Designer's Phone Number</label><input type="tel" value={projectInfo.designer[1]} onChange={e => setDesignerField(1, e.target.value)} /></div></div>
-          <div className="lb-grid-row"><div className="lb-field"><label>Designer's Email</label><input type="email" value={projectInfo.designer[2]} onChange={e => setDesignerField(2, e.target.value)} /></div></div>
+          <div className="lb-section-header"><h2>{lf('projectInformation')}</h2></div>
+          <div className="lb-grid-row"><div className="lb-field"><label>{lf('soNumber')}</label><input type="number" min="1" step="1" value={projectInfo.so} onChange={e => setField('so', e.target.value)} /></div></div>
+          <div className="lb-grid-row"><div className="lb-field"><label>{lf('date')}</label><input type="date" value={projectInfo.date} onChange={e => setField('date', e.target.value)} /></div></div>
+          <div className="lb-grid-row"><div className="lb-field"><label>{lf('projectName')}</label><input type="text" value={projectInfo.name} onChange={e => setField('name', e.target.value)} /></div></div>
+          <div className="lb-grid-row"><div className="lb-field"><label>{lf('engineerInCharge')}</label><input type="text" value={projectInfo.engineer} onChange={e => setField('engineer', e.target.value)} /></div></div>
+          <div className="lb-grid-row"><div className="lb-field"><label>{lf('clientName')}</label><input type="text" value={projectInfo.client[0]} onChange={e => setClientField(0, e.target.value)} /></div></div>
+          <div className="lb-grid-row"><div className="lb-field"><label>{lf('clientAddress')}</label><input type="text" value={projectInfo.client[1]} onChange={e => setClientField(1, e.target.value)} /></div></div>
+          <div className="lb-grid-row"><div className="lb-field"><label>{lf('clientPhone')}</label><input type="tel" value={projectInfo.client[2]} onChange={e => setClientField(2, e.target.value)} /></div></div>
+          <div className="lb-grid-row"><div className="lb-field"><label>{lf('clientEmail')}</label><input type="email" value={projectInfo.client[3]} onChange={e => setClientField(3, e.target.value)} /></div></div>
+          <div className="lb-grid-row"><div className="lb-field"><label>{lf('designerName')}</label><input type="text" value={projectInfo.designer[0]} onChange={e => setDesignerField(0, e.target.value)} /></div></div>
+          <div className="lb-grid-row"><div className="lb-field"><label>{lf('designerPhone')}</label><input type="tel" value={projectInfo.designer[1]} onChange={e => setDesignerField(1, e.target.value)} /></div></div>
+          <div className="lb-grid-row"><div className="lb-field"><label>{lf('designerEmail')}</label><input type="email" value={projectInfo.designer[2]} onChange={e => setDesignerField(2, e.target.value)} /></div></div>
         </div>
 
         <div className="lb-rooms-container">
           {rooms.map((room, roomIdx) => (
             <div className="lb-section lb-room-block" key={roomIdx}>
               <div className="lb-section-header">
-                <h2>Room {roomIdx + 1}</h2>
+                <h2>{lf('room')} {roomIdx + 1}</h2>
                 {rooms.length > 1 && (
-                  <button className="lb-row-del" title="Remove Room" onClick={() => removeRoom(roomIdx)}>&times;</button>
+                  <button className="lb-row-del" title={lf('removeRoom')} onClick={() => removeRoom(roomIdx)}>&times;</button>
                 )}
               </div>
 
-              <div className="lb-grid-row"><div className="lb-field"><label>Room Name</label><input type="text" placeholder="Ej: Master Kitchen" value={room.rName} onChange={e => updateRoom(roomIdx, { rName: e.target.value })} /></div></div>
+              <div className="lb-grid-row"><div className="lb-field"><label>{lf('roomName')}</label><input type="text" placeholder={lf('roomNamePlaceholder')} value={room.rName} onChange={e => updateRoom(roomIdx, { rName: e.target.value })} /></div></div>
 
               <div className="lb-subsection">
-                <div className="lb-subsection-title">TFL Colors</div>
+                <div className="lb-subsection-title">{lf('tflColors')}</div>
                 <div className="lb-list-container">
                   {room.tfl.map((row, rowIdx) => (
                     <div className="lb-dynamic-row" key={rowIdx}>
-                      <div className="lb-field"><label>Name</label><input type="text" placeholder="Color name..." value={row.name || ''} onChange={e => updateListRow(roomIdx, 'tfl', rowIdx, { name: e.target.value })} /></div>
-                      <div className="lb-field lb-small"><label>Sheet Size</label><input type="text" placeholder="Size..." value={row.size || ''} onChange={e => updateListRow(roomIdx, 'tfl', rowIdx, { size: e.target.value })} /></div>
-                      <div className="lb-field"><label>Where</label><input type="text" placeholder="Where used..." value={row.where || ''} onChange={e => updateListRow(roomIdx, 'tfl', rowIdx, { where: e.target.value })} /></div>
+                      <div className="lb-field"><label>{lf('name')}</label><input type="text" placeholder={lf('colorNamePlaceholder')} value={row.name || ''} onChange={e => updateListRow(roomIdx, 'tfl', rowIdx, { name: e.target.value })} /></div>
+                      <div className="lb-field lb-small"><label>{lf('sheetSize')}</label><input type="text" placeholder={lf('sizePlaceholder')} value={row.size || ''} onChange={e => updateListRow(roomIdx, 'tfl', rowIdx, { size: e.target.value })} /></div>
+                      <div className="lb-field"><label>{lf('where')}</label><input type="text" placeholder={lf('wherePlaceholder')} value={row.where || ''} onChange={e => updateListRow(roomIdx, 'tfl', rowIdx, { where: e.target.value })} /></div>
                       <button className="lb-row-del" onClick={() => removeListRow(roomIdx, 'tfl', rowIdx)}>&times;</button>
                     </div>
                   ))}
                 </div>
-                <button className="lb-btn-add-row" onClick={() => addListRow(roomIdx, 'tfl', { name: '', size: '', where: '' })}>+ Add TFL Color</button>
+                <button className="lb-btn-add-row" onClick={() => addListRow(roomIdx, 'tfl', { name: '', size: '', where: '' })}>{lf('addTflColor')}</button>
               </div>
 
               <div className="lb-grid-row">
                 <div className="lb-field lb-small">
-                  <label>Backing</label>
+                  <label>{lf('backing')}</label>
                   <select value={room.rBack} onChange={e => updateRoom(roomIdx, { rBack: e.target.value })}>
-                    <option>Yes</option><option>No</option><option>Partial</option>
+                    <option value="Yes">{lf('yes')}</option><option value="No">{lf('no')}</option><option value="Partial">{lf('partial')}</option>
                   </select>
                 </div>
-                <div className="lb-field lb-large"><label>Backing Notes</label><input type="text" placeholder="Add observations here..." value={room.rBackNote} onChange={e => updateRoom(roomIdx, { rBackNote: e.target.value })} /></div>
+                <div className="lb-field lb-large"><label>{lf('backingNotes')}</label><input type="text" placeholder={lf('observationsPlaceholder')} value={room.rBackNote} onChange={e => updateRoom(roomIdx, { rBackNote: e.target.value })} /></div>
               </div>
 
               <div className="lb-grid-row">
                 <div className="lb-field lb-small">
-                  <label>EB</label>
+                  <label>{lf('eb')}</label>
                   <select value={room.rEb} onChange={e => updateRoom(roomIdx, { rEb: e.target.value })}>
-                    <option>Yes</option><option>No</option><option>Matching</option>
+                    <option value="Yes">{lf('yes')}</option><option value="No">{lf('no')}</option><option value="Matching">{lf('matching')}</option>
                   </select>
                 </div>
-                <div className="lb-field lb-large"><label>EB Notes</label><input type="text" placeholder="Add observations here..." value={room.rEbNote} onChange={e => updateRoom(roomIdx, { rEbNote: e.target.value })} /></div>
+                <div className="lb-field lb-large"><label>{lf('ebNotes')}</label><input type="text" placeholder={lf('observationsPlaceholder')} value={room.rEbNote} onChange={e => updateRoom(roomIdx, { rEbNote: e.target.value })} /></div>
               </div>
 
               <div className="lb-grid-row">
                 <div className="lb-field lb-small">
-                  <label>Molding</label>
+                  <label>{lf('molding')}</label>
                   <div className="lb-checkbox-group">
-                    <label><input type="checkbox" checked={room.rMoldTop} onChange={e => updateRoom(roomIdx, { rMoldTop: e.target.checked })} /> Top</label>
-                    <label><input type="checkbox" checked={room.rMoldBot} onChange={e => updateRoom(roomIdx, { rMoldBot: e.target.checked })} /> Bottom</label>
+                    <label><input type="checkbox" checked={room.rMoldTop} onChange={e => updateRoom(roomIdx, { rMoldTop: e.target.checked })} /> {lf('top')}</label>
+                    <label><input type="checkbox" checked={room.rMoldBot} onChange={e => updateRoom(roomIdx, { rMoldBot: e.target.checked })} /> {lf('bottom')}</label>
                   </div>
                 </div>
-                <div className="lb-field lb-large"><label>Molding Notes</label><input type="text" placeholder="Add observations here..." value={room.rMoldNote} onChange={e => updateRoom(roomIdx, { rMoldNote: e.target.value })} /></div>
+                <div className="lb-field lb-large"><label>{lf('moldingNotes')}</label><input type="text" placeholder={lf('observationsPlaceholder')} value={room.rMoldNote} onChange={e => updateRoom(roomIdx, { rMoldNote: e.target.value })} /></div>
               </div>
 
               <div className="lb-grid-row">
                 <div className="lb-field lb-small">
-                  <label>Thermofoil</label>
+                  <label>{lf('thermofoil')}</label>
                   <select value={room.rThermo} onChange={e => updateRoom(roomIdx, { rThermo: e.target.value })}>
-                    <option>No</option><option>Yes</option>
+                    <option value="No">{lf('no')}</option><option value="Yes">{lf('yes')}</option>
                   </select>
                 </div>
-                <div className="lb-field lb-large"><label>Thermofoil Notes</label><input type="text" placeholder="Add observations here..." value={room.rThermoNote} onChange={e => updateRoom(roomIdx, { rThermoNote: e.target.value })} /></div>
+                <div className="lb-field lb-large"><label>{lf('thermofoilNotes')}</label><input type="text" placeholder={lf('observationsPlaceholder')} value={room.rThermoNote} onChange={e => updateRoom(roomIdx, { rThermoNote: e.target.value })} /></div>
               </div>
 
               <div className="lb-grid-row">
                 <div className="lb-field lb-small">
-                  <label>Special Boreholes</label>
+                  <label>{lf('specialBoreholes')}</label>
                   <select value={room.rBore} onChange={e => updateRoom(roomIdx, { rBore: e.target.value })}>
-                    <option>No</option><option>Yes</option>
+                    <option value="No">{lf('no')}</option><option value="Yes">{lf('yes')}</option>
                   </select>
                 </div>
-                <div className="lb-field lb-large"><label>Boreholes Notes</label><input type="text" placeholder="Add observations here..." value={room.rBoreNote} onChange={e => updateRoom(roomIdx, { rBoreNote: e.target.value })} /></div>
+                <div className="lb-field lb-large"><label>{lf('boreholesNotes')}</label><input type="text" placeholder={lf('observationsPlaceholder')} value={room.rBoreNote} onChange={e => updateRoom(roomIdx, { rBoreNote: e.target.value })} /></div>
               </div>
 
               <div className="lb-grid-row">
                 <div className="lb-field lb-small">
-                  <label>Vertical Lights</label>
+                  <label>{lf('verticalLights')}</label>
                   <select value={room.rVl} onChange={e => updateRoom(roomIdx, { rVl: e.target.value })}>
-                    <option>No</option><option>Yes</option>
+                    <option value="No">{lf('no')}</option><option value="Yes">{lf('yes')}</option>
                   </select>
                 </div>
-                <div className="lb-field lb-xs"><label>Qty</label><input type="number" min="0" placeholder="0" value={room.rVlQ} onChange={e => updateRoom(roomIdx, { rVlQ: e.target.value })} /></div>
+                <div className="lb-field lb-xs"><label>{lf('qty')}</label><input type="number" min="0" placeholder="0" value={room.rVlQ} onChange={e => updateRoom(roomIdx, { rVlQ: e.target.value })} /></div>
                 <div className="lb-field lb-small" style={{ marginLeft: '20px' }}>
-                  <label>Horizontal Lights</label>
+                  <label>{lf('horizontalLights')}</label>
                   <select value={room.rHl} onChange={e => updateRoom(roomIdx, { rHl: e.target.value })}>
-                    <option>No</option><option>Yes</option>
+                    <option value="No">{lf('no')}</option><option value="Yes">{lf('yes')}</option>
                   </select>
                 </div>
-                <div className="lb-field lb-xs"><label>Qty</label><input type="number" min="0" placeholder="0" value={room.rHlQ} onChange={e => updateRoom(roomIdx, { rHlQ: e.target.value })} /></div>
+                <div className="lb-field lb-xs"><label>{lf('qty')}</label><input type="number" min="0" placeholder="0" value={room.rHlQ} onChange={e => updateRoom(roomIdx, { rHlQ: e.target.value })} /></div>
               </div>
 
               <div className="lb-subsection">
-                <div className="lb-subsection-title">Doors</div>
+                <div className="lb-subsection-title">{lf('doors')}</div>
                 <div className="lb-list-container">
                   {room.doors.map((row, rowIdx) => (
                     <div className="lb-dynamic-row" key={rowIdx}>
-                      <div className="lb-field lb-xs"><label>Qty</label><input type="number" min="1" style={{ fontWeight: 'bold' }} value={row.qty || ''} onChange={e => updateListRow(roomIdx, 'doors', rowIdx, { qty: e.target.value })} /></div>
-                      <div className="lb-field lb-large"><label>Description</label><input type="text" placeholder="Describe..." value={row.desc || ''} onChange={e => updateListRow(roomIdx, 'doors', rowIdx, { desc: e.target.value })} /></div>
+                      <div className="lb-field lb-xs"><label>{lf('qty')}</label><input type="number" min="1" style={{ fontWeight: 'bold' }} value={row.qty || ''} onChange={e => updateListRow(roomIdx, 'doors', rowIdx, { qty: e.target.value })} /></div>
+                      <div className="lb-field lb-large"><label>{lf('description')}</label><input type="text" placeholder={lf('describePlaceholder')} value={row.desc || ''} onChange={e => updateListRow(roomIdx, 'doors', rowIdx, { desc: e.target.value })} /></div>
                       <button className="lb-row-del" onClick={() => removeListRow(roomIdx, 'doors', rowIdx)}>&times;</button>
                     </div>
                   ))}
                 </div>
-                <button className="lb-btn-add-row" onClick={() => addListRow(roomIdx, 'doors', { qty: '', desc: '' })}>+ Add Door</button>
+                <button className="lb-btn-add-row" onClick={() => addListRow(roomIdx, 'doors', { qty: '', desc: '' })}>{lf('addDoor')}</button>
               </div>
 
               <div className="lb-subsection">
-                <div className="lb-subsection-title">Drawers</div>
+                <div className="lb-subsection-title">{lf('drawers')}</div>
                 <div className="lb-list-container">
                   {room.drawers.map((row, rowIdx) => (
                     <div className="lb-dynamic-row" key={rowIdx}>
-                      <div className="lb-field lb-xs"><label>Qty</label><input type="number" min="1" style={{ fontWeight: 'bold' }} value={row.qty || ''} onChange={e => updateListRow(roomIdx, 'drawers', rowIdx, { qty: e.target.value })} /></div>
-                      <div className="lb-field lb-large"><label>Description</label><input type="text" placeholder="Describe..." value={row.desc || ''} onChange={e => updateListRow(roomIdx, 'drawers', rowIdx, { desc: e.target.value })} /></div>
+                      <div className="lb-field lb-xs"><label>{lf('qty')}</label><input type="number" min="1" style={{ fontWeight: 'bold' }} value={row.qty || ''} onChange={e => updateListRow(roomIdx, 'drawers', rowIdx, { qty: e.target.value })} /></div>
+                      <div className="lb-field lb-large"><label>{lf('description')}</label><input type="text" placeholder={lf('describePlaceholder')} value={row.desc || ''} onChange={e => updateListRow(roomIdx, 'drawers', rowIdx, { desc: e.target.value })} /></div>
                       <button className="lb-row-del" onClick={() => removeListRow(roomIdx, 'drawers', rowIdx)}>&times;</button>
                     </div>
                   ))}
                 </div>
-                <button className="lb-btn-add-row" onClick={() => addListRow(roomIdx, 'drawers', { qty: '', desc: '' })}>+ Add Drawer</button>
+                <button className="lb-btn-add-row" onClick={() => addListRow(roomIdx, 'drawers', { qty: '', desc: '' })}>{lf('addDrawer')}</button>
               </div>
 
               <div className="lb-subsection">
-                <div className="lb-subsection-title">Additional Notes</div>
+                <div className="lb-subsection-title">{lf('additionalNotes')}</div>
                 <div className="lb-list-container">
                   {room.notes.map((row, rowIdx) => (
                     <div className="lb-dynamic-row" key={rowIdx}>
-                      <div className="lb-field lb-large"><input type="text" placeholder="Type note here..." value={row.text || ''} onChange={e => updateListRow(roomIdx, 'notes', rowIdx, { text: e.target.value })} /></div>
+                      <div className="lb-field lb-large"><input type="text" placeholder={lf('notePlaceholder')} value={row.text || ''} onChange={e => updateListRow(roomIdx, 'notes', rowIdx, { text: e.target.value })} /></div>
                       <button className="lb-row-del" onClick={() => removeListRow(roomIdx, 'notes', rowIdx)}>&times;</button>
                     </div>
                   ))}
                 </div>
-                <button className="lb-btn-add-row" onClick={() => addListRow(roomIdx, 'notes', { text: '' })}>+ Add Note</button>
+                <button className="lb-btn-add-row" onClick={() => addListRow(roomIdx, 'notes', { text: '' })}>{lf('addNote')}</button>
               </div>
             </div>
           ))}
         </div>
 
         <button className="lb-btn-add-room" onClick={addRoom}>
-          <span style={{ fontSize: '18px', fontWeight: 'normal' }}>+</span> Add New Room
+          <span style={{ fontSize: '18px', fontWeight: 'normal' }}>+</span> {lf('addNewRoom')}
         </button>
       </main>
       </div>

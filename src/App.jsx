@@ -480,14 +480,9 @@ function App() {
   }, [mergedData, userProfile, projectNotes, currentUser, pendingUsersCount]);
 
   const renderView = () => {
-    // Standalone Logbook / Bitácora editor page
+    // Standalone shareable project detail page (intentionally public/read-only —
+    // no auth required, bypasses the gate below)
     const urlParams = new URLSearchParams(window.location.search);
-    const logbookSoParam = urlParams.get('logbook');
-    if (logbookSoParam) {
-      return <LogbookView so={logbookSoParam} />;
-    }
-
-    // Standalone shareable project detail page
     const projectSoParam = urlParams.get('project');
     if (projectSoParam) {
       if (loading || authLoading) return <div className="loading-state">Loading project...</div>;
@@ -516,6 +511,14 @@ function App() {
           <button className="btn-secondary" onClick={() => signOut(auth)}>{t('common.signOut')}</button>
         </div>
       );
+    }
+
+    // Standalone Logbook / Bitácora editor page — write-capable, so it sits
+    // behind the same auth/approval gate as the rest of the app (unlike the
+    // read-only ProjectDetailView above).
+    const logbookSoParam = urlParams.get('logbook');
+    if (logbookSoParam) {
+      return <LogbookView so={logbookSoParam} />;
     }
 
     const isDesigner = userProfile?.role === 'designer';

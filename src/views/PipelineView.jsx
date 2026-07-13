@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Search, AlertCircle, Calendar, StickyNote, Flag, Clock, CheckCircle2, Users, Plus, Circle, Image as ImageIcon, Loader2, X, FileText, Paperclip, MessageSquare } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import { db, ref, onValue, set } from '../utils/firebase';
@@ -60,6 +60,72 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   // anyone has dragged a card within a column.
   const [kanbanOrder, setKanbanOrder] = useState({});
   const [draggedOverSo, setDraggedOverSo] = useState(null);
+
+  // Kanban card sizing. Goals (user-confirmed):
+  //  - Always at least 5 cards tall: card height = available column height / 5.
+  //  - Card keeps its 224:150 aspect ratio and its inner content scales WITH it
+  //    (font-size set proportionally, everything inside uses em) so nothing
+  //    breaks or overflows when the card shrinks/grows.
+  //  - Columns do NOT stretch to fill width; leftover width stays empty to the
+  //    right of PROJECTS.
+  //  - PROJECTS auto-widens to show extra sub-columns (2 for >5 cards, 3 for
+  //    >10, ...) using that leftover width, capped by what actually fits.
+  const boardRef = useRef(null);
+  const CARD_ASPECT = 224 / 150; // width / height
+  const VISIBLE_ROWS = 5;
+  const ROW_GAP = 8;
+  const BASE_CARD_H = 150; // reference height the base font-size is tuned for
+
+  useLayoutEffect(() => {
+    if (filter !== 'KANBAN') return;
+    const board = boardRef.current;
+    if (!board) return;
+
+    const COLUMN_HEADER = 46; // column title row (~text + border + margin)
+    const COLUMN_PADDING = 24; // .kanban-column top+bottom padding (12 each)
+    const CONTENT_BOTTOM = 6; // content padding-bottom / scrollbar room
+    const BOARD_BOTTOM_MARGIN = 12; // gap between board and viewport bottom
+
+    const recalc = () => {
+      // Available height = from the board's top edge down to the viewport
+      // bottom (minus a small margin). Measured directly, so it doesn't depend
+      // on a hardcoded 100vh-160px guess or a fragile flex chain resolving.
+      const top = board.getBoundingClientRect().top;
+      const boardH = Math.max(0, window.innerHeight - top - BOARD_BOTTOM_MARGIN);
+      if (boardH <= 0) return;
+      board.style.height = `${boardH}px`;
+
+      // Height left for the 5 card rows inside a column.
+      const rowsArea = boardH - COLUMN_HEADER - COLUMN_PADDING - CONTENT_BOTTOM;
+      const cardH = Math.max(96, Math.floor((rowsArea - ROW_GAP * (VISIBLE_ROWS - 1)) / VISIBLE_ROWS));
+      const cardW = Math.round(cardH * CARD_ASPECT);
+      const fontScale = cardH / BASE_CARD_H;
+
+      board.style.setProperty('--kanban-card-h', `${cardH}px`);
+      board.style.setProperty('--kanban-card-w', `${cardW}px`);
+      board.style.setProperty('--kanban-card-fs', fontScale.toFixed(3));
+
+      // PROJECTS shows up to 3 sub-columns (5 cards each) based on how many
+      // cards it has: 1 for <=5, 2 for <=10, 3 for more. Not width-limited —
+      // the board has overflow-x:auto as a safety net if it doesn't fit.
+      const projectsCol = board.querySelector('.column-projects');
+      if (projectsCol) {
+        const nProjects = projectsCol.querySelectorAll('.kanban-card').length;
+        const wantSubcols = Math.max(1, Math.ceil(nProjects / VISIBLE_ROWS));
+        const subcols = Math.min(wantSubcols, 3); // cap at 3 sub-columns
+        board.style.setProperty('--projects-subcols', subcols);
+      }
+    };
+
+    recalc();
+    // Recalc after paint too (first measure can happen before layout settles).
+    const raf = requestAnimationFrame(recalc);
+    window.addEventListener('resize', recalc);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', recalc);
+    };
+  }, [filter, kanbanState, data]);
 
   const toggleCollapse = (so) => {
     setExpandedProjects(prev => ({ ...prev, [so]: !prev[so] }));
@@ -561,7 +627,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
       )}
 
       {filter === 'KANBAN' ? (
-        <div className="kanban-board">
+        <div className="kanban-board" ref={boardRef}>
           {KANBAN_COLUMNS.map(col => {
             const columnProjects = orderProjectsForColumn(
               kanbanOrderedProjects.filter(p => (kanbanState[p.so] || 'projects') === col.id),
@@ -605,6 +671,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                       onDragLeave={canEditKanban ? () => setDraggedOverSo(prev => (prev === project.so ? null : prev)) : undefined}
                       onDrop={canEditKanban ? (e) => handleDropOnCard(e, col.id, project.so) : undefined}
                     >
+                      <div className="kanban-card-inner">
                       <div className="kanban-card-top">
                         <a
                           href={`${window.location.origin}${window.location.pathname}?project=${project.so}`}
@@ -614,28 +681,29 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                           onClick={e => e.stopPropagation()}
                           style={{ textDecoration: 'none', cursor: 'pointer' }}
                         >#{project.so}</a>
-                        <span className={`status-badge ${getStatusColor(project.status)}`} style={{ padding: '2px 6px', fontSize: '0.65rem' }}>
+                        <span className={`status-badge ${getStatusColor(project.status)}`} style={{ padding: '2px 6px', fontSize: '0.72rem' }}>
                           {getStatusLabel(project.status)}
                         </span>
                       </div>
                       <h4 className="kanban-project-name">{project.name.split(':')[0].trim()}</h4>
                       <div className="kanban-card-meta">
-                        <span className="meta-item" style={{ fontSize: '0.75rem' }}><Calendar size={12}/> {project.install}</span>
-                        <span className="meta-item eng-badge" style={{ fontSize: '0.75rem' }}>ENG: {project.eng}</span>
+                        <span className="meta-item" style={{ fontSize: '0.82rem' }}><Calendar size={13}/> {project.install}</span>
+                        <span className="meta-item eng-badge" style={{ fontSize: '0.82rem' }}>ENG: {project.eng}</span>
                       </div>
                       <div className="kanban-card-bottom" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', gap: '4px' }}>
                           {needsProcurement && (
-                            <span className="meta-item procurement-badge" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>Proc.</span>
+                            <span className="meta-item procurement-badge" style={{ fontSize: '0.72rem', padding: '1px 6px' }}>Proc.</span>
                           )}
                           {hasNonSnowWhiteMaterial && (
-                            <span className="meta-item materials-badge-red" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>Mat.</span>
+                            <span className="meta-item materials-badge-red" style={{ fontSize: '0.72rem', padding: '1px 6px' }}>Mat.</span>
                           )}
                         </div>
-                        <span className="pipeline-comments-bubble" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>
+                        <span className="pipeline-comments-bubble" style={{ fontSize: '0.78rem', padding: '2px 6px' }}>
                           <MessageSquare size={12} />
                           <span>{(projectNotes[project.so] || []).length}</span>
                         </span>
+                      </div>
                       </div>
                     </div>
                   );})}
