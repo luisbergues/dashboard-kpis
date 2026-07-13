@@ -705,6 +705,8 @@
 .kanban-column {
   max-height: calc(100vh - 260px);
   min-width: 0;
+  min-height: 0; /* Grid items default to min-height:auto, which fights the
+                    max-height above and blocks the inner scroll container. */
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-lg);
@@ -735,10 +737,8 @@
 }
 
 .kanban-column-content {
-  display: grid;
-  grid-template-rows: repeat(5, max-content);
-  grid-auto-flow: row;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   overflow-x: hidden;
   overflow-y: auto;
@@ -746,6 +746,9 @@
   padding-right: 4px;
   flex: 1;
   min-width: 0;
+  min-height: 0; /* Without this, a flex child with flex:1 refuses to shrink
+                    below its content size, so overflow-y:auto never kicks in
+                    and the column just grows past its parent's max-height. */
 }
 
 /* Subtle themed scrollbar for the vertical card scroll, replacing the
