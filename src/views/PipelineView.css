@@ -684,7 +684,7 @@
 /* --- Kanban Board ----------------------------------------- */
 .kanban-board {
   display: grid;
-  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, minmax(200px, 1fr));
   gap: var(--spacing-lg);
   padding-bottom: 16px;
   min-height: 60vh;
@@ -692,7 +692,7 @@
 
 @media (max-width: 1200px) {
   .kanban-board {
-    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
   }
 }
 
@@ -737,15 +737,34 @@
 .kanban-column-content {
   display: grid;
   grid-template-rows: repeat(5, max-content);
-  grid-auto-flow: column;
-  grid-auto-columns: 100%;
+  grid-auto-flow: row;
   align-content: start;
   gap: 8px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding-bottom: 8px;
+  padding-right: 4px;
   flex: 1;
   min-width: 0;
+}
+
+/* Subtle themed scrollbar for the vertical card scroll, replacing the
+   browser default so it matches the dark UI instead of standing out. */
+.kanban-column-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.kanban-column-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kanban-column-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.kanban-column-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .kanban-card {
