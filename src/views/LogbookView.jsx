@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { jsPDF } from 'jspdf';
 import { loadLogbookData, saveLogbookData } from '../utils/logbookData';
 import './LogbookView.css';
 
@@ -42,18 +43,6 @@ export default function LogbookView({ so: propSo }) {
   const [projectInfo, setProjectInfo] = useState(emptyProjectInfo());
   const [rooms, setRooms] = useState([emptyRoom()]);
   const [isLoading, setIsLoading] = useState(true);
-  const jspdfReady = useRef(false);
-  const [pdfLibLoaded, setPdfLibLoaded] = useState(false);
-
-  // Load jsPDF from CDN once
-  useEffect(() => {
-    if (window.jspdf) { jspdfReady.current = true; setPdfLibLoaded(true); return; }
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-    script.onload = () => { jspdfReady.current = true; setPdfLibLoaded(true); };
-    document.body.appendChild(script);
-    return () => { document.body.removeChild(script); };
-  }, []);
 
   // Load saved data
   useEffect(() => {
@@ -152,8 +141,6 @@ export default function LogbookView({ so: propSo }) {
 
   // --- PDF generation (ported from original HTML, same layout/logic) ---
   const downloadPDF = () => {
-    if (!window.jspdf) { alert('PDF library still loading, try again in a moment.'); return; }
-    const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
     let y = 50;
