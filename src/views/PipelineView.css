@@ -737,24 +737,24 @@
 }
 
 .kanban-column-content {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  overflow-x: hidden;
-  overflow-y: auto;
+  display: grid;
+  grid-template-rows: repeat(5, max-content);
+  grid-auto-flow: column;
+  grid-auto-columns: 100%;
+  align-content: start;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: 8px;
-  padding-right: 4px;
   flex: 1;
   min-width: 0;
-  min-height: 0; /* Without this, a flex child with flex:1 refuses to shrink
-                    below its content size, so overflow-y:auto never kicks in
-                    and the column just grows past its parent's max-height. */
+  min-height: 0;
 }
 
-/* Subtle themed scrollbar for the vertical card scroll, replacing the
-   browser default so it matches the dark UI instead of standing out. */
+/* Subtle themed scrollbar for the horizontal "5 cards per page" scroll,
+   replacing the browser default so it matches the dark UI. */
 .kanban-column-content::-webkit-scrollbar {
-  width: 6px;
+  height: 6px;
 }
 
 .kanban-column-content::-webkit-scrollbar-track {
@@ -777,7 +777,7 @@
   cursor: grab;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   background: rgba(255, 255, 255, 0.04);
 }
 
