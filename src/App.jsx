@@ -14,6 +14,7 @@ import LoginView from './views/LoginView'
 import MyProjectsView from './views/MyProjectsView'
 import DesignQualityView from './views/DesignQualityView'
 import ProjectDetailView from './views/ProjectDetailView'
+import LogbookView from './views/LogbookView'
 import DesignerPerformanceApp from './designer-performance/App'
 import ErrorBoundary from './components/ErrorBoundary'
 import NotificationBubble from './components/NotificationBubble'
@@ -479,8 +480,14 @@ function App() {
   }, [mergedData, userProfile, projectNotes, currentUser, pendingUsersCount]);
 
   const renderView = () => {
-    // Standalone shareable project detail page
+    // Standalone Logbook / Bitácora editor page
     const urlParams = new URLSearchParams(window.location.search);
+    const logbookSoParam = urlParams.get('logbook');
+    if (logbookSoParam) {
+      return <LogbookView so={logbookSoParam} />;
+    }
+
+    // Standalone shareable project detail page
     const projectSoParam = urlParams.get('project');
     if (projectSoParam) {
       if (loading || authLoading) return <div className="loading-state">Loading project...</div>;

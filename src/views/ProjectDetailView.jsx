@@ -27,7 +27,11 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
   const params = new URLSearchParams(window.location.search);
   const so = params.get('project');
 
-  const project = data?.priorityAnalysis?.find(p => String(p.so) === String(so));
+  // Look in the active sheet first; fall back to the Firestore archive so
+  // completed projects that were later removed from the sheet still resolve
+  // (their data is preserved there — see completedProjectsArchive.js).
+  const project = data?.priorityAnalysis?.find(p => String(p.so) === String(so))
+    || data?.archivedProjects?.find(p => String(p.so) === String(so));
   const override = overrides[so];
   const status = override?.status || project?.status || 'N/A';
   const onHoldReason = override?.onHoldReason || null;

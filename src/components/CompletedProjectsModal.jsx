@@ -56,33 +56,29 @@ export default function CompletedProjectsModal({ projects, onClose, activeProjec
                       archivedDate = new Date(p.archivedAt.seconds * 1000).toLocaleDateString(language === 'es' ? 'es-AR' : 'en-US');
                     }
 
-                    const isOpenable = activeProjectSos && activeProjectSos.has(String(p.so));
+                    const isInPipeline = activeProjectSos && activeProjectSos.has(String(p.so));
 
                     return (
                       <tr
                         key={p.so}
-                        title={!isOpenable
+                        title={!isInPipeline
                           ? (language === 'es' ? 'Proyecto archivado: ya no está en Pipeline' : 'Archived project: no longer in Pipeline')
                           : undefined}
                         style={{
                           borderBottom: '1px solid rgba(255,255,255,0.05)',
-                          opacity: isOpenable ? 1 : 0.6,
+                          opacity: isInPipeline ? 1 : 0.75,
                           transition: 'background 0.15s ease',
                         }}
                       >
                         <td style={{ padding: '12px 8px', color: '#fff', fontWeight: '500' }}>
-                          {isOpenable ? (
-                            <a
-                              href={`${window.location.origin}${window.location.pathname}?project=${p.so}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{ color: '#09D1C7', textDecoration: 'none', cursor: 'pointer' }}
-                            >
-                              {p.so}
-                            </a>
-                          ) : (
-                            p.so
-                          )}
+                          <a
+                            href={`${window.location.origin}${window.location.pathname}?project=${p.so}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: '#09D1C7', textDecoration: 'none', cursor: 'pointer' }}
+                          >
+                            {p.so}
+                          </a>
                         </td>
                         <td style={{ padding: '12px 8px', color: '#E2E8F0' }}>{p.name}</td>
                         <td style={{ padding: '12px 8px', color: '#94A3B8' }}>

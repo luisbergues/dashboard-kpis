@@ -9,7 +9,7 @@ import {
   Briefcase, Calendar, Check, Clock,
   AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag, Users, User,
   ChevronDown, ChevronUp, ArrowUpDown, TrendingUp, CheckCircle2, Image as ImageIcon, Loader2, FileText, Paperclip,
-  LayoutGrid
+  LayoutGrid, NotebookPen
 } from 'lucide-react';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { Chart as ChartJS, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
@@ -21,6 +21,7 @@ import IPGeneratorModal from '../components/IPGeneratorModal';
 import CompletedProjectsModal from '../components/CompletedProjectsModal';
 import { cleanupESSData } from '../utils/essData';
 import { cleanupIPData } from '../utils/ipData';
+import { cleanupLogbookData } from '../utils/logbookData';
 import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
 import { useTheme } from '../utils/ThemeContext';
 import './MyProjectsView.css';
@@ -274,6 +275,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       const activeSOs = data.activeProjects.map(p => p.so);
       cleanupESSData(activeSOs);
       cleanupIPData(activeSOs);
+      cleanupLogbookData(activeSOs);
     }
   }, [data]);
 
@@ -1465,7 +1467,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                             <StickyNote size={14} />
                             <span>{t('myProjects.completarESS')}</span>
                           </button>
-                          <button 
+                          <button
                             onClick={() => { setActiveIPProject(project); setIsIPModalOpen(true); }}
                             className="btn-primary btn-sm btn-download-pdf"
                             style={{ background: '#80EE98', color: '#fff', fontWeight: 'bold' }}
@@ -1473,6 +1475,17 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                             <StickyNote size={14} />
                             <span>{t('myProjects.completarIP')}</span>
                           </button>
+                          <a
+                            href={`${window.location.origin}${window.location.pathname}?logbook=${project.so}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            className="btn-primary btn-sm btn-download-pdf"
+                            style={{ background: '#F5A623', color: '#fff', fontWeight: 'bold', textDecoration: 'none' }}
+                          >
+                            <NotebookPen size={14} />
+                            <span>{t('myProjects.logbook')}</span>
+                          </a>
                         </div>
                       </>
                     )}
