@@ -555,6 +555,122 @@
   gap: var(--spacing-md);
 }
 
+/* ─── Day events list (shown when a calendar cell is clicked) ─── */
+.day-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 55vh;
+  overflow-y: auto;
+  margin-bottom: var(--spacing-lg);
+}
+
+.day-events-empty {
+  text-align: center;
+  padding: 24px 0;
+  font-style: italic;
+}
+
+.day-event-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm, 8px);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--card-border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+  color: inherit;
+}
+
+.day-event-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.day-event-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-muted);
+}
+
+/* Solid dot colors per status (the .cal-status-* bg is too translucent for an
+   8px dot, so map each to its solid accent color here). */
+.day-event-dot.cal-status-hold { background: var(--color-yellow); }
+.day-event-dot.cal-status-check { background: var(--color-mint); }
+.day-event-dot.cal-status-review { background: var(--color-cyan); }
+.day-event-dot.cal-status-eng { background: var(--color-purple); }
+.day-event-dot.cal-status-nesting { background: #9CA3AF; }
+.day-event-dot.cal-status-default { background: var(--text-muted); }
+
+.day-event-so {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-cyan);
+  background: rgba(9, 209, 199, 0.1);
+  padding: 2px 8px;
+  border-radius: 100px;
+  flex-shrink: 0;
+}
+
+.day-event-name {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.day-event-status {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.day-event-note-icon {
+  color: var(--color-cyan);
+  flex-shrink: 0;
+}
+
+.day-event-note-text {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.day-event-author {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.day-events-footer {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--card-border);
+  padding-top: var(--spacing-md);
+}
+
+.day-events-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;

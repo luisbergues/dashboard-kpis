@@ -144,6 +144,11 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
   // subject purely from free-text history — see buildLLMContext's
   // `anchoredProject` param.
   const [lastMentionedSO, setLastMentionedSO] = useState(null);
+  // Same idea as lastMentionedSO, but for a designer contact the user was just
+  // shown (local lookup or picker selection). A contact reply is answered
+  // locally and never enters Gemini's history, so a follow-up like "¿y su
+  // teléfono?" needs this to anchor who "su" is — see buildAnchoredContactSection.
+  const [lastMentionedContact, setLastMentionedContact] = useState(null);
 
   const messagesEndRef = useRef(null);
 
@@ -187,11 +192,13 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
         };
       }
 
-      // Look for project matches
+      // Look for project matches. so/name are coerced via String() first —
+      // Firebase can hand back a numeric `so`, and `.toLowerCase()` on a number
+      // throws, which would crash processInput and leave the "..." bubble stuck.
       const query = cleanText.replace(/[^a-z0-9]/g, '');
       const matches = projects.filter(p => {
-        const cleanName = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const cleanSo = p.so.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanName = String(p.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanSo = String(p.so || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         return cleanName.includes(query) || cleanSo.includes(query);
       });
 
@@ -293,22 +300,23 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       let options = [];
       let optionIdCounter = 1;
 
-      // Check Designers
-      const matchedDesigners = [...new Set(projects.filter(p => p.designer && p.designer.toLowerCase().replace(/[^a-z0-9]/g, '').includes(searchWord)).map(p => p.designer))];
+      // Check Designers. String() guards against non-string field values
+      // (a numeric so/name from Firebase would crash .toLowerCase()).
+      const matchedDesigners = [...new Set(projects.filter(p => p.designer && String(p.designer).toLowerCase().replace(/[^a-z0-9]/g, '').includes(searchWord)).map(p => p.designer))];
       matchedDesigners.forEach(d => {
         options.push({ id: optionIdCounter++, type: 'designer', name: d, label: isES ? `Ver proyectos de ${d} (Diseñador)` : `View projects for ${d} (Designer)` });
       });
 
       // Check Engineers
-      const matchedEngineers = [...new Set(projects.filter(p => p.eng && p.eng.toLowerCase().replace(/[^a-z0-9]/g, '').includes(searchWord)).map(p => p.eng))];
+      const matchedEngineers = [...new Set(projects.filter(p => p.eng && String(p.eng).toLowerCase().replace(/[^a-z0-9]/g, '').includes(searchWord)).map(p => p.eng))];
       matchedEngineers.forEach(e => {
         options.push({ id: optionIdCounter++, type: 'engineer', name: e, label: isES ? `Ver proyectos de ${e} (Ingeniero)` : `View projects for ${e} (Engineer)` });
       });
 
       // Check Projects (by client name or SO)
       const matchedProjects = projects.filter(p => {
-        const cleanName = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const cleanSo = p.so.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanName = String(p.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanSo = String(p.so || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         return cleanName.includes(searchWord) || cleanSo.includes(searchWord);
       });
       matchedProjects.forEach(p => {
@@ -329,10 +337,17 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       // 1-option picker (this is the common case for "How is X?" queries).
       if (options.length === 1) {
         if (options[0].type === 'contact') {
+          // Anchor this contact for follow-ups ("¿y su teléfono?") and clear
+          // any project anchor so the two don't compete for the same "su".
+          setLastMentionedContact(options[0].data.name);
+          setLastMentionedSO(null);
           return { text: buildContactAnswer(options[0].data, isES) };
         }
         const { text: answerText, mentionedSO } = buildEntityAnswer(options[0], projects, isES);
-        if (mentionedSO) setLastMentionedSO(mentionedSO);
+        if (mentionedSO) {
+          setLastMentionedSO(mentionedSO);
+          setLastMentionedContact(null);
+        }
         return { text: answerText };
       }
 
@@ -350,22 +365,55 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     // is unavailable (no API key configured, network error), fall back to
     // the static help message instead of failing silently.
     try {
-      const context = buildLLMContext({ query: text, projects, materialsMatrix, designerContacts, isES, anchoredSO: lastMentionedSO });
-      const history = messages
-        .filter(m => m.id !== 'welcome' && m.id !== 'loading' && m.text !== '...')
-        .slice(-6)
-        .map(m => ({ role: m.sender === 'user' ? 'user' : 'model', text: m.text }));
-      const llmReply = await askLLM({ message: text, language, context, history });
+      const context = buildLLMContext({ query: text, projects, materialsMatrix, designerContacts, isES, anchoredSO: lastMentionedSO, anchoredContactName: lastMentionedContact });
+      // Gemini's contents array requires strict user/model alternation
+      // starting with 'user' — a locally-answered turn (entity picker, "add
+      // note" flow, ON HOLD chip, etc.) never went through Gemini and its bot
+      // reply isn't a valid 'model' turn to hand back to it. Only replay
+      // pairs where the bot reply is explicitly flagged viaLLM, and always
+      // pair each with the user message that immediately preceded it so the
+      // sequence alternates correctly.
+      const history = [];
+      const recent = messages.filter(m => m.id !== 'welcome' && m.id !== 'loading' && m.text !== '...');
+      for (let i = 0; i < recent.length; i++) {
+        const m = recent[i];
+        if (m.sender === 'bot' && m.viaLLM) {
+          const prevUser = recent[i - 1];
+          if (prevUser && prevUser.sender === 'user') {
+            history.push({ role: 'user', text: prevUser.text });
+            history.push({ role: 'model', text: m.text });
+          }
+        }
+      }
+      const trimmedHistory = history.slice(-6);
+      const llmReply = await askLLM({ message: text, language, context, history: trimmedHistory });
       if (llmReply) {
-        return { text: llmReply };
+        return { text: llmReply, viaLLM: true };
       }
     } catch (err) {
       console.error('LLM fallback failed:', err);
+      // Surface real infrastructure failures distinctly from a genuine "I
+      // didn't understand" miss — otherwise both look identical to the user
+      // and this class of outage is indistinguishable from normal NLU misses.
       if (err.status === 401) {
         return {
           text: isES
             ? '⚠️ Tu sesión expiró. Recargá la página para volver a iniciar sesión.'
             : '⚠️ Your session expired. Please reload the page to sign in again.'
+        };
+      }
+      if (err.status === 502 || err.status === 500) {
+        return {
+          text: isES
+            ? '⚠️ El asistente no puede conectarse en este momento (error del servidor). Probá de nuevo en unos minutos, o usá los botones rápidos de abajo.'
+            : '⚠️ The assistant can\'t connect right now (server error). Try again in a few minutes, or use the quick-action buttons below.'
+        };
+      }
+      if (err.status === 429) {
+        return {
+          text: isES
+            ? '⚠️ Demasiadas consultas por ahora. Esperá un momento y volvé a intentar.'
+            : '⚠️ Too many requests right now. Wait a moment and try again.'
         };
       }
     }
@@ -391,8 +439,20 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     const loadingId = 'loading';
     setMessages(prev => [...prev, { id: loadingId, sender: 'bot', text: '...', timestamp: new Date() }]);
 
-    // Process
-    const reply = await processInput(text);
+    // Process. Any uncaught error must still replace the "..." bubble —
+    // otherwise it stays stuck forever and the user gets no feedback.
+    let reply;
+    try {
+      reply = await processInput(text);
+    } catch (err) {
+      console.error('processInput crashed:', err);
+      const isES = language === 'es';
+      reply = {
+        text: isES
+          ? '⚠️ Ocurrió un error inesperado al procesar tu mensaje. Probá de nuevo o usá los botones rápidos.'
+          : '⚠️ An unexpected error occurred while processing your message. Try again or use the quick-action buttons.'
+      };
+    }
 
     // Replace loading bubble with actual reply
     setMessages(prev => prev.map(m => m.id === loadingId ? {
@@ -400,6 +460,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       sender: 'bot',
       text: reply.text,
       options: reply.options,
+      viaLLM: !!reply.viaLLM,
       timestamp: new Date()
     } : m));
   };
@@ -407,6 +468,8 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
   const handleOptionClick = (opt) => {
     const isES = language === 'es';
     if (opt.type === 'contact') {
+      setLastMentionedContact(opt.data.name);
+      setLastMentionedSO(null);
       setMessages(prev => [...prev,
         { id: Date.now().toString() + '_user', sender: 'user', text: opt.label, timestamp: new Date() },
         { id: Date.now().toString() + '_bot', sender: 'bot', text: buildContactAnswer(opt.data, isES), timestamp: new Date() }
@@ -414,7 +477,10 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       return;
     }
     const { text: responseText, mentionedSO } = buildEntityAnswer(opt, projects, isES);
-    if (mentionedSO) setLastMentionedSO(mentionedSO);
+    if (mentionedSO) {
+      setLastMentionedSO(mentionedSO);
+      setLastMentionedContact(null);
+    }
 
     setMessages(prev => [...prev,
       { id: Date.now().toString() + '_user', sender: 'user', text: opt.label, timestamp: new Date() },

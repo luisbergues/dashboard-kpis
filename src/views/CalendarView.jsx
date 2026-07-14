@@ -33,6 +33,9 @@ export default function CalendarView({ data, currentUser, userProfile }) {
 
   // Modal & Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // 'list' = show the day's events (installs + notes) with a + to add;
+  // 'form' = the add/edit-note form.
+  const [dayModalView, setDayModalView] = useState('list');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedNote, setSelectedNote] = useState(null);
   const [noteText, setNoteText] = useState('');
@@ -167,21 +170,34 @@ export default function CalendarView({ data, currentUser, userProfile }) {
     setSelectedDate(format(new Date(), 'yyyy-MM-dd'));
     setNoteText('');
     setLinkedSo('');
+    setDayModalView('form');
     setIsModalOpen(true);
   };
 
+  // Clicking a calendar cell opens the day view: a list of that date's events
+  // (installs + notes) with a + button to add a new note.
   const handleCellClick = (date) => {
     setSelectedNote(null);
     setSelectedDate(format(date, 'yyyy-MM-dd'));
     setNoteText('');
     setLinkedSo('');
+    setDayModalView('list');
     setIsModalOpen(true);
+  };
+
+  // The + inside the day view: switch to the add-note form, keeping the date.
+  const handleAddNoteForDay = () => {
+    setSelectedNote(null);
+    setNoteText('');
+    setLinkedSo('');
+    setDayModalView('form');
   };
 
   const handleEditNote = (note) => {
     setSelectedNote(note);
     setSelectedDate(note.date);
     setNoteText(note.text);
+    setDayModalView('form');
     setLinkedSo(note.so || '');
     setIsModalOpen(true);
   };
@@ -207,7 +223,8 @@ export default function CalendarView({ data, currentUser, userProfile }) {
           { ...noteData, authorName: noteData.authorName },
           !!selectedNote   // true = edición, false = nueva nota
         );
-        setIsModalOpen(false);
+        // Back to the day's event list so the change is visible.
+        setDayModalView('list');
       } catch (err) {
         console.error('Failed to save note to Firebase:', err);
       }
@@ -220,15 +237,16 @@ export default function CalendarView({ data, currentUser, userProfile }) {
         updatedNotes = [...notes, { id: noteId, ...noteData }];
       }
       saveNotesToLocalStorage(updatedNotes);
-      setIsModalOpen(false);
+      setDayModalView('list');
     }
+    setSelectedNote(null);
   };
 
   const handleDeleteNote = (noteId) => {
     if (db && currentUser) {
       try {
         remove(ref(db, `calendar_notes/${noteId}`));
-        setIsModalOpen(false);
+        setDayModalView('list');
       } catch (err) {
         console.error('Failed to delete note from Firebase:', err);
       }
@@ -236,8 +254,9 @@ export default function CalendarView({ data, currentUser, userProfile }) {
       // Local Storage Fallback
       const updatedNotes = notes.filter(n => n.id !== noteId);
       saveNotesToLocalStorage(updatedNotes);
-      setIsModalOpen(false);
+      setDayModalView('list');
     }
+    setSelectedNote(null);
   };
 
   const renderHeader = () => (
@@ -463,9 +482,80 @@ export default function CalendarView({ data, currentUser, userProfile }) {
         </div>
       </div>
 
-      {/* Modern Dialog Form Modal */}
+      {/* Modern Dialog Modal: 'list' = the day's events, 'form' = add/edit note */}
       {isModalOpen && (() => {
         const readOnlyNote = selectedNote && !canManageNote(selectedNote);
+
+        // Events for the selected date (installs are read-only, notes editable).
+        const dayInstalls = projectsWithDates.filter(p => format(p.dateObj, 'yyyy-MM-dd') === selectedDate);
+        const dayNotesForDate = notes.filter(n => n.date === selectedDate);
+        const prettyDate = selectedDate
+          ? format(parse(selectedDate, 'yyyy-MM-dd', new Date()), 'EEEE, MMMM d, yyyy', { locale: language === 'es' ? es : enUS })
+          : '';
+
+        if (dayModalView === 'list') {
+          return (
+            <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h3 className="modal-title" style={{ textTransform: 'capitalize' }}>{prettyDate}</h3>
+                  <button className="modal-close-btn" onClick={() => setIsModalOpen(false)}>
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="day-events-list">
+                  {dayInstalls.length === 0 && dayNotesForDate.length === 0 && (
+                    <p className="text-muted day-events-empty">
+                      {language === 'es' ? 'No hay eventos para este día.' : 'No events for this day.'}
+                    </p>
+                  )}
+
+                  {dayInstalls.map((p, idx) => (
+                    <a
+                      key={`inst-${idx}`}
+                      href={`${window.location.origin}${window.location.pathname}?project=${p.so}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="day-event-item day-event-install"
+                      title={language === 'es' ? 'Abrir proyecto' : 'Open project'}
+                    >
+                      <span className={`day-event-dot ${getStatusColor(p.status)}`} />
+                      <span className="day-event-so">#{p.so}</span>
+                      <span className="day-event-name">{p.name.split(':')[0].trim()}</span>
+                      <span className="day-event-status">{p.status}</span>
+                    </a>
+                  ))}
+
+                  {dayNotesForDate.map((n, idx) => {
+                    const linkedProj = priorityAnalysis.find(p => p.so === n.so);
+                    return (
+                      <div
+                        key={`note-${idx}`}
+                        className="day-event-item day-event-note"
+                        onClick={() => handleEditNote(n)}
+                        title={canManageNote(n) ? (language === 'es' ? 'Editar nota' : 'Edit note') : (language === 'es' ? 'Ver nota' : 'View note')}
+                      >
+                        <FileText size={14} className="day-event-note-icon" />
+                        <span className="day-event-note-text">{n.text}</span>
+                        {n.so && <span className="day-event-so">#{n.so}</span>}
+                        {n.authorName && <span className="day-event-author">{n.authorName}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="day-events-footer">
+                  <button className="btn-primary day-events-add-btn" onClick={handleAddNoteForDay}>
+                    <Plus size={18} />
+                    <span>{language === 'es' ? 'Agregar nota' : 'Add note'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
         return (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -543,9 +633,9 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                   <button
                     type="button"
                     className="btn-secondary"
-                    onClick={() => setIsModalOpen(false)}
+                    onClick={() => { setSelectedNote(null); setDayModalView('list'); }}
                   >
-                    {readOnlyNote ? t('common.close') : t('common.cancel')}
+                    {language === 'es' ? 'Volver' : 'Back'}
                   </button>
                   {!readOnlyNote && (
                     <button type="submit" className="btn-primary">

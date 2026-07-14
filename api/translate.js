@@ -2,6 +2,7 @@
 // spreadsheet-sourced Executive/Weekly Summary) to Spanish via Gemini.
 // Keeps GEMINI_API_KEY server-side only (never exposed to the client bundle).
 import { requireAuth } from './lib/verifyAuth.js';
+import { getGeminiApiKey } from './lib/getGeminiApiKey.js';
 
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
@@ -14,7 +15,7 @@ export default async function handler(req, res) {
 
   if (!(await requireAuth(req, res))) return;
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = getGeminiApiKey();
   if (!apiKey) {
     res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server' });
     return;

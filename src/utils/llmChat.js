@@ -86,6 +86,20 @@ function buildContactsSection(designerContacts, words) {
   return `${matched.name} — Tel/Phone: ${matched.phone || 'N/A'} | Email: ${matched.email || 'N/A'} | Ciudad/City: ${matched.city || 'N/A'}`;
 }
 
+// Mirror of buildAnchoredProjectSection but for a designer contact. A local
+// contact lookup ("natalie contact") answers without going through Gemini, so
+// its reply isn't in the LLM history; a follow-up like "¿y su teléfono?" would
+// otherwise reach Gemini with no idea who "su" refers to. Anchoring the last
+// shown contact as its own labeled section keeps that follow-up grounded (see
+// lastMentionedContact in ProjectChatbot.jsx).
+function buildAnchoredContactSection(anchoredContact, isES) {
+  if (!anchoredContact) return '';
+  const c = anchoredContact;
+  return isES
+    ? `(Este es el contacto de diseñador que el usuario está consultando en este momento — asumí que las preguntas de seguimiento se refieren a él/ella salvo que mencionen otro nombre)\n${c.name} — Tel: ${c.phone || 'N/A'} | Email: ${c.email || 'N/A'} | Ciudad: ${c.city || 'N/A'}`
+    : `(This is the designer contact the user is currently asking about — assume follow-up questions refer to them unless another name is mentioned)\n${c.name} — Phone: ${c.phone || 'N/A'} | Email: ${c.email || 'N/A'} | City: ${c.city || 'N/A'}`;
+}
+
 // Builds the full context block handed to Gemini: a compact, labeled
 // concatenation of every data source relevant to the query (projects,
 // engineering manual, materials matrix, designer contacts). Each section is
@@ -98,15 +112,19 @@ function buildContactsSection(designerContacts, words) {
 // of whether the current query mentions it by name, so short follow-ups
 // stay grounded in the right project instead of falling back to an
 // unrelated slice of projects.
-export function buildLLMContext({ query, projects = [], materialsMatrix = [], designerContacts = [], isES = true, anchoredSO = null }) {
+export function buildLLMContext({ query, projects = [], materialsMatrix = [], designerContacts = [], isES = true, anchoredSO = null, anchoredContactName = null }) {
   const cleanQuery = (query || '').toLowerCase();
   const words = cleanQuery.split(/\s+/).filter(w => w.length >= 3);
   const anchoredProject = anchoredSO
     ? projects.find(p => String(p.so) === String(anchoredSO))
     : null;
+  const anchoredContact = anchoredContactName
+    ? (designerContacts || []).find(c => c.name === anchoredContactName)
+    : null;
 
   const sections = [
     { label: isES ? 'Proyecto en Foco' : 'Project in Focus', text: buildAnchoredProjectSection(anchoredProject, isES) },
+    { label: isES ? 'Contacto en Foco' : 'Contact in Focus', text: buildAnchoredContactSection(anchoredContact, isES) },
     { label: isES ? 'Proyectos' : 'Projects', text: buildProjectsSection(projects, words) },
     { label: isES ? 'Manual de Ingeniería' : 'Engineering Manual', text: buildManualSection(query, isES) },
     { label: isES ? 'Matriz de Materiales' : 'Materials Matrix', text: buildMaterialsSection(materialsMatrix, cleanQuery, words) },
