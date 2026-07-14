@@ -4,7 +4,7 @@ import {
   calculateConversionRate,
   calculateBudgetDeviation,
   calculateAverageValidationTime,
-  calculateCADErrors,
+  calculateFileRequestsPercentage,
   predictBottlenecks,
   getDelayedProjectsCount,
   getProjectLocation
@@ -80,28 +80,46 @@ describe('KPI Calculator Service Tests', () => {
     });
   });
 
-  describe('calculateCADErrors', () => {
-    it('should count CAD-related errors grouped by designer', () => {
+  describe('calculateFileRequestsPercentage', () => {
+    it('should count file-request (CAD-related) notes grouped by designer', () => {
       const notes = [
-        { designer: 'Russell Reiner\nrreiner@jlclosets.com', notes: 'WAITING ACCESORY SHEETS - MIRROR' }, // not CAD
-        { designer: 'Russell Reiner\nrreiner@jlclosets.com', notes: 'THE KCD FILE IS INCONSISTENT WITH THE PDF PLANS' }, // CAD error
-        { designer: 'Malanie Dalfrey\nmdalfrey@jlclosets.com', notes: 'WAITING MEASUREMENTS FROM SITE' }, // CAD error (measure)
-        { designer: 'Melissa Barker', notes: 'WAITING FILE' }, // CAD error (file)
-        { designer: 'Russell Reiner', notes: 'WAITING FILE - LED LIGHT - DOVETAIL - INSERT DRAWER' }, // CAD error (file)
+        { designer: 'Russell Reiner\nrreiner@jlclosets.com', notes: 'WAITING ACCESORY SHEETS - MIRROR' }, // not a file request
+        { designer: 'Russell Reiner\nrreiner@jlclosets.com', notes: 'THE KCD FILE IS INCONSISTENT WITH THE PDF PLANS' }, // file request (kcd/file/inconsistent)
+        { designer: 'Malanie Dalfrey\nmdalfrey@jlclosets.com', notes: 'WAITING MEASUREMENTS FROM SITE' }, // file request (measure)
+        { designer: 'Melissa Barker', notes: 'WAITING FILE' }, // file request (file)
+        { designer: 'Russell Reiner', notes: 'WAITING FILE - LED LIGHT - DOVETAIL - INSERT DRAWER' }, // file request (file)
       ];
 
-      const result = calculateCADErrors(notes);
+      const result = calculateFileRequestsPercentage(notes);
 
-      expect(result.totalCADErrors).toBe(4);
-      expect(result.errorCounts['Russell Reiner']).toBe(2);
-      expect(result.errorCounts['Malanie Dalfrey']).toBe(1);
-      expect(result.errorCounts['Melissa Barker']).toBe(1);
+      expect(result.totalRequests).toBe(4);
+      expect(result.designerStats['Russell Reiner'].requests).toBe(2);
+      expect(result.designerStats['Malanie Dalfrey'].requests).toBe(1);
+      expect(result.designerStats['Melissa Barker'].requests).toBe(1);
+    });
+
+    it('should compute percentage against a designer\'s active project count', () => {
+      const notes = [
+        { designer: 'Russell Reiner', notes: 'WAITING FILE' }, // 1 file request
+      ];
+      const projects = [
+        { eng: 'Russell Reiner' },
+        { eng: 'Russell Reiner' },
+        { eng: 'Russell Reiner' },
+        { eng: 'Russell Reiner' }, // 4 active projects -> 1/4 = 25%
+      ];
+
+      const result = calculateFileRequestsPercentage(notes, projects);
+
+      expect(result.designerStats['Russell Reiner'].requests).toBe(1);
+      expect(result.designerStats['Russell Reiner'].total).toBe(4);
+      expect(result.designerStats['Russell Reiner'].percentage).toBe(25.0);
     });
 
     it('should return empty result if no notes are provided', () => {
-      const result = calculateCADErrors([]);
-      expect(result.totalCADErrors).toBe(0);
-      expect(Object.keys(result.errorCounts).length).toBe(0);
+      const result = calculateFileRequestsPercentage([]);
+      expect(result.totalRequests).toBe(0);
+      expect(Object.keys(result.designerStats).length).toBe(0);
     });
   });
 

@@ -161,9 +161,8 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
   useEffect(() => {
     try {
       localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages));
-      console.log('[chatbot debug] saved', messages.length, 'messages to localStorage');
     } catch (err) {
-      console.error('[chatbot debug] localStorage.setItem failed:', err);
+      console.error('Chatbot: failed to persist history to localStorage:', err);
     }
   }, [messages]);
 
@@ -240,8 +239,9 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
         };
       }
 
-      // Add the note
-      setIsLoading(true);
+      // Add the note. Loading state is managed by the enclosing
+      // handleSendMessage (which disables input for the whole cycle), so it's
+      // not toggled again here.
       try {
         await addProjectNote(targetSO, text, getUserName());
         setChatState('IDLE');
@@ -249,7 +249,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
         setTargetSO(null);
         setTargetProjectName('');
         return {
-          text: isES 
+          text: isES
             ? `✅ ¡Nota agregada con éxito al proyecto **${projName}**!\n\nYa puedes verla en la bitácora de notas de la tarjeta.`
             : `✅ Note successfully added to **${projName}**!\n\nYou can now see it in the notes section of the project card.`
         };
@@ -258,8 +258,6 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
         return {
           text: isES ? 'Hubo un error al guardar la nota. Inténtalo de nuevo.' : 'Error saving the note. Please try again.'
         };
-      } finally {
-        setIsLoading(false);
       }
     }
 
@@ -295,29 +293,42 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     const isPlausibleQuery = wordCount > 0 && wordCount <= 12;
 
     const entityQuery = extractEntityQuery(text);
+    // Two views of the query after trigger-stripping:
+    // - searchWord: everything glued together (no spaces), used for SO-number
+    //   matching where a contiguous digit run is what we want.
+    // - searchTokens: individual meaningful words (3+ chars). Name matching is
+    //   done token-by-token so an extra word like "contact"/"telefono" in
+    //   "natalie contact" doesn't break the match — the blob-only approach
+    //   made "nataliecontact" fail to match "natalieball". A name matches if
+    //   any of its own tokens matches any query token (either contains the
+    //   other), mirroring buildContactsSection in llmChat.js.
     const searchWord = entityQuery.replace(/\s+/g, '');
-    if (isPlausibleQuery && searchWord.length >= 3) {
+    const searchTokens = entityQuery.split(/\s+/).filter(w => w.length >= 3);
+    const nameMatches = (name) => {
+      if (!name) return false;
+      const nameTokens = String(name).toLowerCase().split(/\s+/).map(t => t.replace(/[^a-z0-9]/g, '')).filter(Boolean);
+      return nameTokens.some(nt => searchTokens.some(st => nt.includes(st) || st.includes(nt)));
+    };
+    if (isPlausibleQuery && (searchWord.length >= 3 || searchTokens.length > 0)) {
       let options = [];
       let optionIdCounter = 1;
 
-      // Check Designers. String() guards against non-string field values
-      // (a numeric so/name from Firebase would crash .toLowerCase()).
-      const matchedDesigners = [...new Set(projects.filter(p => p.designer && String(p.designer).toLowerCase().replace(/[^a-z0-9]/g, '').includes(searchWord)).map(p => p.designer))];
+      // Check Designers (token-by-token on the designer's name).
+      const matchedDesigners = [...new Set(projects.filter(p => nameMatches(p.designer)).map(p => p.designer))];
       matchedDesigners.forEach(d => {
         options.push({ id: optionIdCounter++, type: 'designer', name: d, label: isES ? `Ver proyectos de ${d} (Diseñador)` : `View projects for ${d} (Designer)` });
       });
 
       // Check Engineers
-      const matchedEngineers = [...new Set(projects.filter(p => p.eng && String(p.eng).toLowerCase().replace(/[^a-z0-9]/g, '').includes(searchWord)).map(p => p.eng))];
+      const matchedEngineers = [...new Set(projects.filter(p => nameMatches(p.eng)).map(p => p.eng))];
       matchedEngineers.forEach(e => {
         options.push({ id: optionIdCounter++, type: 'engineer', name: e, label: isES ? `Ver proyectos de ${e} (Ingeniero)` : `View projects for ${e} (Engineer)` });
       });
 
-      // Check Projects (by client name or SO)
+      // Check Projects — by client name (token-by-token) or SO (contiguous).
       const matchedProjects = projects.filter(p => {
-        const cleanName = String(p.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         const cleanSo = String(p.so || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        return cleanName.includes(searchWord) || cleanSo.includes(searchWord);
+        return nameMatches(p.name) || (searchWord.length >= 3 && cleanSo.includes(searchWord));
       });
       matchedProjects.forEach(p => {
         options.push({ id: optionIdCounter++, type: 'project', data: p, label: isES ? `Ver proyecto ${p.name} (SO #${p.so})` : `View project ${p.name} (SO #${p.so})` });
@@ -327,7 +338,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       // "natalie contact" locally instead of only via the Gemini proxy.
       const matchedContacts = designerContacts.filter(d => {
         const names = [d.name, ...(d.aliases || [])];
-        return names.some(n => n && n.toLowerCase().replace(/[^a-z0-9]/g, '').includes(searchWord));
+        return names.some(n => nameMatches(n));
       });
       matchedContacts.forEach(c => {
         options.push({ id: optionIdCounter++, type: 'contact', data: c, label: isES ? `Ver contacto de ${c.name} (Diseñador)` : `View contact for ${c.name} (Designer)` });
@@ -424,6 +435,12 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
   const handleSendMessage = async (textToSend) => {
     const text = textToSend || inputValue;
     if (!text.trim()) return;
+    // Guard against a second send while one is still in flight (a slow Gemini
+    // call, a note write) — otherwise messages can interleave and the "add
+    // note" state machine can be driven mid-step. The input/send button are
+    // disabled on isLoading too, but this also covers Enter-key and chip taps.
+    if (isLoading) return;
+    setIsLoading(true);
 
     // Add user message
     const userMsg = {
@@ -452,6 +469,8 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
           ? '⚠️ Ocurrió un error inesperado al procesar tu mensaje. Probá de nuevo o usá los botones rápidos.'
           : '⚠️ An unexpected error occurred while processing your message. Try again or use the quick-action buttons.'
       };
+    } finally {
+      setIsLoading(false);
     }
 
     // Replace loading bubble with actual reply
@@ -593,8 +612,9 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSendMessage();
               }}
+              disabled={isLoading}
             />
-            <button className="chatbot-send-btn" onClick={() => handleSendMessage()}>
+            <button className="chatbot-send-btn" onClick={() => handleSendMessage()} disabled={isLoading}>
               <Send size={16} />
             </button>
           </div>

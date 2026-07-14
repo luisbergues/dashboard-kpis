@@ -4,7 +4,10 @@
 import { requireAuth } from './lib/verifyAuth.js';
 import { getGeminiApiKey } from './lib/getGeminiApiKey.js';
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+// gemini-flash-latest always points at the current Flash model (currently
+// gemini-3.5-flash). The old pinned gemini-2.0-flash is retired and returns
+// 429 limit:0 on this project, so use the rolling alias instead.
+const GEMINI_MODEL = 'gemini-flash-latest';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 export default async function handler(req, res) {
@@ -33,7 +36,10 @@ export default async function handler(req, res) {
   const body = {
     system_instruction: { parts: [{ text: systemInstruction }] },
     contents: [{ role: 'user', parts: [{ text: text.slice(0, 4000) }] }],
-    generationConfig: { maxOutputTokens: 800, temperature: 0.2 },
+    // thinkingBudget: 0 disables the model's internal reasoning pass —
+    // translation is a direct transform that doesn't need it, and it avoids
+    // reasoning tokens eating into maxOutputTokens (see api/chat.js).
+    generationConfig: { maxOutputTokens: 800, temperature: 0.2, thinkingConfig: { thinkingBudget: 0 } },
   };
 
   try {

@@ -7,6 +7,16 @@ export const STAGES = [
   { id: 'install', label: 'Install' }
 ];
 
+// statusHistory.statusDate is raw sheet text — it can be empty, "N/A", or an
+// otherwise unparseable value. new Date(garbage).toISOString() throws
+// RangeError: Invalid time value, which crashed every view that renders a
+// project's stage progress (Pipeline, My Projects, Project Detail,
+// Dashboard). Returns null instead of throwing so callers can skip the entry.
+function toISOStringOrNull(dateInput) {
+  const d = new Date(dateInput);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 export function calculateAutomaticStages(project) {
   const progress = Array(STAGES.length).fill(false);
   const statusHistory = project.statusHistory || [];
@@ -28,7 +38,8 @@ export function calculateAutomaticStages(project) {
   statusHistory.forEach(h => {
     const s = (h.status || '').toUpperCase().trim();
     if (s && !statusDates[s] && h.statusDate) {
-      statusDates[s] = new Date(h.statusDate).toISOString();
+      const iso = toISOStringOrNull(h.statusDate);
+      if (iso) statusDates[s] = iso;
     }
   });
   

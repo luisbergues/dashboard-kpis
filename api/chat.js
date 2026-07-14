@@ -3,7 +3,10 @@
 import { requireAuth } from './lib/verifyAuth.js';
 import { getGeminiApiKey } from './lib/getGeminiApiKey.js';
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+// gemini-flash-latest always points at the current Flash model (currently
+// gemini-3.5-flash). The old pinned gemini-2.0-flash is retired and returns
+// 429 limit:0 on this project, so use the rolling alias instead.
+const GEMINI_MODEL = 'gemini-flash-latest';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 export default async function handler(req, res) {
@@ -45,7 +48,11 @@ export default async function handler(req, res) {
       ...validHistory.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
       { role: 'user', parts: [{ text: message }] },
     ],
-    generationConfig: { maxOutputTokens: 500, temperature: 0.4 },
+    // thinkingBudget: 0 disables the model's internal reasoning pass. These
+    // are grounded lookup/summarize answers that don't need it, and leaving it
+    // on made gemini-3.5-flash burn 250+ tokens of "thinking" before replying —
+    // which could exhaust maxOutputTokens and return an empty answer.
+    generationConfig: { maxOutputTokens: 500, temperature: 0.4, thinkingConfig: { thinkingBudget: 0 } },
   };
 
   try {
