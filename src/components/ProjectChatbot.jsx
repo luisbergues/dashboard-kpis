@@ -2,30 +2,18 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Send, X, Bot, User, StickyNote, HelpCircle } from 'lucide-react';
 import { addProjectNote } from '../utils/notesHelper';
 import { useLanguage } from '../utils/LanguageContext';
-import { normalizeText } from '../utils/engineeringManual';
-import { askLLM, buildLLMContext } from '../utils/llmChat';
+import { askLLM, buildLLMContext, buildManualAnswer } from '../utils/llmChat';
 import { useDesignerContacts } from '../utils/useDesignerContacts';
+import {
+  extractEntityQuery,
+  buildNameMatcher,
+  findProjectMatchesForNote,
+  isOnHoldQuery,
+  isInstallQuery,
+  findOnHoldProjects,
+  findUpcomingInstalls,
+} from '../utils/chatbotLocalMatch';
 import './ProjectChatbot.css';
-
-// Trigger phrases that precede an entity name in a status/lookup question.
-// Stripped out before entity search so "How is Eindar Khant?" searches for
-// "eindar khant" instead of the whole sentence glued together.
-const ENTITY_QUERY_TRIGGERS = [
-  'how is', 'hows', 'how are', 'status of', 'what is the status of',
-  'projects of', 'project of', 'projects for', 'project for',
-  'como esta el proyecto', 'como esta', 'como van', 'estado de',
-  'estado del proyecto', 'proyectos de', 'proyecto de', 'que tal',
-];
-
-// Extracts the entity name a user is asking about by stripping known
-// trigger phrases and punctuation, leaving just the name/SO to search for.
-function extractEntityQuery(rawText) {
-  let t = normalizeText(rawText);
-  ENTITY_QUERY_TRIGGERS.forEach(trigger => {
-    t = t.replace(normalizeText(trigger), ' ');
-  });
-  return t.replace(/\s+/g, ' ').trim();
-}
 
 // Renders the tiny markdown subset the bot's own templates use
 // (**bold**, *italic*/_italic_) as React elements — no dangerouslySetInnerHTML,
@@ -128,6 +116,42 @@ function buildContactAnswer(contact, isES) {
     : `📇 **Designer Contact:**\n**${contact.name}**\n\n• **Phone:** ${contact.phone || 'N/A'}\n• **Email:** ${contact.email || 'N/A'}\n• **City:** ${contact.city || 'N/A'}`;
 }
 
+// Builds the reply for the "ON HOLD" chip / query — a local list of every
+// project currently on hold, so it no longer falls through to Gemini.
+function buildOnHoldAnswer(onHoldProjects, isES) {
+  if (onHoldProjects.length === 0) {
+    return isES
+      ? '✅ No hay proyectos ON HOLD en este momento.'
+      : '✅ There are no projects ON HOLD right now.';
+  }
+  const lines = onHoldProjects
+    .map(p => `• **${p.name}** (SO #${p.so})${p.eng ? ` — ${p.eng}` : ''}`)
+    .join('\n');
+  return isES
+    ? `⚠️ **Proyectos ON HOLD (${onHoldProjects.length}):**\n\n${lines}`
+    : `⚠️ **Projects ON HOLD (${onHoldProjects.length}):**\n\n${lines}`;
+}
+
+// Builds the reply for the "Installations" chip / query — a local list of
+// upcoming installs (soonest first), capped so the bubble stays readable.
+function buildInstallAnswer(installs, isES) {
+  if (installs.length === 0) {
+    return isES
+      ? '📅 No encontré instalaciones próximas programadas.'
+      : '📅 I could not find any upcoming installations scheduled.';
+  }
+  const shown = installs.slice(0, 10);
+  const lines = shown
+    .map(p => `• **${p.install}** — ${p.name} (SO #${p.so})${p.eng ? ` — ${p.eng}` : ''}`)
+    .join('\n');
+  const more = installs.length > shown.length
+    ? (isES ? `\n\n…y ${installs.length - shown.length} más.` : `\n\n…and ${installs.length - shown.length} more.`)
+    : '';
+  return isES
+    ? `📅 **Próximas Instalaciones (${installs.length}):**\n\n${lines}${more}`
+    : `📅 **Upcoming Installations (${installs.length}):**\n\n${lines}${more}`;
+}
+
 export default function ProjectChatbot({ projects = [], materialsMatrix = [], currentUser, userProfile }) {
   const { language } = useLanguage();
   const { contacts: designerContacts } = useDesignerContacts();
@@ -191,15 +215,9 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
         };
       }
 
-      // Look for project matches. so/name are coerced via String() first —
-      // Firebase can hand back a numeric `so`, and `.toLowerCase()` on a number
-      // throws, which would crash processInput and leave the "..." bubble stuck.
-      const query = cleanText.replace(/[^a-z0-9]/g, '');
-      const matches = projects.filter(p => {
-        const cleanName = String(p.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const cleanSo = String(p.so || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        return cleanName.includes(query) || cleanSo.includes(query);
-      });
+      // Look for project matches (see findProjectMatchesForNote — shared with
+      // its test suite — for the so/name String() coercion rationale).
+      const matches = findProjectMatchesForNote(text, projects);
 
       if (matches.length === 0) {
         return {
@@ -296,19 +314,14 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     // Two views of the query after trigger-stripping:
     // - searchWord: everything glued together (no spaces), used for SO-number
     //   matching where a contiguous digit run is what we want.
-    // - searchTokens: individual meaningful words (3+ chars). Name matching is
-    //   done token-by-token so an extra word like "contact"/"telefono" in
-    //   "natalie contact" doesn't break the match — the blob-only approach
-    //   made "nataliecontact" fail to match "natalieball". A name matches if
-    //   any of its own tokens matches any query token (either contains the
-    //   other), mirroring buildContactsSection in llmChat.js.
+    // - searchTokens/nameMatches (from chatbotLocalMatch, shared with its test
+    //   suite): individual meaningful words (3+ chars, intent-stopwords like
+    //   "contact"/"telefono" filtered out). Name matching is done
+    //   token-by-token so an extra word like "contact" in "natalie contact"
+    //   doesn't break the match — the blob-only approach made
+    //   "nataliecontact" fail to match "natalieball".
     const searchWord = entityQuery.replace(/\s+/g, '');
-    const searchTokens = entityQuery.split(/\s+/).filter(w => w.length >= 3);
-    const nameMatches = (name) => {
-      if (!name) return false;
-      const nameTokens = String(name).toLowerCase().split(/\s+/).map(t => t.replace(/[^a-z0-9]/g, '')).filter(Boolean);
-      return nameTokens.some(nt => searchTokens.some(st => nt.includes(st) || st.includes(nt)));
-    };
+    const { searchTokens, nameMatches } = buildNameMatcher(entityQuery);
     if (isPlausibleQuery && (searchWord.length >= 3 || searchTokens.length > 0)) {
       let options = [];
       let optionIdCounter = 1;
@@ -369,6 +382,28 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
         };
       }
     }
+
+    // Aggregate-intent queries (ON HOLD list, upcoming installs) — these back
+    // the corresponding quick-action chips. Checked AFTER the entity search so
+    // a named lookup ("proyecto Hale") still wins, but BEFORE Gemini so the
+    // chips resolve locally instead of falling through to the LLM.
+    if (isOnHoldQuery(text)) {
+      return { text: buildOnHoldAnswer(findOnHoldProjects(projects), isES) };
+    }
+    if (isInstallQuery(text)) {
+      return { text: buildInstallAnswer(findUpcomingInstalls(projects), isES) };
+    }
+
+    // Engineering-manual questions — answered locally straight from the matched
+    // section when searchEngineeringManual finds a clear hit (its scoring is
+    // strict enough not to fire on project/greeting queries). The manual text
+    // is authoritative and pre-written, so this works even when Gemini is down;
+    // unrecognized manual phrasings still fall through to the LLM below.
+    const manualAnswer = buildManualAnswer(text, isES);
+    if (manualAnswer) {
+      return { text: manualAnswer };
+    }
+
     // Main path: hand off to the Gemini-backed LLM proxy, grounded with a
     // context block covering projects, the engineering manual, the materials
     // matrix, and designer contacts — plus recent conversation history so

@@ -61,6 +61,27 @@ function buildManualSection(query, isES) {
   ).join('\n\n');
 }
 
+// Builds a ready-to-display engineering-manual answer straight from the
+// matched section(s), so a manual question can be answered locally without
+// going through Gemini (the manual text is already authoritative and fully
+// written — see searchEngineeringManual). Returns null when nothing matches,
+// letting the caller fall through to the LLM. Shows the top match, plus a
+// second if it scored as relevant, formatted with the section number so the
+// user can cite it.
+export function buildManualAnswer(query, isES) {
+  const matches = searchEngineeringManual(query);
+  if (matches.length === 0) return null;
+
+  const header = isES ? '📐 **Manual de Ingeniería**' : '📐 **Engineering Manual**';
+  const body = matches.slice(0, 2).map(entry =>
+    isES
+      ? `**§${entry.section} — ${entry.titleES}**\n${entry.answerES}`
+      : `**§${entry.section} — ${entry.titleEN}**\n${entry.answerEN}`
+  ).join('\n\n');
+
+  return `${header}\n\n${body}`;
+}
+
 function buildMaterialsSection(materialsMatrix, cleanQuery, words) {
   const matched = (materialsMatrix || []).find(m => {
     const cleanSo = (m.so || '').toLowerCase().trim();

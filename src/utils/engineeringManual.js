@@ -309,14 +309,24 @@ export function normalizeText(str) {
     .trim();
 }
 
-// A query word and a vocab word "match" if they're identical, or if one is a
-// prefix/substring of the other and the shorter side is long enough (5+
-// chars) that it can't just be a coincidental fragment (e.g. "esta" inside
-// "estandar") — short words must match exactly.
+// A query word and a vocab word "match" if they're identical, differ only by
+// a short plural suffix (door/doors, rod/rods, shelf/shelves), or one is a
+// substring of the other with the shorter side long enough (5+ chars) that it
+// can't just be a coincidental fragment (e.g. "esta" inside "estandar").
 function wordsMatch(a, b) {
   if (a === b) return true;
+
   const shorter = a.length <= b.length ? a : b;
   const longer = a.length <= b.length ? b : a;
+
+  // Singular/plural: the longer is the shorter plus a plural suffix, and the
+  // shorter is a real word (3+ chars) so this doesn't rescue tiny fragments.
+  // Covers English "s"/"es" and the shelf→shelves (f→ves) irregular.
+  if (shorter.length >= 3) {
+    if (longer === shorter + 's' || longer === shorter + 'es') return true;
+    if (shorter.endsWith('f') && longer === shorter.slice(0, -1) + 'ves') return true;
+  }
+
   return shorter.length >= 5 && longer.includes(shorter);
 }
 
