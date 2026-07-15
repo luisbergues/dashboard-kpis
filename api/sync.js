@@ -3,7 +3,7 @@
 // Secrets (GOOGLE_SERVICE_ACCOUNT_KEY, SYNC_SHEET_ID) stay server-side.
 import { google } from 'googleapis';
 import { mapEventToCells } from './lib/syncMapping.js';
-import { requireAuth } from './lib/verifyAuth.js';
+import { requireApprovedUser } from './lib/requireApprovedUser.js';
 
 const TAB = 'copy testing';
 
@@ -23,7 +23,12 @@ function getAuth() {
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
-  if (!(await requireAuth(req, res))) return;
+  // Writes land in the live company Sheet, which database.rules.json cannot
+  // protect — enforce approval + role here. 'designer' is excluded to mirror
+  // the role restriction database.rules.json applies to equivalent RTDB paths.
+  if (!(await requireApprovedUser(req, res, {
+    allowedRoles: ['engineer', 'engineer_nester', 'administrative', 'admin', 'engineer-admin'],
+  }))) return;
 
   const spreadsheetId = process.env.SYNC_SHEET_ID;
   const { auth, diag } = getAuth();
