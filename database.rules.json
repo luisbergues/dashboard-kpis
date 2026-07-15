@@ -110,20 +110,20 @@
       ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
     },
     "essData": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'"
     },
     "ipData": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'"
     },
     "logbookData": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'"
     },
     "firebase_cache": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'"
     },
 
     "$other": {
