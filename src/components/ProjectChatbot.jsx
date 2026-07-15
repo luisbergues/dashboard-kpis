@@ -448,6 +448,16 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
             : '⚠️ Your session expired. Please reload the page to sign in again.'
         };
       }
+      // 503: Gemini itself was overloaded even after the proxy's retries. It's
+      // transient and unrelated to what the user asked, so say so plainly
+      // rather than implying their question was the problem.
+      if (err.status === 503) {
+        return {
+          text: isES
+            ? '⚠️ El asistente está sobrecargado en este momento. Volvé a intentar en unos segundos — no es un problema con tu consulta.'
+            : '⚠️ The assistant is overloaded right now. Try again in a few seconds — nothing is wrong with your question.'
+        };
+      }
       if (err.status === 502 || err.status === 500) {
         return {
           text: isES

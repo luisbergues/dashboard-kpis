@@ -2,6 +2,7 @@
 // Keeps GEMINI_API_KEY server-side only (never exposed to the client bundle).
 import { requireAuth } from './lib/verifyAuth.js';
 import { getGeminiApiKey } from './lib/getGeminiApiKey.js';
+import { fetchGeminiWithRetry } from './lib/fetchGeminiWithRetry.js';
 
 // gemini-flash-latest always points at the current Flash model (currently
 // gemini-3.5-flash). The old pinned gemini-2.0-flash is retired and returns
@@ -56,15 +57,27 @@ export default async function handler(req, res) {
   };
 
   try {
-    const geminiRes = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    const geminiRes = await fetchGeminiWithRetry(`${GEMINI_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
 
     if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
+      const errText = await geminiRes.text().catch(() => '');
       console.error('Gemini API error:', geminiRes.status, errText);
+      // Pass through the distinction the client acts on: 503 means the model
+      // was overloaded even after retries (worth trying again shortly), 429
+      // means quota exhausted (waiting won't help until it resets), anything
+      // else is a generic upstream failure.
+      if (geminiRes.status === 503) {
+        res.status(503).json({ error: 'Gemini is overloaded, try again shortly' });
+        return;
+      }
+      if (geminiRes.status === 429) {
+        res.status(429).json({ error: 'Gemini quota exceeded' });
+        return;
+      }
       res.status(502).json({ error: 'Upstream Gemini API error' });
       return;
     }
