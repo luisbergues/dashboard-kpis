@@ -8,6 +8,9 @@
       "$uid": {
         ".read": "auth.uid === $uid",
 
+        ".write": "auth.uid === $uid && !data.exists()",
+        ".validate": "newData.hasChildren(['email', 'designerName', 'requestedRole', 'createdAt']) && !newData.hasChild('role') && !newData.hasChild('status')",
+
         "email":        { ".write": "auth.uid === $uid && !data.exists()" },
         "designerName": { ".write": "auth.uid === $uid" },
         "createdAt":    { ".write": "auth.uid === $uid && !data.exists()" },
