@@ -20,7 +20,7 @@ const DEFAULT_RODS = [
 
 const createDefaultPage = (project, materials) => ({
   headerData: {
-    jobName: project ? `${project.so} - ${project.name.split(':')[0].trim()}` : '',
+    jobName: project ? `${project.so} - ${String(project.name || '').split(':')[0].trim()}` : '',
     color: 'White Classic 300',
     rooms: 'Her Master',
     designer: project ? (project.designer || 'Russell') : '',
@@ -105,7 +105,7 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
   
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: () => `ESS_${project.name.split(':')[0].trim()}`,
+    documentTitle: () => `ESS_${String(project.name || '').split(':')[0].trim()}`,
     pageStyle: `
       @page {
         size: A4 portrait;

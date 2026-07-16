@@ -33,7 +33,7 @@ export default function CostAnalysisView({ data }) {
   };
 
   const chartData = {
-    labels: topCostProjects.map(p => p.name.split(':')[0]), // Use short names
+    labels: topCostProjects.map(p => String(p.name || '').split(':')[0]), // Use short names
     datasets: [
       {
         label: language === 'es' ? 'Costo del Proyecto ($)' : 'Project Cost ($)',

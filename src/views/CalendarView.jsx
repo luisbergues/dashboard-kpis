@@ -130,7 +130,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
           p.so,
           {
             so: p.so,
-            name: p.name.split(':')[0].trim(),
+            name: String(p.name || '').split(':')[0].trim(),
             status: p.status
           }
         ])
@@ -145,7 +145,10 @@ export default function CalendarView({ data, currentUser, userProfile }) {
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
 
   const getStatusColor = (status) => {
-    const s = status.toUpperCase();
+    // Same guard as PipelineView: a blank Status cell in the sheet arrives here
+    // as undefined. Note this copy returns 'cal-'-prefixed classes — only the
+    // guard is shared, the class names deliberately differ.
+    const s = (status || '').toUpperCase();
     if (s.includes('HOLD')) return 'cal-status-hold';
     if (s.includes('CHECK')) return 'cal-status-check';
     if (s.includes('REVIEW')) return 'cal-status-review';
@@ -427,7 +430,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                     <span className="u-day">{format(p.dateObj, 'dd')}</span>
                   </div>
                   <div className="upcoming-info">
-                    <div className="u-name">{p.name.split(':')[0]}</div>
+                    <div className="u-name">{String(p.name || '').split(':')[0]}</div>
                     <div className="u-meta">#{p.so} • {p.eng}</div>
                   </div>
                   <div className={`u-status ${getStatusColor(p.status)}`}></div>
@@ -522,7 +525,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                     >
                       <span className={`day-event-dot ${getStatusColor(p.status)}`} />
                       <span className="day-event-so">#{p.so}</span>
-                      <span className="day-event-name">{p.name.split(':')[0].trim()}</span>
+                      <span className="day-event-name">{String(p.name || '').split(':')[0].trim()}</span>
                       <span className="day-event-status">{p.status}</span>
                     </a>
                   ))}

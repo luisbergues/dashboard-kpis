@@ -97,7 +97,7 @@ export default function IPGeneratorModal({ project, onClose }) {
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: () => {
-      const baseName = project.name.split(':')[0];
+      const baseName = String(project.name || '').split(':')[0];
       const cleanName = baseName.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim();
       return `IP_${cleanName}`;
     },

@@ -1158,7 +1158,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       });
     }
 
-    doc.save(`Timeline_SO_${project.so}_${project.name.split(':')[0].trim()}.pdf`);
+    doc.save(`Timeline_SO_${project.so}_${String(project.name || '').split(':')[0].trim()}.pdf`);
   };
 
   const calculateProgress = (stagesArray) => {
@@ -1237,7 +1237,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                             : (language === 'es' ? `Faltan ${d.daysLeft} días` : `${d.daysLeft} days left`);
                         return (
                           <div key={d.so} className="deadline-item" style={{ background: 'var(--card-bg)', padding: '10px', borderRadius: '6px', borderLeft: `3px solid ${accent}` }}>
-                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>#{d.so} {d.name.split(':')[0]}</div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>#{d.so} {String(d.name || '').split(':')[0]}</div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
                               <span>{d.date}</span>
                               <span style={{ color: accent, fontWeight: isCritical || isSoon ? 600 : 400 }}>{daysLabel}</span>
@@ -1310,7 +1310,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                           onClick={e => e.stopPropagation()}
                           style={{ textDecoration: 'none', cursor: 'pointer' }}
                         >SO #{project.so}</a>
-                        <h3 className="project-name-title" style={{ margin: 0 }}>{project.name.split(':')[0].trim()}</h3>
+                        <h3 className="project-name-title" style={{ margin: 0 }}>{String(project.name || '').split(':')[0].trim()}</h3>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div className="header-status-controls" onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
