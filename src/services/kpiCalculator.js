@@ -544,22 +544,26 @@ export function calculateWeeklyCompletions(projectStages, myProjects = [], weekC
 }
 
 /**
- * Gets upcoming critical deadlines for an engineer
- * @param {Array} projects 
- * @returns {Array} List of projects with upcoming install dates (<= 14 days)
+ * Gets every upcoming install deadline for an engineer.
+ * @param {Array} projects
+ * @returns {Array} All projects with a defined future install date, with the
+ *                  number of days left, soonest first.
  */
 export function getUpcomingDeadlines(projects) {
+  // Normalize to midnight so an install scheduled for today still counts
+  // (0 days left) instead of being dropped by the current time of day.
   const today = new Date();
-  const warningWindow = 14 * 24 * 60 * 60 * 1000;
+  today.setHours(0, 0, 0, 0);
 
   const deadlines = [];
   projects.forEach(p => {
     if (p.install) {
       const instDate = new Date(p.install);
-      if (!isNaN(instDate) && instDate >= today) {
-        const diff = instDate.getTime() - today.getTime();
-        if (diff <= warningWindow) {
-          const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+      if (!isNaN(instDate)) {
+        instDate.setHours(0, 0, 0, 0);
+        if (instDate >= today) {
+          const diff = instDate.getTime() - today.getTime();
+          const daysLeft = Math.round(diff / (1000 * 60 * 60 * 24));
           deadlines.push({
             so: p.so,
             name: p.name,

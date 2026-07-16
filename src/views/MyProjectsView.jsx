@@ -1219,18 +1219,32 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                     Upcoming Install Deadlines
                   </h4>
                   {upcomingDeadlines.length === 0 ? (
-                    <p className="text-muted" style={{ fontSize: '0.85rem' }}>No critical deadlines in the next 14 days.</p>
+                    <p className="text-muted" style={{ fontSize: '0.85rem' }}>
+                      {language === 'es' ? 'No hay instalaciones programadas.' : 'No scheduled installs.'}
+                    </p>
                   ) : (
                     <div className="deadlines-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {upcomingDeadlines.map(d => (
-                        <div key={d.so} className="deadline-item" style={{ background: 'var(--card-bg)', padding: '10px', borderRadius: '6px', borderLeft: d.daysLeft <= 3 ? '3px solid var(--color-pink)' : '3px solid #FFE600' }}>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>#{d.so} {d.name.split(':')[0]}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
-                            <span>{d.date}</span>
-                            <span className={d.daysLeft <= 3 ? 'text-danger' : 'text-yellow'}>{d.daysLeft} days left</span>
+                      {upcomingDeadlines.map(d => {
+                        // Urgency tiers: <=3 days critical (pink), <=14 soon
+                        // (yellow), further out is informational (muted).
+                        const isCritical = d.daysLeft <= 3;
+                        const isSoon = !isCritical && d.daysLeft <= 14;
+                        const accent = isCritical ? 'var(--color-pink)' : isSoon ? '#FFE600' : 'var(--text-muted)';
+                        const daysLabel = d.daysLeft === 0
+                          ? (language === 'es' ? 'Hoy' : 'Today')
+                          : d.daysLeft === 1
+                            ? (language === 'es' ? 'Falta 1 día' : '1 day left')
+                            : (language === 'es' ? `Faltan ${d.daysLeft} días` : `${d.daysLeft} days left`);
+                        return (
+                          <div key={d.so} className="deadline-item" style={{ background: 'var(--card-bg)', padding: '10px', borderRadius: '6px', borderLeft: `3px solid ${accent}` }}>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>#{d.so} {d.name.split(':')[0]}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                              <span>{d.date}</span>
+                              <span style={{ color: accent, fontWeight: isCritical || isSoon ? 600 : 400 }}>{daysLabel}</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
