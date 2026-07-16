@@ -374,7 +374,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
     .filter(p => (p.status || '').toUpperCase().includes('HOLD'))
     .map(p => ({
       so: p.so,
-      name: p.name.split(':')[0].trim(),
+      name: String(p.name || '').split(':')[0].trim(),
       status: p.status,
       install: p.install || 'TBD',
       notes: p.onHoldReason || '',
@@ -387,8 +387,19 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
   const handleNextSlide = () => setCurrentSlide(prev => (prev < totalSlides - 1 ? prev + 1 : 0));
   const activeProjects = actionProjects.slice(currentSlide * itemsPerPage, (currentSlide + 1) * itemsPerPage);
 
+  // A project is "active" while it isn't paused. Status comes from the sheet
+  // and can be blank, so coerce — the raw p.status.toUpperCase() this replaces
+  // threw on any row with an empty Status cell, taking the Dashboard down.
+  const isNotOnHold = (p) => {
+    const s = String(p.status || '').toUpperCase();
+    return !s.includes('HOLD') && !s.includes('PAUSA');
+  };
+
   const getStatusColorClass = (status) => {
-    const s = status.toUpperCase();
+    // Same guard as PipelineView/CalendarView: a blank Status cell in the sheet
+    // arrives here as undefined. This copy returns 'card-'-prefixed classes —
+    // only the guard is shared, the class names deliberately differ.
+    const s = (status || '').toUpperCase();
     if (s.includes('HOLD')) return 'card-status-hold';
     if (s.includes('CHECK')) return 'card-status-check';
     if (s.includes('REVIEW')) return 'card-status-review';
@@ -572,11 +583,11 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
                 <div className="action-plan-sector">
                   <h4 className="sector-heading text-mint">
                     <span className="sector-dot bg-mint"></span>
-                    {language === 'es' ? 'Proyectos Activos' : 'Active Projects'} ({actionProjects.filter(p => !p.status.toUpperCase().includes('HOLD') && !p.status.toUpperCase().includes('PAUSA')).length})
+                    {language === 'es' ? 'Proyectos Activos' : 'Active Projects'} ({actionProjects.filter(isNotOnHold).length})
                   </h4>
                   <div className="projects-carousel-grid small-cards">
                     {actionProjects
-                      .filter(p => !p.status.toUpperCase().includes('HOLD') && !p.status.toUpperCase().includes('PAUSA'))
+                      .filter(isNotOnHold)
                       .map((project, idx) => (
                         <div key={idx} className={`project-carousel-card small-card ${getStatusColorClass(project.status)}`}>
                           <div className="proj-card-header">
@@ -595,7 +606,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
                           )}
                         </div>
                       ))}
-                    {actionProjects.filter(p => !p.status.toUpperCase().includes('HOLD') && !p.status.toUpperCase().includes('PAUSA')).length === 0 && (
+                    {actionProjects.filter(isNotOnHold).length === 0 && (
                       <p className="text-muted" style={{ fontSize: '0.85rem' }}>{language === 'es' ? 'No hay proyectos activos prioritarios' : 'No active priority projects'}</p>
                     )}
                   </div>
@@ -659,7 +670,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
             <div style={{ height: '350px', position: 'relative' }}>
               <Bar 
                 data={{
-                  labels: topCostProjects.map(p => p.name.split(':')[0]),
+                  labels: topCostProjects.map(p => String(p.name || '').split(':')[0]),
                   datasets: [
                     {
                       label: t('costs.projectCost'),

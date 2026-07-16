@@ -360,10 +360,15 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
 
   // Combine data or just use priorityAnalysis as the main source
   const projects = priorityAnalysis.filter(p => {
-    const matchesFilter = filter === 'ALL' || filter === 'KANBAN' || p.status.toUpperCase() === filter.toUpperCase();
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.so.includes(searchTerm) ||
-                          p.eng.toLowerCase().includes(searchTerm.toLowerCase());
+    // Every field here comes straight from the sheet and can be undefined on a
+    // short or blank-celled row — coerce rather than let one bad row throw and
+    // take down the whole list.
+    const term = searchTerm.toLowerCase();
+    const matchesFilter = filter === 'ALL' || filter === 'KANBAN' ||
+                          String(p.status || '').toUpperCase() === filter.toUpperCase();
+    const matchesSearch = String(p.name || '').toLowerCase().includes(term) ||
+                          String(p.so || '').includes(searchTerm) ||
+                          String(p.eng || '').toLowerCase().includes(term);
     
     // Designers only see projects assigned to them
     if (isDesigner && userProfile?.designerName) {
@@ -383,7 +388,10 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   });
 
   const getStatusColor = (status) => {
-    const s = status.toUpperCase();
+    // Sheet rows can arrive with a blank/missing Status cell (sheetParser.js
+    // indexes row[statusIdx] with no fallback), so coerce before matching —
+    // getStatusLabel below already guards the same way.
+    const s = (status || '').toUpperCase();
     if (s.includes('HOLD')) return 'status-hold';
     if (s.includes('CHECK')) return 'status-check';
     if (s.includes('REVIEW')) return 'status-review';
@@ -685,7 +693,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                           {getStatusLabel(project.status)}
                         </span>
                       </div>
-                      <h4 className="kanban-project-name">{project.name.split(':')[0].trim()}</h4>
+                      <h4 className="kanban-project-name">{String(project.name || '').split(':')[0].trim()}</h4>
                       <div className="kanban-card-meta">
                         <span className="meta-item" style={{ fontSize: '0.82rem' }}><Calendar size={13}/> {project.install}</span>
                         <span className="meta-item eng-badge" style={{ fontSize: '0.82rem' }}>ENG: {project.eng}</span>
@@ -744,7 +752,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                         onClick={e => e.stopPropagation()}
                         style={{ textDecoration: 'none', cursor: 'pointer' }}
                       >#{project.so}</a>
-                      <h3 className="project-name">{project.name.split(':')[0].trim()}</h3>
+                      <h3 className="project-name">{String(project.name || '').split(':')[0].trim()}</h3>
                     </div>
                     <div className="project-meta">
                       <span className="meta-item">
