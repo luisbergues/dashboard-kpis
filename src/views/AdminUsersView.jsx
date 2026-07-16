@@ -38,14 +38,28 @@ export default function AdminUsersView({ userProfile, data }) {
     }
   };
 
+  // A rejected write here (e.g. a rules change that locks out the admin) used
+  // to fail silently: the button looked like it worked while nothing was
+  // saved, and the user stayed stuck on the pending-approval screen with no
+  // clue why. Surface it instead.
   const handleApprove = async (uid, requestedRole) => {
     const role = pendingRoleChoice[uid] || requestedRole || 'engineer';
-    await update(ref(db, `users/${uid}`), { role, status: 'approved' });
+    try {
+      await update(ref(db, `users/${uid}`), { role, status: 'approved' });
+    } catch (err) {
+      console.error('Failed to approve user:', err);
+      window.alert(t('admin.approveError'));
+    }
   };
 
   const handleRevoke = async (uid) => {
     if (!window.confirm(t('admin.revokeConfirm'))) return;
-    await update(ref(db, `users/${uid}`), { status: 'rejected' });
+    try {
+      await update(ref(db, `users/${uid}`), { status: 'rejected' });
+    } catch (err) {
+      console.error('Failed to revoke user:', err);
+      window.alert(t('admin.revokeError'));
+    }
   };
 
   const handleRoleChange = async (uid, role) => {

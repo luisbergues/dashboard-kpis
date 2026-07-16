@@ -8,8 +8,8 @@
       "$uid": {
         ".read": "auth.uid === $uid",
 
-        ".write": "auth.uid === $uid && !data.exists()",
-        ".validate": "newData.hasChildren(['email', 'designerName', 'requestedRole', 'createdAt']) && !newData.hasChild('role') && !newData.hasChild('status')",
+        ".write": "(auth.uid === $uid && !data.exists()) || (root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' && root.child('users').child(auth.uid).child('status').val() === 'approved')",
+        ".validate": "!(auth.uid === $uid && !data.exists()) || (newData.hasChildren(['email', 'designerName', 'requestedRole', 'createdAt']) && !newData.hasChild('role') && !newData.hasChild('status'))",
 
         "email":        { ".write": "auth.uid === $uid && !data.exists()" },
         "designerName": { ".write": "auth.uid === $uid" },
