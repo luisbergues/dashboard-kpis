@@ -184,9 +184,14 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
   // sheet row). Cross-reference other sheet sections keyed by the same SO —
   // Material Requirements and Status History — which independently carry
   // their own Name column and are more likely to have the real value.
+  // Coerce before trimming: PapaParse hands back a *number* for a purely
+  // numeric Name cell, and the previous `!name || !name.trim()` guard only
+  // caught falsy values — a numeric name sailed past it and threw
+  // "name.trim is not a function", taking the Completed Projects modal down.
   const isPlaceholderName = (so, name) => {
-    if (!name || !name.trim()) return true;
-    return name.trim().toLowerCase() === `so #${so}`.toLowerCase();
+    const str = String(name ?? '').trim();
+    if (!str) return true;
+    return str.toLowerCase() === `so #${so}`.toLowerCase();
   };
 
   const resolveProjectName = (p) => {
