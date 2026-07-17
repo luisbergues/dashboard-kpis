@@ -13,6 +13,7 @@ import {
 import { Bar } from 'react-chartjs-2';
 import { fetchAndParseQualityData } from '../utils/sheetParser';
 import { useLanguage } from '../utils/LanguageContext';
+import { useTheme } from '../utils/ThemeContext';
 import { db, ref, get, set } from '../utils/firebase';
 
 ChartJS.register(LinearScale, CategoryScale, BarElement, Legend, Tooltip, BarController);
@@ -56,6 +57,17 @@ function shortWeekLabel(weekKey) {
 
 export default function DesignQualityView() {
   const { language } = useLanguage();
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
+
+  // Colors were hardcoded for a dark background (#fff titles, #94A3B8 body),
+  // leaving titles and engineer names nearly invisible in light theme.
+  const C = {
+    title: isLight ? '#0f172a' : '#fff',
+    body: isLight ? '#475569' : '#94A3B8',
+    muted: isLight ? '#64748b' : '#64748B',
+    accent: isLight ? '#0f766e' : '#80EE98',
+  };
   const [data, setData] = useState({ kpiData: [], analysisText: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -145,13 +157,13 @@ export default function DesignQualityView() {
     plugins: {
       legend: {
         position: 'bottom',
-        labels: { color: '#94A3B8', font: { family: 'Inter', size: 11 }, boxWidth: 10, padding: 8 },
+        labels: { color: C.body, font: { family: 'Inter', size: 11 }, boxWidth: 10, padding: 8 },
       },
       tooltip: {
-        backgroundColor: 'rgba(11, 21, 32, 0.95)',
-        titleColor: '#80EE98',
-        bodyColor: '#fff',
-        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: isLight ? 'rgba(255, 255, 255, 0.98)' : 'rgba(11, 21, 32, 0.95)',
+        titleColor: C.accent,
+        bodyColor: isLight ? '#0f172a' : '#fff',
+        borderColor: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)',
         borderWidth: 1,
         padding: 10,
         callbacks: {
@@ -163,19 +175,20 @@ export default function DesignQualityView() {
       x: {
         stacked: true,
         grid: { display: false, drawBorder: false },
-        ticks: { color: '#94A3B8', font: { size: 11 } },
+        ticks: { color: C.body, font: { size: 11 } },
       },
       y: {
         stacked: true,
         beginAtZero: true,
-        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-        ticks: { color: '#64748B', callback: (v) => `${v}%` },
+        grid: { color: isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+        ticks: { color: C.muted, callback: (v) => `${v}%` },
       },
     },
-  }), []);
+    // isLight drives the chart's text/grid colors, so recompute on theme change.
+  }), [isLight]);
 
   if (loading) {
-    return <div className="loading-state text-muted" style={{ padding: '24px', color: '#94A3B8' }}>Loading Team Stats...</div>;
+    return <div className="loading-state text-muted" style={{ padding: '24px', color: C.body }}>Loading Team Stats...</div>;
   }
 
   if (error) {
@@ -187,25 +200,25 @@ export default function DesignQualityView() {
   return (
     <div className="design-quality-view animate-fade-in" style={{ padding: '24px' }}>
       <header className="dashboard-header" style={{ marginBottom: '24px' }}>
-        <h1 className="page-title" style={{ fontSize: '1.75rem', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>Team Stats</h1>
-        <p className="page-subtitle text-muted" style={{ color: '#94A3B8' }}>KPI Distribution Analysis</p>
+        <h1 className="page-title" style={{ fontSize: '1.75rem', fontWeight: 600, color: C.title, marginBottom: '8px' }}>Team Stats</h1>
+        <p className="page-subtitle text-muted" style={{ color: C.body }}>KPI Distribution Analysis</p>
       </header>
 
       {kpiData.length === 0 ? (
-        <div className="glass-card text-muted" style={{ padding: '24px', color: '#94A3B8' }}>
+        <div className="glass-card text-muted" style={{ padding: '24px', color: C.body }}>
           No data found in the spreadsheet tab.
         </div>
       ) : (
         <>
           <div className="glass-card" style={{ marginBottom: '24px', overflowX: 'auto', padding: '0 0 16px 0' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: '#fff' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: C.title }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                  <th style={{ padding: '16px', color: '#80EE98', fontWeight: 600 }}>Engineer</th>
-                  <th style={{ padding: '16px', color: '#80EE98', fontWeight: 600 }}>Own Points</th>
-                  <th style={{ padding: '16px', color: '#80EE98', fontWeight: 600 }}>Revision Points</th>
-                  <th style={{ padding: '16px', color: '#80EE98', fontWeight: 600 }}>Nesting Points</th>
-                  <th style={{ padding: '16px', color: '#80EE98', fontWeight: 600 }}>Total KPI</th>
+                  <th style={{ padding: '16px', color: C.accent, fontWeight: 600 }}>Engineer</th>
+                  <th style={{ padding: '16px', color: C.accent, fontWeight: 600 }}>Own Points</th>
+                  <th style={{ padding: '16px', color: C.accent, fontWeight: 600 }}>Revision Points</th>
+                  <th style={{ padding: '16px', color: C.accent, fontWeight: 600 }}>Nesting Points</th>
+                  <th style={{ padding: '16px', color: C.accent, fontWeight: 600 }}>Total KPI</th>
                 </tr>
               </thead>
               <tbody>
@@ -214,9 +227,9 @@ export default function DesignQualityView() {
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                     <td style={{ padding: '16px' }}>{row.engineer}</td>
-                    <td style={{ padding: '16px', color: '#94A3B8' }}>{formatCurrency(row.ownPoints)}</td>
-                    <td style={{ padding: '16px', color: '#94A3B8' }}>{formatCurrency(row.revisionPoints)}</td>
-                    <td style={{ padding: '16px', color: '#94A3B8' }}>{formatCurrency(row.nestingPoints)}</td>
+                    <td style={{ padding: '16px', color: C.body }}>{formatCurrency(row.ownPoints)}</td>
+                    <td style={{ padding: '16px', color: C.body }}>{formatCurrency(row.revisionPoints)}</td>
+                    <td style={{ padding: '16px', color: C.body }}>{formatCurrency(row.nestingPoints)}</td>
                     <td style={{ padding: '16px', fontWeight: 'bold', color: '#09D1C7' }}>{formatCurrency(row.totalKPI)}</td>
                   </tr>
                 ))}
@@ -225,7 +238,7 @@ export default function DesignQualityView() {
           </div>
 
           <div className="glass-card" style={{ marginBottom: '24px' }}>
-            <h3 style={{ color: '#fff', marginBottom: '20px', fontSize: '1.25rem', fontWeight: 600 }}>KPI Distribution Analysis</h3>
+            <h3 style={{ color: C.title, marginBottom: '20px', fontSize: '1.25rem', fontWeight: 600 }}>KPI Distribution Analysis</h3>
             
             <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
               <div style={{ width: '100%', maxWidth: '380px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -245,7 +258,7 @@ export default function DesignQualityView() {
                   }
 
                   return (
-                    <div key={index} style={{ color: '#fff' }}>
+                    <div key={index} style={{ color: C.title }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.9rem', alignItems: 'center' }}>
                         <span style={{ fontWeight: 500 }}>{row.engineer}{warningBadge}</span>
                         <span style={{ fontWeight: 'bold', color: labelColor }}>{row.percent.toFixed(1)}%</span>
@@ -261,7 +274,7 @@ export default function DesignQualityView() {
               <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {weeklyChartData ? (
                   <div>
-                    <h5 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
+                    <h5 style={{ color: C.title, fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
                       {language === 'es' ? 'Evolución Semanal por Ingeniero' : 'Weekly Evolution by Engineer'}
                     </h5>
                     <div style={{ height: '220px' }}>
@@ -269,14 +282,14 @@ export default function DesignQualityView() {
                     </div>
                   </div>
                 ) : (
-                  <p style={{ color: '#94A3B8', lineHeight: '1.7', fontSize: '0.9rem', margin: 0 }}>
+                  <p style={{ color: C.body, lineHeight: '1.7', fontSize: '0.9rem', margin: 0 }}>
                     {language === 'es'
                       ? 'Aún no hay suficiente historial semanal para graficar la evolución. Volvé a revisar esta vista en las próximas semanas.'
                       : "Not enough weekly history yet to chart the evolution. Check back on this view in the coming weeks."}
                   </p>
                 )}
                 <div style={{ marginTop: '12px', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)', background: 'rgba(255,255,255,0.01)' }}>
-                  <h5 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+                  <h5 style={{ color: C.title, fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
                     {language === 'es' ? 'Guía de Distribución de Carga' : 'Workload Distribution Guide'}
                   </h5>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.82rem', lineHeight: '1.4' }}>
@@ -357,18 +370,18 @@ export default function DesignQualityView() {
                   onClick={() => setShowGuide(false)}
                   style={{
                     position: 'absolute', top: '16px', right: '16px',
-                    background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer'
+                    background: 'none', border: 'none', color: C.body, cursor: 'pointer'
                   }}
                 >
                   <X size={24} />
                 </button>
-                <h2 style={{ color: '#fff', marginBottom: '24px', fontSize: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '16px' }}>
+                <h2 style={{ color: C.title, marginBottom: '24px', fontSize: '1.5rem', borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'}`, paddingBottom: '16px' }}>
                   {language === 'es' ? 'GUÍA DE USUARIO E INSTRUCCIONES' : 'DASHBOARD USER GUIDE & INSTRUCTIONS'}
                 </h2>
 
-                <div style={{ color: '#fff', lineHeight: '1.6', fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{ color: C.title, lineHeight: '1.6', fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   <div>
-                    <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '8px' }}>
+                    <h3 style={{ color: C.title, fontSize: '1.1rem', marginBottom: '8px' }}>
                       {language === 'es' ? '1. COLUMNAS EDITABLES Y RESTRICCIONES' : '1. EDITABLE COLUMNS & RESTRICTIONS'}
                     </h3>
                     <p>
@@ -379,7 +392,7 @@ export default function DesignQualityView() {
                   </div>
 
                   <div>
-                    <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '8px' }}>
+                    <h3 style={{ color: C.title, fontSize: '1.1rem', marginBottom: '8px' }}>
                       {language === 'es' ? '2. DISTRIBUCIÓN DE PUNTOS DE INGENIERÍA (Columnas C, D, E, F, G)' : '2. ENGINEERING POINTS DISTRIBUTION (Columns C, D, E, F, G)'}
                     </h3>
                     <p style={{ marginBottom: '8px' }}>
@@ -395,7 +408,7 @@ export default function DesignQualityView() {
                   </div>
 
                   <div>
-                    <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '8px' }}>
+                    <h3 style={{ color: C.title, fontSize: '1.1rem', marginBottom: '8px' }}>
                       {language === 'es' ? '3. REVISORES Y NESTING (Columnas M, N, O, P)' : '3. REVIEWERS & NESTING (Columns M, N, O, P)'}
                     </h3>
                     <ul style={{ paddingLeft: '20px', listStyleType: 'disc', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -405,13 +418,13 @@ export default function DesignQualityView() {
                   </div>
 
                   <div>
-                    <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '8px' }}>
+                    <h3 style={{ color: C.title, fontSize: '1.1rem', marginBottom: '8px' }}>
                       {language === 'es' ? '4. MULTIPLICADORES DE PROYECTO' : '4. PROJECT MULTIPLIERS'}
                     </h3>
                     <ul style={{ paddingLeft: '20px', listStyleType: 'disc', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <li><strong style={{color: '#80EE98'}}>No Holes?:</strong> {language === 'es' ? 'Multiplica el peso total calculado por 1.25x.' : 'Multiplies the total Calculated Weight by 1.25x.'}</li>
-                      <li><strong style={{color: '#80EE98'}}>Strip Lights?:</strong> {language === 'es' ? 'Agrega un bono del 10% específicamente al cálculo de puntos de Nesting.' : 'Adds a 10% bonus specifically to the Nesting points calculation.'}</li>
-                      <li><strong style={{color: '#80EE98'}}>Multicolor?:</strong> {language === 'es' ? 'Agrega un bono del 10% específicamente al cálculo de puntos de Nesting.' : 'Adds a 10% bonus specifically to the Nesting points calculation.'}</li>
+                      <li><strong style={{color: C.accent}}>No Holes?:</strong> {language === 'es' ? 'Multiplica el peso total calculado por 1.25x.' : 'Multiplies the total Calculated Weight by 1.25x.'}</li>
+                      <li><strong style={{color: C.accent}}>Strip Lights?:</strong> {language === 'es' ? 'Agrega un bono del 10% específicamente al cálculo de puntos de Nesting.' : 'Adds a 10% bonus specifically to the Nesting points calculation.'}</li>
+                      <li><strong style={{color: C.accent}}>Multicolor?:</strong> {language === 'es' ? 'Agrega un bono del 10% específicamente al cálculo de puntos de Nesting.' : 'Adds a 10% bonus specifically to the Nesting points calculation.'}</li>
                     </ul>
                   </div>
                 </div>
