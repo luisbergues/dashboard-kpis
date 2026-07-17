@@ -1723,7 +1723,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                               })()}
                               <div className="note-item-date">
                                 {note.createdBy && <span style={{ marginRight: '8px', fontWeight: 'bold' }}>{note.createdBy} &bull;</span>}
-                                {formatDisplayDate(new Date(note.createdAt), language)}
+                                {formatDisplayDate(new Date(note.createdAt), language)}, {new Date(note.createdAt).toLocaleTimeString(language === 'es' ? 'es-AR' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </div>
                           ))}
