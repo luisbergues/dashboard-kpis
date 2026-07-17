@@ -219,7 +219,7 @@ const styles = {
     margin: '0 auto',
   },
   card: {
-    background: 'rgba(255,255,255,0.05)',
+    background: 'var(--overlay-05)',
     border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: 16,
     padding: 40,
@@ -299,7 +299,7 @@ const styles = {
     marginBottom: 28,
   },
   infoCard: {
-    background: 'rgba(255,255,255,0.04)',
+    background: 'var(--overlay-04)',
     border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: 12,
     padding: '14px 16px',
@@ -331,7 +331,7 @@ const styles = {
     marginTop: 3,
   },
   section: {
-    background: 'rgba(255,255,255,0.03)',
+    background: 'var(--overlay-03)',
     border: '1px solid rgba(255,255,255,0.07)',
     borderRadius: 14,
     padding: '20px 24px',
@@ -388,7 +388,7 @@ const styles = {
     fontWeight: 500,
   },
   noteCard: {
-    background: 'rgba(255,255,255,0.04)',
+    background: 'var(--overlay-04)',
     border: '1px solid rgba(255,255,255,0.07)',
     borderRadius: 10,
     padding: '12px 16px',

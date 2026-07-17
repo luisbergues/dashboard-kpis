@@ -940,7 +940,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                           {noteImages[project.so] && noteImages[project.so].length > 0 && (
                             <div style={{ marginBottom: '8px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                               {noteImages[project.so].map((file, idx) => (
-                                <div key={idx} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px', border: '1px solid var(--card-border)', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }}>
+                                <div key={idx} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px', border: '1px solid var(--card-border)', borderRadius: '4px', background: 'var(--overlay-02)' }}>
                                   {file.type.startsWith('image/') ? (
                                     <img 
                                       src={URL.createObjectURL(file)} 
@@ -981,7 +981,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                                 }
                               }}
                             />
-                            <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', padding: '0 10px', borderRadius: '8px', color: 'var(--text-muted)' }} title={language === 'es' ? 'Adjuntar Imagen o Documento (Máx 1MB)' : 'Attach Image or Document (Max 1MB)'}>
+                            <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--overlay-05)', padding: '0 10px', borderRadius: '8px', color: 'var(--text-muted)' }} title={language === 'es' ? 'Adjuntar Imagen o Documento (Máx 1MB)' : 'Attach Image or Document (Max 1MB)'}>
                               <Paperclip size={14} />
                               <input
                                 type="file"
@@ -1066,7 +1066,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                                         <div key={i} style={{ textDecoration: 'none' }}>
                                           {att.type === 'document' ? (
                                             <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
+                                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'var(--overlay-05)', borderRadius: '4px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
                                                 <FileText size={14} />
                                                 <span title={att.name || 'Document'} style={{ fontSize: '0.75rem', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                   {att.name || 'Document'}

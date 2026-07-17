@@ -288,7 +288,7 @@ export default function DesignQualityView() {
                       : "Not enough weekly history yet to chart the evolution. Check back on this view in the coming weeks."}
                   </p>
                 )}
-                <div style={{ marginTop: '12px', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)', background: 'rgba(255,255,255,0.01)' }}>
+                <div style={{ marginTop: '12px', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)', background: 'var(--overlay-01)' }}>
                   <h5 style={{ color: C.title, fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
                     {language === 'es' ? 'Guía de Distribución de Carga' : 'Workload Distribution Guide'}
                   </h5>

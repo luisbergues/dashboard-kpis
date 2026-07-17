@@ -657,7 +657,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
                   {t('costs.subtitle')}
                 </p>
               </div>
-              <div className="total-value-card" style={{ padding: '8px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'right' }}>
+              <div className="total-value-card" style={{ padding: '8px 16px', borderRadius: '8px', background: 'var(--overlay-03)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'right' }}>
                 <span className="text-muted" style={{ fontSize: '0.75rem', display: 'block' }}>
                   {t('costs.totalPipeline')}
                 </span>

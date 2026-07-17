@@ -1556,7 +1556,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                           {noteImages[project.so] && noteImages[project.so].length > 0 && (
                             <div style={{ marginBottom: '8px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                               {noteImages[project.so].map((file, idx) => (
-                                <div key={idx} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px', border: '1px solid var(--card-border)', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }}>
+                                <div key={idx} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px', border: '1px solid var(--card-border)', borderRadius: '4px', background: 'var(--overlay-02)' }}>
                                   {file.type.startsWith('image/') ? (
                                     <img 
                                       src={URL.createObjectURL(file)} 
@@ -1623,7 +1623,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                                     : (language === 'es' ? 'Normal' : 'Normal')}
                               </button>
                               
-                              <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '12px', fontSize: '0.75rem', color: mutedOnSurface }} title={language === 'es' ? 'Adjuntar Imagen o Documento (Máx 1MB)' : 'Attach Image or Document (Max 1MB)'}>
+                              <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--overlay-05)', padding: '4px 8px', borderRadius: '12px', fontSize: '0.75rem', color: mutedOnSurface }} title={language === 'es' ? 'Adjuntar Imagen o Documento (Máx 1MB)' : 'Attach Image or Document (Max 1MB)'}>
                                 <Paperclip size={14} />
                                 <input
                                   type="file"
@@ -1704,7 +1704,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                                       <div key={i} style={{ textDecoration: 'none' }}>
                                         {att.type === 'document' ? (
                                           <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--overlay-05)', borderRadius: '6px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
                                               <FileText size={16} />
                                               <span title={att.name || 'Document'} style={{ fontSize: '0.85rem', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                 {att.name || 'Document'}
@@ -1798,7 +1798,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                   value={designerSearchTerm}
                   onChange={(e) => setDesignerSearchTerm(e.target.value)}
                   className="form-input"
-                  style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: textOnSurface, fontSize: '0.9rem' }}
+                  style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'var(--overlay-05)', color: textOnSurface, fontSize: '0.9rem' }}
                 >
                   <option value="" disabled>{language === 'es' ? 'Seleccionar diseñador...' : 'Select designer...'}</option>
                   {[
@@ -1837,7 +1837,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                   value={collabSearchTerm}
                   onChange={(e) => setCollabSearchTerm(e.target.value)}
                   className="form-input"
-                  style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: textOnSurface, fontSize: '0.9rem' }}
+                  style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'var(--overlay-05)', color: textOnSurface, fontSize: '0.9rem' }}
                 >
                   <option value="" disabled>{language === 'es' ? 'Seleccionar ingeniero...' : 'Select engineer...'}</option>
                   {designersList.map(name => (
@@ -1909,7 +1909,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                 style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px', maxHeight: '350px', overflowY: 'auto', paddingRight: '8px', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '12px', background: 'rgba(0,0,0,0.1)' }}
               >
                 {(t(`myProjects.checklists.${qaType}`) || []).map((item, idx) => (
-                  <label key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', color: textOnSurface, fontSize: '0.92rem', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}
+                  <label key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', color: textOnSurface, fontSize: '0.92rem', padding: '8px 10px', background: 'var(--overlay-02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}
                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}>
                     <input
