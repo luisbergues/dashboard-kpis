@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Calendar, CheckCircle2, User, Layers, CheckSquare, Zap, Target } from 'lucide-react';
 import type { Project } from '../types';
 import { T } from '../utils/theme';
+import { formatDisplayDate } from '../../utils/dateFormat';
 
 interface ModalProps {
   project: Project | null;
@@ -41,7 +42,7 @@ const ChecklistItem: React.FC<{ checked: boolean; label: string; date?: number |
     </div>
     {checked && date && (
       <span style={{ fontSize: '0.75rem', color: T.textMuted }}>
-        {new Date(date).toLocaleDateString()}
+        {formatDisplayDate(new Date(date))}
       </span>
     )}
   </div>
@@ -124,11 +125,11 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: T.textMuted, fontSize: '0.85rem' }}>
               <Calendar size={14} />
-              Registered: {new Date(project.createdAt).toLocaleDateString()}
+              Registered: {formatDisplayDate(new Date(project.createdAt))}
               {project.approvedAt && (
                 <>
                   <span style={{ margin: '0 4px' }}>•</span>
-                  <span style={{ color: T.blue }}>Approved: {new Date(project.approvedAt).toLocaleDateString()}</span>
+                  <span style={{ color: T.blue }}>Approved: {formatDisplayDate(new Date(project.approvedAt))}</span>
                 </>
               )}
             </div>

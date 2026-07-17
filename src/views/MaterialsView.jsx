@@ -2,10 +2,11 @@ import React from 'react';
 import { Check, Minus } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import { shortProjectName } from '../utils/projectName';
+import { formatDisplayDate } from '../utils/dateFormat';
 import './MaterialsView.css';
 
 export default function MaterialsView({ data }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   if (!data) return null;
 
   const { materialRequirements } = data;
@@ -41,7 +42,7 @@ export default function MaterialsView({ data }) {
               <tr key={idx}>
                 <td className="so-cell">#{item.so}</td>
                 <td className="name-cell" title={item.name}>{shortProjectName(item.name)}</td>
-                <td className="date-cell">{item.installDate}</td>
+                <td className="date-cell">{formatDisplayDate(item.installDate, language)}</td>
                 <td>{renderBadge(item.thermofoil)}</td>
                 <td>{renderBadge(item.noHoles)}</td>
                 <td>{renderBadge(item.dovetail)}</td>

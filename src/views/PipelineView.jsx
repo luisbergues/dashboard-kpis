@@ -7,6 +7,7 @@ import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
 import { sendStageEvent, sendNoteEvent, sendEngineerAssignEvent } from '../utils/sheetSync';
 import { shortProjectName } from '../utils/projectName';
+import { formatDisplayDate } from '../utils/dateFormat';
 import './PipelineView.css';
 
 const getStageLabel = (stageId, language) => {
@@ -697,7 +698,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                       </div>
                       <h4 className="kanban-project-name">{shortProjectName(project.name)}</h4>
                       <div className="kanban-card-meta">
-                        <span className="meta-item" style={{ fontSize: '0.82rem' }}><Calendar size={13}/> {project.install}</span>
+                        <span className="meta-item" style={{ fontSize: '0.82rem' }}><Calendar size={13}/> {formatDisplayDate(project.install, language)}</span>
                         <span className="meta-item eng-badge" style={{ fontSize: '0.82rem' }}>ENG: {project.eng}</span>
                       </div>
                       <div className="kanban-card-bottom" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -759,7 +760,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                     <div className="project-meta">
                       <span className="meta-item">
                         <Calendar size={14} />
-                        {project.install}
+                        {formatDisplayDate(project.install, language)}
                       </span>
                       {(project.eng || assignedEngineers[project.so]) ? (
                         <span className="meta-item eng-badge">

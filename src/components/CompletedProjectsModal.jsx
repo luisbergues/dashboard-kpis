@@ -1,6 +1,7 @@
 import { X, Calendar } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
+import { formatDisplayDate } from '../utils/dateFormat';
 
 export default function CompletedProjectsModal({ projects, onClose, activeProjectSos }) {
   const { language } = useLanguage();
@@ -62,9 +63,9 @@ export default function CompletedProjectsModal({ projects, onClose, activeProjec
                     // Try to parse archivedAt if it's a Firestore timestamp
                     let archivedDate = language === 'es' ? 'Aún en la hoja' : 'Still in sheet';
                     if (p.archivedAt && typeof p.archivedAt.toDate === 'function') {
-                      archivedDate = p.archivedAt.toDate().toLocaleDateString(language === 'es' ? 'es-AR' : 'en-US');
+                      archivedDate = formatDisplayDate(p.archivedAt.toDate(), language);
                     } else if (p.archivedAt && p.archivedAt.seconds) {
-                      archivedDate = new Date(p.archivedAt.seconds * 1000).toLocaleDateString(language === 'es' ? 'es-AR' : 'en-US');
+                      archivedDate = formatDisplayDate(new Date(p.archivedAt.seconds * 1000), language);
                     }
 
                     const isInPipeline = activeProjectSos && activeProjectSos.has(String(p.so));

@@ -4,6 +4,7 @@ import { saveEngineeringCheck } from '../utils/engineeringCheck';
 import { sendOnHoldEvent, sendReleaseHoldEvent, sendQAChecklistEvent, sendNoteEvent, sendStageStatusOnlyEvent } from '../utils/sheetSync';
 import { saveMaterialOverride } from '../utils/materialOverrides';
 import { shortProjectName } from '../utils/projectName';
+import { formatDisplayDate } from '../utils/dateFormat';
 import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';
 import {
@@ -1722,9 +1723,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                               })()}
                               <div className="note-item-date">
                                 {note.createdBy && <span style={{ marginRight: '8px', fontWeight: 'bold' }}>{note.createdBy} &bull;</span>}
-                                {new Date(note.createdAt).toLocaleDateString(language === 'es' ? 'es-AR' : 'en-US', {
-                                  day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                                })}
+                                {formatDisplayDate(new Date(note.createdAt), language)}
                               </div>
                             </div>
                           ))}

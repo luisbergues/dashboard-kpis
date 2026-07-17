@@ -3,6 +3,7 @@ import { Clock, CheckCircle, AlertTriangle, ChevronLeft, ChevronRight, ListTodo,
 import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
 import { shortProjectName } from '../utils/projectName';
+import { formatDisplayDate } from '../utils/dateFormat';
 import {
   Chart as ChartJS,
   LinearScale,
@@ -565,7 +566,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
                           <h4 className="proj-name" title={project.name}>{project.name}</h4>
                           <div className="proj-details">
                             <span className="details-label">{t('common.installDate')}:</span>
-                            <span className="details-value">{project.install}</span>
+                            <span className="details-value">{formatDisplayDate(project.install, language)}</span>
                           </div>
                           {project.notes && (
                             <div className="proj-notes" title={project.notes}>
@@ -598,7 +599,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
                           <h4 className="proj-name" title={project.name}>{project.name}</h4>
                           <div className="proj-details">
                             <span className="details-label">{t('common.installDate')}:</span>
-                            <span className="details-value">{project.install}</span>
+                            <span className="details-value">{formatDisplayDate(project.install, language)}</span>
                           </div>
                           {project.notes && (
                             <div className="proj-notes" title={project.notes}>

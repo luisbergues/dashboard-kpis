@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import type { Project, ProjectStatus } from '../types';
 import { Link2, FileText, CheckSquare, Zap, RefreshCw, Send } from 'lucide-react';
 import { T } from '../utils/theme';
+import { formatDisplayDate } from '../../utils/dateFormat';
 
 /* ── tiny primitives ─────────────────────────────────────────────────── */
 const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => (
@@ -225,7 +226,7 @@ export const Phase1Form: React.FC = () => {
   };
 
   const fmtDate = (ts: number | false) =>
-    ts ? new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+    ts ? formatDisplayDate(new Date(ts)) : null;
 
   /* ── render ──────────────────────────────────────────────────────────── */
   return (
