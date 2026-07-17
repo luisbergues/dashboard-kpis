@@ -40,19 +40,53 @@ export function extractEntityQuery(rawText) {
 // matches a name token when they're equal, or one contains the other AND the
 // shorter side is 4+ chars — long enough not to be a coincidental fragment
 // ("ana" inside "Susana").
+//
+// Two separate jobs, deliberately split:
+//
+// `nameMatches` decides IF a name is a candidate, and only words of 4+ chars
+// may trigger that — a bare short word ("Al", "Jo") is admitted only when the
+// query has nothing longer to go on. This is the safety property: a 3-char
+// token can only ever match a name token exactly, never as a substring, so
+// "al" finds "Al Smith" but never drags in "Alberto".
+//
+// `nameScore` decides HOW WELL it matches, and there every word counts —
+// short ones included. That's what correlates the parts of a full name:
+// "ana ball" makes both Ana Ball and Bob Ball candidates (only "ball" can
+// trigger a match), but Ana Ball hits 2 words to Bob Ball's 1 and outranks it.
+// Scoring on the trigger tokens alone would leave the two indistinguishable.
 export function buildNameMatcher(entityQuery) {
-  const searchTokens = entityQuery.split(/\s+/).filter(w => w.length >= 3 && !INTENT_STOPWORDS.has(w));
+  const words = entityQuery.split(/\s+/).filter(w => w.length > 0 && !INTENT_STOPWORDS.has(w));
+  const substantial = words.filter(w => w.length >= 4);
+  const searchTokens = substantial.length > 0 ? substantial : words;
+
+  const toNameTokens = (name) => String(name).toLowerCase()
+    .split(/\s+/)
+    .map(t => t.replace(/[^a-z0-9]/g, ''))
+    .filter(Boolean);
+
+  // A query token hits a name token when they're equal, or one contains the
+  // other AND the shorter side is 4+ chars — long enough not to be a
+  // coincidental fragment ("ana" inside "Susana").
+  const tokenHits = (token, nameTokens) => nameTokens.some(nt => {
+    if (nt === token) return true;
+    const shorter = nt.length <= token.length ? nt : token;
+    const longer = nt.length <= token.length ? token : nt;
+    return shorter.length >= 4 && longer.includes(shorter);
+  });
+
   const nameMatches = (name) => {
     if (!name || searchTokens.length === 0) return false;
-    const nameTokens = String(name).toLowerCase().split(/\s+/).map(t => t.replace(/[^a-z0-9]/g, '')).filter(Boolean);
-    return nameTokens.some(nt => searchTokens.some(st => {
-      if (nt === st) return true;
-      const shorter = nt.length <= st.length ? nt : st;
-      const longer = nt.length <= st.length ? st : nt;
-      return shorter.length >= 4 && longer.includes(shorter);
-    }));
+    const nameTokens = toNameTokens(name);
+    return searchTokens.some(st => tokenHits(st, nameTokens));
   };
-  return { searchTokens, nameMatches };
+
+  const nameScore = (name) => {
+    if (!name) return 0;
+    const nameTokens = toNameTokens(name);
+    return words.reduce((n, w) => n + (tokenHits(w, nameTokens) ? 1 : 0), 0);
+  };
+
+  return { searchTokens, words, nameMatches, nameScore };
 }
 
 // Runs the full local entity search (designers, engineers, projects, designer
@@ -67,40 +101,48 @@ export function findLocalEntityMatches(text, { projects = [], designerContacts =
 
   const entityQuery = extractEntityQuery(text);
   const searchWord = entityQuery.replace(/\s+/g, '');
-  const { searchTokens, nameMatches } = buildNameMatcher(entityQuery);
+  const { searchTokens, nameMatches, nameScore } = buildNameMatcher(entityQuery);
 
   if (!isPlausibleQuery || (searchWord.length < 3 && searchTokens.length === 0)) {
     return { options: [], searchTokens, eligible: false };
   }
 
-  const options = [];
-  let optionIdCounter = 1;
+  // Collected with their match score, then ranked: a name that hits more of
+  // the query's words is a better answer than one that hits fewer, so
+  // "ana ball" puts Ana Ball ahead of Bob Ball.
+  const scored = [];
 
   const matchedDesigners = [...new Set(projects.filter(p => nameMatches(p.designer)).map(p => p.designer))];
   matchedDesigners.forEach(d => {
-    options.push({ id: optionIdCounter++, type: 'designer', name: d });
+    scored.push({ option: { type: 'designer', name: d }, score: nameScore(d) });
   });
 
   const matchedEngineers = [...new Set(projects.filter(p => nameMatches(p.eng)).map(p => p.eng))];
   matchedEngineers.forEach(e => {
-    options.push({ id: optionIdCounter++, type: 'engineer', name: e });
+    scored.push({ option: { type: 'engineer', name: e }, score: nameScore(e) });
   });
 
-  const matchedProjects = projects.filter(p => {
+  projects.forEach(p => {
     const cleanSo = String(p.so || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    return nameMatches(p.name) || (searchWord.length >= 3 && cleanSo.includes(searchWord));
-  });
-  matchedProjects.forEach(p => {
-    options.push({ id: optionIdCounter++, type: 'project', data: p });
+    const soHit = searchWord.length >= 3 && cleanSo.includes(searchWord);
+    if (!nameMatches(p.name) && !soHit) return;
+    // An SO hit is an explicit identifier — rank it at least as high as a
+    // one-word name hit rather than letting it fall to the bottom on a
+    // name score of 0.
+    scored.push({ option: { type: 'project', data: p }, score: Math.max(nameScore(p.name), soHit ? 1 : 0) });
   });
 
-  const matchedContacts = designerContacts.filter(d => {
-    const names = [d.name, ...(d.aliases || [])];
-    return names.some(n => nameMatches(n));
+  designerContacts.forEach(c => {
+    const names = [c.name, ...(c.aliases || [])];
+    if (!names.some(n => nameMatches(n))) return;
+    scored.push({ option: { type: 'contact', data: c }, score: Math.max(...names.map(n => nameScore(n))) });
   });
-  matchedContacts.forEach(c => {
-    options.push({ id: optionIdCounter++, type: 'contact', data: c });
-  });
+
+  // Stable sort by score (Array.sort is stable in modern JS), so equal-scoring
+  // options keep the designer/engineer/project/contact order they were added in.
+  scored.sort((a, b) => b.score - a.score);
+
+  const options = scored.map((s, i) => ({ id: i + 1, ...s.option, score: s.score }));
 
   return { options, searchTokens, eligible: true };
 }
@@ -125,19 +167,82 @@ export function resolvesLocallyInIdleState(text, { projects = [], designerContac
   return searchEngineeringManual(text).length > 0;
 }
 
+// Scores how well `query` (already lowercased + stripped to alphanumerics)
+// identifies a project, from 0 (no match) to 1 (exact). Ranking beats a flat
+// "does it contain the substring" test because a query that hits several
+// projects usually still has one obvious intended target: an exact SO, or the
+// name it's a prefix of. Ties (e.g. "residence" against two ...Residence
+// projects) legitimately stay close, which is what keeps the picker showing.
+//
+// Ordering of the rules matters — earlier rules are stronger evidence:
+//   exact SO/name           1
+//   SO prefix              0.9
+//   name prefix        0.5–0.9  (scaled by how much of the name it covers)
+//   name contains      0.2–0.5  (same scaling, weaker since it's mid-word)
+//   SO contains            0.2
+export function scoreProjectMatch(query, project) {
+  if (!query) return 0;
+  const cleanName = String(project.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const cleanSo = String(project.so || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  if (cleanSo && cleanSo === query) return 1;
+  if (cleanName && cleanName === query) return 1;
+  if (cleanSo && cleanSo.startsWith(query)) return 0.9;
+  if (cleanName && cleanName.startsWith(query)) return 0.5 + 0.4 * (query.length / cleanName.length);
+  if (cleanName && cleanName.includes(query)) return 0.2 + 0.3 * (query.length / cleanName.length);
+  if (cleanSo && cleanSo.includes(query)) return 0.2;
+  return 0;
+}
+
+// A top match is only auto-selected over the runner-up when it's an exact hit
+// or clears it by this much. Picking wrong here writes the user's note onto
+// the wrong project, so ambiguity must fall back to asking rather than guess.
+const CLEAR_WINNER_MARGIN = 0.25;
+
 // Project matcher used by the AWAITING_PROJECT_FOR_NOTE state (the "which
-// project?" step of the add-note flow) — simple substring match on the
-// alphanumeric-stripped name/SO, distinct from findLocalEntityMatches'
+// project?" step of the add-note flow), distinct from findLocalEntityMatches'
 // token-based nameMatches. Always returns synchronously and never touches
 // Gemini; this is what makes every branch of that flow (no match / one match
 // / many matches / cancel) resolve locally.
+//
+// Returns matches ranked best-first. Note the empty-query guard: stripping
+// non-alphanumerics turns input like "???" into "", and `anything.includes('')`
+// is true in JS, so without it every project would match a query that named
+// none of them. Scoring can't rescue that case — an empty query scores 0
+// against everything, so the "best" match would just be an arbitrary tie.
 export function findProjectMatchesForNote(text, projects = []) {
   const query = text.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-  return projects.filter(p => {
-    const cleanName = String(p.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const cleanSo = String(p.so || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    return cleanName.includes(query) || cleanSo.includes(query);
-  });
+  if (!query) return [];
+
+  return projects
+    .map(p => ({ project: p, score: scoreProjectMatch(query, p) }))
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(x => x.project);
+}
+
+// Resolves the add-note project step: `matches` is every candidate ranked
+// best-first (for the picker), and `best` is the single project confident
+// enough to skip the picker entirely — null when the query is genuinely
+// ambiguous and the user should choose.
+export function resolveProjectForNote(text, projects = []) {
+  const query = text.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!query) return { matches: [], best: null };
+
+  const scored = projects
+    .map(p => ({ project: p, score: scoreProjectMatch(query, p) }))
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  if (scored.length === 0) return { matches: [], best: null };
+
+  const [top, second] = scored;
+  const isClearWinner = top.score === 1 || !second || (top.score - second.score) >= CLEAR_WINNER_MARGIN;
+
+  return {
+    matches: scored.map(x => x.project),
+    best: isClearWinner ? top.project : null,
+  };
 }
 
 // --- Aggregate intents (ON HOLD list, upcoming installs) ---

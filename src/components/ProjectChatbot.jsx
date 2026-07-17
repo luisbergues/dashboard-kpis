@@ -4,10 +4,10 @@ import { addProjectNote } from '../utils/notesHelper';
 import { useLanguage } from '../utils/LanguageContext';
 import { askLLM, buildLLMContext, buildManualAnswer } from '../utils/llmChat';
 import { useDesignerContacts } from '../utils/useDesignerContacts';
+import { appendCapped, nextMessageId, MAX_MESSAGES } from '../utils/chatHistory';
 import {
-  extractEntityQuery,
-  buildNameMatcher,
-  findProjectMatchesForNote,
+  findLocalEntityMatches,
+  resolveProjectForNote,
   isOnHoldQuery,
   isInstallQuery,
   findOnHoldProjects,
@@ -88,7 +88,9 @@ function loadStoredMessages() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) return null;
-    return parsed.map(m => ({ ...m, timestamp: new Date(m.timestamp) }));
+    // Trim on read too — an oversized history may already be stored from
+    // before the cap existed.
+    return parsed.slice(-MAX_MESSAGES).map(m => ({ ...m, timestamp: new Date(m.timestamp) }));
   } catch {
     return null;
   }
@@ -114,6 +116,24 @@ function buildContactAnswer(contact, isES) {
   return isES
     ? `📇 **Contacto de Diseñador:**\n**${contact.name}**\n\n• **Tel:** ${contact.phone || 'N/A'}\n• **Email:** ${contact.email || 'N/A'}\n• **Ciudad:** ${contact.city || 'N/A'}`
     : `📇 **Designer Contact:**\n**${contact.name}**\n\n• **Phone:** ${contact.phone || 'N/A'}\n• **Email:** ${contact.email || 'N/A'}\n• **City:** ${contact.city || 'N/A'}`;
+}
+
+// Human-readable label for a picker option. Kept next to the answer builders
+// because it's presentation — findLocalEntityMatches returns language-agnostic
+// options and the component labels them.
+function labelForOption(opt, isES) {
+  switch (opt.type) {
+    case 'designer':
+      return isES ? `Ver proyectos de ${opt.name} (Diseñador)` : `View projects for ${opt.name} (Designer)`;
+    case 'engineer':
+      return isES ? `Ver proyectos de ${opt.name} (Ingeniero)` : `View projects for ${opt.name} (Engineer)`;
+    case 'project':
+      return isES ? `Ver proyecto ${opt.data.name} (SO #${opt.data.so})` : `View project ${opt.data.name} (SO #${opt.data.so})`;
+    case 'contact':
+      return isES ? `Ver contacto de ${opt.data.name} (Diseñador)` : `View contact for ${opt.data.name} (Designer)`;
+    default:
+      return '';
+  }
 }
 
 // Builds the reply for the "ON HOLD" chip / query — a local list of every
@@ -156,7 +176,11 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
   const { language } = useLanguage();
   const { contacts: designerContacts } = useDesignerContacts();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState(() => loadStoredMessages() || [buildWelcomeMessage(language === 'es')]);
+  // Starts empty rather than seeded with the welcome message: the welcome is
+  // derived at render time (see displayMessages) so it always follows the
+  // current language. Seeding it into state froze it in whatever language the
+  // widget first mounted in.
+  const [messages, setMessages] = useState(() => loadStoredMessages() || []);
   const [inputValue, setInputValue] = useState('');
   const [chatState, setChatState] = useState('IDLE'); // IDLE, AWAITING_PROJECT_FOR_NOTE, AWAITING_NOTE_TEXT
   const [targetSO, setTargetSO] = useState(null);
@@ -176,6 +200,13 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
 
   const messagesEndRef = useRef(null);
 
+  // The welcome bubble is shown, not stored: deriving it here means a language
+  // switch re-renders it in the new language, while real conversation turns
+  // stay exactly as they were said.
+  const displayMessages = messages.length === 0
+    ? [buildWelcomeMessage(language === 'es')]
+    : messages;
+
   // Auto-scroll to bottom of messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -189,6 +220,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       console.error('Chatbot: failed to persist history to localStorage:', err);
     }
   }, [messages]);
+
 
   // Get current username
   const getUserName = () => {
@@ -215,33 +247,34 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
         };
       }
 
-      // Look for project matches (see findProjectMatchesForNote — shared with
-      // its test suite — for the so/name String() coercion rationale).
-      const matches = findProjectMatchesForNote(text, projects);
+      // Resolve which project the note goes on. `best` is set only when one
+      // candidate clearly outranks the rest (exact SO/name, or a wide enough
+      // margin) — otherwise we ask rather than risk filing the note on the
+      // wrong project. `matches` is ranked best-first for the picker.
+      const { matches, best } = resolveProjectForNote(text, projects);
 
       if (matches.length === 0) {
         return {
-          text: isES 
+          text: isES
             ? 'No encontré ningún proyecto con ese nombre o SO. Por favor, intenta de nuevo o escribe "cancelar".'
             : 'No matching project found. Please try again or write "cancel".'
         };
       }
 
-      if (matches.length === 1) {
-        const proj = matches[0];
-        setTargetSO(proj.so);
-        setTargetProjectName(proj.name);
+      if (best) {
+        setTargetSO(best.so);
+        setTargetProjectName(best.name);
         setChatState('AWAITING_NOTE_TEXT');
         return {
-          text: isES 
-            ? `Proyecto encontrado: **${proj.name} (SO #${proj.so})**.\n\nEscribe el texto de la nota que deseas agregar:`
-            : `Project found: **${proj.name} (SO #${proj.so})**.\n\nType the text of the note you want to add:`
+          text: isES
+            ? `Proyecto encontrado: **${best.name} (SO #${best.so})**.\n\nEscribe el texto de la nota que deseas agregar:`
+            : `Project found: **${best.name} (SO #${best.so})**.\n\nType the text of the note you want to add:`
         };
       }
 
-      // Multiple matches
+      // Genuinely ambiguous — list candidates, most likely first.
       return {
-        text: isES 
+        text: isES
           ? `Encontré múltiples coincidencias. Por favor selecciona el número de SO correcto:\n\n${matches.map(m => `• **SO #${m.so}**: ${m.name}`).join('\n')}`
           : `Found multiple matches. Please select the correct SO number:\n\n${matches.map(m => `• **SO #${m.so}**: ${m.name}`).join('\n')}`
       };
@@ -301,86 +334,43 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       };
     }
 
-    // Specific SO or Project name query (Status check)
-    // Entity Search (Designer, Engineer, Project) — strips trigger phrases
-    // like "how is"/"projects of" first, so natural questions search for
-    // just the entity name instead of the whole sentence as one blob.
-    // Guard against long, unrelated paragraphs: a real entity lookup is
-    // short and to the point.
-    const wordCount = cleanText.split(/\s+/).filter(Boolean).length;
-    const isPlausibleQuery = wordCount > 0 && wordCount <= 12;
+    // Entity search (designer / engineer / project / designer contact). The
+    // matching itself lives in findLocalEntityMatches — shared with its test
+    // suite — and returns options already ranked best-first; here we only turn
+    // them into a reply. Trigger phrases ("how is", "proyectos de") are
+    // stripped before matching, and long paragraphs are guarded off there.
+    const rawOptions = findLocalEntityMatches(text, { projects, designerContacts });
+    const options = rawOptions.options.map(o => ({ ...o, label: labelForOption(o, isES) }));
 
-    const entityQuery = extractEntityQuery(text);
-    // Two views of the query after trigger-stripping:
-    // - searchWord: everything glued together (no spaces), used for SO-number
-    //   matching where a contiguous digit run is what we want.
-    // - searchTokens/nameMatches (from chatbotLocalMatch, shared with its test
-    //   suite): individual meaningful words (3+ chars, intent-stopwords like
-    //   "contact"/"telefono" filtered out). Name matching is done
-    //   token-by-token so an extra word like "contact" in "natalie contact"
-    //   doesn't break the match — the blob-only approach made
-    //   "nataliecontact" fail to match "natalieball".
-    const searchWord = entityQuery.replace(/\s+/g, '');
-    const { searchTokens, nameMatches } = buildNameMatcher(entityQuery);
-    if (isPlausibleQuery && (searchWord.length >= 3 || searchTokens.length > 0)) {
-      let options = [];
-      let optionIdCounter = 1;
+    // Answer directly when one option clearly wins: either it's the only
+    // candidate, or it correlates with more of the query than the runner-up
+    // ("ana ball" → Ana Ball hits both words, Bob Ball only one). Equal scores
+    // mean the query genuinely doesn't disambiguate, so show the picker.
+    const isSingleWinner = options.length === 1
+      || (options.length > 1 && options[0].score > options[1].score);
 
-      // Check Designers (token-by-token on the designer's name).
-      const matchedDesigners = [...new Set(projects.filter(p => nameMatches(p.designer)).map(p => p.designer))];
-      matchedDesigners.forEach(d => {
-        options.push({ id: optionIdCounter++, type: 'designer', name: d, label: isES ? `Ver proyectos de ${d} (Diseñador)` : `View projects for ${d} (Designer)` });
-      });
-
-      // Check Engineers
-      const matchedEngineers = [...new Set(projects.filter(p => nameMatches(p.eng)).map(p => p.eng))];
-      matchedEngineers.forEach(e => {
-        options.push({ id: optionIdCounter++, type: 'engineer', name: e, label: isES ? `Ver proyectos de ${e} (Ingeniero)` : `View projects for ${e} (Engineer)` });
-      });
-
-      // Check Projects — by client name (token-by-token) or SO (contiguous).
-      const matchedProjects = projects.filter(p => {
-        const cleanSo = String(p.so || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        return nameMatches(p.name) || (searchWord.length >= 3 && cleanSo.includes(searchWord));
-      });
-      matchedProjects.forEach(p => {
-        options.push({ id: optionIdCounter++, type: 'project', data: p, label: isES ? `Ver proyecto ${p.name} (SO #${p.so})` : `View project ${p.name} (SO #${p.so})` });
-      });
-
-      // Check Designer Contacts (by name or alias) — resolves lookups like
-      // "natalie contact" locally instead of only via the Gemini proxy.
-      const matchedContacts = designerContacts.filter(d => {
-        const names = [d.name, ...(d.aliases || [])];
-        return names.some(n => nameMatches(n));
-      });
-      matchedContacts.forEach(c => {
-        options.push({ id: optionIdCounter++, type: 'contact', data: c, label: isES ? `Ver contacto de ${c.name} (Diseñador)` : `View contact for ${c.name} (Designer)` });
-      });
-
-      // Single unambiguous match: answer directly instead of showing a
-      // 1-option picker (this is the common case for "How is X?" queries).
-      if (options.length === 1) {
-        if (options[0].type === 'contact') {
-          // Anchor this contact for follow-ups ("¿y su teléfono?") and clear
-          // any project anchor so the two don't compete for the same "su".
-          setLastMentionedContact(options[0].data.name);
-          setLastMentionedSO(null);
-          return { text: buildContactAnswer(options[0].data, isES) };
-        }
-        const { text: answerText, mentionedSO } = buildEntityAnswer(options[0], projects, isES);
-        if (mentionedSO) {
-          setLastMentionedSO(mentionedSO);
-          setLastMentionedContact(null);
-        }
-        return { text: answerText };
+    if (isSingleWinner) {
+      const winner = options[0];
+      if (winner.type === 'contact') {
+        // Anchor this contact for follow-ups ("¿y su teléfono?") and clear
+        // any project anchor so the two don't compete for the same "su".
+        setLastMentionedContact(winner.data.name);
+        setLastMentionedSO(null);
+        return { text: buildContactAnswer(winner.data, isES) };
       }
-
-      if (options.length > 1) {
-        return {
-          text: isES ? `Encontré resultados para "${text.trim()}". Selecciona una opción:` : `Found results for "${text.trim()}". Select an option:`,
-          options: options
-        };
+      const { text: answerText, mentionedSO } = buildEntityAnswer(winner, projects, isES);
+      if (mentionedSO) {
+        setLastMentionedSO(mentionedSO);
+        setLastMentionedContact(null);
       }
+      return { text: answerText };
+    }
+
+    if (options.length > 1) {
+      return {
+        text: isES ? `Encontré resultados para "${text.trim()}". Selecciona una opción:` : `Found results for "${text.trim()}". Select an option:`,
+        options: options
+      };
     }
 
     // Aggregate-intent queries (ON HOLD list, upcoming installs) — these back
@@ -489,17 +479,17 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
 
     // Add user message
     const userMsg = {
-      id: Date.now().toString(),
+      id: nextMessageId(),
       sender: 'user',
       text: text,
       timestamp: new Date()
     };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(prev => appendCapped(prev, userMsg));
     setInputValue('');
 
     // Add temporary bot loading bubble
     const loadingId = 'loading';
-    setMessages(prev => [...prev, { id: loadingId, sender: 'bot', text: '...', timestamp: new Date() }]);
+    setMessages(prev => appendCapped(prev, { id: loadingId, sender: 'bot', text: '...', timestamp: new Date() }));
 
     // Process. Any uncaught error must still replace the "..." bubble —
     // otherwise it stays stuck forever and the user gets no feedback.
@@ -520,7 +510,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
 
     // Replace loading bubble with actual reply
     setMessages(prev => prev.map(m => m.id === loadingId ? {
-      id: Date.now().toString(),
+      id: nextMessageId(),
       sender: 'bot',
       text: reply.text,
       options: reply.options,
@@ -531,13 +521,18 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
 
   const handleOptionClick = (opt) => {
     const isES = language === 'es';
+    // Same in-flight guard handleSendMessage uses: picker buttons stay
+    // clickable while a Gemini call is pending, and appending a picker answer
+    // mid-request interleaves it with the reply that's about to land.
+    if (isLoading) return;
+
     if (opt.type === 'contact') {
       setLastMentionedContact(opt.data.name);
       setLastMentionedSO(null);
-      setMessages(prev => [...prev,
-        { id: Date.now().toString() + '_user', sender: 'user', text: opt.label, timestamp: new Date() },
-        { id: Date.now().toString() + '_bot', sender: 'bot', text: buildContactAnswer(opt.data, isES), timestamp: new Date() }
-      ]);
+      setMessages(prev => appendCapped(prev,
+        { id: nextMessageId('_user'), sender: 'user', text: opt.label, timestamp: new Date() },
+        { id: nextMessageId('_bot'), sender: 'bot', text: buildContactAnswer(opt.data, isES), timestamp: new Date() }
+      ));
       return;
     }
     const { text: responseText, mentionedSO } = buildEntityAnswer(opt, projects, isES);
@@ -546,10 +541,10 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       setLastMentionedContact(null);
     }
 
-    setMessages(prev => [...prev,
-      { id: Date.now().toString() + '_user', sender: 'user', text: opt.label, timestamp: new Date() },
-      { id: Date.now().toString() + '_bot', sender: 'bot', text: responseText, timestamp: new Date() }
-    ]);
+    setMessages(prev => appendCapped(prev,
+      { id: nextMessageId('_user'), sender: 'user', text: opt.label, timestamp: new Date() },
+      { id: nextMessageId('_bot'), sender: 'bot', text: responseText, timestamp: new Date() }
+    ));
   };
 
   const handleChipClick = (action) => {
@@ -597,7 +592,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
 
           {/* Messages body */}
           <div className="chatbot-body">
-            {messages.map((m) => (
+            {displayMessages.map((m) => (
               <div key={m.id} className={`chat-message ${m.sender}`}>
                 <div className="message-avatar">
                   {m.sender === 'bot' ? <Bot size={14} /> : <User size={14} />}

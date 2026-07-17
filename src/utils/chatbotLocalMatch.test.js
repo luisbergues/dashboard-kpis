@@ -3,6 +3,9 @@ import {
   resolvesLocallyInIdleState,
   findLocalEntityMatches,
   findProjectMatchesForNote,
+  resolveProjectForNote,
+  scoreProjectMatch,
+  buildNameMatcher,
   isOnHoldQuery,
   isInstallQuery,
   findOnHoldProjects,
@@ -180,6 +183,171 @@ describe('chatbotLocalMatch — add-note flow (AWAITING_PROJECT_FOR_NOTE step in
     const projectsWithNumericSo = [{ so: 11801, name: 'Hale Residence' }];
     expect(() => findProjectMatchesForNote('11801', projectsWithNumericSo)).not.toThrow();
     expect(findProjectMatchesForNote('11801', projectsWithNumericSo)).toHaveLength(1);
+  });
+
+  describe('empty-query guard', () => {
+    // Stripping non-alphanumerics turns these into "", and in JS
+    // `'anything'.includes('')` is true — without the guard every project
+    // matched and the bot answered "found multiple matches" listing all of
+    // them for input that named none.
+    it.each(['???', '...', '!!!', '   ', '¿?'])(
+      'punctuation-only input %j matches nothing',
+      (input) => {
+        expect(findProjectMatchesForNote(input, PROJECTS)).toHaveLength(0);
+      }
+    );
+
+    it('empty input resolves to no matches and no auto-pick', () => {
+      expect(resolveProjectForNote('???', PROJECTS)).toEqual({ matches: [], best: null });
+    });
+  });
+});
+
+describe('chatbotLocalMatch — add-note project ranking (scoreProjectMatch / resolveProjectForNote)', () => {
+  const RANK = [
+    { so: '11801', name: 'Hale Residence' },
+    { so: '11802', name: 'Prince Residence' },
+    { so: '11803', name: 'Hale Annex' },
+    { so: '11804', name: 'Smith Job' },
+  ];
+
+  describe('scoreProjectMatch', () => {
+    it('scores an exact SO as a perfect match', () => {
+      expect(scoreProjectMatch('11801', RANK[0])).toBe(1);
+    });
+
+    it('scores an exact name as a perfect match', () => {
+      expect(scoreProjectMatch('haleresidence', RANK[0])).toBe(1);
+    });
+
+    it('ranks a name prefix above a mid-name substring', () => {
+      const prefix = scoreProjectMatch('hale', { so: '1', name: 'Hale Annex' });
+      const contains = scoreProjectMatch('annex', { so: '2', name: 'Hale Annex' });
+      expect(prefix).toBeGreaterThan(contains);
+    });
+
+    it('scores nothing for an empty query', () => {
+      expect(scoreProjectMatch('', RANK[0])).toBe(0);
+    });
+  });
+
+  describe('resolveProjectForNote', () => {
+    it('auto-picks on an exact SO even though another project shares the prefix', () => {
+      const projects = [{ so: '11801', name: 'A' }, { so: '11801b', name: 'B' }];
+      const { best } = resolveProjectForNote('11801', projects);
+      expect(best.name).toBe('A');
+    });
+
+    it('auto-picks when only one project matches at all', () => {
+      const { best } = resolveProjectForNote('prince', RANK);
+      expect(best.name).toBe('Prince Residence');
+    });
+
+    it('does NOT auto-pick between two similar names — asks instead', () => {
+      // "hale" prefixes both Hale Residence and Hale Annex. Guessing here would
+      // file the note on the wrong project.
+      const { best, matches } = resolveProjectForNote('hale', RANK);
+      expect(best).toBeNull();
+      expect(matches).toHaveLength(2);
+    });
+
+    it('does NOT auto-pick between two ...Residence projects', () => {
+      const { best } = resolveProjectForNote('residence', RANK);
+      expect(best).toBeNull();
+    });
+
+    it('returns ambiguous matches ranked best-first for the picker', () => {
+      // "hale" is a prefix of "Hale Annex" (shorter, so higher coverage) and of
+      // "Hale Residence" — both rank above any non-prefix match.
+      const { matches } = resolveProjectForNote('hale', RANK);
+      expect(matches.map(m => m.name)).toEqual(['Hale Annex', 'Hale Residence']);
+    });
+  });
+});
+
+describe('chatbotLocalMatch — short-word token selection (buildNameMatcher)', () => {
+  const SHORT = [
+    { so: '1', name: 'Kat Project', designer: 'Kat Baumgartner', eng: 'Al Smith', status: 'Engineering' },
+    { so: '2', name: 'Other Job', designer: 'Susana Lopez', eng: 'Alberto Diaz', status: 'Engineering' },
+  ];
+  const ctx = { projects: SHORT, designerContacts: [] };
+
+  it('a bare short name is searched instead of being dropped', () => {
+    // "kat" is 3 chars — previously usable, but "al" (2) was filtered out
+    // entirely, making a real person unsearchable by their own name.
+    const { searchTokens } = buildNameMatcher('al');
+    expect(searchTokens).toEqual(['al']);
+    expect(findLocalEntityMatches('al', ctx).options.map(o => o.name)).toContain('Al Smith');
+  });
+
+  it('a short word next to a longer one is dropped — the longer word carries it', () => {
+    const { searchTokens } = buildNameMatcher('kat baumgartner');
+    expect(searchTokens).toEqual(['baumgartner']);
+  });
+
+  it('short tokens only match a name exactly, never as a fragment', () => {
+    // This is what makes admitting them safe: "al" must not drag in "Alberto".
+    const { nameMatches } = buildNameMatcher('al');
+    expect(nameMatches('Al Smith')).toBe(true);
+    expect(nameMatches('Alberto Diaz')).toBe(false);
+  });
+
+  it('does not match a longer name that merely contains the short token', () => {
+    const opts = findLocalEntityMatches('ana', { projects: SHORT, designerContacts: [] }).options;
+    // "Susana" contains "ana" but must not match.
+    expect(opts.map(o => o.name)).not.toContain('Susana Lopez');
+  });
+
+  it('keeps every short word when none are long enough', () => {
+    const { searchTokens } = buildNameMatcher('al jo');
+    expect(searchTokens).toEqual(['al', 'jo']);
+  });
+});
+
+describe('chatbotLocalMatch — full-name correlation (nameScore)', () => {
+  // A short word can't trigger a match on its own, but it must still correlate:
+  // dropping it outright made "ana ball" rank Ana Ball and Bob Ball identically,
+  // since only "ball" was ever searched.
+  const BALLS = [
+    { so: '1', name: 'Job A', designer: 'Ana Ball', eng: 'E1', status: 'Eng' },
+    { so: '2', name: 'Job B', designer: 'Bob Ball', eng: 'E2', status: 'Eng' },
+  ];
+  const ctx = { projects: BALLS, designerContacts: [] };
+
+  it('scores a name hitting both query words above one hitting a single word', () => {
+    const { nameScore } = buildNameMatcher('ana ball');
+    expect(nameScore('Ana Ball')).toBe(2);
+    expect(nameScore('Bob Ball')).toBe(1);
+  });
+
+  it('still admits both as candidates — only "ball" can trigger the match', () => {
+    const { nameMatches } = buildNameMatcher('ana ball');
+    expect(nameMatches('Ana Ball')).toBe(true);
+    expect(nameMatches('Bob Ball')).toBe(true);
+  });
+
+  it('ranks the fully-correlated name first', () => {
+    const { options } = findLocalEntityMatches('ana ball', ctx);
+    expect(options.map(o => o.name)).toEqual(['Ana Ball', 'Bob Ball']);
+  });
+
+  it('gives the full-name match a strictly higher score, so it auto-answers', () => {
+    const { options } = findLocalEntityMatches('ana ball', ctx);
+    expect(options[0].score).toBeGreaterThan(options[1].score);
+  });
+
+  it('leaves scores tied when the query does not disambiguate (picker stays)', () => {
+    // "ball" alone correlates with both names equally.
+    const { options } = findLocalEntityMatches('ball', ctx);
+    expect(options[0].score).toBe(options[1].score);
+  });
+
+  it('the short word alone still cannot pull in a name it only fragments', () => {
+    const { options } = findLocalEntityMatches('ana', {
+      projects: [{ so: '1', name: 'J', designer: 'Susana Lopez', eng: 'E', status: 'Eng' }],
+      designerContacts: [],
+    });
+    expect(options).toHaveLength(0);
   });
 });
 
