@@ -15,9 +15,9 @@
 .skeleton-cell {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.03) 25%,
-    rgba(255, 255, 255, 0.08) 37%,
-    rgba(255, 255, 255, 0.03) 63%
+    var(--overlay-03) 25%,
+    var(--overlay-08) 37%,
+    var(--overlay-03) 63%
   );
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s infinite linear;
@@ -35,8 +35,8 @@
 .skeleton-card {
   padding: 20px 16px;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--overlay-04);
+  background: var(--overlay-01);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -79,8 +79,8 @@
   flex-direction: column;
   gap: var(--spacing-md);
   padding: var(--spacing-lg);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--overlay-04);
+  background: var(--overlay-01);
   border-radius: var(--radius-md);
   height: 100%;
   min-height: 300px;
@@ -127,8 +127,8 @@
   flex-direction: column;
   gap: 10px;
   padding: var(--spacing-lg);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--overlay-04);
+  background: var(--overlay-01);
   border-radius: var(--radius-md);
   width: 100%;
 }
@@ -138,11 +138,11 @@
   gap: 20px;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--overlay-03);
 }
 
 .skeleton-table-row.header {
-  border-bottom-color: rgba(255, 255, 255, 0.08);
+  border-bottom-color: var(--overlay-08);
 }
 
 .skeleton-cell {

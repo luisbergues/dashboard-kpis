@@ -99,7 +99,7 @@
 
 .cal-cell {
   background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--overlay-03);
   border-radius: 12px;
   height: 80px;
   padding: 8px;
@@ -112,7 +112,7 @@
 }
 
 .cal-cell:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--overlay-02);
 }
 
 .cal-cell.disabled {
@@ -220,13 +220,13 @@
 
 .upcoming-list::-webkit-scrollbar-track,
 .sidebar-notes-list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.01);
+  background: var(--overlay-01);
   border-radius: 3px;
 }
 
 .upcoming-list::-webkit-scrollbar-thumb,
 .sidebar-notes-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--overlay-12);
   border-radius: 3px;
   transition: background 0.2s;
 }
@@ -240,7 +240,7 @@
   display: flex;
   align-items: stretch;
   gap: 14px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--overlay-02);
   border: 1px solid var(--card-border);
   border-radius: 12px;
   overflow: hidden;
@@ -251,13 +251,13 @@
 }
 
 .upcoming-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--overlay-05);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .upcoming-date {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--overlay-05);
   width: 64px;
   display: flex;
   flex-direction: column;
@@ -338,7 +338,7 @@
 
 .sidebar-tab-btn:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--overlay-03);
 }
 
 .sidebar-tab-btn.active {
@@ -358,7 +358,7 @@
 }
 
 .sidebar-note-item {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--overlay-02);
   border: 1px solid var(--card-border);
   border-radius: 12px;
   padding: 14px 16px;
@@ -451,7 +451,7 @@
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--overlay-05);
   color: var(--text-primary);
   border: 1px solid var(--card-border);
   padding: 10px 18px;
@@ -463,7 +463,7 @@
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--overlay-10);
   color: var(--color-mint);
 }
 
@@ -550,7 +550,7 @@
 
 .modal-close-btn:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--overlay-05);
 }
 
 .modal-form {
@@ -581,7 +581,7 @@
   gap: 10px;
   padding: 10px 12px;
   border-radius: var(--radius-sm, 8px);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--overlay-03);
   border: 1px solid var(--card-border);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -590,8 +590,8 @@
 }
 
 .day-event-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--overlay-06);
+  border-color: var(--overlay-15);
 }
 
 .day-event-dot {
@@ -769,7 +769,7 @@
 }
 
 .cal-status-default, .cal-status-default.u-status {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--overlay-10);
   color: var(--text-primary);
   border-left: 2px solid var(--text-muted);
 }
@@ -801,7 +801,7 @@
   gap: 6px;
   padding: 4px 12px;
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--overlay-05);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   transition: all 0.2s ease;
 }
@@ -865,7 +865,7 @@
   position: relative;
   width: 40px;
   height: 22px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--overlay-10);
   border-radius: 20px;
   border: 1px solid var(--card-border);
   transition: all 0.3s ease;

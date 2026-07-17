@@ -9,12 +9,12 @@
   --lb-border: var(--card-border, #26272C);
   --lb-border-strong: var(--card-border, #33343B);
   --lb-text: var(--text-primary, #FFFFFF);
-  --lb-muted: var(--text-secondary, #94A3B8);
+  --lb-muted: var(--text-secondary, var(--text-muted));
   --lb-accent: var(--color-teal, #1D4ED8);
   --lb-accent-2: var(--color-cyan, #3B82F6);
   --lb-accent-light: #23242B;
-  --lb-hover-tint: rgba(255,255,255,0.04);
-  --lb-subtle-tint: rgba(255,255,255,0.02);
+  --lb-hover-tint: var(--overlay-04);
+  --lb-subtle-tint: var(--overlay-02);
   --lb-danger: #FF5C5C;
   --lb-radius: var(--radius-sm, 100px);
   --lb-radius-card: var(--radius-md, 20px);
@@ -49,7 +49,7 @@
 .lb-loading {
   padding: 40px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  color: var(--text-secondary, #94A3B8);
+  color: var(--text-secondary, var(--text-muted));
   background: var(--bg-surface, #0F0F12);
   min-height: 100vh;
 }

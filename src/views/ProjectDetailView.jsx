@@ -55,8 +55,8 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
       <div style={styles.root}>
         <div style={styles.card}>
           <AlertTriangle size={32} color="#ef4444" style={{ marginBottom: 12 }} />
-          <h2 style={{ color: '#f1f5f9', marginBottom: 8 }}>{language === 'es' ? 'Proyecto no encontrado' : 'Project not found'}</h2>
-          <p style={{ color: '#94a3b8' }}>{language === 'es' ? `No se pudo encontrar la SO #${so} en los datos actuales.` : `SO #${so} could not be found in the current data.`}</p>
+          <h2 style={{ color: 'var(--text-primary)', marginBottom: 8 }}>{language === 'es' ? 'Proyecto no encontrado' : 'Project not found'}</h2>
+          <p style={{ color: 'var(--text-muted)' }}>{language === 'es' ? `No se pudo encontrar la SO #${so} en los datos actuales.` : `SO #${so} could not be found in the current data.`}</p>
         </div>
       </div>
     );
@@ -160,7 +160,7 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
                 }}>
                   {isCompleted && <Check size={14} color="#fff" strokeWidth={3} />}
                 </div>
-                <span style={{ ...styles.stageLabel, color: isCompleted ? '#10b981' : '#94a3b8' }}>
+                <span style={{ ...styles.stageLabel, color: isCompleted ? '#10b981' : 'var(--text-muted)' }}>
                   {stage.label}
                 </span>
               </div>
@@ -242,14 +242,14 @@ const styles = {
     marginBottom: 6,
   },
   title: {
-    color: '#f1f5f9',
+    color: 'var(--text-primary)',
     fontSize: '1.6rem',
     fontWeight: 700,
     margin: 0,
     lineHeight: 1.2,
   },
   subtitle: {
-    color: '#94a3b8',
+    color: 'var(--text-muted)',
     fontSize: '0.9rem',
     margin: '6px 0 0',
   },

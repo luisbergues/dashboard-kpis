@@ -948,7 +948,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                                       style={{ height: '40px', borderRadius: '4px', objectFit: 'cover' }} 
                                     />
                                   ) : (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px', color: '#94A3B8' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px', color: 'var(--text-muted)' }}>
                                       <FileText size={18} />
                                       <span title={file.name} style={{ fontSize: '0.75rem', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {file.name}
@@ -981,7 +981,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                                 }
                               }}
                             />
-                            <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', padding: '0 10px', borderRadius: '8px', color: '#94A3B8' }} title={language === 'es' ? 'Adjuntar Imagen o Documento (Máx 1MB)' : 'Attach Image or Document (Max 1MB)'}>
+                            <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', padding: '0 10px', borderRadius: '8px', color: 'var(--text-muted)' }} title={language === 'es' ? 'Adjuntar Imagen o Documento (Máx 1MB)' : 'Attach Image or Document (Max 1MB)'}>
                               <Paperclip size={14} />
                               <input
                                 type="file"

@@ -27,7 +27,21 @@
   --text-primary: #FFFFFF;
   --text-secondary: #94A3B8;
   --text-muted: #64748B;
-  
+
+  /* Superficies translúcidas que siguen al tema (reemplazan rgba(255,255,255,x) hardcodeado) */
+  --overlay-01: rgba(255, 255, 255, 0.01);
+  --overlay-02: rgba(255, 255, 255, 0.02);
+  --overlay-03: rgba(255, 255, 255, 0.03);
+  --overlay-04: rgba(255, 255, 255, 0.04);
+  --overlay-05: rgba(255, 255, 255, 0.05);
+  --overlay-06: rgba(255, 255, 255, 0.06);
+  --overlay-08: rgba(255, 255, 255, 0.08);
+  --overlay-10: rgba(255, 255, 255, 0.1);
+  --overlay-12: rgba(255, 255, 255, 0.12);
+  --overlay-15: rgba(255, 255, 255, 0.15);
+  --overlay-18: rgba(255, 255, 255, 0.18);
+  --overlay-20: rgba(255, 255, 255, 0.2);
+
   /* Spacing */
   --spacing-sm: 0.5rem;
   --spacing-md: 1rem;
@@ -153,6 +167,19 @@ h1, h2, h3, h4, h5, h6 {
   --text-primary: #111827;   /* Dark grey text */
   --text-secondary: #374151; /* Medium grey text */
   --text-muted: #6B7280;     /* Muted grey text */
+
+  --overlay-01: rgba(0, 0, 0, 0.015);
+  --overlay-02: rgba(0, 0, 0, 0.02);
+  --overlay-03: rgba(0, 0, 0, 0.03);
+  --overlay-04: rgba(0, 0, 0, 0.04);
+  --overlay-05: rgba(0, 0, 0, 0.05);
+  --overlay-06: rgba(0, 0, 0, 0.06);
+  --overlay-08: rgba(0, 0, 0, 0.08);
+  --overlay-10: rgba(0, 0, 0, 0.1);
+  --overlay-12: rgba(0, 0, 0, 0.12);
+  --overlay-15: rgba(0, 0, 0, 0.15);
+  --overlay-18: rgba(0, 0, 0, 0.18);
+  --overlay-20: rgba(0, 0, 0, 0.2);
 }
 
 /* Light Theme Global Rules */

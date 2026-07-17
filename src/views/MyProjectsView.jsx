@@ -1387,7 +1387,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                             </span>
                           </button>
                         </div>
-                        <span style={{ color: '#64748B', marginLeft: '8px', fontSize: '0.85rem' }}>{isCollapsed ? '▼' : '▲'}</span>
+                        <span style={{ color: 'var(--text-muted)', marginLeft: '8px', fontSize: '0.85rem' }}>{isCollapsed ? '▼' : '▲'}</span>
                       </div>
                     </div>
 

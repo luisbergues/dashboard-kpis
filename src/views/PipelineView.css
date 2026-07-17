@@ -166,7 +166,7 @@
 }
 
 .eng-badge {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--overlay-10);
   padding: 2px 10px;
   border-radius: 100px;
   color: var(--text-primary);
@@ -214,9 +214,9 @@
 }
 
 .status-default {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--overlay-10);
   color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--overlay-20);
 }
 
 .on-hold-alert {
@@ -244,7 +244,7 @@
 .pipeline-notes-section {
   width: 100%;
   margin-top: 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--overlay-06);
   padding-top: 10px;
 }
 
@@ -267,8 +267,8 @@
 }
 
 .pipeline-note-item {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--overlay-03);
+  border: 1px solid var(--overlay-06);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
   flex: 1 1 260px;
@@ -277,7 +277,7 @@
 }
 
 .pipeline-note-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--overlay-05);
 }
 
 .pipeline-note-item.priority {
@@ -331,8 +331,8 @@
 .pipeline-eng-check-controls {
   margin-top: 12px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--overlay-02);
+  border: 1px solid var(--overlay-05);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
@@ -538,7 +538,7 @@
   flex: 1;
   border-radius: 12px;
   border: 1px solid var(--card-border);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--overlay-03);
   color: #fff;
   font-size: 0.85rem;
   padding: 10px 12px;
@@ -590,8 +590,8 @@
 }
 
 .pipeline-note-item-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--overlay-02);
+  border: 1px solid var(--overlay-04);
   border-radius: 12px;
   padding: 12px 14px;
   position: relative;
@@ -653,7 +653,7 @@
 
 .pipeline-note-card-date {
   font-size: 0.7rem;
-  color: #94A3B8;
+  color: var(--text-muted);
   margin-top: 4px;
 }
 
@@ -724,8 +724,8 @@
   width: calc(var(--kanban-card-w) + 36px);
   flex: 0 0 calc(var(--kanban-card-w) + 36px);
   min-width: 0;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--overlay-02);
+  border: 1px solid var(--overlay-05);
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
@@ -744,7 +744,7 @@
   justify-content: space-between;
   align-items: center;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--overlay-05);
   margin-bottom: 12px;
 }
 
@@ -791,12 +791,12 @@
 }
 
 .kanban-column-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--overlay-10);
   border-radius: 4px;
 }
 
 .kanban-column-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--overlay-18);
 }
 
 /* .kanban-card.glass-card (two classes) so this beats .glass-card's own
@@ -812,7 +812,7 @@
      over-rounded relative to their size. */
   border-radius: calc(17px * var(--kanban-card-fs));
   cursor: grab;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--overlay-04);
   overflow: hidden;
   position: relative;
 }
@@ -880,7 +880,7 @@
   display: flex;
   justify-content: flex-end;
   margin-top: 2px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--overlay-05);
   padding-top: 4px;
 }
 
@@ -914,7 +914,7 @@
 }
 
 .pipeline-toggle-btn.off {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--overlay-10);
 }
 
 .pipeline-toggle-knob {
