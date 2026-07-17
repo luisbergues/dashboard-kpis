@@ -6,6 +6,7 @@ import { saveEngineeringCheck } from '../utils/engineeringCheck';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
 import { sendStageEvent, sendNoteEvent, sendEngineerAssignEvent } from '../utils/sheetSync';
+import { shortProjectName } from '../utils/projectName';
 import './PipelineView.css';
 
 const getStageLabel = (stageId, language) => {
@@ -694,7 +695,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                           {getStatusLabel(project.status)}
                         </span>
                       </div>
-                      <h4 className="kanban-project-name">{String(project.name || '').split(':')[0].trim()}</h4>
+                      <h4 className="kanban-project-name">{shortProjectName(project.name)}</h4>
                       <div className="kanban-card-meta">
                         <span className="meta-item" style={{ fontSize: '0.82rem' }}><Calendar size={13}/> {project.install}</span>
                         <span className="meta-item eng-badge" style={{ fontSize: '0.82rem' }}>ENG: {project.eng}</span>
@@ -753,7 +754,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                         onClick={e => e.stopPropagation()}
                         style={{ textDecoration: 'none', cursor: 'pointer' }}
                       >#{project.so}</a>
-                      <h3 className="project-name">{String(project.name || '').split(':')[0].trim()}</h3>
+                      <h3 className="project-name">{shortProjectName(project.name)}</h3>
                     </div>
                     <div className="project-meta">
                       <span className="meta-item">

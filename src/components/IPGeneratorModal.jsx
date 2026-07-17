@@ -6,6 +6,7 @@ import { saveIPData, loadIPData } from '../utils/ipData';
 import { usePagedModal } from '../utils/usePagedModal';
 import { useLanguage } from '../utils/LanguageContext';
 import { useDesignerContacts } from '../utils/useDesignerContacts';
+import { shortProjectName } from '../utils/projectName';
 import './PDFGeneratorModal.css'; // Re-use the modal styles for consistency
 
 const getClientName = (projectName) => {
@@ -97,7 +98,7 @@ export default function IPGeneratorModal({ project, onClose }) {
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: () => {
-      const baseName = String(project.name || '').split(':')[0];
+      const baseName = shortProjectName(project.name);
       const cleanName = baseName.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim();
       return `IP_${cleanName}`;
     },

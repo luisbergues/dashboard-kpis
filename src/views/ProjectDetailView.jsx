@@ -3,6 +3,7 @@ import { Copy, Check, ExternalLink, Calendar, User, AlertTriangle, Clock } from 
 import { useLanguage } from '../utils/LanguageContext';
 import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
 import { useDesignerContacts } from '../utils/useDesignerContacts';
+import { shortProjectName } from '../utils/projectName';
 
 function getStatusColor(status) {
   switch (status) {
@@ -67,7 +68,7 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
       <div style={styles.header}>
         <div>
           <div style={styles.soLabel}>SO #{project.so}</div>
-          <h1 style={styles.title}>{String(project.name || '').split(':')[0].trim()}</h1>
+          <h1 style={styles.title}>{shortProjectName(project.name)}</h1>
           {String(project.name || '').includes(':') && (
             <p style={styles.subtitle}>{String(project.name).split(':').slice(1).join(':').trim()}</p>
           )}

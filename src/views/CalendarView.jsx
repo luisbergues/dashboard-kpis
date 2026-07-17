@@ -5,9 +5,10 @@ import {
 } from 'date-fns';
 import { es, enUS } from 'date-fns/locale';
 import { useLanguage } from '../utils/LanguageContext';
-import { 
-  ChevronLeft, ChevronRight, Calendar as CalendarIcon, 
-  Plus, Trash2, X, FileText, ClipboardList 
+import { shortProjectName } from '../utils/projectName';
+import {
+  ChevronLeft, ChevronRight, Calendar as CalendarIcon,
+  Plus, Trash2, X, FileText, ClipboardList
 } from 'lucide-react';
 import './CalendarView.css';
 import { db, ref, set, remove, onValue } from '../utils/firebase';
@@ -130,7 +131,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
           p.so,
           {
             so: p.so,
-            name: String(p.name || '').split(':')[0].trim(),
+            name: shortProjectName(p.name),
             status: p.status
           }
         ])
@@ -442,7 +443,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                     <span className="u-day">{format(p.dateObj, 'dd')}</span>
                   </div>
                   <div className="upcoming-info">
-                    <div className="u-name">{String(p.name || '').split(':')[0]}</div>
+                    <div className="u-name">{shortProjectName(p.name)}</div>
                     <div className="u-meta">#{p.so} • {p.eng}</div>
                   </div>
                   <div className={`u-status ${getStatusColor(p.status)}`}></div>
@@ -542,7 +543,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                     >
                       <span className={`day-event-dot ${getStatusColor(p.status)}`} />
                       <span className="day-event-so">#{p.so}</span>
-                      <span className="day-event-name">{String(p.name || '').split(':')[0].trim()}</span>
+                      <span className="day-event-name">{shortProjectName(p.name)}</span>
                       <span className="day-event-status">{p.status}</span>
                     </a>
                   ))}

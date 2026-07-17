@@ -24,6 +24,7 @@ import { useLanguage } from './utils/LanguageContext'
 import { isSuperAdminRole } from './utils/adminConfig'
 import { usePendingUsersCount } from './utils/usePendingUsersCount'
 import { auth, db, onAuthStateChanged, ref, onValue, set, get, child, signOut } from './utils/firebase'
+import { shortProjectName } from './utils/projectName'
 
 function App() {
   const { t } = useLanguage();
@@ -360,7 +361,7 @@ function App() {
       alerts.push({
         so: p.so,
         type: 'warning',
-        text: `SO #${p.so} "${p.name.split(':')[0].trim()}" está ON HOLD${reason}`
+        text: `SO #${p.so} "${shortProjectName(p.name)}" está ON HOLD${reason}`
       });
     });
 
@@ -408,7 +409,7 @@ function App() {
           alerts.push({
             so: p.so,
             type: 'urgent',
-            text: `¡Urgente! SO #${p.so} tiene instalación en ${diffDays} días: ${p.name.split(':')[0].trim()}`
+            text: `¡Urgente! SO #${p.so} tiene instalación en ${diffDays} días: ${shortProjectName(p.name)}`
           });
         }
       }
@@ -449,7 +450,7 @@ function App() {
           alerts.push({
             so: p.so,
             type: 'note',
-            text: `SO #${p.so}: ${unreadCount} nota${unreadCount > 1 ? 's' : ''} nueva${unreadCount > 1 ? 's' : ''} en ${p.name.split(':')[0].trim()}`
+            text: `SO #${p.so}: ${unreadCount} nota${unreadCount > 1 ? 's' : ''} nueva${unreadCount > 1 ? 's' : ''} en ${shortProjectName(p.name)}`
           });
         }
       }

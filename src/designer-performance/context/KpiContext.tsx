@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { Project, Designer } from '../types';
 import { calculateDesignerStats } from '../utils/scoreCalculator';
 import { db, ref, set, onValue } from '../../utils/firebase';
+import { shortProjectName } from '../../utils/projectName';
 
 interface KpiContextType {
   projects: Project[];
@@ -82,7 +83,7 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
         id: so,
         createdAt:    perfData.createdAt    ?? Date.now(),
         approvedAt:   perfData.approvedAt   ?? null,
-        projectName:  p.name || `SO #${so}`,
+        projectName:  shortProjectName(p.name) || `SO #${so}`,
         designerName: perfData.designerName || baseDesignerName,
         status:       perfData.status       ?? 'Pending',
         totalRooms:   perfData.totalRooms   ?? 1,

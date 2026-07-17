@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Clock, CheckCircle, AlertTriangle, ChevronLeft, ChevronRight, ListTodo, DollarSign, TrendingUp, Download } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
+import { shortProjectName } from '../utils/projectName';
 import {
   Chart as ChartJS,
   LinearScale,
@@ -340,7 +341,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
       const so = soMatch ? soMatch[1] : '';
       let displayName = titlePart;
       if (titlePart.includes(':')) {
-        displayName = titlePart.split(':')[0].trim();
+        displayName = shortProjectName(titlePart);
       }
       let status = '';
       let install = '';
@@ -374,7 +375,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
     .filter(p => (p.status || '').toUpperCase().includes('HOLD'))
     .map(p => ({
       so: p.so,
-      name: String(p.name || '').split(':')[0].trim(),
+      name: shortProjectName(p.name),
       status: p.status,
       install: p.install || 'TBD',
       notes: p.onHoldReason || '',
@@ -670,7 +671,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
             <div style={{ height: '350px', position: 'relative' }}>
               <Bar 
                 data={{
-                  labels: topCostProjects.map(p => String(p.name || '').split(':')[0]),
+                  labels: topCostProjects.map(p => shortProjectName(p.name)),
                   datasets: [
                     {
                       label: t('costs.projectCost'),

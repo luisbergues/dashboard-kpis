@@ -5,6 +5,7 @@ import PDFPrintLayout from './PDFPrintLayout';
 import { saveESSData, loadESSData } from '../utils/essData';
 import { usePagedModal } from '../utils/usePagedModal';
 import { useLanguage } from '../utils/LanguageContext';
+import { shortProjectName } from '../utils/projectName';
 import './PDFGeneratorModal.css';
 
 const DEFAULT_DRAWERS = [
@@ -20,7 +21,7 @@ const DEFAULT_RODS = [
 
 const createDefaultPage = (project, materials) => ({
   headerData: {
-    jobName: project ? `${project.so} - ${String(project.name || '').split(':')[0].trim()}` : '',
+    jobName: project ? `${project.so} - ${shortProjectName(project.name)}` : '',
     color: 'White Classic 300',
     rooms: 'Her Master',
     designer: project ? (project.designer || 'Russell') : '',
@@ -105,7 +106,7 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
   
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: () => `ESS_${String(project.name || '').split(':')[0].trim()}`,
+    documentTitle: () => `ESS_${shortProjectName(project.name)}`,
     pageStyle: `
       @page {
         size: A4 portrait;

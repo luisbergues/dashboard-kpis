@@ -2,6 +2,7 @@
  * KPI Calculator Service (Clean Architecture)
  * Contains isolated mathematical formulas and business logic for JL Closets metrics.
  */
+import { shortProjectName } from '../utils/projectName';
 
 /**
  * Parses a currency string to a float number
@@ -191,7 +192,7 @@ export function predictBottlenecks(projects, referenceDateStr = new Date().toISO
         date,
         severity: 'high',
         message: `High installation load on ${date}: ${projs.length} projects scheduled.`,
-        projects: projs.map(p => `#${p.so} ${p.name.split(':')[0]}`)
+        projects: projs.map(p => `#${p.so} ${shortProjectName(p.name)}`)
       });
     }
   });
@@ -205,8 +206,8 @@ export function predictBottlenecks(projects, referenceDateStr = new Date().toISO
         type: 'delayed_installation_risk',
         date: p.install,
         severity: isCritical ? 'critical' : 'high',
-        message: `Project #${p.so} (${p.name.split(':')[0]}) is scheduled for installation on ${p.install} but is currently ${p.status.toUpperCase()}.`,
-        projects: [`#${p.so} ${p.name.split(':')[0]}`]
+        message: `Project #${p.so} (${shortProjectName(p.name)}) is scheduled for installation on ${p.install} but is currently ${p.status.toUpperCase()}.`,
+        projects: [`#${p.so} ${shortProjectName(p.name)}`]
       });
     }
   });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, Minus } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
+import { shortProjectName } from '../utils/projectName';
 import './MaterialsView.css';
 
 export default function MaterialsView({ data }) {
@@ -39,7 +40,7 @@ export default function MaterialsView({ data }) {
             {materialRequirements.map((item, idx) => (
               <tr key={idx}>
                 <td className="so-cell">#{item.so}</td>
-                <td className="name-cell">{item.name}</td>
+                <td className="name-cell" title={item.name}>{shortProjectName(item.name)}</td>
                 <td className="date-cell">{item.installDate}</td>
                 <td>{renderBadge(item.thermofoil)}</td>
                 <td>{renderBadge(item.noHoles)}</td>
