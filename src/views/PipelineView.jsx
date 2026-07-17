@@ -947,7 +947,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                                   ) : (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px', color: '#94A3B8' }}>
                                       <FileText size={18} />
-                                      <span style={{ fontSize: '0.75rem', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      <span title={file.name} style={{ fontSize: '0.75rem', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {file.name}
                                       </span>
                                     </div>
@@ -1065,7 +1065,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                                             <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
                                               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
                                                 <FileText size={14} />
-                                                <span style={{ fontSize: '0.75rem', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                <span title={att.name || 'Document'} style={{ fontSize: '0.75rem', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                   {att.name || 'Document'}
                                                 </span>
                                               </div>

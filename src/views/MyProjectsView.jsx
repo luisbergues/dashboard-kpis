@@ -1379,7 +1379,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                           <button
                             onClick={() => handleOpenDesignerModal(project.so)}
                             className="btn-hold-toggle collab-btn"
-                            title={language === 'es' ? 'Diseñador a Cargo' : 'Designer in Charge'}
+                            title={`${language === 'es' ? 'Diseñador a Cargo' : 'Designer in Charge'}: ${projectDesigners[project.so] || (language === 'es' ? 'Ninguno' : 'None')}`}
                           >
                             <User size={16} />
                             <span style={{ maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1566,7 +1566,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                                   ) : (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px', color: mutedOnSurface }}>
                                       <FileText size={24} />
-                                      <span style={{ fontSize: '0.8rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      <span title={file.name} style={{ fontSize: '0.8rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {file.name}
                                       </span>
                                     </div>
@@ -1706,7 +1706,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                                           <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
                                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
                                               <FileText size={16} />
-                                              <span style={{ fontSize: '0.85rem', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                              <span title={att.name || 'Document'} style={{ fontSize: '0.85rem', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                 {att.name || 'Document'}
                                               </span>
                                             </div>
