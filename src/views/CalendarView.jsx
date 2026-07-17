@@ -157,6 +157,18 @@ export default function CalendarView({ data, currentUser, userProfile }) {
     return 'cal-status-default';
   };
 
+  // A note's `date` isn't enforced by any rule on the calendar_notes
+  // collection, so one written by an older build — or whose write partially
+  // failed — can lack it. Building the string by concatenation turned that
+  // into "undefinedT00:00:00" -> Invalid Date, and format() throws
+  // RangeError on those, taking the whole Calendar down.
+  const formatNoteDate = (rawDate) => {
+    if (!rawDate) return '';
+    const d = new Date(`${rawDate}T00:00:00`);
+    if (isNaN(d.getTime())) return '';
+    return format(d, 'MMM dd, yyyy', { locale: language === 'es' ? es : enUS });
+  };
+
   // LocalStorage Helper
   const saveNotesToLocalStorage = (updatedNotes) => {
     setNotes(updatedNotes);
@@ -449,12 +461,11 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                 .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')))
                 .map((n, idx) => {
                   const linkedProj = priorityAnalysis.find(p => p.so === n.so);
-                  const noteDate = new Date(n.date + 'T00:00:00');
                   return (
                     <div key={idx} className="sidebar-note-item" onClick={() => handleEditNote(n)}>
                       <div className="sidebar-note-header">
                         <span className="sidebar-note-date">
-                          {format(noteDate, 'MMM dd, yyyy', { locale: language === 'es' ? es : enUS })}
+                          {formatNoteDate(n.date)}
                         </span>
                         {n.so && (
                           <span className="sidebar-note-badge" title={linkedProj?.name}>
