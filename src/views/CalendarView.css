@@ -368,6 +368,10 @@
   flex-direction: column;
   gap: 8px;
   flex-shrink: 0;
+  /* Reset <button> defaults now that this is a real button, not a div. */
+  font: inherit;
+  text-align: left;
+  width: 100%;
 }
 
 .sidebar-note-item:hover {

@@ -4,26 +4,7 @@ import { calculatePhase1ScoreAndStatus, calculateTechnicalPoints } from '../util
 import toast from 'react-hot-toast';
 import type { Project, ProjectStatus } from '../types';
 import { Link2, FileText, CheckSquare, Zap, RefreshCw, Send } from 'lucide-react';
-
-/* ── shared design tokens matching the main app ─────────────────────── */
-const T = {
-  cardBg:     '#1C1C22',
-  cardBorder: '#26272C',
-  cardHover:  '#202128',
-  bgDeep:     '#0A0A0C',
-  bgSurface:  '#0F0F12',
-  textPrimary:   '#FFFFFF',
-  textSecondary: '#94A3B8',
-  textMuted:     '#64748B',
-  blue:    '#3B82F6',
-  blueDeep:'#1D4ED8',
-  green:   '#10B981',
-  yellow:  '#FFE600',
-  red:     '#EF4444',
-  radiusLg: 28,
-  radiusMd: 20,
-  radiusPill: 100,
-};
+import { T } from '../utils/theme';
 
 /* ── tiny primitives ─────────────────────────────────────────────────── */
 const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => (
@@ -366,13 +347,23 @@ export const Phase1Form: React.FC = () => {
               return (
                 <label key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    {/* custom checkbox */}
-                    <div onClick={() => handleChecklistToggle(item.id)} style={{
+                    {/* Real checkbox input, visually hidden: the <label> wrapper
+                        already routes clicks to it, and it gives keyboard focus,
+                        Enter/Space toggling, and screen-reader semantics that the
+                        bare onClick div lacked. */}
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => handleChecklistToggle(item.id)}
+                      style={{ position: 'absolute', opacity: 0, width: 20, height: 20, margin: 0, cursor: 'pointer' }}
+                    />
+                    {/* custom checkbox visual */}
+                    <div aria-hidden="true" style={{
                       width: 20, height: 20, borderRadius: 6, flexShrink: 0,
                       border: `2px solid ${checked ? T.blue : T.cardBorder}`,
                       background: checked ? T.blue : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.2s', cursor: 'pointer',
+                      transition: 'all 0.2s',
                     }}>
                       {checked && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>✓</span>}
                     </div>
@@ -402,12 +393,18 @@ export const Phase1Form: React.FC = () => {
               }}>
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div onClick={() => handleChecklistToggle('finalMeasurementsDelivered')} style={{
+                    <input
+                      type="checkbox"
+                      checked={checklist.finalMeasurementsDelivered !== false}
+                      onChange={() => handleChecklistToggle('finalMeasurementsDelivered')}
+                      style={{ position: 'absolute', opacity: 0, width: 20, height: 20, margin: 0, cursor: 'pointer' }}
+                    />
+                    <div aria-hidden="true" style={{
                       width: 20, height: 20, borderRadius: 6, flexShrink: 0,
                       border: `2px solid ${checklist.finalMeasurementsDelivered !== false ? T.blue : T.cardBorder}`,
                       background: checklist.finalMeasurementsDelivered !== false ? T.blue : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.2s', cursor: 'pointer',
+                      transition: 'all 0.2s',
                     }}>
                       {checklist.finalMeasurementsDelivered !== false && (
                         <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>
@@ -462,14 +459,20 @@ export const Phase1Form: React.FC = () => {
               const checked = complexity[item.id];
               const isAutoSynced = item.synced && autoFilledFields.has(item.id);
               return (
-                <label key={item.id} onClick={() => handleComplexityChange(item.id)} style={{
+                <label key={item.id} style={{
                   display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
                   padding: '10px 12px', borderRadius: T.radiusMd,
                   background: checked ? 'rgba(59,130,246,0.07)' : T.bgSurface,
                   border: `1px solid ${checked ? 'rgba(59,130,246,0.2)' : T.cardBorder}`,
                   transition: 'all 0.2s',
                 }}>
-                  <div style={{
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => handleComplexityChange(item.id)}
+                    style={{ position: 'absolute', opacity: 0, width: 18, height: 18, margin: 0, cursor: 'pointer' }}
+                  />
+                  <div aria-hidden="true" style={{
                     width: 18, height: 18, borderRadius: 5, flexShrink: 0,
                     border: `2px solid ${checked ? T.blue : T.textMuted}`,
                     background: checked ? T.blue : 'transparent',

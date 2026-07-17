@@ -129,7 +129,7 @@ export default function IPGeneratorModal({ project, onClose }) {
             <button className="btn-primary btn-sm" onClick={handlePrint}>
               <Printer size={16} /> {t('myProjects.printSavePDF')}
             </button>
-            <button className="btn-icon danger" onClick={onClose}>
+            <button className="btn-icon danger" onClick={onClose} aria-label={t('common.close')}>
               <X size={20} />
             </button>
           </div>
@@ -156,7 +156,7 @@ export default function IPGeneratorModal({ project, onClose }) {
                 )}
               </div>
             ))}
-            <button className="btn-add-tab" onClick={addPage} title={t('myProjects.addNewSheet')}>
+            <button className="btn-add-tab" onClick={addPage} title={t('myProjects.addNewSheet')} aria-label={t('myProjects.addNewSheet')}>
               <Plus size={16} />
             </button>
           </div>

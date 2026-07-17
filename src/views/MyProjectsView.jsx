@@ -16,6 +16,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, LineElement, PointElement
 import { Line } from 'react-chartjs-2';
 import { calculateWeeklyCompletions, getUpcomingDeadlines } from '../services/kpiCalculator';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
+import SkeletonLoader from '../components/SkeletonLoader';
 import PDFGeneratorModal from '../components/PDFGeneratorModal';
 import IPGeneratorModal from '../components/IPGeneratorModal';
 import CompletedProjectsModal from '../components/CompletedProjectsModal';
@@ -56,6 +57,12 @@ const getStageLabel = (stageId, language) => {
 export default function MyProjectsView({ data, currentUser, userProfile, setActiveTab, setFocusedProjectSo }) {
   const { t, language } = useLanguage();
   const { theme } = useTheme();
+  const isLight = theme === 'light';
+  // A few inline styles hardcoded dark-theme text (#fff / #94A3B8) on top of a
+  // translucent rgba(255,255,255,...) surface, which lets the real page
+  // background show through — invisible on light theme's white background.
+  const textOnSurface = isLight ? '#1e293b' : '#fff';
+  const mutedOnSurface = isLight ? '#64748b' : '#94A3B8';
   if (!data) return null;
 
   const { priorityAnalysis, onHoldNotes } = data;
@@ -1194,13 +1201,19 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       {/* Analytics Section */}
       {!loading && myProjectsRaw.length > 0 && (
         <section className="personal-analytics-section glass-card mb-xl">
-          <div className="analytics-header" onClick={() => setShowAnalytics(!showAnalytics)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showAnalytics ? '16px' : '0' }}>
+          <button
+            type="button"
+            className="analytics-header"
+            onClick={() => setShowAnalytics(!showAnalytics)}
+            aria-expanded={showAnalytics}
+            style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showAnalytics ? '16px' : '0', width: '100%', background: 'none', border: 'none', font: 'inherit', textAlign: 'left', padding: 0 }}
+          >
             <h2 className="section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <TrendingUp size={20} className="text-neon-cyan" />
               My Analytics Dashboard
             </h2>
             {showAnalytics ? <ChevronUp size={20} className="text-muted" /> : <ChevronDown size={20} className="text-muted" />}
-          </div>
+          </button>
           
           {showAnalytics && (
             <div className="projects-analytics-grid">
@@ -1280,7 +1293,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       </div>
 
       {loading ? (
-        <div className="loading-state">{t('myProjects.loading')}</div>
+        <SkeletonLoader type="card" count={6} />
       ) : myProjects.length === 0 ? (
         <div className="empty-projects glass-card">
           <Briefcase size={48} className="text-muted" />
@@ -1549,7 +1562,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                                       style={{ height: '60px', borderRadius: '4px', objectFit: 'cover' }} 
                                     />
                                   ) : (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px', color: '#94A3B8' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px', color: mutedOnSurface }}>
                                       <FileText size={24} />
                                       <span style={{ fontSize: '0.8rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {file.name}
@@ -1608,7 +1621,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                                     : (language === 'es' ? 'Normal' : 'Normal')}
                               </button>
                               
-                              <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '12px', fontSize: '0.75rem', color: '#94A3B8' }} title={language === 'es' ? 'Adjuntar Imagen o Documento (Máx 1MB)' : 'Attach Image or Document (Max 1MB)'}>
+                              <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '12px', fontSize: '0.75rem', color: mutedOnSurface }} title={language === 'es' ? 'Adjuntar Imagen o Documento (Máx 1MB)' : 'Attach Image or Document (Max 1MB)'}>
                                 <Paperclip size={14} />
                                 <input
                                   type="file"
@@ -1731,7 +1744,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">{t('myProjects.modalHoldTitle')}</h3>
-              <button className="modal-close-btn" onClick={() => setIsHoldModalOpen(false)}>
+              <button className="modal-close-btn" onClick={() => setIsHoldModalOpen(false)} aria-label={t('common.close')}>
                 <X size={18} />
               </button>
             </div>
@@ -1774,7 +1787,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">{language === 'es' ? 'Diseñador a Cargo' : 'Designer in Charge'}</h3>
-              <button className="modal-close-btn" onClick={() => setIsDesignerModalOpen(false)}>
+              <button className="modal-close-btn" onClick={() => setIsDesignerModalOpen(false)} aria-label={t('common.close')}>
                 <X size={18} />
               </button>
             </div>
@@ -1785,7 +1798,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                   value={designerSearchTerm}
                   onChange={(e) => setDesignerSearchTerm(e.target.value)}
                   className="form-input"
-                  style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.9rem' }}
+                  style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: textOnSurface, fontSize: '0.9rem' }}
                 >
                   <option value="" disabled>{language === 'es' ? 'Seleccionar diseñador...' : 'Select designer...'}</option>
                   {[
@@ -1813,7 +1826,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">{language === 'es' ? 'Colaboradores del Proyecto' : 'Project Collaborators'}</h3>
-              <button className="modal-close-btn" onClick={() => setIsCollabModalOpen(false)}>
+              <button className="modal-close-btn" onClick={() => setIsCollabModalOpen(false)} aria-label={t('common.close')}>
                 <X size={18} />
               </button>
             </div>
@@ -1824,7 +1837,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                   value={collabSearchTerm}
                   onChange={(e) => setCollabSearchTerm(e.target.value)}
                   className="form-input"
-                  style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.9rem' }}
+                  style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: textOnSurface, fontSize: '0.9rem' }}
                 >
                   <option value="" disabled>{language === 'es' ? 'Seleccionar ingeniero...' : 'Select engineer...'}</option>
                   {designersList.map(name => (
@@ -1880,7 +1893,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                 {qaType === 'ess_ip' && (language === 'es' ? '📄 2. Checklist Eng Shop Sheet (ESS) / Installer Packet (IP)' : '📄 2. Eng Shop Sheet (ESS) / Installer Packet (IP)')}
                 {qaType === 'final' && (language === 'es' ? '🏁 3. Final Checklist' : '🏁 3. Final Checklist')}
               </h3>
-              <button className="modal-close-btn" onClick={() => { setIsQAModalOpen(false); setQAPendingAction(null); setQAType(''); }}>
+              <button className="modal-close-btn" onClick={() => { setIsQAModalOpen(false); setQAPendingAction(null); setQAType(''); }} aria-label={t('common.close')}>
                 <X size={18} />
               </button>
             </div>
@@ -1896,7 +1909,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                 style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px', maxHeight: '350px', overflowY: 'auto', paddingRight: '8px', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '12px', background: 'rgba(0,0,0,0.1)' }}
               >
                 {(t(`myProjects.checklists.${qaType}`) || []).map((item, idx) => (
-                  <label key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', color: '#fff', fontSize: '0.92rem', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}
+                  <label key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', color: textOnSurface, fontSize: '0.92rem', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}
                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}>
                     <input
@@ -1922,7 +1935,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                     type="button" 
                     className="btn-secondary"
                     onClick={() => { setIsQAModalOpen(false); setQAPendingAction(null); setQAType(''); }}
-                    style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#94A3B8', cursor: 'pointer' }}
+                    style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: mutedOnSurface, cursor: 'pointer' }}
                   >
                     {t('common.cancel')}
                   </button>
@@ -1990,11 +2003,12 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
             style={{ position: 'relative', maxWidth: '85vw', maxHeight: '90vh' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <button 
+            <button
               onClick={() => setSelectedImage(null)}
-              style={{ 
-                position: 'absolute', top: '0', right: '-50px', 
-                background: 'none', border: 'none', color: '#fff', 
+              aria-label={language === 'es' ? 'Cerrar imagen' : 'Close image'}
+              style={{
+                position: 'absolute', top: '0', right: '-50px',
+                background: 'none', border: 'none', color: '#fff',
                 cursor: 'pointer', padding: '8px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: 'rgba(255,255,255,0.1)', borderRadius: '50%'

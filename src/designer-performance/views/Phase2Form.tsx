@@ -3,26 +3,7 @@ import { useKpi } from '../context/KpiContext';
 import { calculatePhase2Score } from '../utils/scoreCalculator';
 import toast from 'react-hot-toast';
 import { Flag, BarChart2, Send, Hash, User, Layers } from 'lucide-react';
-
-/* ── design tokens (same as Phase1Form) ─────────────────────────────── */
-const T = {
-  cardBg:     '#1C1C22',
-  cardBorder: '#26272C',
-  cardHover:  '#202128',
-  bgDeep:     '#0A0A0C',
-  bgSurface:  '#0F0F12',
-  textPrimary:   '#FFFFFF',
-  textSecondary: '#94A3B8',
-  textMuted:     '#64748B',
-  blue:    '#3B82F6',
-  blueDeep:'#1D4ED8',
-  green:   '#10B981',
-  yellow:  '#EAB308',
-  red:     '#EF4444',
-  radiusLg: 28,
-  radiusMd: 20,
-  radiusPill: 100,
-};
+import { T } from '../utils/theme';
 
 const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => (
   <div style={{

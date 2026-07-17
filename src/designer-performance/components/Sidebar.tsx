@@ -119,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView })
         ))}
       </nav>
 
-      <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.07)', color: '#334155', fontSize: '0.72rem', textAlign: 'center' }}>
+      <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.07)', color: '#64748b', fontSize: '0.72rem', textAlign: 'center' }}>
         JL Closets · KPI v2.0
       </div>
     </div>

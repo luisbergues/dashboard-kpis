@@ -276,11 +276,11 @@ export default function CalendarView({ data, currentUser, userProfile }) {
 
   const renderHeader = () => (
     <div className="calendar-header">
-      <button onClick={prevMonth} className="cal-nav-btn"><ChevronLeft /></button>
+      <button onClick={prevMonth} className="cal-nav-btn" aria-label={language === 'es' ? 'Mes anterior' : 'Previous month'}><ChevronLeft /></button>
       <h2 className="cal-month-title" style={{ textTransform: 'capitalize' }}>
         {format(currentMonth, 'MMMM yyyy', { locale: language === 'es' ? es : enUS })}
       </h2>
-      <button onClick={nextMonth} className="cal-nav-btn"><ChevronRight /></button>
+      <button onClick={nextMonth} className="cal-nav-btn" aria-label={language === 'es' ? 'Mes siguiente' : 'Next month'}><ChevronRight /></button>
     </div>
   );
 
@@ -462,7 +462,13 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                 .map((n, idx) => {
                   const linkedProj = priorityAnalysis.find(p => p.so === n.so);
                   return (
-                    <div key={idx} className="sidebar-note-item" onClick={() => handleEditNote(n)}>
+                    <button
+                      type="button"
+                      key={idx}
+                      className="sidebar-note-item"
+                      onClick={() => handleEditNote(n)}
+                      aria-label={language === 'es' ? `Editar nota: ${n.text}` : `Edit note: ${n.text}`}
+                    >
                       <div className="sidebar-note-header">
                         <span className="sidebar-note-date">
                           {formatNoteDate(n.date)}
@@ -479,7 +485,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                           {language === 'es' ? 'Por' : 'By'} {n.authorName}
                         </div>
                       )}
-                    </div>
+                    </button>
                   );
                 })}
               {notes.length === 0 && (
@@ -513,7 +519,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
               <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                   <h3 className="modal-title" style={{ textTransform: 'capitalize' }}>{prettyDate}</h3>
-                  <button className="modal-close-btn" onClick={() => setIsModalOpen(false)}>
+                  <button className="modal-close-btn" onClick={() => setIsModalOpen(false)} aria-label={language === 'es' ? 'Cerrar' : 'Close'}>
                     <X size={18} />
                   </button>
                 </div>
@@ -577,7 +583,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
               <h3 className="modal-title">
                 {selectedNote ? t('calendar.editNote') : t('calendar.addNote')}
               </h3>
-              <button className="modal-close-btn" onClick={() => setIsModalOpen(false)}>
+              <button className="modal-close-btn" onClick={() => setIsModalOpen(false)} aria-label={t('common.close')}>
                 <X size={18} />
               </button>
             </div>

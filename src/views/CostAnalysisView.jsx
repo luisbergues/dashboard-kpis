@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../utils/LanguageContext';
+import SkeletonLoader from '../components/SkeletonLoader';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -23,7 +24,7 @@ ChartJS.register(
 
 export default function CostAnalysisView({ data }) {
   const { t, language } = useLanguage();
-  if (!data) return null;
+  if (!data) return <SkeletonLoader type="table" count={5} />;
 
   const { topCostProjects } = data;
 

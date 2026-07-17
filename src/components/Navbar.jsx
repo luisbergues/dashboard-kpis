@@ -107,7 +107,7 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
             </button>
 
             {/* Profile Capsule on Mobile */}
-            <div className="nav-user-profile mobile-profile" onClick={openModal}>
+            <button type="button" className="nav-user-profile mobile-profile" onClick={openModal} aria-label={language === 'es' ? 'Editar perfil' : 'Edit profile'}>
               <div className="user-avatar">
                 <User size={16} />
               </div>
@@ -115,7 +115,7 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
                 <span className="user-name">{userProfile.designerName || 'Designer'}</span>
                 <span className="user-role">{getRoleLabel()}</span>
               </div>
-            </div>
+            </button>
 
             {/* Sign Out Button on Mobile */}
             <button className="mobile-signout-btn" onClick={handleSignOut} title={t('common.signOut')}>
@@ -183,7 +183,7 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
               </button>
             </div>
 
-            <div className="nav-user-profile" onClick={openModal}>
+            <button type="button" className="nav-user-profile" onClick={openModal} aria-label={language === 'es' ? 'Editar perfil' : 'Edit profile'}>
               <div className="user-avatar">
                 <User size={18} />
               </div>
@@ -191,7 +191,7 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
                 <span className="user-name">{userProfile.designerName || 'Designer'}</span>
                 <span className="user-role">{getRoleLabel()}</span>
               </div>
-            </div>
+            </button>
             <button 
               className="nav-btn signout-btn" 
               onClick={handleSignOut}

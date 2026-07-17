@@ -1,23 +1,7 @@
 import React from 'react';
 import { X, Calendar, CheckCircle2, User, Layers, CheckSquare, Zap, Target } from 'lucide-react';
 import type { Project } from '../types';
-
-/* ── design tokens ─────────────────────────────────────────────── */
-const T = {
-  cardBg:     '#1C1C22',
-  cardBorder: '#26272C',
-  bgSurface:  '#0F0F12',
-  textPrimary:   '#FFFFFF',
-  textSecondary: '#94A3B8',
-  textMuted:     '#64748B',
-  blue:    '#3B82F6',
-  green:   '#10B981',
-  yellow:  '#EAB308',
-  red:     '#EF4444',
-  radiusLg: 28,
-  radiusMd: 20,
-  radiusPill: 100,
-};
+import { T } from '../utils/theme';
 
 interface ModalProps {
   project: Project | null;

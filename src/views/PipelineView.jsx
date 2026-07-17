@@ -613,11 +613,12 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
             style={{ position: 'relative', maxWidth: '85vw', maxHeight: '90vh' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <button 
+            <button
               onClick={() => setSelectedImage(null)}
-              style={{ 
-                position: 'absolute', top: '0', right: '-50px', 
-                background: 'none', border: 'none', color: '#fff', 
+              aria-label={language === 'es' ? 'Cerrar imagen' : 'Close image'}
+              style={{
+                position: 'absolute', top: '0', right: '-50px',
+                background: 'none', border: 'none', color: '#fff',
                 cursor: 'pointer', padding: '8px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: 'rgba(255,255,255,0.1)', borderRadius: '50%'

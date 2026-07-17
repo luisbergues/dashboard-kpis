@@ -564,7 +564,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     <div className="project-chatbot-widget">
       {/* Floating Toggle Button */}
       {!isOpen && (
-        <button className="chatbot-toggle-btn animate-bounce-slow" onClick={() => setIsOpen(true)}>
+        <button className="chatbot-toggle-btn animate-bounce-slow" onClick={() => setIsOpen(true)} aria-label={language === 'es' ? 'Abrir chat de asistente' : 'Open assistant chat'}>
           <MessageSquare size={26} />
         </button>
       )}
@@ -585,7 +585,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
                 </div>
               </div>
             </div>
-            <button className="btn-icon danger" onClick={() => setIsOpen(false)}>
+            <button className="btn-icon danger" onClick={() => setIsOpen(false)} aria-label={language === 'es' ? 'Cerrar chat' : 'Close chat'}>
               <X size={18} />
             </button>
           </div>
@@ -654,7 +654,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
               }}
               disabled={isLoading}
             />
-            <button className="chatbot-send-btn" onClick={() => handleSendMessage()} disabled={isLoading}>
+            <button className="chatbot-send-btn" onClick={() => handleSendMessage()} disabled={isLoading} aria-label={language === 'es' ? 'Enviar mensaje' : 'Send message'}>
               <Send size={16} />
             </button>
           </div>

@@ -54,8 +54,8 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
       <div style={styles.root}>
         <div style={styles.card}>
           <AlertTriangle size={32} color="#ef4444" style={{ marginBottom: 12 }} />
-          <h2 style={{ color: '#f1f5f9', marginBottom: 8 }}>Project not found</h2>
-          <p style={{ color: '#94a3b8' }}>SO #{so} could not be found in the current data.</p>
+          <h2 style={{ color: '#f1f5f9', marginBottom: 8 }}>{language === 'es' ? 'Proyecto no encontrado' : 'Project not found'}</h2>
+          <p style={{ color: '#94a3b8' }}>{language === 'es' ? `No se pudo encontrar la SO #${so} en los datos actuales.` : `SO #${so} could not be found in the current data.`}</p>
         </div>
       </div>
     );

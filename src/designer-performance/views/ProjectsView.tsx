@@ -3,6 +3,7 @@ import { useKpi } from '../context/KpiContext';
 import { ProjectDetailsModal } from '../components/ProjectDetailsModal';
 import type { Project, ProjectStatus } from '../types';
 import { Search, User, Hash, LayoutList, Star } from 'lucide-react';
+import { useTheme } from '../../utils/ThemeContext';
 
 const STATUS_STYLES: Record<string, { bg: string; color: string; border: string; dot: string }> = {
   Pending:    { bg: 'rgba(100,116,139,0.12)', color: '#94a3b8', border: 'rgba(100,116,139,0.25)', dot: '#64748b' },
@@ -12,14 +13,14 @@ const STATUS_STYLES: Record<string, { bg: string; color: string; border: string;
   Completed:  { bg: 'rgba(16,185,129,0.10)',  color: '#34d399', border: 'rgba(16,185,129,0.25)',  dot: '#10b981' },
 };
 
-const ScorePill: React.FC<{ score: number | null; label: string }> = ({ score, label }) => (
+const ScorePill: React.FC<{ score: number | null; label: string; isLight: boolean }> = ({ score, label, isLight }) => (
   <div style={{ textAlign: 'center' }}>
-    <div style={{ color: '#475569', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
+    <div style={{ color: isLight ? '#64748b' : '#475569', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
       {label}
     </div>
     <div style={{
       fontWeight: 700, fontSize: '0.9rem',
-      color: score === null ? '#334155' : score >= 80 ? '#34d399' : score >= 60 ? '#facc15' : '#f87171',
+      color: score === null ? (isLight ? '#94a3b8' : '#334155') : score >= 80 ? '#059669' : score >= 60 ? '#b45309' : '#dc2626',
     }}>
       {score === null ? '—' : score}
     </div>
@@ -30,6 +31,33 @@ const FILTER_OPTIONS: Array<ProjectStatus | 'All'> = ['All', 'Pending', 'To revi
 
 export const ProjectsView: React.FC = () => {
   const { projects } = useKpi();
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
+
+  // Local palette: this view was written with dark-only literals (near-white
+  // text, white-tinted rgba surfaces) that vanish on the light theme's white
+  // background. Resolve the ones that sit directly on the page/card
+  // background per theme; status-tinted pills (STATUS_STYLES) are left as-is
+  // since their bg/color pairs are self-contained and already legible.
+  const C = {
+    title: isLight ? '#0f172a' : '#f1f5f9',
+    subtitle: isLight ? '#64748b' : '#475569',
+    name: isLight ? '#1e293b' : '#e2e8f0',
+    body: isLight ? '#475569' : '#94a3b8',
+    muted: isLight ? '#94a3b8' : '#64748b',
+    faint: isLight ? '#94a3b8' : '#334155',
+    inactiveTab: isLight ? '#64748b' : '#475569',
+    surface: isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.025)',
+    surfaceBorder: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.07)',
+    headBg: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(0,0,0,0.2)',
+    rowBorder: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.04)',
+    rowAlt: isLight ? 'rgba(0,0,0,0.015)' : 'rgba(255,255,255,0.01)',
+    rowHover: isLight ? 'rgba(59,130,246,0.05)' : 'rgba(59,130,246,0.06)',
+    inputBg: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.05)',
+    inputBorder: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.09)',
+    tabBorder: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.07)',
+    tabBg: isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.03)',
+  };
 
   const [filterStatus, setFilterStatus] = useState<ProjectStatus | 'All'>('All');
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,8 +87,8 @@ export const ProjectsView: React.FC = () => {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h2 style={{ color: '#f1f5f9', fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>Projects Directory</h2>
-          <p style={{ color: '#475569', margin: '4px 0 0', fontSize: '0.85rem' }}>
+          <h2 style={{ color: C.title, fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>Projects Directory</h2>
+          <p style={{ color: C.subtitle, margin: '4px 0 0', fontSize: '0.85rem' }}>
             {filtered.length} of {projects.length} projects · Status reflects the Phase 1/2 design-review checklist, not the manufacturing pipeline stage
           </p>
         </div>
@@ -69,7 +97,7 @@ export const ProjectsView: React.FC = () => {
             widget (top:24px/right:24px, ~56px wide) so the input never sits
             underneath it on narrower viewports. */}
         <div style={{ position: 'relative', minWidth: 220, marginRight: 90 }}>
-          <Search size={14} color="#475569" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
+          <Search size={14} color={C.subtitle} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
           <input
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -81,10 +109,10 @@ export const ProjectsView: React.FC = () => {
               paddingRight: 12,
               paddingTop: 8,
               paddingBottom: 8,
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.09)',
+              background: C.inputBg,
+              border: `1px solid ${C.inputBorder}`,
               borderRadius: 10,
-              color: '#e2e8f0',
+              color: C.name,
               fontSize: '0.82rem',
               outline: 'none',
             }}
@@ -106,11 +134,11 @@ export const ProjectsView: React.FC = () => {
                 borderRadius: 20,
                 border: isActive
                   ? `1px solid ${st?.border || 'rgba(59,130,246,0.4)'}`
-                  : '1px solid rgba(255,255,255,0.07)',
+                  : `1px solid ${C.tabBorder}`,
                 background: isActive
                   ? (st?.bg || 'rgba(59,130,246,0.12)')
-                  : 'rgba(255,255,255,0.03)',
-                color: isActive ? (st?.color || '#60a5fa') : '#475569',
+                  : C.tabBg,
+                color: isActive ? (st?.color || '#60a5fa') : C.inactiveTab,
                 fontSize: '0.78rem',
                 fontWeight: isActive ? 600 : 400,
                 cursor: 'pointer',
@@ -121,7 +149,7 @@ export const ProjectsView: React.FC = () => {
               }}
             >
               {status !== 'All' && st && (
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: isActive ? st.dot : '#334155', display: 'inline-block' }} />
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: isActive ? st.dot : C.faint, display: 'inline-block' }} />
               )}
               {status}
               <span style={{ opacity: 0.6, fontSize: '0.72rem' }}>({counts[status] || 0})</span>
@@ -134,8 +162,8 @@ export const ProjectsView: React.FC = () => {
       <div style={{
         flex: 1,
         overflow: 'hidden',
-        background: 'rgba(255,255,255,0.025)',
-        border: '1px solid rgba(255,255,255,0.07)',
+        background: C.surface,
+        border: `1px solid ${C.surfaceBorder}`,
         borderRadius: 14,
         backdropFilter: 'blur(8px)',
         display: 'flex',
@@ -152,8 +180,8 @@ export const ProjectsView: React.FC = () => {
               display: 'grid',
               gridTemplateColumns: '90px minmax(180px, 1fr) 160px 80px 90px 90px 130px',
               padding: '10px 16px',
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
-              background: 'rgba(0,0,0,0.2)',
+              borderBottom: `1px solid ${C.rowBorder}`,
+              background: C.headBg,
             }}>
               {[
                 { icon: Hash, label: 'SO #' },
@@ -164,7 +192,7 @@ export const ProjectsView: React.FC = () => {
                 { icon: Star, label: 'Phase 2' },
                 { icon: null, label: 'Design Review' },
               ].map(({ label }) => (
-                <div key={label} style={{ color: '#334155', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', paddingRight: 8 }}>
+                <div key={label} style={{ color: C.faint, fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', paddingRight: 8 }}>
                   {label}
                 </div>
               ))}
@@ -173,7 +201,7 @@ export const ProjectsView: React.FC = () => {
             {/* Rows */}
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {filtered.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#334155', fontSize: '0.85rem' }}>
+                <div style={{ textAlign: 'center', padding: '40px 0', color: C.faint, fontSize: '0.85rem' }}>
                   No projects match the current filter.
                 </div>
               ) : (
@@ -187,14 +215,14 @@ export const ProjectsView: React.FC = () => {
                         display: 'grid',
                         gridTemplateColumns: '90px minmax(180px, 1fr) 160px 80px 90px 90px 130px',
                         padding: '11px 16px',
-                        borderBottom: '1px solid rgba(255,255,255,0.04)',
+                        borderBottom: `1px solid ${C.rowBorder}`,
                         cursor: 'pointer',
                         alignItems: 'center',
-                        background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                        background: idx % 2 === 0 ? 'transparent' : C.rowAlt,
                         transition: 'background 0.12s',
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.06)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)')}
+                      onMouseEnter={e => (e.currentTarget.style.background = C.rowHover)}
+                      onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : C.rowAlt)}
                     >
                       {/* SO */}
                       <div style={{
@@ -207,25 +235,25 @@ export const ProjectsView: React.FC = () => {
                       </div>
 
                       {/* Name */}
-                      <div title={project.projectName} style={{ color: '#e2e8f0', fontSize: '0.85rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>
+                      <div title={project.projectName} style={{ color: C.name, fontSize: '0.85rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>
                         {project.projectName}
                       </div>
 
                       {/* Designer */}
-                      <div title={project.designerName} style={{ color: '#94a3b8', fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>
+                      <div title={project.designerName} style={{ color: C.body, fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>
                         {project.designerName}
                       </div>
 
                       {/* Rooms */}
-                      <div style={{ color: '#64748b', fontSize: '0.82rem', textAlign: 'center' }}>
+                      <div style={{ color: C.muted, fontSize: '0.82rem', textAlign: 'center' }}>
                         {project.totalRooms}
                       </div>
 
                       {/* P1 Score */}
-                      <ScorePill score={project.phase1Score} label="" />
+                      <ScorePill score={project.phase1Score} label="" isLight={isLight} />
 
                       {/* P2 Score */}
-                      <ScorePill score={project.phase2Score} label="" />
+                      <ScorePill score={project.phase2Score} label="" isLight={isLight} />
 
                       {/* Design Review status — a Phase 1 document-checklist
                           outcome (contract/KCD/measurements signed off), NOT

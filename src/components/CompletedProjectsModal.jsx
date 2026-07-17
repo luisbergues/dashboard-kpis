@@ -1,8 +1,19 @@
 import { X, Calendar } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
+import { useTheme } from '../utils/ThemeContext';
 
 export default function CompletedProjectsModal({ projects, onClose, activeProjectSos }) {
   const { language } = useLanguage();
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
+  // background is var(--bg-surface) (real theme background), so hardcoded
+  // near-white text below it was invisible in light theme.
+  const C = {
+    title: isLight ? '#0f172a' : '#fff',
+    body: isLight ? '#475569' : '#94A3B8',
+    name: isLight ? '#1e293b' : '#E2E8F0',
+    faint: isLight ? '#64748b' : '#64748B',
+  };
 
   return (
     <div className="modal-overlay animate-fade-in" style={{
@@ -20,16 +31,16 @@ export default function CompletedProjectsModal({ projects, onClose, activeProjec
           display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#fff' }}>
+            <h2 style={{ margin: 0, fontSize: '1.25rem', color: C.title }}>
               {language === 'es' ? 'Proyectos Completados' : 'Completed Projects'}
             </h2>
-            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#94A3B8' }}>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: C.body }}>
               {language === 'es'
                 ? 'Todos los proyectos finalizados: en la hoja activa o ya archivados (hasta 6 meses tras ser removidos).'
                 : 'All finished projects: still in the active sheet, or already archived (kept up to 6 months after removal).'}
             </p>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer' }}>
+          <button onClick={onClose} aria-label={language === 'es' ? 'Cerrar' : 'Close'} style={{ background: 'transparent', border: 'none', color: C.body, cursor: 'pointer' }}>
             <X size={24} />
           </button>
         </div>
@@ -40,10 +51,10 @@ export default function CompletedProjectsModal({ projects, onClose, activeProjec
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--card-border)' }}>
-                    <th style={{ padding: '12px 8px', color: '#94A3B8', fontSize: '0.85rem' }}>SO #</th>
-                    <th style={{ padding: '12px 8px', color: '#94A3B8', fontSize: '0.85rem' }}>{language === 'es' ? 'Nombre' : 'Name'}</th>
-                    <th style={{ padding: '12px 8px', color: '#94A3B8', fontSize: '0.85rem' }}>{language === 'es' ? 'Fecha de Instalación' : 'Install Date'}</th>
-                    <th style={{ padding: '12px 8px', color: '#94A3B8', fontSize: '0.85rem' }}>{language === 'es' ? 'Archivado' : 'Archived'}</th>
+                    <th style={{ padding: '12px 8px', color: C.body, fontSize: '0.85rem' }}>SO #</th>
+                    <th style={{ padding: '12px 8px', color: C.body, fontSize: '0.85rem' }}>{language === 'es' ? 'Nombre' : 'Name'}</th>
+                    <th style={{ padding: '12px 8px', color: C.body, fontSize: '0.85rem' }}>{language === 'es' ? 'Fecha de Instalación' : 'Install Date'}</th>
+                    <th style={{ padding: '12px 8px', color: C.body, fontSize: '0.85rem' }}>{language === 'es' ? 'Archivado' : 'Archived'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -70,7 +81,7 @@ export default function CompletedProjectsModal({ projects, onClose, activeProjec
                           transition: 'background 0.15s ease',
                         }}
                       >
-                        <td style={{ padding: '12px 8px', color: '#fff', fontWeight: '500' }}>
+                        <td style={{ padding: '12px 8px', color: C.title, fontWeight: '500' }}>
                           <a
                             href={`${window.location.origin}${window.location.pathname}?project=${p.so}`}
                             target="_blank"
@@ -80,14 +91,14 @@ export default function CompletedProjectsModal({ projects, onClose, activeProjec
                             {p.so}
                           </a>
                         </td>
-                        <td style={{ padding: '12px 8px', color: '#E2E8F0' }}>{p.name}</td>
-                        <td style={{ padding: '12px 8px', color: '#94A3B8' }}>
+                        <td style={{ padding: '12px 8px', color: C.name }}>{p.name}</td>
+                        <td style={{ padding: '12px 8px', color: C.body }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <Calendar size={14} />
                             {p.install || 'TBD'}
                           </div>
                         </td>
-                        <td style={{ padding: '12px 8px', color: '#64748B', fontSize: '0.85rem' }}>{archivedDate}</td>
+                        <td style={{ padding: '12px 8px', color: C.faint, fontSize: '0.85rem' }}>{archivedDate}</td>
                       </tr>
                     );
                   })}
@@ -95,7 +106,7 @@ export default function CompletedProjectsModal({ projects, onClose, activeProjec
               </table>
             </div>
           ) : (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>
+            <div style={{ padding: '40px', textAlign: 'center', color: C.faint }}>
               <p>{language === 'es' ? 'No hay proyectos archivados aún.' : 'No archived projects yet.'}</p>
             </div>
           )}

@@ -368,6 +368,7 @@ export default function DesignQualityView() {
               >
                 <button
                   onClick={() => setShowGuide(false)}
+                  aria-label={language === 'es' ? 'Cerrar' : 'Close'}
                   style={{
                     position: 'absolute', top: '16px', right: '16px',
                     background: 'none', border: 'none', color: C.body, cursor: 'pointer'
