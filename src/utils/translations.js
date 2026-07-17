@@ -265,6 +265,7 @@ export const translations = {
     },
     pipeline: {
       title: "Project Pipeline",
+      subtitle: "Track every active project across engineering, nesting and production stages",
       searchPlaceholder: "Search by SO#, Name or ENG...",
       noProjects: "No projects found."
     },
@@ -578,6 +579,7 @@ export const translations = {
     },
     pipeline: {
       title: "Tubería de Proyectos (Pipeline)",
+      subtitle: "Seguimiento de cada proyecto activo a través de las etapas de ingeniería, nesting y producción",
       searchPlaceholder: "Buscar por SO#, Nombre o Diseñador (ENG)...",
       noProjects: "No se encontraron proyectos."
     },
