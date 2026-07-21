@@ -10,17 +10,6 @@
 }
 
 @media (max-width: 767px) {
-  .table-container {
-    -webkit-overflow-scrolling: touch;
-    position: relative;
-    background:
-      linear-gradient(to right, var(--card-bg, #1a1a1a) 0%, transparent 2%) 0 0,
-      linear-gradient(to left, var(--card-bg, #1a1a1a) 0%, transparent 8%) 100% 0;
-    background-size: 24px 100%;
-    background-repeat: no-repeat;
-    background-attachment: local, scroll;
-  }
-
   .materials-table th,
   .materials-table td {
     padding: 12px;

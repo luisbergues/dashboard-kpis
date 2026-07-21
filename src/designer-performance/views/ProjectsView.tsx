@@ -181,7 +181,7 @@ export const ProjectsView: React.FC = () => {
             width (SO + Name + Designer + Rooms + scores + Status all need
             room to breathe), so on narrow viewports this scrolls instead of
             squashing every column down to unreadable slivers. */}
-        <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <div className="h-scroll-shadow" style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
           <div style={{ minWidth: 720, display: 'flex', flexDirection: 'column', flex: 1 }}>
             {/* Table header */}
             <div style={{

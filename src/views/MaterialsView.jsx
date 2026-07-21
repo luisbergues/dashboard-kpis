@@ -24,7 +24,7 @@ export default function MaterialsView({ data }) {
         <p className="text-muted">{t('materials.subtitle')}</p>
       </header>
 
-      <div className="table-container glass-card">
+      <div className="table-container glass-card h-scroll-shadow">
         <table className="materials-table">
           <thead>
             <tr>
