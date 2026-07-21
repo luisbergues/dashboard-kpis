@@ -129,6 +129,15 @@
       ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'"
     },
 
+    "archive": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'"
+    },
+    "archive_lock": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'"
+    },
+
     "$other": {
       ".read": false,
       ".write": false
