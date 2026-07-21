@@ -268,20 +268,25 @@ function App() {
     localStorage.setItem('active_tab', activeTab);
   }, [activeTab]);
 
-  const getMergedData = () => {
+  // Memoized so this only recomputes when one of its actual data sources
+  // changes, instead of on every App render — an unmemoized version was
+  // producing a new mergedData object (and therefore invalidating every
+  // downstream useMemo/useEffect keyed on it, e.g. realAlerts below) on
+  // renders unrelated to data at all (tab switches, modal toggles, etc).
+  const mergedData = useMemo(() => {
     if (!data) return null;
 
     const mergedPriorityAnalysis = data.priorityAnalysis.map(p => {
       const override = overrides[p.so];
       const costData = data.topCostProjects?.find(cp => cp.name === p.name);
-      
+
       let status = p.status;
       let onHoldReason = null;
       if (override) {
         status = override.status || p.status;
         onHoldReason = override.onHoldReason || null;
       }
-      
+
       return {
         ...p,
         status,
@@ -329,9 +334,7 @@ function App() {
       priorityAnalysis: mergedPriorityAnalysis,
       materialRequirements: updatedMaterialRequirements
     };
-  };
-
-  const mergedData = getMergedData();
+  }, [data, overrides, projectDesigners, materialOverrides]);
 
   // Build real-time alerts from actual project data
   const realAlerts = useMemo(() => {
