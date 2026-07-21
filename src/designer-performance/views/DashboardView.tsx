@@ -3,10 +3,12 @@ import { useKpi } from '../context/KpiContext';
 import { Badge } from '../components/Badge';
 import { Users, FolderOpen, CheckCircle } from 'lucide-react';
 import { useTheme } from '../../utils/ThemeContext';
+import { useLanguage } from '../../utils/LanguageContext';
 
 export const DashboardView: React.FC = () => {
   const { designers, projects } = useKpi();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const isLight = theme === 'light';
 
   // Colors were hardcoded for a dark background, which left titles and designer
@@ -33,17 +35,17 @@ export const DashboardView: React.FC = () => {
   const activeDesigners   = designers.filter(d => d.totalProjects > 0).length;
 
   const statCards = [
-    { label: 'Total Projects',    value: totalProjects,    icon: FolderOpen,   color: '#3b82f6' },
-    { label: 'Completed',         value: completedProjects, icon: CheckCircle, color: '#10b981' },
-    { label: 'Active Designers',  value: activeDesigners,  icon: Users,        color: '#8b5cf6' },
+    { label: t('designerPerf.dashboard.totalProjects'),   value: totalProjects,    icon: FolderOpen,   color: '#3b82f6' },
+    { label: t('designerPerf.dashboard.completed'),       value: completedProjects, icon: CheckCircle, color: '#10b981' },
+    { label: t('designerPerf.dashboard.activeDesigners'), value: activeDesigners,  icon: Users,        color: '#8b5cf6' },
   ];
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", maxWidth: 880, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
-        <h2 style={{ color: C.title, fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>Leaderboard</h2>
-        <p style={{ color: C.label, margin: '6px 0 0', fontSize: '0.9rem' }}>Designer performance overview and KPIs.</p>
+        <h2 style={{ color: C.title, fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>{t('designerPerf.dashboard.title')}</h2>
+        <p style={{ color: C.label, margin: '6px 0 0', fontSize: '0.9rem' }}>{t('designerPerf.dashboard.subtitle')}</p>
       </div>
 
       {/* Stat Cards */}
@@ -94,14 +96,22 @@ export const DashboardView: React.FC = () => {
           background: C.headBg,
         }}>
           <span style={{ color: C.body, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Designer Rankings
+            {t('designerPerf.dashboard.rankings')}
           </span>
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Rank', 'Designer', 'Projects', 'Avg P1 (ICE)', 'Avg P2 (IFR)', 'Global KPI', 'Performance'].map(col => (
+                {[
+                  t('designerPerf.dashboard.rank'),
+                  t('designerPerf.dashboard.designer'),
+                  t('designerPerf.dashboard.projects'),
+                  t('designerPerf.dashboard.avgP1'),
+                  t('designerPerf.dashboard.avgP2'),
+                  t('designerPerf.dashboard.globalKpi'),
+                  t('designerPerf.dashboard.performance'),
+                ].map(col => (
                   <th key={col} style={{
                     padding: '10px 20px',
                     textAlign: 'left',
@@ -143,7 +153,7 @@ export const DashboardView: React.FC = () => {
                       {designer.totalProjects > 0 ? (
                         <Badge score={designer.globalKpi} />
                       ) : (
-                        <span style={{ color: C.faint, fontSize: '0.78rem', fontStyle: 'italic' }}>No data yet</span>
+                        <span style={{ color: C.faint, fontSize: '0.78rem', fontStyle: 'italic' }}>{t('designerPerf.dashboard.noData')}</span>
                       )}
                     </td>
                   </tr>

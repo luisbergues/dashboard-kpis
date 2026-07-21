@@ -1,5 +1,6 @@
 import React from 'react';
 import { LayoutDashboard, FileText, CheckSquare, FolderOpen, Activity } from 'lucide-react';
+import { useLanguage } from '../../utils/LanguageContext';
 
 interface SidebarProps {
   currentView: string;
@@ -7,19 +8,20 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
+  const { t } = useLanguage();
   const navGroups = [
     {
-      label: 'Overview',
+      label: t('designerPerf.sidebar.overview'),
       items: [
-        { id: 'dashboard', label: 'Leaderboard',        icon: LayoutDashboard },
-        { id: 'projects',  label: 'Projects Directory', icon: FolderOpen },
+        { id: 'dashboard', label: t('designerPerf.sidebar.leaderboard'), icon: LayoutDashboard },
+        { id: 'projects',  label: t('designerPerf.sidebar.projects'),    icon: FolderOpen },
       ],
     },
     {
-      label: 'Workflow',
+      label: t('designerPerf.sidebar.workflow'),
       items: [
-        { id: 'phase1', label: 'Phase 1: Intake',  icon: FileText },
-        { id: 'phase2', label: 'Phase 2: Closure', icon: CheckSquare },
+        { id: 'phase1', label: t('designerPerf.sidebar.phase1'), icon: FileText },
+        { id: 'phase2', label: t('designerPerf.sidebar.phase2'), icon: CheckSquare },
       ],
     },
   ];
@@ -44,10 +46,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView })
       <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
           <Activity size={18} color="#3b82f6" />
-          <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.95rem' }}>Designer Perf.</span>
+          <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.95rem' }}>{t('designerPerf.sidebar.title')}</span>
         </div>
         <span style={{ color: '#475569', fontSize: '0.72rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-          Performance Tracker
+          {t('designerPerf.sidebar.subtitle')}
         </span>
       </div>
 

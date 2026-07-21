@@ -3,6 +3,7 @@ import { X, Calendar, CheckCircle2, User, Layers, CheckSquare, Zap, Target } fro
 import type { Project } from '../types';
 import { T } from '../utils/theme';
 import { formatDisplayDate } from '../../utils/dateFormat';
+import { useLanguage } from '../../utils/LanguageContext';
 
 interface ModalProps {
   project: Project | null;
@@ -49,14 +50,15 @@ const ChecklistItem: React.FC<{ checked: boolean; label: string; date?: number |
 );
 
 export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) => {
+  const { t } = useLanguage();
   if (!project) return null;
 
   // Calculate checklist progress
   const checklistItems = [
-    { key: 'kcdFile', label: 'KCD File' },
-    { key: 'jlContract', label: 'JL Contract' },
-    { key: 'quoteComplete', label: 'Quote Complete' },
-    { key: 'drawingsSigned', label: 'Drawings Signed' },
+    { key: 'kcdFile', label: t('designerPerf.modal.kcdFile') },
+    { key: 'jlContract', label: t('designerPerf.modal.jlContract') },
+    { key: 'quoteComplete', label: t('designerPerf.modal.quoteComplete') },
+    { key: 'drawingsSigned', label: t('designerPerf.modal.drawingsSigned') },
   ] as const;
   
   let checkedCount = checklistItems.filter(i => project.checklist[i.key] !== false).length;
@@ -107,7 +109,7 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
             
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <MetricPill label={project.status} color={statusColor} bgColor={`${statusColor}15`} />
-              <MetricPill icon={<Layers size={14} />} label={`${project.totalRooms} Rooms`} color={T.textSecondary} bgColor="rgba(255,255,255,0.05)" />
+              <MetricPill icon={<Layers size={14} />} label={`${project.totalRooms} ${t('designerPerf.modal.rooms')}`} color={T.textSecondary} bgColor="rgba(255,255,255,0.05)" />
               <MetricPill icon={<User size={14} />} label={project.designerName} color={T.textSecondary} bgColor="rgba(255,255,255,0.05)" />
               <button onClick={onClose} style={{
                 background: 'transparent', border: 'none', color: T.textMuted, cursor: 'pointer',
@@ -125,11 +127,11 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: T.textMuted, fontSize: '0.85rem' }}>
               <Calendar size={14} />
-              Registered: {formatDisplayDate(new Date(project.createdAt))}
+              {t('designerPerf.modal.registered')}: {formatDisplayDate(new Date(project.createdAt))}
               {project.approvedAt && (
                 <>
                   <span style={{ margin: '0 4px' }}>•</span>
-                  <span style={{ color: T.blue }}>Approved: {formatDisplayDate(new Date(project.approvedAt))}</span>
+                  <span style={{ color: T.blue }}>{t('designerPerf.modal.approved')}: {formatDisplayDate(new Date(project.approvedAt))}</span>
                 </>
               )}
             </div>
@@ -138,7 +140,7 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
           {/* Progress Bar */}
           <div style={{ marginTop: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ color: T.textSecondary, fontSize: '0.8rem', fontWeight: 600 }}>Checklist Progress</span>
+              <span style={{ color: T.textSecondary, fontSize: '0.8rem', fontWeight: 600 }}>{t('designerPerf.modal.checklistProgress')}</span>
               <span style={{ color: T.green, fontSize: '0.8rem', fontWeight: 700 }}>{progressPercent}%</span>
             </div>
             <div style={{ height: 6, background: T.bgSurface, borderRadius: 10, overflow: 'hidden' }}>
@@ -161,17 +163,17 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
               
               <div>
                 <h3 style={{ color: T.textPrimary, fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <CheckSquare size={16} color={T.blue} /> Checklist
+                  <CheckSquare size={16} color={T.blue} /> {t('designerPerf.modal.checklist')}
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {checklistItems.map(item => (
                     <ChecklistItem key={item.key} label={item.label} checked={project.checklist[item.key] !== false} date={project.checklist[item.key]} />
                   ))}
                   {project.checklist.finalMeasurementsApplies !== false && (
-                    <ChecklistItem 
-                      label="Final Measurements Delivered" 
-                      checked={project.checklist.finalMeasurementsDelivered !== false} 
-                      date={project.checklist.finalMeasurementsDelivered} 
+                    <ChecklistItem
+                      label={t('designerPerf.modal.finalMeasurements')}
+                      checked={project.checklist.finalMeasurementsDelivered !== false}
+                      date={project.checklist.finalMeasurementsDelivered}
                     />
                   )}
                 </div>
@@ -179,15 +181,15 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
 
               <div>
                 <h3 style={{ color: T.textPrimary, fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <Zap size={16} color={T.yellow} /> Project Elements
+                  <Zap size={16} color={T.yellow} /> {t('designerPerf.modal.projectElements')}
                 </h3>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {([
-                    { key: 'colorsDefined', label: 'Colors Defined' },
-                    { key: 'thermofoilDoors', label: 'Thermofoil' },
-                    { key: 'customBoreHoles', label: 'Custom Holes' },
-                    { key: 'routingRequired', label: 'Routing / Dovetail' },
-                    { key: 'customPanels', label: 'Custom Panels' },
+                    { key: 'colorsDefined', label: t('designerPerf.modal.colorsDefined') },
+                    { key: 'thermofoilDoors', label: t('designerPerf.modal.thermofoil') },
+                    { key: 'customBoreHoles', label: t('designerPerf.modal.customHoles') },
+                    { key: 'routingRequired', label: t('designerPerf.modal.routingDovetail') },
+                    { key: 'customPanels', label: t('designerPerf.modal.customPanels') },
                   ] as const).map(item => {
                     const active = project.complexity[item.key];
                     return (
@@ -213,29 +215,29 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
               
               <div>
                 <h3 style={{ color: T.textPrimary, fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <Target size={16} color={T.blue} /> Performance Scores
+                  <Target size={16} color={T.blue} /> {t('designerPerf.modal.performanceScores')}
                 </h3>
-                
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   {/* Phase 1 Score */}
                   <div style={{ background: T.bgSurface, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: '16px' }}>
-                    <div style={{ color: T.textSecondary, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Phase 1 (ICE)</div>
+                    <div style={{ color: T.textSecondary, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>{t('designerPerf.modal.phase1Ice')}</div>
                     <div style={{ fontSize: '1.8rem', fontWeight: 700, color: project.phase1Score !== null ? T.textPrimary : T.textMuted }}>
                       {project.phase1Score ?? '—'}
                     </div>
                   </div>
-                  
+
                   {/* Phase 2 Score */}
                   <div style={{ background: T.bgSurface, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: '16px' }}>
-                    <div style={{ color: T.textSecondary, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Phase 2 (IFR)</div>
+                    <div style={{ color: T.textSecondary, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>{t('designerPerf.modal.phase2Ifr')}</div>
                     <div style={{ fontSize: '1.8rem', fontWeight: 700, color: project.phase2Score !== null ? T.textPrimary : T.textMuted }}>
                       {project.phase2Score ?? '—'}
                     </div>
                   </div>
-                  
+
                   {/* ICP */}
                   <div style={{ gridColumn: '1 / -1', background: 'rgba(59,130,246,0.05)', border: `1px solid rgba(59,130,246,0.2)`, borderRadius: 16, padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ color: T.blue, fontSize: '0.85rem', fontWeight: 600 }}>Index of Complexity (ICP)</div>
+                    <div style={{ color: T.blue, fontSize: '0.85rem', fontWeight: 600 }}>{t('designerPerf.modal.indexComplexity')}</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 700, color: T.blue }}>{project.icp}</div>
                   </div>
                 </div>
@@ -243,14 +245,14 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
 
               {project.phase2Data && (
                 <div>
-                  <h3 style={{ color: T.textPrimary, fontSize: '1rem', fontWeight: 600, marginBottom: 12 }}>Friction Metrics</h3>
+                  <h3 style={{ color: T.textPrimary, fontSize: '1rem', fontWeight: 600, marginBottom: 12 }}>{t('designerPerf.modal.frictionMetrics')}</h3>
                   <div style={{ background: T.bgSurface, border: `1px solid ${T.cardBorder}`, borderRadius: 16, overflow: 'hidden' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: `1px solid ${T.cardBorder}` }}>
-                      <span style={{ color: T.textSecondary, fontSize: '0.85rem' }}>Total Red Flags</span>
+                      <span style={{ color: T.textSecondary, fontSize: '0.85rem' }}>{t('designerPerf.modal.totalRedFlags')}</span>
                       <span style={{ color: T.red, fontWeight: 600 }}>{project.phase2Data.totalRedFlags}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px' }}>
-                      <span style={{ color: T.textSecondary, fontSize: '0.85rem' }}>Red Flags &gt; 4 Days</span>
+                      <span style={{ color: T.textSecondary, fontSize: '0.85rem' }}>{t('designerPerf.modal.redFlags4Days')}</span>
                       <span style={{ color: T.red, fontWeight: 600 }}>{project.phase2Data.redFlagsOver4Days}</span>
                     </div>
                   </div>
@@ -271,7 +273,7 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
           >
-            Close Details
+            {t('designerPerf.modal.closeDetails')}
           </button>
         </div>
 

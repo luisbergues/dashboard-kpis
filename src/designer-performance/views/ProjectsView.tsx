@@ -4,6 +4,7 @@ import { ProjectDetailsModal } from '../components/ProjectDetailsModal';
 import type { Project, ProjectStatus } from '../types';
 import { Search, User, Hash, LayoutList, Star } from 'lucide-react';
 import { useTheme } from '../../utils/ThemeContext';
+import { useLanguage } from '../../utils/LanguageContext';
 
 const STATUS_STYLES: Record<string, { bg: string; color: string; border: string; dot: string }> = {
   Pending:    { bg: 'rgba(100,116,139,0.12)', color: '#94a3b8', border: 'rgba(100,116,139,0.25)', dot: '#64748b' },
@@ -32,6 +33,7 @@ const FILTER_OPTIONS: Array<ProjectStatus | 'All'> = ['All', 'Pending', 'To revi
 export const ProjectsView: React.FC = () => {
   const { projects } = useKpi();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const isLight = theme === 'light';
 
   // Local palette: this view was written with dark-only literals (near-white
@@ -81,15 +83,21 @@ export const ProjectsView: React.FC = () => {
     return c;
   }, [projects]);
 
+  const STATUS_LABEL_KEYS: Record<string, string> = {
+    All: 'statusAll', Pending: 'statusPending', 'To review': 'statusToReview',
+    Approved: 'statusApproved', Rejected: 'statusRejected', Completed: 'statusCompleted',
+  };
+  const statusLabel = (s: string) => t(`designerPerf.projects.${STATUS_LABEL_KEYS[s] || 'statusAll'}`);
+
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", height: '100%', display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 880, margin: '0 auto' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h2 style={{ color: C.title, fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>Projects Directory</h2>
+          <h2 style={{ color: C.title, fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>{t('designerPerf.projects.title')}</h2>
           <p style={{ color: C.subtitle, margin: '4px 0 0', fontSize: '0.85rem' }}>
-            {filtered.length} of {projects.length} projects · Status reflects the Phase 1/2 design-review checklist, not the manufacturing pipeline stage
+            {filtered.length} {t('designerPerf.projects.of')} {projects.length} {t('designerPerf.projects.projectsWord')} · {t('designerPerf.projects.statusNote')}
           </p>
         </div>
 
@@ -101,7 +109,7 @@ export const ProjectsView: React.FC = () => {
           <input
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search SO, name, designer…"
+            placeholder={t('designerPerf.projects.searchPlaceholder')}
             style={{
               width: '100%',
               boxSizing: 'border-box',
@@ -151,7 +159,7 @@ export const ProjectsView: React.FC = () => {
               {status !== 'All' && st && (
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: isActive ? st.dot : C.faint, display: 'inline-block' }} />
               )}
-              {status}
+              {statusLabel(status)}
               <span style={{ opacity: 0.6, fontSize: '0.72rem' }}>({counts[status] || 0})</span>
             </button>
           );
@@ -184,13 +192,13 @@ export const ProjectsView: React.FC = () => {
               background: C.headBg,
             }}>
               {[
-                { icon: Hash, label: 'SO #' },
-                { icon: LayoutList, label: 'Project Name' },
-                { icon: User, label: 'Designer' },
-                { icon: null, label: 'Rooms' },
-                { icon: Star, label: 'Phase 1' },
-                { icon: Star, label: 'Phase 2' },
-                { icon: null, label: 'Design Review' },
+                { icon: Hash, label: t('designerPerf.projects.so') },
+                { icon: LayoutList, label: t('designerPerf.projects.name') },
+                { icon: User, label: t('designerPerf.projects.designer') },
+                { icon: null, label: t('designerPerf.projects.rooms') },
+                { icon: Star, label: t('designerPerf.projects.phase1') },
+                { icon: Star, label: t('designerPerf.projects.phase2') },
+                { icon: null, label: t('designerPerf.projects.designReview') },
               ].map(({ label }) => (
                 <div key={label} style={{ color: C.faint, fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', paddingRight: 8 }}>
                   {label}
@@ -202,7 +210,7 @@ export const ProjectsView: React.FC = () => {
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {filtered.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px 0', color: C.faint, fontSize: '0.85rem' }}>
-                  No projects match the current filter.
+                  {t('designerPerf.projects.empty')}
                 </div>
               ) : (
                 filtered.map((project, idx) => {
@@ -260,7 +268,7 @@ export const ProjectsView: React.FC = () => {
                           the manufacturing/engineering pipeline stage. Title
                           attribute + label above avoid it being confused
                           with Pipeline's ON HOLD/CHECK/etc. */}
-                      <div title="Phase 1 design-review checklist status (not the manufacturing stage)">
+                      <div title={t('designerPerf.projects.statusTooltip')}>
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', gap: 5,
                           padding: '3px 10px', borderRadius: 20,
@@ -268,7 +276,7 @@ export const ProjectsView: React.FC = () => {
                           fontSize: '0.73rem', fontWeight: 600,
                         }}>
                           <span style={{ width: 5, height: 5, borderRadius: '50%', background: st.dot, flexShrink: 0 }} />
-                          {project.status}
+                          {statusLabel(project.status)}
                         </span>
                       </div>
                     </div>
