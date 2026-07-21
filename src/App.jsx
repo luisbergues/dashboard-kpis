@@ -105,8 +105,12 @@ function App() {
 
   // Save weekly snapshots to Firebase & load history
   // We save TWO snapshots per sheet update: one for 'previous week' and one for 'current week'
+  //
+  // Skip entirely for designers: database.rules.json denies designer writes
+  // to weekly_history, so this used to fire a set() that always failed with
+  // PERMISSION_DENIED for that role (silently swallowed by the catch below).
   useEffect(() => {
-    if (!data || !db) return;
+    if (!data || !db || userProfile?.role === 'designer') return;
 
     const saveAndLoadHistory = async () => {
       try {
@@ -205,7 +209,7 @@ function App() {
     };
 
     saveAndLoadHistory();
-  }, [data]);
+  }, [data, userProfile?.role]);
 
   useEffect(() => {
     if (!auth) {

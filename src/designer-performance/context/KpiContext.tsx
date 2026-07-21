@@ -1,17 +1,24 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { Project, Designer } from '../types';
 import { calculateDesignerStats } from '../utils/scoreCalculator';
-import { db, ref, set, onValue } from '../../utils/firebase';
+import { db, ref, set, get, onValue } from '../../utils/firebase';
 import { shortProjectName } from '../../utils/projectName';
+
+// Result of a project_designers/{so} write attempt. `project_designers` is
+// also written directly from MyProjectsView (the main app's "Designer in
+// Charge" button) with no coordination between the two UIs — last write
+// wins silently. `conflict: true` means the value changed underneath this
+// form between load and submit; the caller should warn instead of clobbering it.
+export type SaveProjectResult = { conflict: false } | { conflict: true; currentDesignerName: string };
 
 interface KpiContextType {
   projects: Project[];
   designers: Designer[];
   designerNames: string[];
   projectDesigners: Record<string, string>;
-  addProject: (project: Project) => void;
-  updateProject: (project: Project) => void;
+  addProject: (project: Project) => Promise<SaveProjectResult>;
+  updateProject: (project: Project) => Promise<SaveProjectResult>;
   getProjectComplexity: (soNumber: string) => Partial<Project['complexity']>;
 }
 
@@ -47,6 +54,17 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
   const [performanceProjects, setPerformanceProjects] = useState<Record<string, Partial<Project>>>({});
   const [projects, setProjects] = useState<Project[]>([]);
 
+  // Session-stable fallback for createdAt on a project that hasn't persisted
+  // one yet (perfData.createdAt is undefined until the first addProject/
+  // updateProject write). Without this, `perfData.createdAt ?? Date.now()`
+  // below generated a NEW timestamp on every rerun of the merge effect
+  // (every externalData/projectDesigners/performanceProjects change), so
+  // "Registered: {date}" could visibly change between renders for the same
+  // project. A ref survives across renders without triggering them, so the
+  // first Date.now() seen for a given SO this session sticks until Firebase
+  // has a real value.
+  const sessionCreatedAt = useRef<Record<string, number>>({});
+
   // 1. Designer list is canonical (CANONICAL_DESIGNERS) — not read from allowed_designers (that node stores engineers)
 
   // 2. Fetch performance data from Firebase
@@ -79,9 +97,13 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
         customPanels:      perfData.complexity?.customPanels      ?? (matReq?.element === 'Yes'),
       };
 
+      if (perfData.createdAt === undefined && sessionCreatedAt.current[so] === undefined) {
+        sessionCreatedAt.current[so] = Date.now();
+      }
+
       return {
         id: so,
-        createdAt:    perfData.createdAt    ?? Date.now(),
+        createdAt:    perfData.createdAt    ?? sessionCreatedAt.current[so],
         approvedAt:   perfData.approvedAt   ?? null,
         projectName:  shortProjectName(p.name) || `SO #${so}`,
         designerName: perfData.designerName || baseDesignerName,
@@ -128,20 +150,41 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
     };
   };
 
-  const addProject = (project: Project) => {
-    if (!db) return;
-    set(ref(db, `designer_performance_projects/${project.id}`), project);
-    if (project.designerName) {
-      set(ref(db, `project_designers/${project.id}`), project.designerName);
+  // Re-reads project_designers/{so} right before writing and refuses to
+  // overwrite it if it changed since this form last saw it (`expectedValue`,
+  // the value this component loaded the form from) — the same
+  // read-before-write guard MyProjectsView's "Designer in Charge" button uses.
+  const saveDesignerName = async (so: string, newName: string): Promise<SaveProjectResult> => {
+    if (!db) return { conflict: false };
+    const designerRef = ref(db, `project_designers/${so}`);
+    const snapshot = await get(designerRef);
+    const currentValue = snapshot.exists() ? snapshot.val() : '';
+    const expectedValue = projectDesigners[so] || '';
+    if (currentValue !== expectedValue && currentValue !== newName) {
+      return { conflict: true, currentDesignerName: currentValue };
     }
+    await set(designerRef, newName);
+    return { conflict: false };
   };
 
-  const updateProject = (updatedProject: Project) => {
-    if (!db) return;
-    set(ref(db, `designer_performance_projects/${updatedProject.id}`), updatedProject);
-    if (updatedProject.designerName) {
-      set(ref(db, `project_designers/${updatedProject.id}`), updatedProject.designerName);
+  const addProject = async (project: Project): Promise<SaveProjectResult> => {
+    if (!db) return { conflict: false };
+    if (project.designerName) {
+      const result = await saveDesignerName(project.id, project.designerName);
+      if (result.conflict) return result;
     }
+    await set(ref(db, `designer_performance_projects/${project.id}`), project);
+    return { conflict: false };
+  };
+
+  const updateProject = async (updatedProject: Project): Promise<SaveProjectResult> => {
+    if (!db) return { conflict: false };
+    if (updatedProject.designerName) {
+      const result = await saveDesignerName(updatedProject.id, updatedProject.designerName);
+      if (result.conflict) return result;
+    }
+    await set(ref(db, `designer_performance_projects/${updatedProject.id}`), updatedProject);
+    return { conflict: false };
   };
 
   return (

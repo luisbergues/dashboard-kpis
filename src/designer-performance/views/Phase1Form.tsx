@@ -187,7 +187,7 @@ export const Phase1Form: React.FC = () => {
     setAutoFilledFields(prev => { const n = new Set(prev); n.delete(field); return n; });
   };
 
-  const handleSubmit = (e: React.FormEvent, forceReview = false) => {
+  const handleSubmit = async (e: React.FormEvent, forceReview = false) => {
     e.preventDefault();
     if (!soNumber || !projectName || !designerName || totalRooms === '') {
       toast.error('Please fill in all basic project details.'); return;
@@ -204,22 +204,30 @@ export const Phase1Form: React.FC = () => {
 
     if (mode === 'New') {
       const existing = projects.find(p => p.id === soNumber);
-      updateProject({ 
+      const result = await updateProject({
         ...(existing || {}),
-        id: soNumber, 
-        createdAt: existing?.createdAt || now, 
+        id: soNumber,
+        createdAt: existing?.createdAt || now,
         approvedAt: finalStatus === 'Approved' ? now : null,
         projectName, designerName, status: finalStatus, totalRooms: Number(totalRooms), icp,
-        phase1Score: score, phase2Score: existing?.phase2Score ?? null, checklist, complexity 
+        phase1Score: score, phase2Score: existing?.phase2Score ?? null, checklist, complexity
       });
+      if (result.conflict) {
+        toast.error(`Designer was just changed to "${result.currentDesignerName}" by someone else. Reload and try again.`);
+        return;
+      }
       toast.success(finalStatus === 'Approved' ? 'Project Approved! ✓' : finalStatus === 'To review' ? 'Saved for review.' : 'Registered (missing docs).');
       resetForm();
     } else {
       const existing = projects.find(p => p.id === soNumber);
       if (!existing) return;
-      updateProject({ ...existing, projectName, designerName, status: finalStatus,
+      const result = await updateProject({ ...existing, projectName, designerName, status: finalStatus,
         totalRooms: Number(totalRooms), icp, phase1Score: score, checklist, complexity,
         approvedAt: finalStatus === 'Approved' ? now : existing.approvedAt });
+      if (result.conflict) {
+        toast.error(`Designer was just changed to "${result.currentDesignerName}" by someone else. Reload and try again.`);
+        return;
+      }
       toast.success(finalStatus === 'Approved' ? 'Updated & Approved! ✓' : 'Saved.');
       if (finalStatus === 'Approved') { resetForm(); setMode('New'); }
     }

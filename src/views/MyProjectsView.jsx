@@ -816,9 +816,25 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
   const handleSaveDesigner = async (e) => {
     e.preventDefault();
     if (!designerSearchTerm || !activeDesignerProjectSo) return;
-    
+
     try {
-      await set(ref(db, `project_designers/${activeDesignerProjectSo}`), designerSearchTerm);
+      // project_designers/{so} is also written from the Designer Perf. module
+      // (KpiContext.tsx addProject/updateProject) with no coordination — two
+      // people editing the same project from each side would otherwise
+      // silently clobber one another. Re-read right before writing and warn
+      // if it changed since this modal opened, instead of blindly overwriting.
+      const designerRef = ref(db, `project_designers/${activeDesignerProjectSo}`);
+      const snapshot = await get(designerRef);
+      const currentValue = snapshot.exists() ? snapshot.val() : '';
+      const valueWhenOpened = projectDesigners[activeDesignerProjectSo] || '';
+      if (currentValue !== valueWhenOpened) {
+        alert(language === 'es'
+          ? `Otro usuario ya cambió el diseñador de este proyecto a "${currentValue}" mientras tenías este formulario abierto. Cerrá y volvé a abrirlo para ver el valor actual antes de guardar.`
+          : `Another user already changed this project's designer to "${currentValue}" while you had this form open. Close and reopen it to see the current value before saving.`);
+        return;
+      }
+
+      await set(designerRef, designerSearchTerm);
       setIsDesignerModalOpen(false);
       setDesignerSearchTerm('');
       setActiveDesignerProjectSo(null);

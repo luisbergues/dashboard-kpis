@@ -95,19 +95,23 @@ export const Phase2Form: React.FC = () => {
     : previewScore >= 60 ? T.yellow
     : T.red;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProject) { toast.error('Please select an approved project.'); return; }
     if (totalRedFlags === '' || redFlagsOver4Days === '') { toast.error('Please fill in all red flag fields.'); return; }
     if (Number(redFlagsOver4Days) > Number(totalRedFlags)) { toast.error('Red flags > 4 days cannot exceed total red flags.'); return; }
 
     const phase2Score = calculatePhase2Score(Number(totalRedFlags), Number(redFlagsOver4Days), selectedProject.icp);
-    updateProject({
+    const result = await updateProject({
       ...selectedProject,
       status: 'Completed',
       phase2Score,
       phase2Data: { totalRedFlags: Number(totalRedFlags), redFlagsOver4Days: Number(redFlagsOver4Days) },
     });
+    if (result.conflict) {
+      toast.error(`Designer was just changed to "${result.currentDesignerName}" by someone else. Reload and try again.`);
+      return;
+    }
     toast.success(`Project Closed! IFR Score: ${phase2Score}`);
     setSelectedProjectId(''); setTotalRedFlags(''); setRedFlagsOver4Days('');
   };
