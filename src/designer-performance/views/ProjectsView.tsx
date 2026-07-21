@@ -248,8 +248,12 @@ export const ProjectsView: React.FC = () => {
                       </div>
 
                       {/* Designer */}
-                      <div title={project.designerName} style={{ color: C.body, fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>
-                        {project.designerName}
+                      <div title={project.designerName} style={{
+                        color: project.designerName === 'Unassigned' ? C.faint : C.body,
+                        fontStyle: project.designerName === 'Unassigned' ? 'italic' : 'normal',
+                        fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8,
+                      }}>
+                        {project.designerName === 'Unassigned' ? t('designerPerf.projects.unassigned') : project.designerName}
                       </div>
 
                       {/* Rooms */}

@@ -80,6 +80,12 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
   };
   const statusColor = getStatusColor(project.status);
 
+  const STATUS_LABEL_KEYS: Record<string, string> = {
+    All: 'statusAll', Pending: 'statusPending', 'To review': 'statusToReview',
+    Approved: 'statusApproved', Rejected: 'statusRejected', Completed: 'statusCompleted',
+  };
+  const statusLabel = (s: string) => t(`designerPerf.projects.${STATUS_LABEL_KEYS[s] || 'statusAll'}`);
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 50,
@@ -108,7 +114,7 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
             </div>
             
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <MetricPill label={project.status} color={statusColor} bgColor={`${statusColor}15`} />
+              <MetricPill label={statusLabel(project.status)} color={statusColor} bgColor={`${statusColor}15`} />
               <MetricPill icon={<Layers size={14} />} label={`${project.totalRooms} ${t('designerPerf.modal.rooms')}`} color={T.textSecondary} bgColor="rgba(255,255,255,0.05)" />
               <MetricPill icon={<User size={14} />} label={project.designerName} color={T.textSecondary} bgColor="rgba(255,255,255,0.05)" />
               <button onClick={onClose} style={{

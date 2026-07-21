@@ -82,6 +82,16 @@ export const DashboardView: React.FC = () => {
         ))}
       </div>
 
+      {projects.length > 0 && designers.every(d => d.totalProjects === 0) && (
+        <div style={{
+          marginBottom: 28, padding: '14px 18px', borderRadius: 12,
+          background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)',
+          color: C.body, fontSize: '0.85rem', lineHeight: 1.5,
+        }}>
+          {t('designerPerf.dashboard.emptyExplainer')}
+        </div>
+      )}
+
       {/* Leaderboard Table */}
       <div style={{
         background: C.panelBg,
@@ -143,7 +153,7 @@ export const DashboardView: React.FC = () => {
                     <td style={{ padding: '12px 20px', color: C.name, fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                       {designer.name}
                     </td>
-                    <td style={{ padding: '12px 20px', color: C.body, fontSize: '0.85rem' }}>{designer.totalProjects}</td>
+                    <td style={{ padding: '12px 20px', color: C.body, fontSize: '0.85rem' }}>{designer.totalProjects || '—'}</td>
                     <td style={{ padding: '12px 20px', color: C.body, fontSize: '0.85rem' }}>{designer.avgPhase1Score || '—'}</td>
                     <td style={{ padding: '12px 20px', color: C.body, fontSize: '0.85rem' }}>{designer.avgPhase2Score || '—'}</td>
                     <td style={{ padding: '12px 20px', color: C.value, fontSize: '0.95rem', fontWeight: 700 }}>
