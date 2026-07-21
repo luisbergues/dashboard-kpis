@@ -1208,7 +1208,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
             className="analytics-header"
             onClick={() => setShowAnalytics(!showAnalytics)}
             aria-expanded={showAnalytics}
-            style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showAnalytics ? '16px' : '0', width: '100%', background: 'none', border: 'none', font: 'inherit', textAlign: 'left', padding: 0 }}
+            style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showAnalytics ? '16px' : '0', width: '100%', background: 'none', border: 'none', font: 'inherit', color: 'inherit', textAlign: 'left', padding: 0 }}
           >
             <h2 className="section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <TrendingUp size={20} className="text-neon-cyan" />
