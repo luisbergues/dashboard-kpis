@@ -11,7 +11,7 @@ import {
   Briefcase, Calendar, Check, Clock,
   AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag, Users, User,
   ChevronDown, ChevronUp, ArrowUpDown, TrendingUp, CheckCircle2, Image as ImageIcon, Loader2, FileText, Paperclip,
-  LayoutGrid, NotebookPen
+  LayoutGrid, NotebookPen, ListChecks
 } from 'lucide-react';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { Chart as ChartJS, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
@@ -25,6 +25,7 @@ import CompletedProjectsModal from '../components/CompletedProjectsModal';
 import { cleanupESSData } from '../utils/essData';
 import { cleanupIPData } from '../utils/ipData';
 import { cleanupLogbookData } from '../utils/logbookData';
+import { cleanupChecklistData } from '../utils/checklistData';
 import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
 import { useTheme } from '../utils/ThemeContext';
 import './MyProjectsView.css';
@@ -313,6 +314,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       cleanupESSData(activeSOs);
       cleanupIPData(activeSOs);
       cleanupLogbookData(activeSOs);
+      cleanupChecklistData(activeSOs);
     }
   }, [data]);
 
@@ -1548,6 +1550,17 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                           >
                             <NotebookPen size={14} />
                             <span>{t('myProjects.logbook')}</span>
+                          </a>
+                          <a
+                            href={`${window.location.origin}${window.location.pathname}?checklist=${project.so}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            className="btn-primary btn-sm btn-download-pdf"
+                            style={{ background: '#8B5CF6', color: '#fff', fontWeight: 'bold', textDecoration: 'none' }}
+                          >
+                            <ListChecks size={14} />
+                            <span>{t('myProjects.checklistBtn')}</span>
                           </a>
                         </div>
                       </>

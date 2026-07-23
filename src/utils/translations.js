@@ -119,6 +119,18 @@ export const translations = {
       pdfHoldReason: "Reason:",
       pdfPending: "Pending",
       checklists: {
+        general: [
+          "Make sure the plans match the signed contract/plans. Seriously, don't mess this up.",
+          "KCD file address should match the Zoho address.",
+          "Room name in KCD should match the signed drawing name (WIC=Walk in Closet, RIC= Reach in Closet)",
+          "Set a Standardized KCD note & fill out the necessary information",
+          "Verify colors against signed docs set and talk to the designer if you're not 100% sure."
+        ],
+        finalMeasurements: [
+          "Check wall heights and lengths against the final measurements.",
+          "Are the final measurements recent? Hope so.",
+          "Check for all the wall obstructions (outlets, switches, casing, ceiling obstructions, vents, sprinklers, windows, piping, etc.) against final measurements."
+        ],
         engineering: [
           "Unit heights need to match the 32mm Panel Height Sheet.",
           "Unit fixed shelves need to match the 32mm Panel Height Sheet whenever there’s backing or doors in the unit.",
@@ -184,6 +196,21 @@ export const translations = {
       completarESS: "Complete ESS",
       completarIP: "Complete IP",
       logbook: "Logbook",
+      checklistBtn: "Checklist",
+      checklistForm: {
+        title: "Engineering Checklist",
+        openDashboard: "Open Dashboard",
+        loading: "Loading checklist...",
+        missingSo: "Missing project SO number.",
+        progress: "Progress",
+        sectionGeneral: "General",
+        sectionFinalMeasurements: "Final Measurements",
+        sectionEngineering: "Engineering",
+        sectionEssIp: "Eng Shop Sheet (ESS) / Installer Packet (EP)",
+        sectionFinal: "Final Checklist",
+        resetSection: "Reset section",
+        autoSaveActive: "Auto-save active"
+      },
       completarESSTitle: "Complete ESS - Project",
       completarIPTitle: "Complete IP (Installer Packet) - Project",
       autoSaveActive: "Auto-save active",
@@ -511,6 +538,18 @@ export const translations = {
       pdfHoldReason: "Motivo:",
       pdfPending: "Pendiente",
       checklists: {
+        general: [
+          "Asegúrate de que los planos coincidan con el contrato/planos firmados. En serio, no te equivoques con esto.",
+          "La dirección en el archivo KCD debe coincidir con la dirección en Zoho.",
+          "El nombre del cuarto en KCD debe coincidir con el nombre del dibujo firmado (WIC=Walk in Closet, RIC=Reach in Closet).",
+          "Coloca una nota estandarizada de KCD y completa la información necesaria.",
+          "Verifica los colores contra el set de documentos firmados y habla con el diseñador si no estás 100% seguro."
+        ],
+        finalMeasurements: [
+          "Verifica alturas y largos de pared contra las medidas finales (final measurements).",
+          "¿Las medidas finales son recientes? Esperemos que sí.",
+          "Verifica todas las obstrucciones de pared (tomacorrientes, interruptores, molduras, obstrucciones de techo, rejillas de ventilación, rociadores, ventanas, cañerías, etc.) contra las medidas finales."
+        ],
         engineering: [
           "Las alturas de los módulos (Unit heights) deben coincidir con la hoja de 32mm Panel Height.",
           "Los estantes fijos (Fixed shelves) deben coincidir con la hoja de 32mm Panel Height cuando hay fondo (backing) o puertas en el módulo.",
@@ -576,6 +615,21 @@ export const translations = {
       completarESS: "Completar ESS",
       completarIP: "Completar IP",
       logbook: "Bitácora",
+      checklistBtn: "Checklist",
+      checklistForm: {
+        title: "Checklist de Ingeniería",
+        openDashboard: "Abrir Dashboard",
+        loading: "Cargando checklist...",
+        missingSo: "Falta el número de SO del proyecto.",
+        progress: "Progreso",
+        sectionGeneral: "General",
+        sectionFinalMeasurements: "Medidas Finales",
+        sectionEngineering: "Ingeniería",
+        sectionEssIp: "Eng Shop Sheet (ESS) / Installer Packet (EP)",
+        sectionFinal: "Checklist Final",
+        resetSection: "Reiniciar sección",
+        autoSaveActive: "Autoguardado activado"
+      },
       completarESSTitle: "Completar ESS - Proyecto",
       completarIPTitle: "Completar IP (Installer Packet) - Proyecto",
       autoSaveActive: "Autoguardado activado",

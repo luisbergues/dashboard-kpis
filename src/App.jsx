@@ -15,6 +15,7 @@ import MyProjectsView from './views/MyProjectsView'
 import DesignQualityView from './views/DesignQualityView'
 import ProjectDetailView from './views/ProjectDetailView'
 import LogbookView from './views/LogbookView'
+import ChecklistView from './views/ChecklistView'
 import DesignerPerformanceApp from './designer-performance/App'
 import ErrorBoundary from './components/ErrorBoundary'
 import NotificationBubble from './components/NotificationBubble'
@@ -527,6 +528,13 @@ function App() {
     const logbookSoParam = urlParams.get('logbook');
     if (logbookSoParam) {
       return <LogbookView so={logbookSoParam} />;
+    }
+
+    // Standalone Engineering Checklist page — same access level as Logbook
+    // (write-capable, behind the same auth/approval gate).
+    const checklistSoParam = urlParams.get('checklist');
+    if (checklistSoParam) {
+      return <ChecklistView so={checklistSoParam} />;
     }
 
     const isDesigner = userProfile?.role === 'designer';
