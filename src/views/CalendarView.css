@@ -164,6 +164,15 @@
   text-overflow: ellipsis;
 }
 
+/* Short label prefix distinguishing Install vs Finals events in the day cell */
+.cal-event-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+
 /* Custom note calendar event */
 .cal-note-event {
   background: rgba(9, 209, 199, 0.1) !important;
@@ -993,6 +1002,7 @@
   .cal-event-time,
   .cal-event-title,
   .cal-event-so,
+  .cal-event-tag,
   .cal-note-icon,
   .cal-finals-icon {
     display: none !important;

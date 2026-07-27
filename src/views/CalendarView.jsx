@@ -365,6 +365,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
             <div className="cal-events">
               {dayProjects.map((p, idx) => (
                 <div key={idx} className={`cal-event ${getStatusColor(p.status)}`} title={`${p.name} - ${p.status}`}>
+                  <span className="cal-event-tag">INST</span>
                   <span className="cal-event-title">#{p.so}</span>
                 </div>
               ))}
@@ -375,6 +376,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                   title={`${language === 'es' ? 'Finales' : 'Finals'}: ${p.name}${p.isCompleted ? ` (${language === 'es' ? 'Completado' : 'Completed'})` : ''}`}
                 >
                   {p.isCompleted ? <CheckCircle2 size={10} className="cal-finals-icon" /> : <FlagTriangleRight size={10} className="cal-finals-icon" />}
+                  <span className="cal-event-tag">FIN</span>
                   <span className="cal-event-title">#{p.so}</span>
                 </div>
               ))}
