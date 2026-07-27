@@ -8,7 +8,7 @@ import { useLanguage } from '../utils/LanguageContext';
 import { shortProjectName } from '../utils/projectName';
 import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon,
-  Plus, Trash2, X, FileText, ClipboardList
+  Plus, Trash2, X, FileText, ClipboardList, FlagTriangleRight, CheckCircle2
 } from 'lucide-react';
 import './CalendarView.css';
 import { db, ref, set, remove, onValue } from '../utils/firebase';
@@ -119,6 +119,41 @@ export default function CalendarView({ data, currentUser, userProfile }) {
       }
       return { ...p, dateObj };
     })
+    .filter(p => !isNaN(p.dateObj))
+    .sort((a, b) => a.dateObj - b.dateObj);
+
+  // The sheet uses the literal string "NA" (or blank) when no Finals date has
+  // been entered yet — treat both as "no date" rather than trying to parse them.
+  const isBlankFinalsValue = (val) => !val || !val.trim() || val.trim().toUpperCase() === 'NA';
+
+  const parseSheetDate = (val) => {
+    let dateObj;
+    try {
+      dateObj = parse(val, 'M/d/yyyy', new Date());
+      if (isNaN(dateObj)) dateObj = new Date(val);
+    } catch (e) {
+      dateObj = new Date(val);
+    }
+    return dateObj;
+  };
+
+  // Finals Scheduled events, one per project that has a scheduled date.
+  // If Final Taken also has a date, the same event is flagged "completed"
+  // instead of creating a second event on the Final Taken date.
+  const finalsWithDates = priorityAnalysis
+    .filter(p => !isBlankFinalsValue(p.finalsScheduled))
+    .filter(p => {
+      if (isDesigner && userProfile?.designerName) {
+        return projectDesigners[p.so] &&
+          projectDesigners[p.so].trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
+      }
+      return !showMyProjectsOnly || (userProfile && p.eng && p.eng.trim() === userProfile.designerName);
+    })
+    .map(p => ({
+      ...p,
+      dateObj: parseSheetDate(p.finalsScheduled),
+      isCompleted: !isBlankFinalsValue(p.finalTaken)
+    }))
     .filter(p => !isNaN(p.dateObj))
     .sort((a, b) => a.dateObj - b.dateObj);
 
@@ -315,8 +350,9 @@ export default function CalendarView({ data, currentUser, userProfile }) {
         const cloneDay = day;
         const dayStr = format(cloneDay, 'yyyy-MM-dd');
         
-        // Find projects and notes for this day
+        // Find projects, finals, and notes for this day
         const dayProjects = projectsWithDates.filter(p => isSameDay(p.dateObj, cloneDay));
+        const dayFinals = finalsWithDates.filter(p => isSameDay(p.dateObj, cloneDay));
         const dayNotes = notes.filter(n => n.date === dayStr);
 
         days.push(
@@ -329,6 +365,16 @@ export default function CalendarView({ data, currentUser, userProfile }) {
             <div className="cal-events">
               {dayProjects.map((p, idx) => (
                 <div key={idx} className={`cal-event ${getStatusColor(p.status)}`} title={`${p.name} - ${p.status}`}>
+                  <span className="cal-event-title">#{p.so}</span>
+                </div>
+              ))}
+              {dayFinals.map((p, idx) => (
+                <div
+                  key={idx}
+                  className={`cal-event cal-finals-event ${p.isCompleted ? 'cal-finals-completed' : ''}`}
+                  title={`${language === 'es' ? 'Finales' : 'Finals'}: ${p.name}${p.isCompleted ? ` (${language === 'es' ? 'Completado' : 'Completed'})` : ''}`}
+                >
+                  {p.isCompleted ? <CheckCircle2 size={10} className="cal-finals-icon" /> : <FlagTriangleRight size={10} className="cal-finals-icon" />}
                   <span className="cal-event-title">#{p.so}</span>
                 </div>
               ))}
@@ -507,8 +553,9 @@ export default function CalendarView({ data, currentUser, userProfile }) {
       {isModalOpen && (() => {
         const readOnlyNote = selectedNote && !canManageNote(selectedNote);
 
-        // Events for the selected date (installs are read-only, notes editable).
+        // Events for the selected date (installs and finals are read-only, notes editable).
         const dayInstalls = projectsWithDates.filter(p => format(p.dateObj, 'yyyy-MM-dd') === selectedDate);
+        const dayFinalsForDate = finalsWithDates.filter(p => format(p.dateObj, 'yyyy-MM-dd') === selectedDate);
         const dayNotesForDate = notes.filter(n => n.date === selectedDate);
         const prettyDate = selectedDate
           ? format(parse(selectedDate, 'yyyy-MM-dd', new Date()), 'EEEE, MMMM d, yyyy', { locale: language === 'es' ? es : enUS })
@@ -526,7 +573,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                 </div>
 
                 <div className="day-events-list">
-                  {dayInstalls.length === 0 && dayNotesForDate.length === 0 && (
+                  {dayInstalls.length === 0 && dayFinalsForDate.length === 0 && dayNotesForDate.length === 0 && (
                     <p className="text-muted day-events-empty">
                       {language === 'es' ? 'No hay eventos para este día.' : 'No events for this day.'}
                     </p>
@@ -545,6 +592,26 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                       <span className="day-event-so">#{p.so}</span>
                       <span className="day-event-name">{shortProjectName(p.name)}</span>
                       <span className="day-event-status">{p.status}</span>
+                    </a>
+                  ))}
+
+                  {dayFinalsForDate.map((p, idx) => (
+                    <a
+                      key={`fin-${idx}`}
+                      href={`${window.location.origin}${window.location.pathname}?project=${p.so}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`day-event-item day-event-finals ${p.isCompleted ? 'day-event-finals-completed' : ''}`}
+                      title={language === 'es' ? 'Abrir proyecto' : 'Open project'}
+                    >
+                      {p.isCompleted
+                        ? <CheckCircle2 size={14} className="day-event-finals-icon" />
+                        : <FlagTriangleRight size={14} className="day-event-finals-icon" />}
+                      <span className="day-event-so">#{p.so}</span>
+                      <span className="day-event-name">{shortProjectName(p.name)}</span>
+                      <span className="day-event-status">
+                        {language === 'es' ? 'Finales' : 'Finals'}{p.isCompleted ? ` · ${language === 'es' ? 'Completado' : 'Completed'}` : ''}
+                      </span>
                     </a>
                   ))}
 

@@ -161,6 +161,8 @@ export async function fetchAndParseData() {
            const installIdx = getIdx(headers, ['install', 'installdate'], 3);
            const engIdx = getIdx(headers, ['eng', 'engineering'], 4);
            const statusIdx = getIdx(headers, ['status'], 5);
+           const finalsScheduledIdx = getIdx(headers, ['finalsscheduled', 'finalscheduled'], 6);
+           const finalTakenIdx = getIdx(headers, ['finaltaken', 'finalstaken'], 7);
 
            if (row[soIdx] && row[soIdx].toUpperCase() !== 'SO#') {
              parsedData.priorityAnalysis.push({
@@ -168,7 +170,9 @@ export async function fetchAndParseData() {
                name: row[nameIdx],
                install: row[installIdx],
                eng: row[engIdx],
-               status: row[statusIdx]
+               status: row[statusIdx],
+               finalsScheduled: row[finalsScheduledIdx],
+               finalTaken: row[finalTakenIdx]
              });
            }
         }
