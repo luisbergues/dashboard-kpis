@@ -60,8 +60,16 @@ function App() {
     queryFn: async () => {
       const cached = await getCachedData();
       let dataToReturn = null;
-      
-      if (cached && isCacheFresh(cached.timestamp)) {
+
+      // A cache entry written before the `alerts` field existed on parsedData
+      // lacks it entirely (not just empty) — serving that stale shape as-is
+      // makes the Dashboard's action-required banners flicker in and out as
+      // the 5-minute cache and 30s refetch interval alternate between this
+      // stale cache and a live fetch. Treat a missing `alerts` key as stale
+      // so it's re-fetched live instead of served as fresh.
+      const cacheHasCurrentShape = cached?.parsedData && 'alerts' in cached.parsedData;
+
+      if (cached && cacheHasCurrentShape && isCacheFresh(cached.timestamp)) {
         dataToReturn = cached.parsedData;
         // Fetch archived projects
         dataToReturn.archivedProjects = await fetchArchivedCompletedProjects();
