@@ -21,6 +21,87 @@
   font-size: 0.95rem;
 }
 
+/* ─── Action-Required Alert Banners (from Sheet) ───────────────── */
+.dashboard-alerts-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  margin-bottom: 24px;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-alerts-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.alert-banner {
+  padding: var(--spacing-md);
+  border-left: 3px solid var(--text-muted);
+}
+
+.alert-banner-warning {
+  border-left-color: var(--color-yellow);
+}
+
+.alert-banner-info {
+  border-left-color: var(--color-cyan);
+}
+
+.alert-banner-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: var(--spacing-sm);
+}
+
+.alert-banner-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.alert-banner-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--overlay-03);
+  text-decoration: none;
+  color: inherit;
+  font-size: 0.82rem;
+  transition: background 0.15s ease;
+}
+
+.alert-banner-item:hover {
+  background: var(--overlay-06);
+}
+
+.alert-item-so {
+  font-weight: 600;
+  color: var(--color-cyan);
+  flex-shrink: 0;
+}
+
+.alert-item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alert-item-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
 /* Top Row Side-by-Side Grid Layout */
 .dashboard-top-row {
   display: grid;

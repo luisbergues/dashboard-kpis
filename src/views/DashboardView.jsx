@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Clock, CheckCircle, AlertTriangle, ChevronLeft, ChevronRight, ListTodo, DollarSign, TrendingUp, Download } from 'lucide-react';
+import { Clock, CheckCircle, AlertTriangle, ChevronLeft, ChevronRight, ListTodo, DollarSign, TrendingUp, Download, UserX, ClipboardCheck } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
 import { shortProjectName } from '../utils/projectName';
@@ -98,7 +98,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
     );
   }
 
-  const { weekOverWeek = [], insights = {}, meetingPoints = [], topCostProjects = [], weekLabels = {}, financialImpact = { rows: [] } } = data;
+  const { weekOverWeek = [], insights = {}, meetingPoints = [], topCostProjects = [], weekLabels = {}, financialImpact = { rows: [] }, alerts = {} } = data;
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const filteredProjects = data.priorityAnalysis || [];
@@ -451,6 +451,69 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
           </div>
         )}
       </section>
+
+      {/* Sheet-sourced action-required banners: unassigned engineer + pending Check review */}
+      {(alerts.unassignedEngineer || alerts.pendingCheckReview) && (
+        <SectionErrorBoundary title="Alerts Error">
+          <section className="dashboard-alerts-row">
+            {alerts.unassignedEngineer && alerts.unassignedEngineer.projects.length > 0 && (
+              <div className="glass-card alert-banner alert-banner-warning">
+                <div className="alert-banner-header">
+                  <UserX className="text-yellow" size={18} />
+                  <span>
+                    {language === 'es'
+                      ? `${alerts.unassignedEngineer.count} proyecto(s) sin ingeniero asignado`
+                      : `${alerts.unassignedEngineer.count} project(s) without an assigned engineer`}
+                  </span>
+                </div>
+                <div className="alert-banner-list">
+                  {alerts.unassignedEngineer.projects.map((p, idx) => (
+                    <a
+                      key={idx}
+                      className="alert-banner-item"
+                      href={`${window.location.origin}${window.location.pathname}?project=${p.so}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <span className="alert-item-so">#{p.so}</span>
+                      <span className="alert-item-name">{shortProjectName(p.name)}</span>
+                      {p.designer && <span className="alert-item-meta">{p.designer}</span>}
+                      {p.install && <span className="alert-item-meta">{formatDisplayDate(p.install, language)}</span>}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {alerts.pendingCheckReview && alerts.pendingCheckReview.projects.length > 0 && (
+              <div className="glass-card alert-banner alert-banner-info">
+                <div className="alert-banner-header">
+                  <ClipboardCheck className="text-cyan" size={18} />
+                  <span>
+                    {language === 'es'
+                      ? `${alerts.pendingCheckReview.count} proyecto(s) en 'Check' pendientes de revisión`
+                      : `${alerts.pendingCheckReview.count} project(s) in 'Check' pending review`}
+                  </span>
+                </div>
+                <div className="alert-banner-list">
+                  {alerts.pendingCheckReview.projects.map((p, idx) => (
+                    <a
+                      key={idx}
+                      className="alert-banner-item"
+                      href={`${window.location.origin}${window.location.pathname}?project=${p.so}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <span className="alert-item-so">#{p.so}</span>
+                      <span className="alert-item-name">{shortProjectName(p.name)}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        </SectionErrorBoundary>
+      )}
 
       {/* Week over Week Comparison (2/3 width, under Budget Deviation + Avg Validation Time)
           alongside a compact Financial Impact Analysis pill (1/3 width, under Conversion Rate) */}
