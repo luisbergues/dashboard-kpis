@@ -29,6 +29,50 @@ const getIdx = (map, keys, fallback) => {
   return fallback;
 };
 
+// Parses one "• Name:[SO] FullName | Designer: X | Material: Y | Install: Z | Finals: W"
+// bullet line from an alert banner cell into a structured project entry.
+const parseAlertBulletLine = (line) => {
+  const trimmed = line.replace(/^[•\s]+/, '').trim();
+  if (!trimmed) return null;
+
+  const segments = trimmed.split('|').map(s => s.trim());
+  const titlePart = segments[0] || '';
+  const soMatch = titlePart.match(/\[(\d+)\]/);
+
+  const getField = (label) => {
+    const seg = segments.find(s => s.toLowerCase().startsWith(label.toLowerCase()));
+    if (!seg) return '';
+    const value = seg.slice(seg.indexOf(':') + 1).trim();
+    return value.toUpperCase() === 'N/A' ? '' : value;
+  };
+
+  return {
+    so: soMatch ? soMatch[1] : '',
+    name: titlePart,
+    designer: getField('Designer'),
+    material: getField('Material'),
+    install: getField('Install'),
+    finals: getField('Finals'),
+  };
+};
+
+// Both alert banners are a single cell: a header line ("... N project(s) ...")
+// followed by "• ..." bullet lines, one per affected project.
+const parseAlertBannerCell = (cellText) => {
+  const lines = cellText.split('\n').map(l => l.trim()).filter(Boolean);
+  const header = lines.find(l => !l.startsWith('•')) || '';
+  const countMatch = header.match(/(\d+)\s*project/i);
+  const projects = lines
+    .filter(l => l.startsWith('•'))
+    .map(parseAlertBulletLine)
+    .filter(Boolean);
+  return {
+    message: header,
+    count: countMatch ? parseInt(countMatch[1], 10) : projects.length,
+    projects,
+  };
+};
+
 const parseDateStringOrNumber = (val) => {
   if (!val) return '0';
   const cleanVal = val.trim();
@@ -80,6 +124,10 @@ export async function fetchAndParseData() {
       financialImpact: {
         description: '',
         rows: []
+      },
+      alerts: {
+        unassignedEngineer: null,
+        pendingCheckReview: null
       }
     };
 
@@ -92,6 +140,18 @@ export async function fetchAndParseData() {
       // or join the row to find keywords
       const rowString = row.join('').trim();
       if (!rowString) continue;
+
+      // Alert banners live in a single cell each (header line + "• ..."
+      // bullets), independent of the currentSection state machine below.
+      if (rowString.includes('ACTION REQUIRED') && rowString.includes('without an assigned engineer')) {
+        const cellText = row.find(c => c && c.includes('ACTION REQUIRED')) || '';
+        parsedData.alerts.unassignedEngineer = parseAlertBannerCell(cellText);
+        continue;
+      } else if (rowString.includes('ACTION REQUIRED') && rowString.includes("'Check' status")) {
+        const cellText = row.find(c => c && c.includes('ACTION REQUIRED')) || '';
+        parsedData.alerts.pendingCheckReview = parseAlertBannerCell(cellText);
+        continue;
+      }
 
       // Detect Section Headers
       if (rowString.includes('Priority Analysis (Action Required)')) {
