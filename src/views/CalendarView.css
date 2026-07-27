@@ -183,6 +183,25 @@
   color: var(--color-cyan);
 }
 
+/* Finals Scheduled calendar event */
+.cal-finals-event {
+  background: rgba(255, 165, 0, 0.12) !important;
+  color: var(--color-orange, #ffa500) !important;
+  border-left: 2px solid var(--color-orange, #ffa500) !important;
+}
+
+.cal-finals-icon {
+  flex-shrink: 0;
+}
+
+/* Final Taken has a date -> mark the Finals event as completed instead of
+   adding a second event on the calendar. */
+.cal-finals-completed {
+  background: rgba(70, 223, 177, 0.15) !important;
+  color: var(--color-mint) !important;
+  border-left: 2px solid var(--color-mint) !important;
+}
+
 .cal-event-so {
   font-size: 0.65rem;
   background: rgba(9, 209, 199, 0.15);
@@ -646,6 +665,19 @@
   flex-shrink: 0;
 }
 
+.day-event-finals-icon {
+  color: var(--color-orange, #ffa500);
+  flex-shrink: 0;
+}
+
+.day-event-finals-completed .day-event-finals-icon {
+  color: var(--color-mint);
+}
+
+.day-event-finals-completed {
+  border-color: rgba(70, 223, 177, 0.3);
+}
+
 .day-event-note-text {
   font-size: 0.9rem;
   color: var(--text-primary);
@@ -958,16 +990,23 @@
   }
 
   /* Hide textual metadata on mobile dots */
-  .cal-event-time, 
-  .cal-event-title, 
-  .cal-event-so, 
-  .cal-note-icon {
+  .cal-event-time,
+  .cal-event-title,
+  .cal-event-so,
+  .cal-note-icon,
+  .cal-finals-icon {
     display: none !important;
   }
 
   /* Dot status color overrides */
   .cal-note-event {
     background: var(--color-cyan) !important;
+  }
+  .cal-finals-event {
+    background: var(--color-orange, #ffa500) !important;
+  }
+  .cal-finals-completed {
+    background: var(--color-mint) !important;
   }
   .cal-status-hold {
     background: var(--color-yellow) !important;
