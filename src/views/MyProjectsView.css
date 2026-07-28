@@ -676,7 +676,7 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 2px 9px;
-  border-radius: 8px;
+  border-radius: 100px;
   border: 1px solid transparent;
   transition: all 0.2s;
   user-select: none;
