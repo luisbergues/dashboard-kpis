@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useKpi } from '../context/KpiContext';
-import { calculatePhase2Score } from '../utils/scoreCalculator';
+import { calculatePhase2FromNotes } from '../utils/redFlags';
 import toast from 'react-hot-toast';
-import { Flag, BarChart2, Send, Hash, User, Layers } from 'lucide-react';
+import { Flag, Send, Hash, User, Layers } from 'lucide-react';
 import { T } from '../utils/theme';
 
 const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => (
@@ -74,46 +74,57 @@ const MetricChip: React.FC<{ icon: React.ReactNode; label: string; value: React.
 );
 
 export const Phase2Form: React.FC = () => {
-  const { projects, updateProject } = useKpi();
+  const { projects, updateProject, getProjectNotes } = useKpi();
 
-  const [selectedProjectId, setSelectedProjectId]   = useState('');
-  const [totalRedFlags, setTotalRedFlags]           = useState<number | ''>('');
-  const [redFlagsOver4Days, setRedFlagsOver4Days]   = useState<number | ''>('');
+  const [selectedProjectId, setSelectedProjectId] = useState('');
 
   const approvedProjects = projects.filter(p => p.status === 'Approved');
   const selectedProject  = projects.find(p => p.id === selectedProjectId);
 
-  /* live IFR preview */
-  const previewScore = useMemo(() => {
-    if (!selectedProject || totalRedFlags === '' || redFlagsOver4Days === '') return null;
-    if (Number(redFlagsOver4Days) > Number(totalRedFlags)) return null;
-    return calculatePhase2Score(Number(totalRedFlags), Number(redFlagsOver4Days), selectedProject.icp);
-  }, [selectedProject, totalRedFlags, redFlagsOver4Days]);
+  // Las notas designer del proyecto son los red flags. El reloj de las que
+  // sigan abiertas corre hasta hoy, asi que el preview sube solo.
+  const notes = selectedProject ? getProjectNotes(selectedProject.id) : [];
+  // notesKey captura lo unico que afecta el calculo; `notes` cambia de
+  // identidad en cada render y volveria a calcular siempre.
+  const notesKey = notes.map(n => `${n.id}:${n.urgency || 'green'}:${n.resolvedAt || ''}`).join('|');
+  const result = useMemo(
+    () => calculatePhase2FromNotes(notes, Date.now()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [notesKey],
+  );
 
-  const scoreColor = previewScore === null ? T.textMuted
-    : previewScore >= 80 ? T.green
-    : previewScore >= 60 ? T.yellow
+  const noteById = (id: string) => notes.find(n => n.id === id);
+
+  const scoreColor = result.score >= 80 ? T.green
+    : result.score >= 60 ? T.yellow
     : T.red;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProject) { toast.error('Please select an approved project.'); return; }
-    if (totalRedFlags === '' || redFlagsOver4Days === '') { toast.error('Please fill in all red flag fields.'); return; }
-    if (Number(redFlagsOver4Days) > Number(totalRedFlags)) { toast.error('Red flags > 4 days cannot exceed total red flags.'); return; }
 
-    const phase2Score = calculatePhase2Score(Number(totalRedFlags), Number(redFlagsOver4Days), selectedProject.icp);
-    const result = await updateProject({
+    const closedAt = Date.now();
+    // Se recalcula con el timestamp de cierre para congelar el valor: las notas
+    // abiertas dejan de acumular en este instante.
+    const finalResult = calculatePhase2FromNotes(notes, closedAt);
+
+    const updateResult = await updateProject({
       ...selectedProject,
       status: 'Completed',
-      phase2Score,
-      phase2Data: { totalRedFlags: Number(totalRedFlags), redFlagsOver4Days: Number(redFlagsOver4Days) },
+      phase2Score: finalResult.score,
+      phase2Data: {
+        closedAt,
+        totalNotes: finalResult.breakdown.length,
+        totalPenalty: finalResult.totalPenalty,
+        breakdown: finalResult.breakdown,
+      },
     });
-    if (result.conflict) {
-      toast.error(`Designer was just changed to "${result.currentDesignerName}" by someone else. Reload and try again.`);
+    if (updateResult.conflict) {
+      toast.error(`Designer was just changed to "${updateResult.currentDesignerName}" by someone else. Reload and try again.`);
       return;
     }
-    toast.success(`Project Closed! IFR Score: ${phase2Score}`);
-    setSelectedProjectId(''); setTotalRedFlags(''); setRedFlagsOver4Days('');
+    toast.success(`Project Closed! IFR Score: ${finalResult.score}`);
+    setSelectedProjectId('');
   };
 
   return (
@@ -161,9 +172,8 @@ export const Phase2Form: React.FC = () => {
           {/* Project metrics */}
           {selectedProject && (
             <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
-              <MetricChip icon={<Layers size={16} color={T.blue} />}    label="Total Rooms"  value={selectedProject.totalRooms} color={T.blue} />
-              <MetricChip icon={<BarChart2 size={16} color="#8b5cf6" />} label="ICP Score"    value={selectedProject.icp}        color="#8b5cf6" />
-              <MetricChip icon={<User size={16} color={T.green} />}      label="Designer"     value={selectedProject.designerName} color={T.green} />
+              <MetricChip icon={<Layers size={16} color={T.blue} />} label="Total Rooms" value={selectedProject.totalRooms} color={T.blue} />
+              <MetricChip icon={<User size={16} color={T.green} />}  label="Designer"    value={selectedProject.designerName} color={T.green} />
             </div>
           )}
         </Card>
@@ -173,30 +183,49 @@ export const Phase2Form: React.FC = () => {
           <Card>
             <SectionTitle
               icon={<Flag size={15} color={T.red} />}
-              title="Friction Metrics"
-              subtitle="Red flags are delays or issues encountered during production."
+              title="Red Flags"
+              subtitle="Notas de tipo Designer cargadas en My Projects. Verde −0.5/día, amarillo −1, rojo −2; se duplica a partir del día 5, con tope por nota."
             />
 
-            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-              <Field label="Total Red Flags" half>
-                <input
-                  type="number" min="0" value={totalRedFlags}
-                  onChange={e => setTotalRedFlags(e.target.value === '' ? '' : Number(e.target.value))}
-                  placeholder="0"
-                  style={inputStyle}
-                />
-              </Field>
-              <Field label="Red Flags > 4 Days" half>
-                <input
-                  type="number" min="0" value={redFlagsOver4Days}
-                  onChange={e => setRedFlagsOver4Days(e.target.value === '' ? '' : Number(e.target.value))}
-                  placeholder="0"
-                  style={inputStyle}
-                />
-              </Field>
-            </div>
+            {result.breakdown.length === 0 ? (
+              <div style={{
+                padding: '12px 16px', borderRadius: T.radiusMd,
+                background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)',
+                color: T.green, fontSize: '0.82rem',
+              }}>
+                Sin red flags para este proyecto. IFR = 100.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {result.breakdown.map(line => {
+                  const note = noteById(line.noteId);
+                  const dot = line.urgency === 'red' ? T.red : line.urgency === 'yellow' ? T.yellow : T.green;
+                  return (
+                    <div key={line.noteId} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                      padding: '10px 14px', borderRadius: T.radiusMd,
+                      background: T.bgSurface, border: `1px solid ${T.cardBorder}`,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: dot, flexShrink: 0 }} />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ color: T.textPrimary, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {note?.text || '(sin texto)'}
+                          </div>
+                          <div style={{ color: T.textMuted, fontSize: '0.72rem' }}>
+                            {line.days} {line.days === 1 ? 'día' : 'días'} · {note?.resolvedAt ? 'resuelta' : 'abierta'}
+                          </div>
+                        </div>
+                      </div>
+                      <span style={{ color: T.red, fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
+                        &minus;{line.penalty}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
-            {/* Formula explanation */}
             <div style={{
               marginTop: 16, padding: '12px 16px', borderRadius: T.radiusMd,
               background: T.bgSurface, border: `1px solid ${T.cardBorder}`,
@@ -204,23 +233,22 @@ export const Phase2Form: React.FC = () => {
             }}>
               <div>
                 <div style={{ color: T.textMuted, fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-                  IFR Formula
+                  Penalización total
                 </div>
                 <code style={{ color: T.textSecondary, fontSize: '0.78rem' }}>
-                  100 – (RedFlags / ICP × 40) – (RedFlags&gt;4d × 5)
+                  100 &minus; {result.totalPenalty}
                 </code>
               </div>
-              {/* Live preview */}
               <div style={{ textAlign: 'right' }}>
                 <div style={{ color: T.textMuted, fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-                  Preview IFR
+                  IFR
                 </div>
                 <div style={{
                   fontSize: '1.6rem', fontWeight: 800, color: scoreColor,
-                  textShadow: previewScore !== null ? `0 0 20px ${scoreColor}60` : 'none',
+                  textShadow: `0 0 20px ${scoreColor}60`,
                   transition: 'color 0.3s',
                 }}>
-                  {previewScore !== null ? previewScore : '—'}
+                  {result.score}
                 </div>
               </div>
             </div>
