@@ -23,10 +23,18 @@ const startOfDay = (ts: number): number => {
 const urgencyOf = (note: DesignerNote): Urgency =>
   note.urgency && note.urgency in RATE ? note.urgency : 'green';
 
+// Notas viejas pueden no tener createdAt (o tenerlo corrupto). Sin este guard
+// el calculo propaga NaN hasta la UI ("NaN días abierta").
+const parseDate = (value: string | null | undefined, fallback: number): number => {
+  if (!value) return fallback;
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? fallback : ms;
+};
+
 export const noteDaysOpen = (note: DesignerNote, until: number): number => {
-  const created = new Date(note.createdAt).getTime();
+  const created = parseDate(note.createdAt, RED_FLAG_SCORING_SINCE);
   const start = startOfDay(Math.max(created, RED_FLAG_SCORING_SINCE));
-  const end = startOfDay(note.resolvedAt ? new Date(note.resolvedAt).getTime() : until);
+  const end = startOfDay(note.resolvedAt ? parseDate(note.resolvedAt, until) : until);
   return Math.max(0, Math.round((end - start) / MS_PER_DAY));
 };
 

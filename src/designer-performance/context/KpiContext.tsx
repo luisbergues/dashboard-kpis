@@ -152,7 +152,15 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
 
   const designers: Designer[] = designerNames.map(name => calculateDesignerStats(name, projects));
 
-  const getProjectNotes = (soNumber: string): DesignerNote[] => projectNotes[soNumber] || [];
+  // Firebase devuelve el array de notas como objeto indexado cuando las claves
+  // no son correlativas (pasa si quedan huecos al borrar). Normalizamos a array
+  // y descartamos los huecos, que llegan como null.
+  const getProjectNotes = (soNumber: string): DesignerNote[] => {
+    const raw = projectNotes[soNumber];
+    if (!raw) return [];
+    const list = Array.isArray(raw) ? raw : Object.values(raw as Record<string, DesignerNote>);
+    return list.filter(Boolean);
+  };
 
   // Helper to get the auto-derived complexity for any SO (used in Phase1Form pre-fill)
   const getProjectComplexity = (soNumber: string): Partial<Project['complexity']> => {

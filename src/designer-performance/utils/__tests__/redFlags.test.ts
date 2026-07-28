@@ -41,6 +41,18 @@ describe('noteDaysOpen', () => {
   it('nunca devuelve negativo', () => {
     expect(noteDaysOpen(note(), ts(2026, 7, 1))).toBe(0);
   });
+
+  it('no propaga NaN si la nota no tiene createdAt', () => {
+    const n = note();
+    delete (n as Partial<DesignerNote>).createdAt;
+    // Sin createdAt el reloj arranca en el release: hasta el 4-ago son 7 días.
+    expect(noteDaysOpen(n, ts(2026, 8, 4))).toBe(7);
+  });
+
+  it('no propaga NaN si createdAt o resolvedAt son ilegibles', () => {
+    expect(noteDaysOpen(note({ createdAt: 'no-es-fecha' }), ts(2026, 8, 4))).toBe(7);
+    expect(noteDaysOpen(note({ resolvedAt: 'no-es-fecha' }), ts(2026, 8, 4))).toBe(3);
+  });
 });
 
 describe('notePenalty', () => {
@@ -115,5 +127,15 @@ describe('calculatePhase2FromNotes', () => {
 
   it('tolera undefined', () => {
     expect(calculatePhase2FromNotes(undefined as unknown as DesignerNote[], ts(2026, 8, 4)).score).toBe(100);
+  });
+
+  it('ignora los huecos null que deja Firebase al borrar notas', () => {
+    const notes = [
+      note({ id: 'a', urgency: 'yellow', createdAt: iso(2026, 8, 1) }),
+      null as unknown as DesignerNote,
+      note({ id: 'b', urgency: 'green', createdAt: iso(2026, 8, 1) }),
+    ];
+    const r = calculatePhase2FromNotes(notes, ts(2026, 8, 9));
+    expect(r.breakdown.map(l => l.noteId)).toEqual(['a', 'b']);
   });
 });
