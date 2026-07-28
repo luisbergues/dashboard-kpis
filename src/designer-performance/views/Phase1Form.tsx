@@ -72,7 +72,7 @@ const selectStyle: React.CSSProperties = {
    pill: the OS/browser calendar can't be restyled (rounded corners, gray
    background, blue borders) since it isn't part of the page DOM, so this is
    a small custom popover calendar matching the pill's look instead. */
-const MiniDatePicker: React.FC<{
+export const MiniDatePicker: React.FC<{
   value: number; // timestamp of the currently selected date
   onChange: (ts: number) => void;
   children: React.ReactNode; // the pill trigger

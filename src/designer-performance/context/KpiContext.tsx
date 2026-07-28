@@ -136,7 +136,10 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
           ...(perfData.checklist || {}),
         },
         complexity: autoComplexity,
-        phase2Data: perfData.phase2Data ?? { totalRedFlags: 0, redFlagsOver4Days: 0 },
+        // Sin default fabricado: un proyecto que nunca se cerro no tiene datos
+        // de Fase 2, y inventarle ceros hacia que el detalle mostrara
+        // "Friction Metrics 0 / 0" en proyectos Pending.
+        phase2Data: perfData.phase2Data,
       };
     });
 
