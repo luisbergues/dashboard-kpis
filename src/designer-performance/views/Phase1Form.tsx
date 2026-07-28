@@ -436,6 +436,12 @@ export const Phase1Form: React.FC = () => {
                         padding: '2px 10px', whiteSpace: 'nowrap', cursor: 'pointer',
                       }}
                       title="Click to correct the date"
+                      onClick={e => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const input = e.currentTarget.querySelector('input[type="date"]') as HTMLInputElement | null;
+                        input?.showPicker?.();
+                      }}
                     >
                       ✓ {fmtDate(checklist[item.id])}
                       <input
@@ -490,6 +496,12 @@ export const Phase1Form: React.FC = () => {
                         padding: '2px 10px', whiteSpace: 'nowrap', cursor: 'pointer',
                       }}
                       title="Click to correct the date"
+                      onClick={e => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const input = e.currentTarget.querySelector('input[type="date"]') as HTMLInputElement | null;
+                        input?.showPicker?.();
+                      }}
                     >
                       ✓ {fmtDate(checklist.finalMeasurementsDelivered)}
                       <input
