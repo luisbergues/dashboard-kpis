@@ -373,7 +373,12 @@ export const translations = {
         quoteComplete: "Quote Complete",
         quoteBreakdown: "Quote Breakdown",
         creditCardForm: "Credit Card Form",
-        drawingsSigned: "Drawings Signed"
+        drawingsSigned: "Drawings Signed",
+        redFlagsBreakdown: "Red Flags",
+        redFlagOpen: "open",
+        redFlagResolved: "resolved",
+        redFlagDays: "days",
+        totalPenalty: "Total penalty"
       }
     },
     costs: {
@@ -794,7 +799,12 @@ export const translations = {
         quoteComplete: "Cotización Completa",
         quoteBreakdown: "Desglose de Cotización",
         creditCardForm: "Formulario de Tarjeta de Crédito",
-        drawingsSigned: "Planos Firmados"
+        drawingsSigned: "Planos Firmados",
+        redFlagsBreakdown: "Red Flags",
+        redFlagOpen: "abierta",
+        redFlagResolved: "resuelta",
+        redFlagDays: "días",
+        totalPenalty: "Penalización total"
       }
     },
     costs: {
