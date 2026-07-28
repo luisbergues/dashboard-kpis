@@ -58,6 +58,8 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
     { key: 'kcdFile', label: t('designerPerf.modal.kcdFile') },
     { key: 'jlContract', label: t('designerPerf.modal.jlContract') },
     { key: 'quoteComplete', label: t('designerPerf.modal.quoteComplete') },
+    { key: 'quoteBreakdown', label: t('designerPerf.modal.quoteBreakdown') },
+    { key: 'creditCardForm', label: t('designerPerf.modal.creditCardForm') },
     { key: 'drawingsSigned', label: t('designerPerf.modal.drawingsSigned') },
   ] as const;
   

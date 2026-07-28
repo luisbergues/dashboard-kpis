@@ -10,6 +10,8 @@ import { shortProjectName } from '../utils/projectName';
 import { formatDisplayDate } from '../utils/dateFormat';
 import './PipelineView.css';
 
+const getNoteEffectiveType = (note) => note.noteType || (note.priority ? 'priority' : 'normal');
+
 const getStageLabel = (stageId, language) => {
   if (language === 'es') {
     switch (stageId) {
@@ -1037,13 +1039,17 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                       {(projectNotes[project.so] || []).length > 0 && (
                         <div className="pipeline-notes-list-wrapper">
                           {(projectNotes[project.so] || []).map(note => (
-                            <div key={note.id} className={`pipeline-note-item-card ${note.priority ? 'priority' : 'normal'}`}>
+                            <div key={note.id} className={`pipeline-note-item-card ${getNoteEffectiveType(note)}`}>
                               <div className="pipeline-note-item-header">
                                 <div className="note-tags-left">
-                                  <span className={`pipeline-note-priority-badge ${note.priority ? 'priority' : 'normal'}`}>
-                                    {note.priority
+                                  <span className={`pipeline-note-priority-badge ${getNoteEffectiveType(note)}`}>
+                                    {getNoteEffectiveType(note) === 'priority'
                                       ? (language === 'es' ? '⚑ Prioritaria' : '⚑ Priority')
-                                      : (language === 'es' ? 'Normal' : 'Normal')}
+                                      : getNoteEffectiveType(note) === 'obs'
+                                        ? (language === 'es' ? 'Observación' : 'Obs')
+                                        : getNoteEffectiveType(note) === 'designer'
+                                          ? (language === 'es' ? 'Diseñador' : 'Designer')
+                                          : (language === 'es' ? 'Normal' : 'Normal')}
                                   </span>
                                   {note.createdBy && project.eng && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
                                     <span className="pipeline-note-author">

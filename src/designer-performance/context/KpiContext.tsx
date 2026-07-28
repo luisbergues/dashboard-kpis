@@ -116,6 +116,8 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
           kcdFile:                      false,
           jlContract:                   false,
           quoteComplete:                false,
+          quoteBreakdown:               false,
+          creditCardForm:               false,
           drawingsSigned:               false,
           finalMeasurementsApplies:     false,
           finalMeasurementsDelivered:   false,

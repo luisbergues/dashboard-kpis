@@ -1,15 +1,37 @@
 import type { Project, Designer } from '../types';
 
-export const calculatePhase1ScoreAndStatus = (checklist: Project['checklist']) => {
-  const { kcdFile, jlContract, quoteComplete, drawingsSigned, finalMeasurementsApplies, finalMeasurementsDelivered } = checklist;
-  
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+// Days between project intake (createdAt) and when an item was checked, or
+// today if it's still unchecked. Same-day completion (day 0) costs nothing.
+const daysLate = (createdAt: number, checkedAt: number | false): number => {
+  const until = checkedAt === false ? Date.now() : checkedAt;
+  return Math.max(0, Math.floor((until - createdAt) / MS_PER_DAY));
+};
+
+// -2 pts/day for the first 4 days late, -3 pts/day for every day after that.
+const latePenalty = (days: number): number => {
+  const first4 = Math.min(days, 4) * 2;
+  const rest = Math.max(0, days - 4) * 3;
+  return first4 + rest;
+};
+
+export const calculatePhase1ScoreAndStatus = (checklist: Project['checklist'], createdAt: number) => {
+  const { kcdFile, jlContract, quoteComplete, quoteBreakdown, creditCardForm, drawingsSigned, finalMeasurementsApplies, finalMeasurementsDelivered } = checklist;
+
   // If final measurements applies, it MUST be delivered.
   const finalMeasurementsValid = !finalMeasurementsApplies || (finalMeasurementsApplies && finalMeasurementsDelivered);
 
-  const isApproved = kcdFile && jlContract && quoteComplete && drawingsSigned && finalMeasurementsValid;
+  const isApproved = kcdFile && jlContract && quoteComplete && quoteBreakdown && creditCardForm && drawingsSigned && finalMeasurementsValid;
+
+  const requiredItems: (number | false)[] = [kcdFile, jlContract, quoteComplete, quoteBreakdown, creditCardForm, drawingsSigned];
+  if (finalMeasurementsApplies) requiredItems.push(finalMeasurementsDelivered);
+
+  const penalty = requiredItems.reduce((acc, checkedAt) => acc + latePenalty(daysLate(createdAt, checkedAt)), 0);
+  const score = Math.max(0, 100 - penalty);
 
   return {
-    score: isApproved ? 100 : 0,
+    score,
     status: isApproved ? 'Approved' as const : 'Rejected' as const
   };
 };

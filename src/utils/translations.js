@@ -371,6 +371,8 @@ export const translations = {
         kcdFile: "KCD File",
         jlContract: "JL Contract",
         quoteComplete: "Quote Complete",
+        quoteBreakdown: "Quote Breakdown",
+        creditCardForm: "Credit Card Form",
         drawingsSigned: "Drawings Signed"
       }
     },
@@ -790,6 +792,8 @@ export const translations = {
         kcdFile: "Archivo KCD",
         jlContract: "Contrato JL",
         quoteComplete: "Cotización Completa",
+        quoteBreakdown: "Desglose de Cotización",
+        creditCardForm: "Formulario de Tarjeta de Crédito",
         drawingsSigned: "Planos Firmados"
       }
     },

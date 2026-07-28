@@ -17,6 +17,8 @@ export interface Project {
     kcdFile: number | false;          // timestamp when checked, false if not
     jlContract: number | false;
     quoteComplete: number | false;
+    quoteBreakdown: number | false;
+    creditCardForm: number | false;
     drawingsSigned: number | false;
     finalMeasurementsApplies: number | false;
     finalMeasurementsDelivered: number | false;

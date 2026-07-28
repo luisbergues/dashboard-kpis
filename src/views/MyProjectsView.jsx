@@ -756,6 +756,10 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       createdBy: userName
     };
 
+    if (input?.noteType === 'designer') {
+      newNote.urgency = input?.urgency || 'green';
+    }
+
     if (attachments.length > 0) {
       newNote.attachments = attachments;
     }
@@ -780,7 +784,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       sendNoteEvent(so, newNote.text, newNote.createdBy, project || {}, 'obs');
     }
 
-    setNoteInputs(prev => ({ ...prev, [so]: { text: '', noteType: 'normal' } }));
+    setNoteInputs(prev => ({ ...prev, [so]: { text: '', noteType: 'normal', urgency: undefined } }));
     setNoteImages(prev => ({ ...prev, [so]: null }));
     setIsUploadingImage(prev => ({ ...prev, [so]: false }));
   };
@@ -796,6 +800,26 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
         await set(ref(db, `project_notes/${so}`), currentNotes.length > 0 ? currentNotes : null);
       } catch (err) {
         console.error('Failed to delete note from Firebase:', err);
+      }
+    } else {
+      localStorage.setItem(`project_notes_${so}`, JSON.stringify(currentNotes));
+      setProjectNotes(prev => ({ ...prev, [so]: currentNotes }));
+    }
+  };
+
+  const handleCycleNoteUrgency = async (so, noteId) => {
+    const currentNotes = projectNotes[so] ? [...projectNotes[so]] : [];
+    const idx = currentNotes.findIndex(n => n.id === noteId);
+    if (idx === -1) return;
+    const currentUrgency = currentNotes[idx].urgency || 'green';
+    const nextUrgency = currentUrgency === 'green' ? 'yellow' : currentUrgency === 'yellow' ? 'red' : 'green';
+    currentNotes[idx] = { ...currentNotes[idx], urgency: nextUrgency };
+
+    if (db && currentUser) {
+      try {
+        await set(ref(db, `project_notes/${so}`), currentNotes);
+      } catch (err) {
+        console.error('Failed to update note urgency in Firebase:', err);
       }
     } else {
       localStorage.setItem(`project_notes_${so}`, JSON.stringify(currentNotes));
@@ -1633,10 +1657,10 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                             <div style={{ display: 'flex', gap: '8px' }}>
                               <button
                                 type="button"
-                                className={`priority-toggle ${noteInputs[project.so]?.noteType === 'priority' ? 'is-priority' : noteInputs[project.so]?.noteType === 'obs' ? 'is-obs' : 'not-priority'}`}
+                                className={`priority-toggle ${noteInputs[project.so]?.noteType === 'priority' ? 'is-priority' : noteInputs[project.so]?.noteType === 'obs' ? 'is-obs' : noteInputs[project.so]?.noteType === 'designer' ? 'is-designer' : 'not-priority'}`}
                                 onClick={() => setNoteInputs(prev => {
                                   const currentType = prev[project.so]?.noteType || 'normal';
-                                  const nextType = currentType === 'normal' ? 'priority' : currentType === 'priority' ? 'obs' : 'normal';
+                                  const nextType = currentType === 'normal' ? 'priority' : currentType === 'priority' ? 'obs' : currentType === 'obs' ? 'designer' : 'normal';
                                   return {
                                     ...prev,
                                     [project.so]: { ...prev[project.so], noteType: nextType }
@@ -1645,13 +1669,39 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                                 disabled={isUploadingImage[project.so]}
                               >
                                 <Flag size={12} />
-                                {noteInputs[project.so]?.noteType === 'priority' 
+                                {noteInputs[project.so]?.noteType === 'priority'
                                   ? (language === 'es' ? 'Prioritaria' : 'Priority')
                                   : noteInputs[project.so]?.noteType === 'obs'
                                     ? (language === 'es' ? 'Observación' : 'Obs')
-                                    : (language === 'es' ? 'Normal' : 'Normal')}
+                                    : noteInputs[project.so]?.noteType === 'designer'
+                                      ? (language === 'es' ? 'Diseñador' : 'Designer')
+                                      : (language === 'es' ? 'Normal' : 'Normal')}
                               </button>
-                              
+
+                              {noteInputs[project.so]?.noteType === 'designer' && (
+                                <button
+                                  type="button"
+                                  className={`urgency-toggle urgency-${noteInputs[project.so]?.urgency || 'green'}`}
+                                  onClick={() => setNoteInputs(prev => {
+                                    const currentUrgency = prev[project.so]?.urgency || 'green';
+                                    const nextUrgency = currentUrgency === 'green' ? 'yellow' : currentUrgency === 'yellow' ? 'red' : 'green';
+                                    return {
+                                      ...prev,
+                                      [project.so]: { ...prev[project.so], urgency: nextUrgency }
+                                    };
+                                  })}
+                                  disabled={isUploadingImage[project.so]}
+                                  title={language === 'es' ? 'Grado de urgencia' : 'Urgency level'}
+                                >
+                                  <span className="urgency-dot" />
+                                  {(() => {
+                                    const u = noteInputs[project.so]?.urgency || 'green';
+                                    if (language === 'es') return u === 'red' ? 'Alta' : u === 'yellow' ? 'Media' : 'Baja';
+                                    return u === 'red' ? 'High' : u === 'yellow' ? 'Medium' : 'Low';
+                                  })()}
+                                </button>
+                              )}
+
                               <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--overlay-05)', padding: '4px 8px', borderRadius: '12px', fontSize: '0.75rem', color: mutedOnSurface }} title={language === 'es' ? 'Adjuntar Imagen o Documento (Máx 1MB)' : 'Attach Image or Document (Max 1MB)'}>
                                 <Paperclip size={14} />
                                 <input
@@ -1700,25 +1750,54 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                           {(projectNotes[project.so] || []).map(note => (
                             <div key={note.id} className="note-item">
                               <div className="note-item-header">
-                                <span className={`note-priority-tag ${note.priority ? 'priority' : 'normal'}`}>
-                                  {note.priority 
-                                    ? (language === 'es' ? '⚑ Prioritaria' : '⚑ Priority')
-                                    : (language === 'es' ? 'Normal' : 'Normal')}
-                                </span>
-                                {note.createdBy && project.eng && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
-                                  <span className="note-author" style={{ fontSize: '0.72rem', color: '#09D1C7', marginLeft: '6px', fontWeight: 'bold' }}>
-                                    | By {note.createdBy}
-                                  </span>
-                                )}
-                                {!isAdmin && (
-                                  <button
-                                    className="note-delete-btn"
-                                    onClick={() => handleDeleteNote(project.so, note.id)}
-                                    title={language === 'es' ? 'Eliminar nota' : 'Delete note'}
-                                  >
-                                    <Trash2 size={13} />
-                                  </button>
-                                )}
+                                <div className="note-item-header-left">
+                                  {(() => {
+                                    const effectiveType = note.noteType || (note.priority ? 'priority' : 'normal');
+                                    return (
+                                      <span className={`note-priority-tag ${effectiveType === 'priority' ? 'priority' : effectiveType === 'obs' ? 'obs' : effectiveType === 'designer' ? 'designer' : 'normal'}`}>
+                                        {effectiveType === 'priority'
+                                          ? (language === 'es' ? '⚑ Prioritaria' : '⚑ Priority')
+                                          : effectiveType === 'obs'
+                                            ? (language === 'es' ? 'Observación' : 'Obs')
+                                            : effectiveType === 'designer'
+                                              ? (language === 'es' ? 'Diseñador' : 'Designer')
+                                              : (language === 'es' ? 'Normal' : 'Normal')}
+                                      </span>
+                                    );
+                                  })()}
+                                  {note.createdBy && project.eng && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
+                                    <span className="note-author" style={{ fontSize: '0.72rem', color: '#09D1C7', marginLeft: '6px', fontWeight: 'bold' }}>
+                                      | By {note.createdBy}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="note-item-header-right">
+                                  {(note.noteType || (note.priority ? 'priority' : 'normal')) === 'designer' && (
+                                    <button
+                                      type="button"
+                                      className={`urgency-toggle urgency-${note.urgency || 'green'}`}
+                                      onClick={() => handleCycleNoteUrgency(project.so, note.id)}
+                                      disabled={isAdmin}
+                                      title={language === 'es' ? 'Grado de urgencia (click para cambiar)' : 'Urgency level (click to change)'}
+                                    >
+                                      <span className="urgency-dot" />
+                                      {(() => {
+                                        const u = note.urgency || 'green';
+                                        if (language === 'es') return u === 'red' ? 'Alta' : u === 'yellow' ? 'Media' : 'Baja';
+                                        return u === 'red' ? 'High' : u === 'yellow' ? 'Medium' : 'Low';
+                                      })()}
+                                    </button>
+                                  )}
+                                  {!isAdmin && (
+                                    <button
+                                      className="note-delete-btn"
+                                      onClick={() => handleDeleteNote(project.so, note.id)}
+                                      title={language === 'es' ? 'Eliminar nota' : 'Delete note'}
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                               <div className="note-item-text">{note.text}</div>
                               {(() => {

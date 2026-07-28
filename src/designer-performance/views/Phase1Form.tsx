@@ -72,6 +72,8 @@ type ChecklistState = {
   kcdFile: number | false;
   jlContract: number | false;
   quoteComplete: number | false;
+  quoteBreakdown: number | false;
+  creditCardForm: number | false;
   drawingsSigned: number | false;
   finalMeasurementsApplies: number | false;
   finalMeasurementsDelivered: number | false;
@@ -79,6 +81,7 @@ type ChecklistState = {
 
 const emptyChecklist: ChecklistState = {
   kcdFile: false, jlContract: false, quoteComplete: false,
+  quoteBreakdown: false, creditCardForm: false,
   drawingsSigned: false, finalMeasurementsApplies: false, finalMeasurementsDelivered: false,
 };
 
@@ -104,6 +107,12 @@ export const Phase1Form: React.FC = () => {
   const updatableProjects = projects.filter(p => p.status !== 'Pending');
   // Active projects = Pending (not yet evaluated in Phase 1)
   const activeProjects = projects.filter(p => p.status === 'Pending');
+
+  // Effective createdAt for the live score preview: the existing project's
+  // registration date, or "today" for a not-yet-registered New intake.
+  const existingProject = projects.find(p => p.id === soNumber);
+  const effectiveCreatedAt = existingProject?.createdAt || Date.now();
+  const livePreview = soNumber ? calculatePhase1ScoreAndStatus(checklist, effectiveCreatedAt) : null;
 
   /* When selecting an active project in New mode, auto-fill name + designer */
   const handleNewProjectSelect = (selectedSo: string) => {
@@ -182,6 +191,20 @@ export const Phase1Form: React.FC = () => {
     setChecklist(prev => ({ ...prev, [field]: prev[field] === false ? Date.now() : false }));
   };
 
+  // Lets the engineer correct the recorded date if an item was checked late
+  // by mistake (e.g. paperwork actually arrived earlier). Keeps the
+  // original time-of-day, only the calendar date changes.
+  const handleChecklistDateChange = (field: keyof ChecklistState, dateStr: string) => {
+    if (!dateStr) return;
+    setChecklist(prev => {
+      const current = prev[field];
+      const base = current !== false ? new Date(current) : new Date();
+      const [year, month, day] = dateStr.split('-').map(Number);
+      base.setFullYear(year, month - 1, day);
+      return { ...prev, [field]: base.getTime() };
+    });
+  };
+
   const handleComplexityChange = (field: keyof typeof complexity) => {
     setComplexity(prev => ({ ...prev, [field]: !prev[field] }));
     setAutoFilledFields(prev => { const n = new Set(prev); n.delete(field); return n; });
@@ -195,19 +218,22 @@ export const Phase1Form: React.FC = () => {
     if (mode === 'New' && projects.some(p => p.id === soNumber && p.status !== 'Pending')) {
       toast.error('A project with this SO Number has already been processed.'); return;
     }
+    const existingForCreatedAt = projects.find(p => p.id === soNumber);
+    const now = Date.now();
+    const createdAt = existingForCreatedAt?.createdAt || now;
+
     let finalStatus: ProjectStatus, score: number | null;
     if (forceReview) { finalStatus = 'To review'; score = null; }
-    else { const r = calculatePhase1ScoreAndStatus(checklist); finalStatus = r.status; score = r.score; }
+    else { const r = calculatePhase1ScoreAndStatus(checklist, createdAt); finalStatus = r.status; score = r.score; }
 
     const icp = Number(totalRooms) + calculateTechnicalPoints(complexity);
-    const now = Date.now();
 
     if (mode === 'New') {
       const existing = projects.find(p => p.id === soNumber);
       const result = await updateProject({
         ...(existing || {}),
         id: soNumber,
-        createdAt: existing?.createdAt || now,
+        createdAt,
         approvedAt: finalStatus === 'Approved' ? now : null,
         projectName, designerName, status: finalStatus, totalRooms: Number(totalRooms), icp,
         phase1Score: score, phase2Score: existing?.phase2Score ?? null, checklist, complexity
@@ -235,6 +261,15 @@ export const Phase1Form: React.FC = () => {
 
   const fmtDate = (ts: number | false) =>
     ts ? formatDisplayDate(new Date(ts)) : null;
+
+  // YYYY-MM-DD in local time for <input type="date"> value, padded to 2 digits.
+  const toDateInputValue = (ts: number | false) => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${mm}-${dd}`;
+  };
 
   /* ── render ──────────────────────────────────────────────────────────── */
   return (
@@ -341,7 +376,17 @@ export const Phase1Form: React.FC = () => {
           <SectionTitle
             icon={<CheckSquare size={15} color={T.blue} />}
             title="Strict Go / No-Go Checklist"
-            subtitle="Check each item when the documentation is received. Date is recorded automatically."
+            subtitle="Check each item when the documentation is received. Date is recorded automatically. -2 pts/day late per missing item (first 4 days), -3 pts/day after."
+            badge={livePreview ? (
+              <span style={{
+                fontSize: '0.72rem', fontWeight: 700,
+                color: livePreview.score >= 80 ? T.green : livePreview.score >= 50 ? T.yellow : T.red,
+                background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.cardBorder}`,
+                borderRadius: T.radiusPill, padding: '3px 10px',
+              }}>
+                Score: {livePreview.score}
+              </span>
+            ) : undefined}
           />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -349,6 +394,8 @@ export const Phase1Form: React.FC = () => {
               { id: 'kcdFile',                   label: 'KCD file (complete & latest)' },
               { id: 'jlContract',                label: 'JL Contract (complete & signed)' },
               { id: 'quoteComplete',             label: 'Quote (complete by room)' },
+              { id: 'quoteBreakdown',            label: 'Quote breakdown' },
+              { id: 'creditCardForm',            label: 'Credit Card Form' },
               { id: 'drawingsSigned',            label: 'Drawings (signed by client)' },
               { id: 'finalMeasurementsApplies',  label: 'Does "Final Measurements" apply here?' },
             ] as { id: keyof ChecklistState; label: string }[]).map(item => {
@@ -381,12 +428,23 @@ export const Phase1Form: React.FC = () => {
                     </span>
                   </div>
                   {checked && (
-                    <span style={{
-                      fontSize: '0.72rem', color: T.blue, background: 'rgba(59,130,246,0.1)',
-                      border: '1px solid rgba(59,130,246,0.2)', borderRadius: T.radiusPill,
-                      padding: '2px 10px', whiteSpace: 'nowrap',
-                    }}>
+                    <span
+                      style={{
+                        position: 'relative', display: 'inline-flex', alignItems: 'center',
+                        fontSize: '0.72rem', color: T.blue, background: 'rgba(59,130,246,0.1)',
+                        border: '1px solid rgba(59,130,246,0.2)', borderRadius: T.radiusPill,
+                        padding: '2px 10px', whiteSpace: 'nowrap', cursor: 'pointer',
+                      }}
+                      title="Click to correct the date"
+                    >
                       ✓ {fmtDate(checklist[item.id])}
+                      <input
+                        type="date"
+                        value={toDateInputValue(checklist[item.id])}
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => { e.stopPropagation(); handleChecklistDateChange(item.id, e.target.value); }}
+                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', border: 'none' }}
+                      />
                     </span>
                   )}
                 </label>
@@ -424,12 +482,23 @@ export const Phase1Form: React.FC = () => {
                     </span>
                   </div>
                   {checklist.finalMeasurementsDelivered !== false && (
-                    <span style={{
-                      fontSize: '0.72rem', color: T.blue, background: 'rgba(59,130,246,0.1)',
-                      border: '1px solid rgba(59,130,246,0.2)', borderRadius: T.radiusPill,
-                      padding: '2px 10px', whiteSpace: 'nowrap',
-                    }}>
+                    <span
+                      style={{
+                        position: 'relative', display: 'inline-flex', alignItems: 'center',
+                        fontSize: '0.72rem', color: T.blue, background: 'rgba(59,130,246,0.1)',
+                        border: '1px solid rgba(59,130,246,0.2)', borderRadius: T.radiusPill,
+                        padding: '2px 10px', whiteSpace: 'nowrap', cursor: 'pointer',
+                      }}
+                      title="Click to correct the date"
+                    >
                       ✓ {fmtDate(checklist.finalMeasurementsDelivered)}
+                      <input
+                        type="date"
+                        value={toDateInputValue(checklist.finalMeasurementsDelivered)}
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => { e.stopPropagation(); handleChecklistDateChange('finalMeasurementsDelivered', e.target.value); }}
+                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', border: 'none' }}
+                      />
                     </span>
                   )}
                 </label>

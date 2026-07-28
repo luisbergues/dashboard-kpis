@@ -611,6 +611,14 @@
   border-left: 3px solid var(--color-cyan);
 }
 
+.pipeline-note-item-card.obs {
+  border-left: 3px solid #9ca3af;
+}
+
+.pipeline-note-item-card.designer {
+  border-left: 3px solid #8B5CF6;
+}
+
 .pipeline-note-item-header {
   display: flex;
   justify-content: space-between;
@@ -639,6 +647,16 @@
 .pipeline-note-priority-badge.normal {
   background: rgba(0, 122, 255, 0.1);
   color: var(--color-cyan);
+}
+
+.pipeline-note-priority-badge.obs {
+  background: rgba(156, 163, 175, 0.14);
+  color: #9ca3af;
+}
+
+.pipeline-note-priority-badge.designer {
+  background: rgba(139, 92, 246, 0.14);
+  color: #8B5CF6;
 }
 
 .pipeline-note-author {
