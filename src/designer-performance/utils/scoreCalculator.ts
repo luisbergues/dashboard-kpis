@@ -2,18 +2,42 @@ import type { Project, Designer } from '../types';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-// Days between project intake (createdAt) and when an item was checked, or
-// today if it's still unchecked. Same-day completion (day 0) costs nothing.
-const daysLate = (createdAt: number, checkedAt: number | false): number => {
-  const until = checkedAt === false ? Date.now() : checkedAt;
-  return Math.max(0, Math.floor((until - createdAt) / MS_PER_DAY));
+type ChecklistKey = keyof Project['checklist'];
+
+// A checklist item added to the product after a project was already registered
+// can't be counted late from that project's createdAt — it didn't exist yet.
+// Its clock starts the day the item appeared. Add an entry here whenever a new
+// checklist item ships, using the date it went live.
+const ITEM_INTRODUCED_AT: Partial<Record<ChecklistKey, number>> = {
+  quoteBreakdown: new Date(2026, 6, 28).getTime(),
+  creditCardForm: new Date(2026, 6, 28).getTime(),
 };
 
-// -2 pts/day for the first 4 days late, -3 pts/day for every day after that.
+// Penalties are counted in whole calendar days, so a document checked at 09:00
+// the same day the project was registered at 14:00 is day 0, not "-1".
+const startOfDay = (ts: number): number => {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+};
+
+// Calendar days between the item's baseline (project intake, or the item's own
+// introduction date if it shipped later) and when it was checked — or today if
+// it's still unchecked. Same-day completion (day 0) costs nothing.
+const daysLate = (createdAt: number, checkedAt: number | false, introducedAt?: number): number => {
+  const baseline = startOfDay(Math.max(createdAt, introducedAt ?? 0));
+  const until = startOfDay(checkedAt === false ? Date.now() : checkedAt);
+  return Math.max(0, Math.round((until - baseline) / MS_PER_DAY));
+};
+
+// -1 pt/day for the first 4 days late, -2 pts/day after that, capped per item
+// so one very-late document can't sink the whole score on its own.
+const MAX_PENALTY_PER_ITEM = 20;
+
 const latePenalty = (days: number): number => {
-  const first4 = Math.min(days, 4) * 2;
-  const rest = Math.max(0, days - 4) * 3;
-  return first4 + rest;
+  const first4 = Math.min(days, 4) * 1;
+  const rest = Math.max(0, days - 4) * 2;
+  return Math.min(MAX_PENALTY_PER_ITEM, first4 + rest);
 };
 
 export const calculatePhase1ScoreAndStatus = (checklist: Project['checklist'], createdAt: number) => {
@@ -24,10 +48,13 @@ export const calculatePhase1ScoreAndStatus = (checklist: Project['checklist'], c
 
   const isApproved = kcdFile && jlContract && quoteComplete && quoteBreakdown && creditCardForm && drawingsSigned && finalMeasurementsValid;
 
-  const requiredItems: (number | false)[] = [kcdFile, jlContract, quoteComplete, quoteBreakdown, creditCardForm, drawingsSigned];
-  if (finalMeasurementsApplies) requiredItems.push(finalMeasurementsDelivered);
+  const requiredKeys: ChecklistKey[] = ['kcdFile', 'jlContract', 'quoteComplete', 'quoteBreakdown', 'creditCardForm', 'drawingsSigned'];
+  if (finalMeasurementsApplies) requiredKeys.push('finalMeasurementsDelivered');
 
-  const penalty = requiredItems.reduce((acc, checkedAt) => acc + latePenalty(daysLate(createdAt, checkedAt)), 0);
+  const penalty = requiredKeys.reduce(
+    (acc, key) => acc + latePenalty(daysLate(createdAt, checklist[key], ITEM_INTRODUCED_AT[key])),
+    0,
+  );
   const score = Math.max(0, 100 - penalty);
 
   return {
