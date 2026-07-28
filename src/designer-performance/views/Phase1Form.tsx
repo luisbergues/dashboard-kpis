@@ -436,18 +436,15 @@ export const Phase1Form: React.FC = () => {
                         padding: '2px 10px', whiteSpace: 'nowrap', cursor: 'pointer',
                       }}
                       title="Click to correct the date"
-                      onClick={e => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const input = e.currentTarget.querySelector('input[type="date"]') as HTMLInputElement | null;
-                        input?.showPicker?.();
-                      }}
                     >
                       ✓ {fmtDate(checklist[item.id])}
                       <input
                         type="date"
                         value={toDateInputValue(checklist[item.id])}
-                        onClick={e => e.stopPropagation()}
+                        onClick={e => {
+                          e.stopPropagation();
+                          e.currentTarget.showPicker?.();
+                        }}
                         onChange={e => { e.stopPropagation(); handleChecklistDateChange(item.id, e.target.value); }}
                         style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', border: 'none' }}
                       />
@@ -496,18 +493,15 @@ export const Phase1Form: React.FC = () => {
                         padding: '2px 10px', whiteSpace: 'nowrap', cursor: 'pointer',
                       }}
                       title="Click to correct the date"
-                      onClick={e => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const input = e.currentTarget.querySelector('input[type="date"]') as HTMLInputElement | null;
-                        input?.showPicker?.();
-                      }}
                     >
                       ✓ {fmtDate(checklist.finalMeasurementsDelivered)}
                       <input
                         type="date"
                         value={toDateInputValue(checklist.finalMeasurementsDelivered)}
-                        onClick={e => e.stopPropagation()}
+                        onClick={e => {
+                          e.stopPropagation();
+                          e.currentTarget.showPicker?.();
+                        }}
                         onChange={e => { e.stopPropagation(); handleChecklistDateChange('finalMeasurementsDelivered', e.target.value); }}
                         style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', border: 'none' }}
                       />
