@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useKpi } from '../context/KpiContext';
 import { calculatePhase1ScoreAndStatus, calculateTechnicalPoints } from '../utils/scoreCalculator';
 import toast from 'react-hot-toast';
@@ -65,6 +65,109 @@ const selectStyle: React.CSSProperties = {
   ...inputStyle,
   cursor: 'pointer',
   appearance: 'none' as const,
+};
+
+/* ── mini date picker ────────────────────────────────────────────────────
+   Replaces the native <input type="date"> for the checklist date-correction
+   pill: the OS/browser calendar can't be restyled (rounded corners, gray
+   background, blue borders) since it isn't part of the page DOM, so this is
+   a small custom popover calendar matching the pill's look instead. */
+const MiniDatePicker: React.FC<{
+  value: number; // timestamp of the currently selected date
+  onChange: (ts: number) => void;
+  children: React.ReactNode; // the pill trigger
+}> = ({ value, onChange, children }) => {
+  const [open, setOpen] = useState(false);
+  const [viewDate, setViewDate] = useState(() => new Date(value));
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [open]);
+
+  // La píldora vive dentro del <label> del ítem del checklist, que routea
+  // cualquier click a su checkbox. preventDefault corta ese comportamiento
+  // nativo (stopPropagation solo no alcanza) para que abrir el calendario no
+  // destilde el ítem.
+  const handleToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!open) setViewDate(new Date(value));
+    setOpen(o => !o);
+  };
+
+  const selected = new Date(value);
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  const monthLabel = viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const pick = (day: number) => {
+    const next = new Date(selected);
+    next.setFullYear(year, month, day);
+    onChange(next.getTime());
+    setOpen(false);
+  };
+
+  return (
+    <div ref={wrapperRef} style={{ position: 'relative', display: 'inline-flex' }}>
+      <span onClick={handleToggle} style={{ display: 'inline-flex' }}>{children}</span>
+      {open && (
+        <div
+          // Mismo motivo que handleToggle: el popover se renderiza dentro del
+          // <label>, asi que cualquier click suyo (flechas de mes, dias) tiene
+          // que quedar aislado o destilda el item.
+          onClick={e => { e.preventDefault(); e.stopPropagation(); }}
+          style={{
+            position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 20,
+            background: T.bgSurface, border: `1px solid ${T.blue}`, borderRadius: T.radiusMd,
+            padding: 14, width: 240, boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+          }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <button type="button" onClick={() => setViewDate(new Date(year, month - 1, 1))}
+              style={{ background: 'none', border: 'none', color: T.textSecondary, cursor: 'pointer', fontSize: '0.9rem', padding: 4 }}>‹</button>
+            <span style={{ color: T.textPrimary, fontWeight: 600, fontSize: '0.82rem' }}>{monthLabel}</span>
+            <button type="button" onClick={() => setViewDate(new Date(year, month + 1, 1))}
+              style={{ background: 'none', border: 'none', color: T.textSecondary, cursor: 'pointer', fontSize: '0.9rem', padding: 4 }}>›</button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
+            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+              <span key={d} style={{ textAlign: 'center', fontSize: '0.65rem', color: T.textMuted, fontWeight: 600 }}>{d}</span>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+            {cells.map((day, i) => {
+              if (day === null) return <span key={i} />;
+              const isSelected = day === selected.getDate() && month === selected.getMonth() && year === selected.getFullYear();
+              return (
+                <button
+                  type="button"
+                  key={i}
+                  onClick={() => pick(day)}
+                  style={{
+                    aspectRatio: '1', border: 'none', borderRadius: 8, cursor: 'pointer',
+                    fontSize: '0.75rem', fontFamily: "'Inter',sans-serif",
+                    background: isSelected ? T.blue : 'transparent',
+                    color: isSelected ? '#fff' : T.textPrimary,
+                    fontWeight: isSelected ? 700 : 400,
+                  }}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 /* ── types ───────────────────────────────────────────────────────────── */
@@ -192,17 +295,10 @@ export const Phase1Form: React.FC = () => {
   };
 
   // Lets the engineer correct the recorded date if an item was checked late
-  // by mistake (e.g. paperwork actually arrived earlier). Keeps the
-  // original time-of-day, only the calendar date changes.
-  const handleChecklistDateChange = (field: keyof ChecklistState, dateStr: string) => {
-    if (!dateStr) return;
-    setChecklist(prev => {
-      const current = prev[field];
-      const base = current !== false ? new Date(current) : new Date();
-      const [year, month, day] = dateStr.split('-').map(Number);
-      base.setFullYear(year, month - 1, day);
-      return { ...prev, [field]: base.getTime() };
-    });
+  // by mistake (e.g. paperwork actually arrived earlier). MiniDatePicker ya
+  // preserva la hora original, asi que aca solo se guarda el timestamp.
+  const handleChecklistDateChange = (field: keyof ChecklistState, ts: number) => {
+    setChecklist(prev => ({ ...prev, [field]: ts }));
   };
 
   const handleComplexityChange = (field: keyof typeof complexity) => {
@@ -261,15 +357,6 @@ export const Phase1Form: React.FC = () => {
 
   const fmtDate = (ts: number | false) =>
     ts ? formatDisplayDate(new Date(ts)) : null;
-
-  // YYYY-MM-DD in local time for <input type="date"> value, padded to 2 digits.
-  const toDateInputValue = (ts: number | false) => {
-    if (!ts) return '';
-    const d = new Date(ts);
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${d.getFullYear()}-${mm}-${dd}`;
-  };
 
   /* ── render ──────────────────────────────────────────────────────────── */
   return (
@@ -428,27 +515,21 @@ export const Phase1Form: React.FC = () => {
                     </span>
                   </div>
                   {checked && (
-                    <span
-                      style={{
-                        position: 'relative', display: 'inline-flex', alignItems: 'center',
-                        fontSize: '0.72rem', color: T.blue, background: 'rgba(59,130,246,0.1)',
-                        border: '1px solid rgba(59,130,246,0.2)', borderRadius: T.radiusPill,
-                        padding: '2px 10px', whiteSpace: 'nowrap', cursor: 'pointer',
-                      }}
-                      title="Click to correct the date"
+                    <MiniDatePicker
+                      value={checklist[item.id] as number}
+                      onChange={ts => handleChecklistDateChange(item.id, ts)}
                     >
-                      ✓ {fmtDate(checklist[item.id])}
-                      <input
-                        type="date"
-                        value={toDateInputValue(checklist[item.id])}
-                        onClick={e => {
-                          e.stopPropagation();
-                          e.currentTarget.showPicker?.();
+                      <span
+                        title="Click to correct the date"
+                        style={{
+                          fontSize: '0.72rem', color: T.blue, background: 'rgba(59,130,246,0.1)',
+                          border: '1px solid rgba(59,130,246,0.2)', borderRadius: T.radiusPill,
+                          padding: '2px 10px', whiteSpace: 'nowrap', cursor: 'pointer',
                         }}
-                        onChange={e => { e.stopPropagation(); handleChecklistDateChange(item.id, e.target.value); }}
-                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', border: 'none' }}
-                      />
-                    </span>
+                      >
+                        ✓ {fmtDate(checklist[item.id])}
+                      </span>
+                    </MiniDatePicker>
                   )}
                 </label>
               );
@@ -485,27 +566,21 @@ export const Phase1Form: React.FC = () => {
                     </span>
                   </div>
                   {checklist.finalMeasurementsDelivered !== false && (
-                    <span
-                      style={{
-                        position: 'relative', display: 'inline-flex', alignItems: 'center',
-                        fontSize: '0.72rem', color: T.blue, background: 'rgba(59,130,246,0.1)',
-                        border: '1px solid rgba(59,130,246,0.2)', borderRadius: T.radiusPill,
-                        padding: '2px 10px', whiteSpace: 'nowrap', cursor: 'pointer',
-                      }}
-                      title="Click to correct the date"
+                    <MiniDatePicker
+                      value={checklist.finalMeasurementsDelivered as number}
+                      onChange={ts => handleChecklistDateChange('finalMeasurementsDelivered', ts)}
                     >
-                      ✓ {fmtDate(checklist.finalMeasurementsDelivered)}
-                      <input
-                        type="date"
-                        value={toDateInputValue(checklist.finalMeasurementsDelivered)}
-                        onClick={e => {
-                          e.stopPropagation();
-                          e.currentTarget.showPicker?.();
+                      <span
+                        title="Click to correct the date"
+                        style={{
+                          fontSize: '0.72rem', color: T.blue, background: 'rgba(59,130,246,0.1)',
+                          border: '1px solid rgba(59,130,246,0.2)', borderRadius: T.radiusPill,
+                          padding: '2px 10px', whiteSpace: 'nowrap', cursor: 'pointer',
                         }}
-                        onChange={e => { e.stopPropagation(); handleChecklistDateChange('finalMeasurementsDelivered', e.target.value); }}
-                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', border: 'none' }}
-                      />
-                    </span>
+                      >
+                        ✓ {fmtDate(checklist.finalMeasurementsDelivered)}
+                      </span>
+                    </MiniDatePicker>
                   )}
                 </label>
               </div>
