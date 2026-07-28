@@ -463,7 +463,7 @@ export const Phase1Form: React.FC = () => {
           <SectionTitle
             icon={<CheckSquare size={15} color={T.blue} />}
             title="Strict Go / No-Go Checklist"
-            subtitle="Check each item when the documentation is received. Date is recorded automatically — click it to correct the date if it was logged late. Business days only: -1 pt/day late per item (first 4 days), -2 pts/day after, max -20. Final Measurements depends on scheduling, so it only costs -0.1/day the first week and -0.2/day after."
+            subtitle="Check each item when the documentation is received. Date is recorded automatically — click it to correct the date if it was logged late. Business days only: -1 pt/day late per item (first 4 days), -2 pts/day after, max -20. Final Measurements depends on scheduling, so it only costs -0.1/day the first 4 days and -0.4/day after."
             badge={livePreview ? (
               <span style={{
                 fontSize: '0.72rem', fontWeight: 700,
@@ -488,7 +488,7 @@ export const Phase1Form: React.FC = () => {
             ] as { id: keyof ChecklistState; label: string }[]).map(item => {
               const checked = checklist[item.id] !== false;
               return (
-                <label key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                <label key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', position: 'relative' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     {/* Real checkbox input, visually hidden: the <label> wrapper
                         already routes clicks to it, and it gives keyboard focus,
@@ -542,7 +542,7 @@ export const Phase1Form: React.FC = () => {
                 background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)',
                 borderRadius: T.radiusMd,
               }}>
-                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', position: 'relative' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <input
                       type="checkbox"
@@ -623,7 +623,7 @@ export const Phase1Form: React.FC = () => {
                   padding: '10px 12px', borderRadius: T.radiusMd,
                   background: checked ? 'rgba(59,130,246,0.07)' : T.bgSurface,
                   border: `1px solid ${checked ? 'rgba(59,130,246,0.2)' : T.cardBorder}`,
-                  transition: 'all 0.2s',
+                  transition: 'all 0.2s', position: 'relative',
                 }}>
                   <input
                     type="checkbox"

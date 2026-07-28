@@ -81,23 +81,24 @@ describe('Final Measurements penaliza mucho mas suave', () => {
     expect(finals(LUN_3)).toBe(100);
   });
 
-  it('0.1 por dia habil durante la primera semana laboral', () => {
-    expect(finals(VIE_7)).toBe(99.6);  // 4 habiles x 0.1 = 0.4
-    expect(finals(LUN_10)).toBe(99.5); // 5 habiles x 0.1 = 0.5
+  it('0.1 por dia habil durante los primeros 4 dias', () => {
+    expect(finals(VIE_7)).toBe(99.6); // 4 habiles x 0.1 = 0.4
   });
 
-  it('0.2 por dia habil pasada la primera semana', () => {
-    // 5 x 0.1 + 5 x 0.2 = 1.5
-    expect(finals(LUN_17)).toBe(98.5);
-    // 5 x 0.1 + 15 x 0.2 = 3.5
-    expect(finals(LUN_31)).toBe(96.5);
+  it('0.4 por dia habil a partir del 4to dia', () => {
+    // 4 x 0.1 + 1 x 0.4 = 0.8
+    expect(finals(LUN_10)).toBe(99.2);
+    // 4 x 0.1 + 6 x 0.4 = 2.8
+    expect(finals(LUN_17)).toBe(97.2);
+    // 4 x 0.1 + 16 x 0.4 = 6.8
+    expect(finals(LUN_31)).toBe(93.2);
   });
 
-  it('pesa mucho menos que un item comun con la misma demora', () => {
+  it('usa el mismo corte de 4 dias que los items comunes, pero tasa mas baja', () => {
     const comun = score({ drawingsSigned: LUN_17 });        // 10 habiles -> -16
-    const final = finals(LUN_17);                            // 10 habiles -> -1.5
+    const final = finals(LUN_17);                            // 10 habiles -> -2.8
     expect(100 - final).toBeLessThan(100 - comun);
-    expect(100 - final).toBeCloseTo(1.5, 5);
+    expect(100 - final).toBeCloseTo(2.8, 5);
     expect(100 - comun).toBeCloseTo(16, 5);
   });
 

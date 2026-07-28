@@ -69,9 +69,10 @@ interface LateRate {
 const DEFAULT_RATE: LateRate = { perDay: 1, perDayAfter: 2, threshold: 4 };
 
 // Final Measurements depends on scheduling, not only on the designer, so it
-// penalises an order of magnitude softer and its threshold is a full working
-// week (5 business days) instead of 4 days.
-const FINALS_RATE: LateRate = { perDay: 0.1, perDayAfter: 0.2, threshold: 5 };
+// penalises an order of magnitude softer than the rest. Same 4-day threshold as
+// the other items, but the rate after it quadruples instead of doubling: a
+// scheduling delay that drags on is still a real problem for the project.
+const FINALS_RATE: LateRate = { perDay: 0.1, perDayAfter: 0.4, threshold: 4 };
 
 const rateFor = (key: ChecklistKey): LateRate =>
   key === 'finalMeasurementsDelivered' ? FINALS_RATE : DEFAULT_RATE;
