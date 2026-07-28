@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import type { Project, Designer } from '../types';
+import type { Project, Designer, DesignerNote } from '../types';
 import { calculateDesignerStats } from '../utils/scoreCalculator';
 import { db, ref, set, get, onValue } from '../../utils/firebase';
 import { shortProjectName } from '../../utils/projectName';
@@ -20,6 +20,7 @@ interface KpiContextType {
   addProject: (project: Project) => Promise<SaveProjectResult>;
   updateProject: (project: Project) => Promise<SaveProjectResult>;
   getProjectComplexity: (soNumber: string) => Partial<Project['complexity']>;
+  getProjectNotes: (soNumber: string) => DesignerNote[];
 }
 
 // Canonical list of designers — separate from engineers
@@ -53,6 +54,7 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
 }) => {
   const [performanceProjects, setPerformanceProjects] = useState<Record<string, Partial<Project>>>({});
   const [projects, setProjects] = useState<Project[]>([]);
+  const [projectNotes, setProjectNotes] = useState<Record<string, DesignerNote[]>>({});
 
   // Session-stable fallback for createdAt on a project that hasn't persisted
   // one yet (perfData.createdAt is undefined until the first addProject/
@@ -74,6 +76,16 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
     const unsub = onValue(perfRef, (snapshot) => {
       const val = snapshot.val();
       setPerformanceProjects(val || {});
+    });
+    return () => unsub();
+  }, []);
+
+  // 2b. Notas de proyecto — las de noteType 'designer' son los red flags de Fase 2
+  useEffect(() => {
+    if (!db) return;
+    const notesRef = ref(db, 'project_notes');
+    const unsub = onValue(notesRef, (snapshot) => {
+      setProjectNotes(snapshot.val() || {});
     });
     return () => unsub();
   }, []);
@@ -140,6 +152,8 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
 
   const designers: Designer[] = designerNames.map(name => calculateDesignerStats(name, projects));
 
+  const getProjectNotes = (soNumber: string): DesignerNote[] => projectNotes[soNumber] || [];
+
   // Helper to get the auto-derived complexity for any SO (used in Phase1Form pre-fill)
   const getProjectComplexity = (soNumber: string): Partial<Project['complexity']> => {
     const matReq = externalData?.materialRequirements?.find((m: any) => String(m.so) === soNumber);
@@ -190,7 +204,7 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
   };
 
   return (
-    <KpiContext.Provider value={{ projects, designers, designerNames, projectDesigners, addProject, updateProject, getProjectComplexity }}>
+    <KpiContext.Provider value={{ projects, designers, designerNames, projectDesigners, addProject, updateProject, getProjectComplexity, getProjectNotes }}>
       {children}
     </KpiContext.Provider>
   );

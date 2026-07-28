@@ -73,12 +73,8 @@ export const calculateTechnicalPoints = (complexity: Project['complexity']): num
   return points;
 };
 
-export const calculatePhase2Score = (totalRedFlags: number, redFlagsOver4Days: number, icp: number): number => {
-  if (icp === 0) return 0; // Avoid division by zero
-  
-  let ifr = 100 - ((totalRedFlags / icp) * 40) - (redFlagsOver4Days * 5);
-  return Math.max(0, Math.round(ifr * 10) / 10); // Keep 1 decimal place and minimum 0
-};
+// El puntaje de Fase 2 se calcula en redFlags.ts a partir de las notas
+// designer del proyecto. El ICP ya no interviene.
 
 export const calculateDesignerStats = (designerName: string, projects: Project[]): Designer => {
   const designerProjects = projects.filter(p => p.designerName === designerName);
