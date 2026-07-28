@@ -33,8 +33,14 @@ export interface Project {
   
   // Phase 2 specific data
   phase2Data?: {
-    totalRedFlags: number;
-    redFlagsOver4Days: number;
+    // Formato viejo — proyectos cerrados antes del cambio a notas designer.
+    totalRedFlags?: number;
+    redFlagsOver4Days?: number;
+    // Formato nuevo — desglose congelado al cerrar.
+    closedAt?: number;
+    totalNotes?: number;
+    totalPenalty?: number;
+    breakdown?: RedFlagLine[];
   };
 }
 
@@ -44,4 +50,31 @@ export interface Designer {
   avgPhase1Score: number;
   avgPhase2Score: number;
   globalKpi: number;
+}
+
+export type Urgency = 'green' | 'yellow' | 'red';
+
+// Una nota de project_notes/{so}. Solo las de noteType 'designer' puntúan
+// en Fase 2; el resto se ignoran.
+export interface DesignerNote {
+  id: string;
+  text: string;
+  noteType: string;
+  urgency?: Urgency;
+  createdAt: string;          // ISO
+  createdBy?: string;
+  resolvedAt?: string | null; // ISO; ausente o null = abierta
+}
+
+export interface RedFlagLine {
+  noteId: string;
+  urgency: Urgency;
+  days: number;
+  penalty: number;
+}
+
+export interface Phase2Result {
+  score: number;
+  totalPenalty: number;
+  breakdown: RedFlagLine[];
 }

@@ -251,7 +251,32 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
                 </div>
               </div>
 
-              {project.phase2Data && (
+              {project.phase2Data?.breakdown && project.phase2Data.breakdown.length > 0 && (
+                <div>
+                  <h3 style={{ color: T.textPrimary, fontSize: '1rem', fontWeight: 600, marginBottom: 12 }}>{t('designerPerf.modal.redFlagsBreakdown')}</h3>
+                  <div style={{ background: T.bgSurface, border: `1px solid ${T.cardBorder}`, borderRadius: 16, overflow: 'hidden' }}>
+                    {project.phase2Data.breakdown.map(line => {
+                      const dot = line.urgency === 'red' ? T.red : line.urgency === 'yellow' ? T.yellow : T.green;
+                      return (
+                        <div key={line.noteId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: `1px solid ${T.cardBorder}` }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: T.textSecondary, fontSize: '0.85rem' }}>
+                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: dot }} />
+                            {line.days} {t('designerPerf.modal.redFlagDays')}
+                          </span>
+                          <span style={{ color: T.red, fontWeight: 600 }}>&minus;{line.penalty}</span>
+                        </div>
+                      );
+                    })}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px' }}>
+                      <span style={{ color: T.textSecondary, fontSize: '0.85rem', fontWeight: 600 }}>{t('designerPerf.modal.totalPenalty')}</span>
+                      <span style={{ color: T.red, fontWeight: 700 }}>&minus;{project.phase2Data.totalPenalty}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Formato viejo — proyectos cerrados antes del cambio a notas designer */}
+              {project.phase2Data && !project.phase2Data.breakdown && project.phase2Data.totalRedFlags !== undefined && (
                 <div>
                   <h3 style={{ color: T.textPrimary, fontSize: '1rem', fontWeight: 600, marginBottom: 12 }}>{t('designerPerf.modal.frictionMetrics')}</h3>
                   <div style={{ background: T.bgSurface, border: `1px solid ${T.cardBorder}`, borderRadius: 16, overflow: 'hidden' }}>

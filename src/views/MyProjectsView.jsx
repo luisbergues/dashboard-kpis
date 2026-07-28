@@ -14,6 +14,8 @@ import {
   LayoutGrid, NotebookPen, ListChecks
 } from 'lucide-react';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
+import { canManageDesignerNotes } from '../utils/notePermissions';
+import { noteDaysOpen, notePenalty } from '../designer-performance/utils/redFlags';
 import { Chart as ChartJS, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { calculateWeeklyCompletions, getUpcomingDeadlines } from '../services/kpiCalculator';
@@ -231,6 +233,10 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
   const activeProjectSos = new Set(priorityAnalysis.map(p => String(p.so)));
 
   const isAdmin = userProfile && (userProfile.role === 'administrative' || userProfile.role === 'admin');
+
+  // Las notas designer descuentan del KPI del disenador, asi que crearlas y
+  // resolverlas queda restringido a los roles de ingenieria.
+  const canDesignerNote = canManageDesignerNotes(userProfile);
 
   // Kanban priority order: must mirror Pipeline's KANBAN_COLUMNS order exactly
   // (Procurement → Material → Nesting → Projects) so this sort reproduces the
@@ -711,6 +717,10 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
     if (userProfile && (userProfile.role === 'administrative' || userProfile.role === 'admin')) {
       return;
     }
+    // No alcanza con esconder la opcion en la UI: se valida tambien aca.
+    if (noteInputs[so]?.noteType === 'designer' && !canManageDesignerNotes(userProfile)) {
+      return;
+    }
     const input = noteInputs[so];
     const files = noteImages[so] || [];
     
@@ -820,6 +830,31 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
         await set(ref(db, `project_notes/${so}`), currentNotes);
       } catch (err) {
         console.error('Failed to update note urgency in Firebase:', err);
+      }
+    } else {
+      localStorage.setItem(`project_notes_${so}`, JSON.stringify(currentNotes));
+      setProjectNotes(prev => ({ ...prev, [so]: currentNotes }));
+    }
+  };
+
+  // Marca/desmarca una nota designer como resuelta. El reloj de penalizacion
+  // de Fase 2 se detiene en resolvedAt.
+  const handleResolveNote = async (so, noteId) => {
+    if (!canManageDesignerNotes(userProfile)) return;
+    const currentNotes = projectNotes[so] ? [...projectNotes[so]] : [];
+    const idx = currentNotes.findIndex(n => n.id === noteId);
+    if (idx === -1) return;
+    const isResolved = Boolean(currentNotes[idx].resolvedAt);
+    currentNotes[idx] = {
+      ...currentNotes[idx],
+      resolvedAt: isResolved ? null : new Date().toISOString(),
+    };
+
+    if (db && currentUser) {
+      try {
+        await set(ref(db, `project_notes/${so}`), currentNotes);
+      } catch (err) {
+        console.error('Failed to update note resolution in Firebase:', err);
       }
     } else {
       localStorage.setItem(`project_notes_${so}`, JSON.stringify(currentNotes));
@@ -1660,7 +1695,10 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                                 className={`priority-toggle ${noteInputs[project.so]?.noteType === 'priority' ? 'is-priority' : noteInputs[project.so]?.noteType === 'obs' ? 'is-obs' : noteInputs[project.so]?.noteType === 'designer' ? 'is-designer' : 'not-priority'}`}
                                 onClick={() => setNoteInputs(prev => {
                                   const currentType = prev[project.so]?.noteType || 'normal';
-                                  const nextType = currentType === 'normal' ? 'priority' : currentType === 'priority' ? 'obs' : currentType === 'obs' ? 'designer' : 'normal';
+                                  const nextType = currentType === 'normal' ? 'priority'
+                                    : currentType === 'priority' ? 'obs'
+                                    : currentType === 'obs' ? (canDesignerNote ? 'designer' : 'normal')
+                                    : 'normal';
                                   return {
                                     ...prev,
                                     [project.so]: { ...prev[project.so], noteType: nextType }
@@ -1748,7 +1786,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                       ) : (
                         <div className="notes-list">
                           {(projectNotes[project.so] || []).map(note => (
-                            <div key={note.id} className="note-item">
+                            <div key={note.id} className={`note-item ${note.resolvedAt ? 'note-resolved' : ''}`}>
                               <div className="note-item-header">
                                 <div className="note-item-header-left">
                                   {(() => {
@@ -1788,6 +1826,21 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                                       })()}
                                     </button>
                                   )}
+                                  {(note.noteType || (note.priority ? 'priority' : 'normal')) === 'designer' && canDesignerNote && (
+                                    <button
+                                      type="button"
+                                      className={`note-resolve-btn ${note.resolvedAt ? 'is-resolved' : ''}`}
+                                      onClick={() => handleResolveNote(project.so, note.id)}
+                                      title={note.resolvedAt
+                                        ? (language === 'es' ? 'Reabrir red flag' : 'Reopen red flag')
+                                        : (language === 'es' ? 'Marcar como resuelta' : 'Mark as resolved')}
+                                    >
+                                      <Check size={13} />
+                                      {note.resolvedAt
+                                        ? (language === 'es' ? 'Resuelta' : 'Resolved')
+                                        : (language === 'es' ? 'Resolver' : 'Resolve')}
+                                    </button>
+                                  )}
                                   {!isAdmin && (
                                     <button
                                       className="note-delete-btn"
@@ -1800,6 +1853,20 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                                 </div>
                               </div>
                               <div className="note-item-text">{note.text}</div>
+                              {(note.noteType || (note.priority ? 'priority' : 'normal')) === 'designer' && (() => {
+                                const dias = noteDaysOpen(note, Date.now());
+                                const pts  = notePenalty(note, Date.now());
+                                return (
+                                  <div className="note-redflag-meta">
+                                    <span>
+                                      {note.resolvedAt
+                                        ? (language === 'es' ? `Resuelta en ${dias} días` : `Resolved in ${dias} days`)
+                                        : (language === 'es' ? `${dias} días abierta` : `${dias} days open`)}
+                                    </span>
+                                    <span className="note-redflag-penalty">&minus;{pts}</span>
+                                  </div>
+                                );
+                              })()}
                               {(() => {
                                 const atts = note.attachments ? [...note.attachments] : [];
                                 if (note.imageUrl) {
