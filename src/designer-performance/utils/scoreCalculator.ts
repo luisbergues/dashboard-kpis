@@ -21,23 +21,65 @@ const startOfDay = (ts: number): number => {
   return d.getTime();
 };
 
-// Calendar days between the item's baseline (project intake, or the item's own
-// introduction date if it shipped later) and when it was checked — or today if
-// it's still unchecked. Same-day completion (day 0) costs nothing.
-const daysLate = (createdAt: number, checkedAt: number | false, introducedAt?: number): number => {
-  const baseline = startOfDay(Math.max(createdAt, introducedAt ?? 0));
-  const until = startOfDay(checkedAt === false ? Date.now() : checkedAt);
-  return Math.max(0, Math.round((until - baseline) / MS_PER_DAY));
+// Business days elapsed after `from`, up to and including `to`. Weekends don't
+// count: a document requested Friday and delivered Monday is 1 day late, not 3
+// — nobody is working Saturday, so it isn't the designer's delay.
+// Full weeks are taken in one step (5 business days each) so the loop never
+// runs more than 6 times, however old the project is.
+const businessDaysBetween = (from: number, to: number): number => {
+  const start = startOfDay(from);
+  const end = startOfDay(to);
+  if (end <= start) return 0;
+
+  const totalDays = Math.round((end - start) / MS_PER_DAY);
+  const fullWeeks = Math.floor(totalDays / 7);
+  let count = fullWeeks * 5;
+
+  // setDate (en vez de sumar milisegundos) mantiene la cuenta correcta a través
+  // de cambios de horario de verano y de fin de mes.
+  const cursor = new Date(start);
+  cursor.setDate(cursor.getDate() + fullWeeks * 7);
+  for (let i = 0; i < totalDays - fullWeeks * 7; i++) {
+    cursor.setDate(cursor.getDate() + 1);
+    const dow = cursor.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
 };
 
-// -1 pt/day for the first 4 days late, -2 pts/day after that, capped per item
-// so one very-late document can't sink the whole score on its own.
+// Business days between the item's baseline (project intake, or the item's own
+// introduction date if it shipped later) and when it was checked — or today if
+// it's still unchecked. Same-day completion (day 0) costs nothing.
+const daysLate = (createdAt: number, checkedAt: number | false, introducedAt?: number): number =>
+  businessDaysBetween(
+    Math.max(createdAt, introducedAt ?? 0),
+    checkedAt === false ? Date.now() : checkedAt,
+  );
+
+// Cap per item so one very-late document can't sink the whole score on its own.
 const MAX_PENALTY_PER_ITEM = 20;
 
-const latePenalty = (days: number): number => {
-  const first4 = Math.min(days, 4) * 1;
-  const rest = Math.max(0, days - 4) * 2;
-  return Math.min(MAX_PENALTY_PER_ITEM, first4 + rest);
+interface LateRate {
+  perDay: number;      // hasta `threshold` días hábiles de atraso
+  perDayAfter: number; // de ahí en adelante
+  threshold: number;
+}
+
+// -1 pt/business day for the first 4 days, -2 after.
+const DEFAULT_RATE: LateRate = { perDay: 1, perDayAfter: 2, threshold: 4 };
+
+// Final Measurements depends on scheduling, not only on the designer, so it
+// penalises an order of magnitude softer and its threshold is a full working
+// week (5 business days) instead of 4 days.
+const FINALS_RATE: LateRate = { perDay: 0.1, perDayAfter: 0.2, threshold: 5 };
+
+const rateFor = (key: ChecklistKey): LateRate =>
+  key === 'finalMeasurementsDelivered' ? FINALS_RATE : DEFAULT_RATE;
+
+const latePenalty = (days: number, rate: LateRate): number => {
+  const first = Math.min(days, rate.threshold) * rate.perDay;
+  const rest = Math.max(0, days - rate.threshold) * rate.perDayAfter;
+  return Math.min(MAX_PENALTY_PER_ITEM, first + rest);
 };
 
 export const calculatePhase1ScoreAndStatus = (checklist: Project['checklist'], createdAt: number) => {
@@ -52,10 +94,12 @@ export const calculatePhase1ScoreAndStatus = (checklist: Project['checklist'], c
   if (finalMeasurementsApplies) requiredKeys.push('finalMeasurementsDelivered');
 
   const penalty = requiredKeys.reduce(
-    (acc, key) => acc + latePenalty(daysLate(createdAt, checklist[key], ITEM_INTRODUCED_AT[key])),
+    (acc, key) => acc + latePenalty(daysLate(createdAt, checklist[key], ITEM_INTRODUCED_AT[key]), rateFor(key)),
     0,
   );
-  const score = Math.max(0, 100 - penalty);
+  // Redondeo a 1 decimal: las tasas fraccionarias de finals arrastran error de
+  // punto flotante (0.5 + 3 x 0.2 no da exactamente 1.1).
+  const score = Math.max(0, Math.round((100 - penalty) * 10) / 10);
 
   return {
     score,

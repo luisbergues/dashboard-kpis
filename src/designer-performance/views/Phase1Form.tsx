@@ -463,7 +463,7 @@ export const Phase1Form: React.FC = () => {
           <SectionTitle
             icon={<CheckSquare size={15} color={T.blue} />}
             title="Strict Go / No-Go Checklist"
-            subtitle="Check each item when the documentation is received. Date is recorded automatically — click it to correct the date if it was logged late. -1 pt/day late per missing item (first 4 days), -2 pts/day after, max -20 per item."
+            subtitle="Check each item when the documentation is received. Date is recorded automatically — click it to correct the date if it was logged late. Business days only: -1 pt/day late per item (first 4 days), -2 pts/day after, max -20. Final Measurements depends on scheduling, so it only costs -0.1/day the first week and -0.2/day after."
             badge={livePreview ? (
               <span style={{
                 fontSize: '0.72rem', fontWeight: 700,
