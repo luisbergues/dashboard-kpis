@@ -905,3 +905,52 @@
   color: var(--text-secondary);
   border-color: var(--card-border);
 }
+
+/* ── Red flags: resolucion de notas designer ─────────────────────── */
+.note-resolve-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.note-resolve-btn:hover {
+  background: rgba(16, 185, 129, 0.22);
+}
+
+.note-resolve-btn.is-resolved {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+}
+
+.note-item.note-resolved {
+  opacity: 0.6;
+}
+
+.note-item.note-resolved .note-item-text {
+  text-decoration: line-through;
+}
+
+.note-redflag-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.note-redflag-penalty {
+  font-weight: 700;
+  color: #ef4444;
+}
