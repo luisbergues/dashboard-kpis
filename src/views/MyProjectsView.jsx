@@ -11,7 +11,7 @@ import {
   Briefcase, Calendar, Check, Clock,
   AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag, Users, User,
   ChevronDown, ChevronUp, ArrowUpDown, TrendingUp, CheckCircle2, Image as ImageIcon, Loader2, FileText, Paperclip,
-  LayoutGrid, NotebookPen, ListChecks
+  LayoutGrid, NotebookPen, ListChecks, Pencil
 } from 'lucide-react';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { canManageDesignerNotes } from '../utils/notePermissions';
@@ -810,6 +810,32 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
         await set(ref(db, `project_notes/${so}`), currentNotes.length > 0 ? currentNotes : null);
       } catch (err) {
         console.error('Failed to delete note from Firebase:', err);
+      }
+    } else {
+      localStorage.setItem(`project_notes_${so}`, JSON.stringify(currentNotes));
+      setProjectNotes(prev => ({ ...prev, [so]: currentNotes }));
+    }
+  };
+
+  // Permite corregir el tipo de una nota ya creada (ej. se puso Priority por
+  // error y en realidad era para el Designer) sin borrarla y recrearla.
+  const handleCycleNoteType = async (so, noteId) => {
+    const currentNotes = projectNotes[so] ? [...projectNotes[so]] : [];
+    const idx = currentNotes.findIndex(n => n.id === noteId);
+    if (idx === -1) return;
+    const currentType = currentNotes[idx].noteType || (currentNotes[idx].priority ? 'priority' : 'normal');
+    const nextType = currentType === 'normal' ? 'priority' : currentType === 'priority' ? 'obs' : currentType === 'obs' ? 'designer' : 'normal';
+    const updatedNote = { ...currentNotes[idx], noteType: nextType, priority: nextType === 'priority' };
+    if (nextType === 'designer' && !updatedNote.urgency) {
+      updatedNote.urgency = 'green';
+    }
+    currentNotes[idx] = updatedNote;
+
+    if (db && currentUser) {
+      try {
+        await set(ref(db, `project_notes/${so}`), currentNotes);
+      } catch (err) {
+        console.error('Failed to update note type in Firebase:', err);
       }
     } else {
       localStorage.setItem(`project_notes_${so}`, JSON.stringify(currentNotes));
@@ -1800,6 +1826,16 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                                             : effectiveType === 'designer'
                                               ? (language === 'es' ? 'Diseñador' : 'Designer')
                                               : (language === 'es' ? 'Normal' : 'Normal')}
+                                        {!isAdmin && (
+                                          <button
+                                            type="button"
+                                            className="note-tag-edit-btn"
+                                            onClick={() => handleCycleNoteType(project.so, note.id)}
+                                            title={language === 'es' ? 'Cambiar tipo de nota' : 'Change note type'}
+                                          >
+                                            <Pencil size={10} />
+                                          </button>
+                                        )}
                                       </span>
                                     );
                                   })()}

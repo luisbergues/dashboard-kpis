@@ -724,12 +724,32 @@
 }
 
 .note-priority-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 2px 8px;
   border-radius: 8px;
+}
+
+.note-tag-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.note-tag-edit-btn:hover {
+  opacity: 1;
 }
 
 .note-priority-tag.priority {
