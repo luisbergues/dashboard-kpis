@@ -86,9 +86,9 @@ function App() {
           // clients can't clobber each other's read-modify-write on the archive nodes.
           await withArchiveLease(async () => {
             if (cached && cached.parsedData) {
-              await archiveMissingCompletedProjects(cached.parsedData, parsedData);
+              await archiveMissingCompletedProjects(cached.parsedData, parsedData, projectDesigners);
             }
-            await archiveCurrentlyCompletedProjects(parsedData);
+            await archiveCurrentlyCompletedProjects(parsedData, projectDesigners);
             await checkDbSizeAndArchive();
             await purgeExpiredArchives();
           }).catch(console.error);
@@ -390,20 +390,24 @@ function App() {
     // Process new notes and installations, and clean up readNotes for COMPLETED/CANCELLED
     let readNotesUpdates = {};
     let hasReadNotesUpdates = false;
-    let notesToDelete = {};
 
     projects.forEach(p => {
-      const isCompletedOrCancelled = p.status === 'COMPLETED' || p.status === 'CANCELLED';
+      // Raw sheet status text isn't guaranteed uppercase (sheet has e.g.
+      // "Completed"); every other status comparison in this codebase
+      // normalizes with .toUpperCase() (see stageUtils.js, PipelineView.jsx)
+      // before comparing to constants like this — do the same here.
+      const statusUpper = (p.status || '').toUpperCase();
+      const isCompletedOrCancelled = statusUpper === 'COMPLETED' || statusUpper === 'CANCELLED';
 
-      // 1. Cleanup readNotes for completed/cancelled projects
+      // Cleanup readNotes for completed/cancelled projects. Note: this only
+      // clears this user's own "last read" marker — it must NEVER delete
+      // project_notes itself. Completed Projects is meant to preserve a
+      // project's full My Projects history (notes included), so notes stay
+      // in RTDB indefinitely and remain visible on that project's detail
+      // page even after it's archived.
       if (isCompletedOrCancelled && userProfile.readNotes && userProfile.readNotes[p.so]) {
         readNotesUpdates[p.so] = null; // Mark for deletion
         hasReadNotesUpdates = true;
-      }
-
-      // 1.5 Cleanup actual project notes for completed/cancelled projects
-      if (isCompletedOrCancelled && projectNotes[p.so]) {
-        notesToDelete[p.so] = true;
       }
 
       // Check if user should see alerts for this project
@@ -481,16 +485,6 @@ function App() {
           set(ref(db, refPath), null);
         });
       }, 100);
-    }
-
-    // Fire and forget project_notes cleanup for completed projects
-    if (Object.keys(notesToDelete).length > 0 && db) {
-      setTimeout(() => {
-        Object.keys(notesToDelete).forEach(so => {
-          const refPath = `project_notes/${so}`;
-          set(ref(db, refPath), null);
-        });
-      }, 200);
     }
 
     return alerts;

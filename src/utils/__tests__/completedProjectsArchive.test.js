@@ -104,10 +104,40 @@ describe('archiveCurrentlyCompletedProjects', () => {
 
     expect(writeArchiveMap).not.toHaveBeenCalled(); // nothing changed → no write, no race
   });
+
+  it('stamps the archived record with the RTDB-sourced designer name', async () => {
+    await archiveCurrentlyCompletedProjects(
+      { priorityAnalysis: [{ so: '400', name: 'Has designer', status: 'Completed' }] },
+      { '400': 'Russell Reiner' }
+    );
+
+    expect(store.get(ARCHIVE_PATHS.completed)['400'].designer).toBe('Russell Reiner');
+  });
+
+  it('does not manufacture a designer field when none is known (no dirty-check perturbation)', async () => {
+    store.set(ARCHIVE_PATHS.completed, { '200': { so: '200', name: 'v1', status: 'Completed', archivedAt: oldISO() } });
+
+    await archiveCurrentlyCompletedProjects({
+      priorityAnalysis: [{ so: '200', name: 'v1', status: 'Completed' }],
+    }); // no projectDesigners arg at all
+
+    expect(writeArchiveMap).not.toHaveBeenCalled();
+    expect(store.get(ARCHIVE_PATHS.completed)['200'].designer).toBeUndefined();
+  });
+
+  it('keeps a previously-known designer on re-archive even without a fresh projectDesigners entry', async () => {
+    store.set(ARCHIVE_PATHS.completed, { '500': { so: '500', name: 'v1', status: 'Completed', designer: 'Monica Gabriel', archivedAt: oldISO() } });
+
+    await archiveCurrentlyCompletedProjects({
+      priorityAnalysis: [{ so: '500', name: 'v1-refreshed', status: 'Completed' }],
+    });
+
+    expect(store.get(ARCHIVE_PATHS.completed)['500'].designer).toBe('Monica Gabriel');
+  });
 });
 
 describe('archiveMissingCompletedProjects', () => {
-  it('archives completed projects that vanished from the sheet, leaving others intact', async () => {
+  it('archives a project that vanished from the sheet while marked Completed, leaving others intact', async () => {
     store.set(ARCHIVE_PATHS.completed, { '100': { so: '100', name: 'Existing', archivedAt: oldISO() } });
 
     const previousData = { priorityAnalysis: [{ so: '500', name: 'Gone', status: 'Completed' }] };
@@ -120,11 +150,41 @@ describe('archiveMissingCompletedProjects', () => {
     expect(map['500'].name).toBe('Gone');
   });
 
-  it('ignores non-completed projects that disappear', async () => {
-    const previousData = { priorityAnalysis: [{ so: '600', status: 'Active' }] };
+  // A project can leave the sheet without ever being marked "Completed"
+  // first — someone just deletes the row once it's done or dropped, without
+  // bothering to flip a status field. Disappearing from the sheet at all is
+  // what signals "no longer active" here, not the specific status text it
+  // last carried — otherwise these rows would sit as permanent orphans,
+  // recoverable only via the manual Orphaned Projects panel.
+  it('archives ANY project that disappears from the sheet, regardless of its last status', async () => {
+    const previousData = { priorityAnalysis: [{ so: '600', name: 'Dropped mid-nesting', status: 'Nesting' }] };
     const newData = { priorityAnalysis: [] };
+
+    await archiveMissingCompletedProjects(previousData, newData);
+
+    const entry = store.get(ARCHIVE_PATHS.completed)['600'];
+    expect(entry).toBeDefined();
+    expect(entry.name).toBe('Dropped mid-nesting');
+    // Forced to Completed for the archive record — same convention
+    // manuallyArchiveProject uses for orphan recovery — since the modal
+    // doesn't otherwise distinguish "how" a project stopped being tracked.
+    expect(entry.status).toBe('Completed');
+  });
+
+  it('is a no-op when nothing disappeared', async () => {
+    const previousData = { priorityAnalysis: [{ so: '650', status: 'Active' }] };
+    const newData = { priorityAnalysis: [{ so: '650', status: 'Active' }] };
     await archiveMissingCompletedProjects(previousData, newData);
     expect(writeArchiveMap).not.toHaveBeenCalled();
+  });
+
+  it('stamps the designer name on a project archived via the disappearance path too', async () => {
+    const previousData = { priorityAnalysis: [{ so: '700', name: 'Gone', status: 'Completed' }] };
+    const newData = { priorityAnalysis: [] };
+
+    await archiveMissingCompletedProjects(previousData, newData, { '700': 'Kat Baumgartner' });
+
+    expect(store.get(ARCHIVE_PATHS.completed)['700'].designer).toBe('Kat Baumgartner');
   });
 });
 

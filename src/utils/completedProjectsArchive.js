@@ -16,7 +16,11 @@ function sixMonthsAgo() {
 // is effectively lost. This function makes that impossible by upserting a
 // backup as soon as a project is marked Completed, whether or not it's ever
 // later removed from the sheet.
-export async function archiveCurrentlyCompletedProjects(newData) {
+//
+// `projectDesigners` (RTDB project_designers/{so} -> name) is passed in
+// separately because the sheet itself has no Designer column — without it,
+// an archived project could never show who designed it.
+export async function archiveCurrentlyCompletedProjects(newData, projectDesigners = {}) {
   if (!db || !newData) return;
 
   try {
@@ -29,9 +33,15 @@ export async function archiveCurrentlyCompletedProjects(newData) {
     const before = JSON.stringify(map);
     completed.forEach((project) => {
       const key = project.so.toString();
+      // Only add a `designer` key when there's an actual value to store —
+      // manufacturing `designer: null` on every unrelated re-archive would
+      // perturb the dirty-check below into always seeing a "change" and
+      // rewriting every completed project on every poll forever.
+      const designer = projectDesigners[key] || map[key]?.designer;
       map[key] = {
         ...map[key],
         ...project,
+        ...(designer ? { designer } : {}),
         // Refresh the data but keep the original archive timestamp.
         archivedAt: map[key]?.archivedAt || new Date().toISOString(),
       };
@@ -45,7 +55,7 @@ export async function archiveCurrentlyCompletedProjects(newData) {
   }
 }
 
-export async function archiveMissingCompletedProjects(previousData, newData) {
+export async function archiveMissingCompletedProjects(previousData, newData, projectDesigners = {}) {
   if (!db || !previousData || !newData) return;
 
   try {
@@ -54,20 +64,30 @@ export async function archiveMissingCompletedProjects(previousData, newData) {
 
     const newSoMap = new Set(newProjects.map(p => p.so));
 
-    // Find projects that were in previousData, had status Completed, and are missing from newData
-    const completedAndDeleted = prevProjects.filter(p =>
-      p.status && p.status.toLowerCase() === 'completed' && !newSoMap.has(p.so)
-    );
+    // Any project that was in the sheet on the previous poll but is gone now
+    // is treated as done, regardless of what status it last had. Gating this
+    // on "was it already marked Completed" left every row that gets deleted
+    // directly (a common real workflow: finish or drop a project and just
+    // remove its row, without ever flipping a status field first)
+    // permanently orphaned — recoverable only via the manual Orphaned
+    // Projects panel. Disappearing from the sheet IS the completion signal.
+    const vanished = prevProjects.filter(p => !newSoMap.has(p.so));
 
-    if (completedAndDeleted.length === 0) return;
+    if (vanished.length === 0) return;
 
-    console.log(`📦 Archiving ${completedAndDeleted.length} completed projects...`);
+    console.log(`📦 Archiving ${vanished.length} project(s) removed from the sheet...`);
     const map = await readArchiveMap(ARCHIVE_PATHS.completed);
-    completedAndDeleted.forEach((project) => {
+    vanished.forEach((project) => {
       const key = project.so.toString();
+      const designer = projectDesigners[key] || map[key]?.designer;
       map[key] = {
         ...map[key],
         ...project,
+        // Whatever its last status was (still Nesting, On Hold, etc.), it's
+        // no longer tracked anywhere live — same convention manuallyArchiveProject
+        // uses for orphan recovery.
+        status: 'Completed',
+        ...(designer ? { designer } : {}),
         archivedAt: map[key]?.archivedAt || new Date().toISOString(),
       };
     });

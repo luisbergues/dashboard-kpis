@@ -54,6 +54,7 @@ export default function CompletedProjectsModal({ projects, onClose, activeProjec
                   <tr style={{ borderBottom: '1px solid var(--card-border)' }}>
                     <th style={{ padding: '12px 8px', color: C.body, fontSize: '0.85rem' }}>SO #</th>
                     <th style={{ padding: '12px 8px', color: C.body, fontSize: '0.85rem' }}>{language === 'es' ? 'Nombre' : 'Name'}</th>
+                    <th style={{ padding: '12px 8px', color: C.body, fontSize: '0.85rem' }}>{language === 'es' ? 'Diseñador' : 'Designer'}</th>
                     <th style={{ padding: '12px 8px', color: C.body, fontSize: '0.85rem' }}>{language === 'es' ? 'Fecha de Instalación' : 'Install Date'}</th>
                     <th style={{ padding: '12px 8px', color: C.body, fontSize: '0.85rem' }}>{language === 'es' ? 'Archivado' : 'Archived'}</th>
                   </tr>
@@ -93,6 +94,7 @@ export default function CompletedProjectsModal({ projects, onClose, activeProjec
                           </a>
                         </td>
                         <td style={{ padding: '12px 8px', color: C.name }}>{p.name}</td>
+                        <td style={{ padding: '12px 8px', color: C.body }}>{p.designer || '—'}</td>
                         <td style={{ padding: '12px 8px', color: C.body }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <Calendar size={14} />
