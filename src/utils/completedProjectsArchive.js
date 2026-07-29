@@ -1,21 +1,26 @@
 import { db } from './firebase';
 import { readArchiveMap, writeArchiveMap, ARCHIVE_PATHS } from './archiveStore';
 
-// Cutoff date for keeping archived projects: 6 calendar months ago.
-function sixMonthsAgo() {
+// Cutoff date for keeping archived projects: 1 calendar year ago.
+function retentionCutoff() {
   const d = new Date();
-  d.setMonth(d.getMonth() - 6);
+  d.setFullYear(d.getFullYear() - 1);
   return d;
 }
 
-// Proactively back up every currently-Completed project the moment we see it,
-// instead of only reacting when a row disappears from the sheet between two
-// fetches (archiveMissingCompletedProjects below). That disappearance-based
-// approach has a gap: if the row gets deleted from the sheet in between the
-// exact snapshots being diffed, the project is never archived and its data
-// is effectively lost. This function makes that impossible by upserting a
-// backup as soon as a project is marked Completed, whether or not it's ever
-// later removed from the sheet.
+// Proactively back up every currently-Completed (or Cancelled) project the
+// moment we see it, instead of only reacting when a row disappears from the
+// sheet between two fetches (archiveMissingCompletedProjects below). That
+// disappearance-based approach has a gap: if the row gets deleted from the
+// sheet in between the exact snapshots being diffed, the project is never
+// archived and its data is effectively lost. This function makes that
+// impossible by upserting a backup as soon as a project reaches either
+// finished state, whether or not it's ever later removed from the sheet.
+// Cancelled is included alongside Completed because both are terminal
+// states this app treats as "done" everywhere else (see isCompletedOrCancelled
+// in App.jsx); a Cancelled project can otherwise sit in the sheet
+// indefinitely before its row is ever deleted, and shouldn't have to wait
+// for that to be recoverable from Completed Projects.
 //
 // `projectDesigners` (RTDB project_designers/{so} -> name) is passed in
 // separately because the sheet itself has no Designer column — without it,
@@ -24,9 +29,10 @@ export async function archiveCurrentlyCompletedProjects(newData, projectDesigner
   if (!db || !newData) return;
 
   try {
-    const completed = (newData.priorityAnalysis || []).filter(p =>
-      p.status && p.status.toLowerCase() === 'completed'
-    );
+    const completed = (newData.priorityAnalysis || []).filter(p => {
+      const status = (p.status || '').toLowerCase();
+      return status === 'completed' || status === 'cancelled';
+    });
     if (completed.length === 0) return;
 
     const map = await readArchiveMap(ARCHIVE_PATHS.completed);
@@ -121,9 +127,9 @@ export async function fetchArchivedCompletedProjects() {
     // NOTE: purging (a destructive write) is NOT triggered here anymore — it runs
     // under the single-writer archive lease in App.jsx to avoid concurrent writes.
     const map = await readArchiveMap(ARCHIVE_PATHS.completed);
-    const cutoff = sixMonthsAgo();
+    const cutoff = retentionCutoff();
 
-    // Keep entries with no archivedAt or within the last 6 months.
+    // Keep entries with no archivedAt or within the last year.
     return Object.values(map).filter((data) => {
       const archivedAt = data.archivedAt ? new Date(data.archivedAt) : null;
       return !archivedAt || archivedAt >= cutoff;
@@ -139,7 +145,7 @@ export async function purgeExpiredArchives() {
 
   try {
     const map = await readArchiveMap(ARCHIVE_PATHS.completed);
-    const cutoff = sixMonthsAgo();
+    const cutoff = retentionCutoff();
 
     let changed = false;
     for (const [key, data] of Object.entries(map)) {

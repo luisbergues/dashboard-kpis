@@ -2195,6 +2195,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
         <CompletedProjectsModal
           projects={myCompletedProjects}
           activeProjectSos={activeProjectSos}
+          projectNotes={projectNotes}
           onClose={() => setIsCompletedProjectsModalOpen(false)}
         />
       )}

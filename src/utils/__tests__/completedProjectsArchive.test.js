@@ -39,7 +39,8 @@ import {
 } from '../completedProjectsArchive';
 
 const recentISO = () => new Date().toISOString();
-const oldISO = () => new Date(Date.now() - 220 * 24 * 3600 * 1000).toISOString(); // ~7 months
+const oldISO = () => new Date(Date.now() - 400 * 24 * 3600 * 1000).toISOString(); // ~13 months — past the 1-year retention cutoff
+const withinYearISO = () => new Date(Date.now() - 240 * 24 * 3600 * 1000).toISOString(); // ~8 months — within the 1-year retention window
 
 beforeEach(() => {
   store.clear();
@@ -134,6 +135,22 @@ describe('archiveCurrentlyCompletedProjects', () => {
 
     expect(store.get(ARCHIVE_PATHS.completed)['500'].designer).toBe('Monica Gabriel');
   });
+
+  // Cancelled is a terminal state too (see isCompletedOrCancelled in App.jsx)
+  // — a Cancelled project shouldn't have to wait for its row to be deleted
+  // from the sheet before it's recoverable from Completed Projects.
+  it('proactively archives Cancelled projects too, not just Completed', async () => {
+    await archiveCurrentlyCompletedProjects({
+      priorityAnalysis: [
+        { so: '800', name: 'Dropped deal', status: 'Cancelled' },
+        { so: '801', name: 'Still active', status: 'Nesting' }, // must be ignored
+      ],
+    });
+
+    const map = store.get(ARCHIVE_PATHS.completed);
+    expect(Object.keys(map)).toEqual(['800']);
+    expect(map['800'].status).toBe('Cancelled'); // real status preserved, unlike the disappearance path
+  });
 });
 
 describe('archiveMissingCompletedProjects', () => {
@@ -201,16 +218,26 @@ describe('manuallyArchiveProject', () => {
 });
 
 describe('fetchArchivedCompletedProjects', () => {
-  it('returns recent and undated entries, hides ones older than 6 months', async () => {
+  it('returns recent and undated entries, hides ones older than 1 year', async () => {
     store.set(ARCHIVE_PATHS.completed, {
       a: { so: 'a', archivedAt: recentISO() },
-      b: { so: 'b', archivedAt: oldISO() },   // expired
+      b: { so: 'b', archivedAt: oldISO() },   // expired (~13 months)
       c: { so: 'c' },                          // no timestamp → kept
     });
 
     const result = await fetchArchivedCompletedProjects();
     const sos = result.map(p => p.so).sort();
     expect(sos).toEqual(['a', 'c']);
+  });
+
+  // Retention was widened from 6 months to 1 year specifically so completed
+  // projects stick around longer — pin the boundary explicitly rather than
+  // just trusting the "old"/"recent" cases above.
+  it('keeps an entry archived ~8 months ago (past the old 6-month cutoff, within the new 1-year one)', async () => {
+    store.set(ARCHIVE_PATHS.completed, { d: { so: 'd', archivedAt: withinYearISO() } });
+
+    const result = await fetchArchivedCompletedProjects();
+    expect(result.map(p => p.so)).toEqual(['d']);
   });
 
   it('returns [] gracefully when the read fails', async () => {
@@ -220,7 +247,7 @@ describe('fetchArchivedCompletedProjects', () => {
 });
 
 describe('purgeExpiredArchives', () => {
-  it('removes only entries older than 6 months', async () => {
+  it('removes only entries older than 1 year', async () => {
     store.set(ARCHIVE_PATHS.completed, {
       a: { so: 'a', archivedAt: recentISO() },
       b: { so: 'b', archivedAt: oldISO() },
@@ -231,6 +258,15 @@ describe('purgeExpiredArchives', () => {
 
     const map = store.get(ARCHIVE_PATHS.completed);
     expect(Object.keys(map).sort()).toEqual(['a', 'c']);
+  });
+
+  it('does not purge an entry archived ~8 months ago', async () => {
+    store.set(ARCHIVE_PATHS.completed, { d: { so: 'd', archivedAt: withinYearISO() } });
+
+    await purgeExpiredArchives();
+
+    expect(writeArchiveMap).not.toHaveBeenCalled();
+    expect(store.get(ARCHIVE_PATHS.completed)['d']).toBeDefined();
   });
 
   it('does not write when nothing is expired', async () => {
