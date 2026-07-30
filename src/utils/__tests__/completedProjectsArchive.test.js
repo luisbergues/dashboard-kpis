@@ -30,6 +30,15 @@ vi.mock('../archiveStore', () => ({
 }));
 vi.mock('../firebase', () => ({ db: {} }));
 
+// Minimal firebase/database mock backed by an in-memory RTDB stand-in, same
+// pattern used in archiveHelpers.test.js.
+let rtdb = {};
+vi.mock('firebase/database', () => ({
+  ref: (_db, path) => ({ path }),
+  get: vi.fn(async (r) => ({ val: () => (r.path in rtdb ? rtdb[r.path] : null) })),
+  remove: vi.fn(async (r) => { delete rtdb[r.path]; }),
+}));
+
 import {
   archiveCurrentlyCompletedProjects,
   archiveMissingCompletedProjects,
@@ -44,6 +53,7 @@ const withinYearISO = () => new Date(Date.now() - 240 * 24 * 3600 * 1000).toISOS
 
 beforeEach(() => {
   store.clear();
+  rtdb = {};
   readArchiveMap.mockClear();
   writeArchiveMap.mockClear();
 });
@@ -151,6 +161,23 @@ describe('archiveCurrentlyCompletedProjects', () => {
     expect(Object.keys(map)).toEqual(['800']);
     expect(map['800'].status).toBe('Cancelled'); // real status preserved, unlike the disappearance path
   });
+
+  // A project marked Completed but still SITTING in the sheet is still
+  // visible/editable in Pipeline and My Projects — someone could still be
+  // adding a closing note or ticking off a last check. Only the disappearance
+  // path (archiveMissingCompletedProjects) snapshots + clears working data,
+  // because that's the point where the project is truly gone from every live
+  // view. This proactive pass must stay a lightweight backup copy only.
+  it('does NOT snapshot or clear working-data nodes for a project still visible in the sheet', async () => {
+    rtdb['project_notes/850'] = [{ id: 'n1', text: 'still being edited' }];
+
+    await archiveCurrentlyCompletedProjects({
+      priorityAnalysis: [{ so: '850', name: 'Still in sheet', status: 'Completed' }],
+    });
+
+    expect(store.get(ARCHIVE_PATHS.completed)['850'].snapshot).toBeUndefined();
+    expect(rtdb['project_notes/850']).toEqual([{ id: 'n1', text: 'still being edited' }]); // untouched
+  });
 });
 
 describe('archiveMissingCompletedProjects', () => {
@@ -202,6 +229,80 @@ describe('archiveMissingCompletedProjects', () => {
     await archiveMissingCompletedProjects(previousData, newData, { '700': 'Kat Baumgartner' });
 
     expect(store.get(ARCHIVE_PATHS.completed)['700'].designer).toBe('Kat Baumgartner');
+  });
+
+  // Before this, a project that vanished from the sheet lost its notes,
+  // materials, checks, etc. forever — none of it was ever copied anywhere,
+  // and the live nodes just sat orphaned in the RTDB. The archiver now
+  // snapshots all of a project's working-data nodes into the archive record
+  // before clearing the live ones.
+  it('snapshots notes, materials, checks, history, and collaborators into the archive record', async () => {
+    rtdb['project_notes/900'] = [{ id: 'n1', text: 'Client wants extra shelf', createdBy: 'Ana' }];
+    rtdb['project_materials/900'] = { thermofoil: true };
+    rtdb['engineering_checks/900'] = { started: '2026-01-01', finished: '2026-01-02', user: 'Bob' };
+    rtdb['nesting_checks/900'] = { started: '2026-01-03', finished: '2026-01-04', user: 'Cal' };
+    rtdb['project_history/900'] = [{ type: 'status_change', status: 'ON HOLD', timestamp: '2026-01-01' }];
+    rtdb['project_collaborators/900'] = ['Dee', 'Eve'];
+
+    const previousData = {
+      priorityAnalysis: [{ so: '900', name: 'Rich data project', status: 'Completed' }],
+      statusHistory: [
+        { so: '900', status: 'ENGINEERING', statusDate: '2025-12-01' },
+        { so: '900', status: 'INSTALL', statusDate: '2026-01-05' },
+        { so: '901', status: 'ENGINEERING', statusDate: '2025-12-01' }, // different SO, must be excluded
+      ],
+    };
+    const newData = { priorityAnalysis: [] };
+
+    await archiveMissingCompletedProjects(previousData, newData);
+
+    const entry = store.get(ARCHIVE_PATHS.completed)['900'];
+    expect(entry.snapshot.notes).toEqual([{ id: 'n1', text: 'Client wants extra shelf', createdBy: 'Ana' }]);
+    expect(entry.snapshot.materials).toEqual({ thermofoil: true });
+    expect(entry.snapshot.engineeringChecks.user).toBe('Bob');
+    expect(entry.snapshot.nestingChecks.user).toBe('Cal');
+    expect(entry.snapshot.history).toEqual([{ type: 'status_change', status: 'ON HOLD', timestamp: '2026-01-01' }]);
+    expect(entry.snapshot.collaborators).toEqual(['Dee', 'Eve']);
+    expect(entry.snapshot.statusHistory).toEqual([
+      { so: '900', status: 'ENGINEERING', statusDate: '2025-12-01' },
+      { so: '900', status: 'INSTALL', statusDate: '2026-01-05' },
+    ]);
+  });
+
+  it('clears the live working-data nodes only after the archive write succeeds', async () => {
+    rtdb['project_notes/910'] = [{ id: 'n1', text: 'note' }];
+    rtdb['project_materials/910'] = { thermofoil: true };
+
+    const previousData = { priorityAnalysis: [{ so: '910', name: 'Gone', status: 'Completed' }] };
+    const newData = { priorityAnalysis: [] };
+
+    await archiveMissingCompletedProjects(previousData, newData);
+
+    expect(rtdb['project_notes/910']).toBeUndefined();
+    expect(rtdb['project_materials/910']).toBeUndefined();
+    // The archive kept its own copy independent of the now-cleared live node.
+    expect(store.get(ARCHIVE_PATHS.completed)['910'].snapshot.notes).toEqual([{ id: 'n1', text: 'note' }]);
+  });
+
+  it('does NOT clear any live node when the archive write fails (no data loss)', async () => {
+    rtdb['project_notes/920'] = [{ id: 'n1', text: 'note' }];
+    writeArchiveMap.mockRejectedValueOnce(new Error('write blew up'));
+
+    const previousData = { priorityAnalysis: [{ so: '920', name: 'Gone', status: 'Completed' }] };
+    const newData = { priorityAnalysis: [] };
+
+    await archiveMissingCompletedProjects(previousData, newData);
+
+    expect(rtdb['project_notes/920']).toEqual([{ id: 'n1', text: 'note' }]); // untouched
+  });
+
+  it('does not add a snapshot key at all when no working data exists for the project', async () => {
+    const previousData = { priorityAnalysis: [{ so: '930', name: 'No extra data', status: 'Completed' }] };
+    const newData = { priorityAnalysis: [] };
+
+    await archiveMissingCompletedProjects(previousData, newData);
+
+    expect(store.get(ARCHIVE_PATHS.completed)['930'].snapshot).toBeUndefined();
   });
 
   // A sheet-parsing glitch (mid-write CSV read, renamed section header, etc.)

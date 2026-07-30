@@ -5,6 +5,48 @@ import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
 import { useDesignerContacts } from '../utils/useDesignerContacts';
 import { shortProjectName } from '../utils/projectName';
 
+// Resolves what this view should show for notes/stages/materials/checks,
+// preferring the archive's `snapshot` (captured before the live nodes were
+// cleared — see completedProjectsArchive.js) once a project is archived.
+// Legacy archive records (written before snapshots existed) have no
+// `snapshot` key at all — everything here falls back gracefully instead of
+// throwing, so those 3 old records still render fine.
+export function resolveArchivedView(project, isArchived, liveNotes = []) {
+  const snapshot = isArchived ? (project?.snapshot || null) : null;
+  return {
+    notes: snapshot?.notes || liveNotes || [],
+    // project_stages (RTDB) hasn't been written to in a long time — real
+    // per-stage dates come from the sheet's statusHistory, which is what
+    // calculateAutomaticStages() actually reads.
+    stagesSource: snapshot?.statusHistory
+      ? { ...project, statusHistory: snapshot.statusHistory }
+      : project,
+    materials: snapshot?.materials || null,
+    engineeringChecks: snapshot?.engineeringChecks || null,
+    nestingChecks: snapshot?.nestingChecks || null,
+    collaborators: snapshot?.collaborators || null,
+  };
+}
+
+// Renders an opaque, freeform object (materials/checks can hold whatever
+// shape the feature that wrote them used) as a simple label/value list —
+// generic on purpose, so it never breaks on an unexpected shape.
+function KeyValueList({ data }) {
+  if (!data || typeof data !== 'object') return null;
+  const entries = Object.entries(data);
+  if (entries.length === 0) return null;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {entries.map(([key, value]) => (
+        <div key={key} style={styles.kvRow}>
+          <span style={styles.kvKey}>{key}</span>
+          <span style={styles.kvValue}>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function getStatusColor(status) {
   switch (status) {
     case 'ENGINEERING': return '#3b82f6';
@@ -28,18 +70,20 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
   const params = new URLSearchParams(window.location.search);
   const so = params.get('project');
 
-  // Look in the active sheet first; fall back to the Firestore archive so
-  // completed projects that were later removed from the sheet still resolve
-  // (their data is preserved there — see completedProjectsArchive.js).
-  const project = data?.priorityAnalysis?.find(p => String(p.so) === String(so))
-    || data?.archivedProjects?.find(p => String(p.so) === String(so));
+  // Look in the active sheet first; fall back to the archive so completed
+  // projects that were later removed from the sheet still resolve (their
+  // data is preserved there — see completedProjectsArchive.js).
+  const liveProject = data?.priorityAnalysis?.find(p => String(p.so) === String(so));
+  const project = liveProject || data?.archivedProjects?.find(p => String(p.so) === String(so));
+  const isArchived = !liveProject && !!project;
   const override = overrides[so];
   const status = override?.status || project?.status || 'N/A';
   const onHoldReason = override?.onHoldReason || null;
   const designer = projectDesigners[so];
   const designerPhone = designer ? (phoneLookup[designer] || 'N/A') : null;
-  const notes = projectNotes[so] || [];
-  const stages = project ? calculateAutomaticStages(project) : [];
+  const { notes, stagesSource, materials, engineeringChecks, nestingChecks, collaborators } =
+    resolveArchivedView(project, isArchived, projectNotes[so]);
+  const stages = project ? calculateAutomaticStages(stagesSource) : [];
 
   const pageUrl = window.location.href;
 
@@ -178,10 +222,10 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
               <div key={note.id || i} style={styles.noteCard}>
                 <div style={styles.noteMeta}>
                   <span style={{ color: '#60a5fa', fontWeight: 600, fontSize: '0.8rem' }}>
-                    {note.author || 'Unknown'}
+                    {note.createdBy || 'Unknown'}
                   </span>
                   <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
-                    {note.timestamp ? new Date(note.timestamp).toLocaleString() : ''}
+                    {note.createdAt ? new Date(note.createdAt).toLocaleString() : ''}
                   </span>
                 </div>
                 <p style={styles.noteText}>{note.text}</p>
@@ -191,6 +235,47 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
                   ) : null
                 ))}
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Materials — only preserved for archived projects (see completedProjectsArchive.js) */}
+      {isArchived && materials && (
+        <div style={styles.section}>
+          <h3 style={styles.sectionTitle}>{language === 'es' ? 'Materiales' : 'Materials'}</h3>
+          <KeyValueList data={materials} />
+        </div>
+      )}
+
+      {/* Checks — engineering + nesting, only preserved for archived projects */}
+      {isArchived && (engineeringChecks || nestingChecks) && (
+        <div style={styles.section}>
+          <h3 style={styles.sectionTitle}>Checks</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {engineeringChecks && (
+              <div>
+                <div style={styles.checkLabel}>{language === 'es' ? 'Ingeniería' : 'Engineering'}</div>
+                <KeyValueList data={engineeringChecks} />
+              </div>
+            )}
+            {nestingChecks && (
+              <div>
+                <div style={styles.checkLabel}>Nesting</div>
+                <KeyValueList data={nestingChecks} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Collaborators — only preserved for archived projects */}
+      {isArchived && collaborators && collaborators.length > 0 && (
+        <div style={styles.section}>
+          <h3 style={styles.sectionTitle}>{language === 'es' ? 'Colaboradores' : 'Collaborators'}</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {collaborators.map((name, i) => (
+              <span key={i} style={styles.collabBadge}>{name}</span>
             ))}
           </div>
         </div>
@@ -386,6 +471,41 @@ const styles = {
     textAlign: 'center',
     lineHeight: 1.2,
     fontWeight: 500,
+  },
+  kvRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 12,
+    padding: '8px 0',
+    borderBottom: '1px solid rgba(255,255,255,0.06)',
+  },
+  kvKey: {
+    color: '#64748b',
+    fontSize: '0.8rem',
+    textTransform: 'capitalize',
+  },
+  kvValue: {
+    color: '#e2e8f0',
+    fontSize: '0.85rem',
+    fontWeight: 500,
+    textAlign: 'right',
+    wordBreak: 'break-word',
+  },
+  checkLabel: {
+    color: '#cbd5e1',
+    fontSize: '0.78rem',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    marginBottom: 8,
+  },
+  collabBadge: {
+    background: 'var(--overlay-05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 20,
+    padding: '4px 12px',
+    fontSize: '0.82rem',
+    color: '#e2e8f0',
   },
   noteCard: {
     background: 'var(--overlay-04)',

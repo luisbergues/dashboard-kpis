@@ -1,5 +1,61 @@
 import { db } from './firebase';
+import { ref, get, remove } from 'firebase/database';
 import { readArchiveMap, writeArchiveMap, ARCHIVE_PATHS } from './archiveStore';
+
+// Per-SO "working data" nodes that exist while a project is active. None of
+// these are copied into the archive today — a project that vanishes from the
+// sheet loses its notes, materials, checks, etc. forever, while the live
+// nodes linger orphaned in the RTDB with no link back to the (now archived)
+// project. `stages` is legacy and unused for writes anymore (see
+// MyProjectsView.jsx) — kept here defensively in case any old data lingers,
+// but the real per-stage dates come from the sheet's own statusHistory (see
+// snapshotAuxData below).
+const AUX_NODE_PATHS = {
+  notes: 'project_notes',
+  stages: 'project_stages',
+  history: 'project_history',
+  materials: 'project_materials',
+  engineeringChecks: 'engineering_checks',
+  nestingChecks: 'nesting_checks',
+  collaborators: 'project_collaborators',
+};
+
+// Reads every working-data node for a project before it's archived, so none
+// of it is lost once the live nodes are cleared. `statusHistory` doesn't live
+// in the RTDB — it's the relevant slice of the sheet's own "Status History"
+// section, which is what calculateAutomaticStages() uses for real per-stage
+// dates (project_stages in the RTDB hasn't been written to in a long time).
+async function snapshotAuxData(so, statusHistory) {
+  const entries = Object.entries(AUX_NODE_PATHS);
+  const snapshots = await Promise.all(
+    entries.map(([, node]) => get(ref(db, `${node}/${so}`)))
+  );
+  const snapshot = {};
+  entries.forEach(([key], i) => {
+    const val = snapshots[i].val();
+    if (val !== null && val !== undefined) snapshot[key] = val;
+  });
+  if (statusHistory && statusHistory.length > 0) {
+    snapshot.statusHistory = statusHistory;
+  }
+  return snapshot;
+}
+
+// Clears the live working-data nodes once their contents are safely in the
+// archive. Best-effort per node: losing one node's cleanup just leaves it
+// orphaned (same as today's behavior), which is far preferable to aborting
+// and leaving the rest uncleaned too.
+async function clearAuxData(so) {
+  const nodes = Object.values(AUX_NODE_PATHS);
+  const results = await Promise.allSettled(
+    nodes.map((node) => remove(ref(db, `${node}/${so}`)))
+  );
+  results.forEach((result, i) => {
+    if (result.status === 'rejected') {
+      console.error(`❌ Failed to clear ${nodes[i]}/${so} after archiving:`, result.reason);
+    }
+  });
+}
 
 // Cutoff date for keeping archived projects: 1 calendar year ago.
 function retentionCutoff() {
@@ -108,8 +164,19 @@ export async function archiveMissingCompletedProjects(previousData, newData, pro
 
     console.log(`📦 Archiving ${vanished.length} project(s) removed from the sheet...`);
     const map = await readArchiveMap(ARCHIVE_PATHS.completed);
-    vanished.forEach((project) => {
+    const prevStatusHistory = previousData.statusHistory || [];
+
+    // Snapshot each project's working data (notes, materials, checks, etc.)
+    // BEFORE anything is written or cleared — a failed read here just skips
+    // that project's snapshot, it never risks the live nodes.
+    const entries = await Promise.all(vanished.map(async (project) => {
       const key = project.so.toString();
+      const statusHistory = prevStatusHistory.filter(h => String(h.so) === key);
+      const snapshot = await snapshotAuxData(key, statusHistory);
+      return { key, project, snapshot };
+    }));
+
+    entries.forEach(({ key, project, snapshot }) => {
       const designer = projectDesigners[key] || map[key]?.designer;
       map[key] = {
         ...map[key],
@@ -119,11 +186,17 @@ export async function archiveMissingCompletedProjects(previousData, newData, pro
         // uses for orphan recovery.
         status: 'Completed',
         ...(designer ? { designer } : {}),
+        ...(Object.keys(snapshot).length > 0 ? { snapshot } : {}),
         archivedAt: map[key]?.archivedAt || new Date().toISOString(),
       };
     });
     await writeArchiveMap(ARCHIVE_PATHS.completed, map);
     console.log('✅ Completed projects successfully archived.');
+
+    // Only clear the live working nodes once their data is safely in the
+    // archive — if the write above had thrown, we'd never reach this line,
+    // so a failed archive write can never cause data loss.
+    await Promise.all(entries.map(({ key }) => clearAuxData(key)));
   } catch (error) {
     console.error('❌ Error archiving completed projects:', error);
   }
