@@ -24,6 +24,8 @@ import AdminUsersView from './views/AdminUsersView'
 import { useLanguage } from './utils/LanguageContext'
 import { isSuperAdminRole } from './utils/adminConfig'
 import { usePendingUsersCount } from './utils/usePendingUsersCount'
+import { canManageDesignerNotes } from './utils/notePermissions'
+import { noteDaysOpen } from './designer-performance/utils/redFlags'
 import { auth, db, onAuthStateChanged, ref, onValue, set, get, child, signOut } from './utils/firebase'
 import { shortProjectName } from './utils/projectName'
 
@@ -420,6 +422,8 @@ function App() {
 
       if (!belongsToMe) return;
 
+      const notes = projectNotes[p.so] || [];
+
       // 2. Urgent installs logic
       if (!isCompletedOrCancelled && p.status !== 'ON HOLD' && p.install) {
         const d = new Date(p.install);
@@ -436,7 +440,6 @@ function App() {
 
       // 3. Unread Notes logic
       if (!isCompletedOrCancelled) {
-        const notes = projectNotes[p.so] || [];
         const lastReadTimestamp = userProfile.readNotes ? userProfile.readNotes[p.so] : null;
         
         let unreadCount = 0;
@@ -471,6 +474,29 @@ function App() {
             so: p.so,
             type: 'note',
             text: `SO #${p.so}: ${unreadCount} nota${unreadCount > 1 ? 's' : ''} nueva${unreadCount > 1 ? 's' : ''} en ${shortProjectName(p.name)}`
+          });
+        }
+      }
+
+      // 4. Notas "Designer" sin resolver — cada día que quedan abiertas le
+      // restan puntos al KPI de Fase 2 del diseñador (ver redFlags.ts), así
+      // que quien puede gestionarlas (roles de ingeniería) recibe un
+      // recordatorio en cada apertura de la app hasta que la resuelva o
+      // confirme si el diseñador realmente pidió ese cambio.
+      if (!isCompletedOrCancelled && canManageDesignerNotes(userProfile)) {
+        const unresolvedDesignerNotes = notes.filter(n => {
+          const effectiveType = n.noteType || (n.priority ? 'priority' : 'normal');
+          return effectiveType === 'designer' && !n.resolvedAt;
+        });
+        if (unresolvedDesignerNotes.length > 0) {
+          const maxDays = Math.max(...unresolvedDesignerNotes.map(n => noteDaysOpen(n, Date.now())));
+          const count = unresolvedDesignerNotes.length;
+          alerts.push({
+            so: p.so,
+            type: 'designer_review',
+            text: count === 1
+              ? `SO #${p.so} "${shortProjectName(p.name)}": revisar nota Designer (${maxDays} día${maxDays === 1 ? '' : 's'} abierta) — ¿lo solicitó el diseñador?`
+              : `SO #${p.so} "${shortProjectName(p.name)}": ${count} notas Designer sin revisar (hasta ${maxDays} días abiertas)`
           });
         }
       }

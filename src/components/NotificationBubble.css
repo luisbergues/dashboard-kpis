@@ -200,6 +200,10 @@
   color: #3b82f6;
 }
 
+.notification-item.designer_review .notification-icon {
+  color: #8B5CF6;
+}
+
 .notification-content {
   flex: 1;
 }
