@@ -203,6 +203,41 @@ describe('archiveMissingCompletedProjects', () => {
 
     expect(store.get(ARCHIVE_PATHS.completed)['700'].designer).toBe('Kat Baumgartner');
   });
+
+  // A sheet-parsing glitch (mid-write CSV read, renamed section header, etc.)
+  // can silently return a suspiciously truncated priorityAnalysis. Since this
+  // function now archives ANY vanished row regardless of prior status, such a
+  // glitch would otherwise mass-archive every real active project as
+  // "Completed". Guard against that specific shape: a sharp drop from a
+  // reasonably sized sheet.
+  it('skips archiving entirely when the project count drops sharply (likely a parsing glitch, not real completions)', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const previousData = {
+      priorityAnalysis: Array.from({ length: 20 }, (_, i) => ({ so: `${i}`, status: 'Active' })),
+    };
+    const newData = { priorityAnalysis: [{ so: '0', status: 'Active' }] }; // 20 -> 1, a parsing failure, not attrition
+
+    await archiveMissingCompletedProjects(previousData, newData);
+
+    expect(writeArchiveMap).not.toHaveBeenCalled();
+    expect(store.get(ARCHIVE_PATHS.completed)).toBeUndefined();
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('still archives normally when the drop is small, even on a larger sheet', async () => {
+    const previousData = {
+      priorityAnalysis: Array.from({ length: 20 }, (_, i) => ({ so: `${i}`, status: 'Active' })),
+    };
+    // Only project '0' vanished — 19 of 20 remain, nowhere near the >50% drop guard.
+    const newData = {
+      priorityAnalysis: Array.from({ length: 19 }, (_, i) => ({ so: `${i + 1}`, status: 'Active' })),
+    };
+
+    await archiveMissingCompletedProjects(previousData, newData);
+
+    expect(store.get(ARCHIVE_PATHS.completed)['0']).toBeDefined();
+  });
 });
 
 describe('manuallyArchiveProject', () => {

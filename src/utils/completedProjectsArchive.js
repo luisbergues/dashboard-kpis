@@ -61,12 +61,37 @@ export async function archiveCurrentlyCompletedProjects(newData, projectDesigner
   }
 }
 
+// sheetParser.js has no sanity check of its own: if a CSV read gets caught
+// mid-write, or a section header gets renamed, it can silently come back
+// with a priorityAnalysis that's empty or drastically truncated. Widening
+// the disappearance check above to catch ANY vanished row (not just ones
+// already marked Completed) means such a glitch would otherwise get
+// mistaken for a wave of real completions and mass-archive every active
+// project as "Completed". A real drop this sharp between two ~30s polls is
+// far more likely to be a parsing failure than genuine attrition, so bail
+// out instead of archiving anything. MIN_PROJECTS_FOR_GUARD keeps this from
+// firing on small sheets (or test fixtures) where a big *relative* swing is
+// normal and expected.
+const MIN_PROJECTS_FOR_GUARD = 10;
+const MAX_DROP_RATIO = 0.5;
+
+function looksLikeParsingFailure(prevCount, newCount) {
+  return prevCount >= MIN_PROJECTS_FOR_GUARD && newCount < prevCount * (1 - MAX_DROP_RATIO);
+}
+
 export async function archiveMissingCompletedProjects(previousData, newData, projectDesigners = {}) {
   if (!db || !previousData || !newData) return;
 
   try {
     const prevProjects = previousData.priorityAnalysis || [];
     const newProjects = newData.priorityAnalysis || [];
+
+    if (looksLikeParsingFailure(prevProjects.length, newProjects.length)) {
+      console.error(
+        `⚠️ Skipping disappearance-based archiving: project count dropped from ${prevProjects.length} to ${newProjects.length}. Likely a sheet parsing glitch, not real completions — nothing archived this cycle.`
+      );
+      return;
+    }
 
     const newSoMap = new Set(newProjects.map(p => p.so));
 
