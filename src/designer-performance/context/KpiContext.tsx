@@ -4,6 +4,7 @@ import type { Project, Designer, DesignerNote } from '../types';
 import { calculateDesignerStats } from '../utils/scoreCalculator';
 import { db, ref, set, get, onValue } from '../../utils/firebase';
 import { shortProjectName } from '../../utils/projectName';
+import { canForceApproveIntake } from '../../utils/intakePermissions';
 
 // Result of a project_designers/{so} write attempt. `project_designers` is
 // also written directly from MyProjectsView (the main app's "Designer in
@@ -21,6 +22,8 @@ interface KpiContextType {
   updateProject: (project: Project) => Promise<SaveProjectResult>;
   getProjectComplexity: (soNumber: string) => Partial<Project['complexity']>;
   getProjectNotes: (soNumber: string) => DesignerNote[];
+  // Si el usuario puede aprobar un intake con documentacion faltante.
+  canForceApprove: boolean;
 }
 
 // Canonical list of designers — separate from engineers
@@ -47,10 +50,16 @@ const CANONICAL_DESIGNERS: string[] = [
 
 const KpiContext = createContext<KpiContextType | undefined>(undefined);
 
-export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; projectDesigners?: Record<string, string> }> = ({
+export const KpiProvider: React.FC<{
+  children: ReactNode;
+  externalData?: any;
+  projectDesigners?: Record<string, string>;
+  userProfile?: { role?: string } | null;
+}> = ({
   children,
   externalData,
   projectDesigners = {},
+  userProfile = null,
 }) => {
   const [performanceProjects, setPerformanceProjects] = useState<Record<string, Partial<Project>>>({});
   const [projects, setProjects] = useState<Project[]>([]);
@@ -215,7 +224,7 @@ export const KpiProvider: React.FC<{ children: ReactNode; externalData?: any; pr
   };
 
   return (
-    <KpiContext.Provider value={{ projects, designers, designerNames, projectDesigners, addProject, updateProject, getProjectComplexity, getProjectNotes }}>
+    <KpiContext.Provider value={{ projects, designers, designerNames, projectDesigners, addProject, updateProject, getProjectComplexity, getProjectNotes, canForceApprove: canForceApproveIntake(userProfile) }}>
       {children}
     </KpiContext.Provider>
   );

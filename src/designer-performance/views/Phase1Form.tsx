@@ -3,7 +3,7 @@ import { useKpi } from '../context/KpiContext';
 import { calculatePhase1ScoreAndStatus, calculateTechnicalPoints } from '../utils/scoreCalculator';
 import toast from 'react-hot-toast';
 import type { Project, ProjectStatus } from '../types';
-import { Link2, FileText, CheckSquare, Zap, RefreshCw, Send } from 'lucide-react';
+import { Link2, FileText, CheckSquare, Zap, RefreshCw, Send, AlertTriangle } from 'lucide-react';
 import { T } from '../utils/theme';
 import { formatDisplayDate } from '../../utils/dateFormat';
 
@@ -188,6 +188,18 @@ const emptyChecklist: ChecklistState = {
   drawingsSigned: false, finalMeasurementsApplies: false, finalMeasurementsDelivered: false,
 };
 
+// Fuente única de los ítems del checklist: la usan tanto el render como el
+// cálculo de qué documentación falta al confirmar una aprobación forzada.
+const CHECKLIST_ITEMS: { id: keyof ChecklistState; label: string }[] = [
+  { id: 'kcdFile',                   label: 'KCD file (complete & latest)' },
+  { id: 'jlContract',                label: 'JL Contract (complete & signed)' },
+  { id: 'quoteComplete',             label: 'Quote (complete by room)' },
+  { id: 'quoteBreakdown',            label: 'Quote breakdown' },
+  { id: 'creditCardForm',            label: 'Credit Card Form' },
+  { id: 'drawingsSigned',            label: 'Drawings (signed by client)' },
+  { id: 'finalMeasurementsApplies',  label: 'Does "Final Measurements" apply here?' },
+];
+
 const emptyComplexity = {
   colorsDefined: false, thermofoilDoors: false, customBoreHoles: false,
   routingRequired: false, customPanels: false,
@@ -195,7 +207,7 @@ const emptyComplexity = {
 
 /* ── main component ──────────────────────────────────────────────────── */
 export const Phase1Form: React.FC = () => {
-  const { designerNames, projects, projectDesigners, addProject, updateProject, getProjectComplexity } = useKpi();
+  const { designerNames, projects, projectDesigners, addProject, updateProject, getProjectComplexity, canForceApprove } = useKpi();
 
   const [mode, setMode] = useState<'New' | 'Update'>('New');
   const [soNumber, setSoNumber]       = useState('');
@@ -205,6 +217,8 @@ export const Phase1Form: React.FC = () => {
   const [checklist, setChecklist]     = useState<ChecklistState>(emptyChecklist);
   const [complexity, setComplexity]   = useState(emptyComplexity);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
+  // Solo para administrative: lo que falta, mientras se confirma aprobar igual.
+  const [pendingApproval, setPendingApproval] = useState<{ basics: string[]; docs: string[] } | null>(null);
 
   // Any project that has been evaluated (not Pending) can be updated to correct mistakes
   const updatableProjects = projects.filter(p => p.status !== 'Pending');
@@ -306,23 +320,51 @@ export const Phase1Form: React.FC = () => {
     setAutoFilledFields(prev => { const n = new Set(prev); n.delete(field); return n; });
   };
 
-  const handleSubmit = async (e: React.FormEvent, forceReview = false) => {
-    e.preventDefault();
-    if (!soNumber || !projectName || !designerName || totalRooms === '') {
-      toast.error('Please fill in all basic project details.'); return;
+  /* Qué le falta al formulario. Se usa para decidir si se bloquea el envío
+     (perfiles normales) o se ofrece aprobar igual (administrative). */
+  const missingBasics = (): string[] => {
+    const missing: string[] = [];
+    if (!projectName) missing.push('Project Name');
+    if (!designerName) missing.push('Designer');
+    if (totalRooms === '') missing.push('Total Rooms');
+    return missing;
+  };
+
+  const missingDocs = (): string[] => {
+    const missing = CHECKLIST_ITEMS
+      .filter(i => i.id !== 'finalMeasurementsApplies' && checklist[i.id] === false)
+      .map(i => i.label);
+    if (checklist.finalMeasurementsApplies !== false && checklist.finalMeasurementsDelivered === false) {
+      missing.push('Final Measurements delivered');
     }
-    if (mode === 'New' && projects.some(p => p.id === soNumber && p.status !== 'Pending')) {
-      toast.error('A project with this SO Number has already been processed.'); return;
-    }
+    return missing;
+  };
+
+  /* Guarda el intake. `forceApprove` deja el proyecto en Approved aunque falte
+     documentación — es una decisión administrativa. El puntaje NO se toca: se
+     calcula igual por las demoras, así que el KPI sigue reflejando la realidad
+     del papeleo. */
+  const saveIntake = async (opts: { forceReview?: boolean; forceApprove?: boolean } = {}) => {
+    const { forceReview = false, forceApprove = false } = opts;
+
     const existingForCreatedAt = projects.find(p => p.id === soNumber);
     const now = Date.now();
     const createdAt = existingForCreatedAt?.createdAt || now;
 
     let finalStatus: ProjectStatus, score: number | null;
-    if (forceReview) { finalStatus = 'To review'; score = null; }
-    else { const r = calculatePhase1ScoreAndStatus(checklist, createdAt); finalStatus = r.status; score = r.score; }
+    if (forceReview) {
+      finalStatus = 'To review'; score = null;
+    } else {
+      const r = calculatePhase1ScoreAndStatus(checklist, createdAt);
+      score = r.score;
+      finalStatus = forceApprove ? 'Approved' : r.status;
+    }
 
-    const icp = Number(totalRooms) + calculateTechnicalPoints(complexity);
+    // Al forzar, los básicos pueden venir vacíos: se completan con algo usable
+    // en vez de guardar undefined.
+    const safeName = projectName || `SO #${soNumber}`;
+    const safeRooms = totalRooms === '' ? 0 : Number(totalRooms);
+    const icp = safeRooms + calculateTechnicalPoints(complexity);
 
     if (mode === 'New') {
       const existing = projects.find(p => p.id === soNumber);
@@ -331,28 +373,59 @@ export const Phase1Form: React.FC = () => {
         id: soNumber,
         createdAt,
         approvedAt: finalStatus === 'Approved' ? now : null,
-        projectName, designerName, status: finalStatus, totalRooms: Number(totalRooms), icp,
+        projectName: safeName, designerName, status: finalStatus, totalRooms: safeRooms, icp,
         phase1Score: score, phase2Score: existing?.phase2Score ?? null, checklist, complexity
       });
       if (result.conflict) {
         toast.error(`Designer was just changed to "${result.currentDesignerName}" by someone else. Reload and try again.`);
         return;
       }
-      toast.success(finalStatus === 'Approved' ? 'Project Approved! ✓' : finalStatus === 'To review' ? 'Saved for review.' : 'Registered (missing docs).');
+      toast.success(
+        forceApprove ? 'Approved with missing documentation.'
+        : finalStatus === 'Approved' ? 'Project Approved! ✓'
+        : finalStatus === 'To review' ? 'Saved for review.'
+        : 'Registered (missing docs).');
       resetForm();
     } else {
       const existing = projects.find(p => p.id === soNumber);
       if (!existing) return;
-      const result = await updateProject({ ...existing, projectName, designerName, status: finalStatus,
-        totalRooms: Number(totalRooms), icp, phase1Score: score, checklist, complexity,
+      const result = await updateProject({ ...existing, projectName: safeName, designerName, status: finalStatus,
+        totalRooms: safeRooms, icp, phase1Score: score, checklist, complexity,
         approvedAt: finalStatus === 'Approved' ? now : existing.approvedAt });
       if (result.conflict) {
         toast.error(`Designer was just changed to "${result.currentDesignerName}" by someone else. Reload and try again.`);
         return;
       }
-      toast.success(finalStatus === 'Approved' ? 'Updated & Approved! ✓' : 'Saved.');
+      toast.success(forceApprove ? 'Approved with missing documentation.' : finalStatus === 'Approved' ? 'Updated & Approved! ✓' : 'Saved.');
       if (finalStatus === 'Approved') { resetForm(); setMode('New'); }
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent, forceReview = false) => {
+    e.preventDefault();
+
+    // El SO es la clave del registro en Firebase: sin él no hay nada que guardar,
+    // ni siquiera para una aprobación administrativa.
+    if (!soNumber) { toast.error('SO Number is required.'); return; }
+
+    if (mode === 'New' && projects.some(p => p.id === soNumber && p.status !== 'Pending')) {
+      toast.error('A project with this SO Number has already been processed.'); return;
+    }
+
+    const basics = missingBasics();
+    const docs = missingDocs();
+
+    // "Save for Later Review" no aprueba nada, así que no dispara la confirmación.
+    if (!forceReview && canForceApprove && (basics.length > 0 || docs.length > 0)) {
+      setPendingApproval({ basics, docs });
+      return;
+    }
+
+    if (basics.length > 0) {
+      toast.error('Please fill in all basic project details.'); return;
+    }
+
+    await saveIntake({ forceReview });
   };
 
   const fmtDate = (ts: number | false) =>
@@ -477,15 +550,7 @@ export const Phase1Form: React.FC = () => {
           />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {([
-              { id: 'kcdFile',                   label: 'KCD file (complete & latest)' },
-              { id: 'jlContract',                label: 'JL Contract (complete & signed)' },
-              { id: 'quoteComplete',             label: 'Quote (complete by room)' },
-              { id: 'quoteBreakdown',            label: 'Quote breakdown' },
-              { id: 'creditCardForm',            label: 'Credit Card Form' },
-              { id: 'drawingsSigned',            label: 'Drawings (signed by client)' },
-              { id: 'finalMeasurementsApplies',  label: 'Does "Final Measurements" apply here?' },
-            ] as { id: keyof ChecklistState; label: string }[]).map(item => {
+            {CHECKLIST_ITEMS.map(item => {
               const checked = checklist[item.id] !== false;
               return (
                 <label key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', position: 'relative' }}>
@@ -697,6 +762,100 @@ export const Phase1Form: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Confirmación de aprobación administrativa — solo la ve el rol
+          administrative, en lugar del error que bloquea a los demás perfiles. */}
+      {pendingApproval && (
+        <div
+          onClick={() => setPendingApproval(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 60,
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: T.cardBg, border: `1px solid ${T.cardBorder}`,
+              borderRadius: T.radiusLg, padding: '26px 28px',
+              maxWidth: 460, width: '100%', boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <span style={{
+                width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                background: 'rgba(234,179,8,0.14)', border: '1px solid rgba(234,179,8,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <AlertTriangle size={17} color={T.yellow} />
+              </span>
+              <h3 style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: '1.05rem', color: T.textPrimary, margin: 0 }}>
+                Approve with missing information?
+              </h3>
+            </div>
+
+            <p style={{ color: T.textSecondary, fontSize: '0.86rem', lineHeight: 1.5, marginTop: 0, marginBottom: 16 }}>
+              This project does not meet the intake requirements. As an administrative user you can approve it anyway.
+            </p>
+
+            {pendingApproval.basics.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ color: T.textMuted, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                  Missing details
+                </div>
+                {pendingApproval.basics.map(label => (
+                  <div key={label} style={{ color: T.yellow, fontSize: '0.83rem', padding: '2px 0' }}>• {label}</div>
+                ))}
+              </div>
+            )}
+
+            {pendingApproval.docs.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ color: T.textMuted, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                  Missing documentation
+                </div>
+                {pendingApproval.docs.map(label => (
+                  <div key={label} style={{ color: T.yellow, fontSize: '0.83rem', padding: '2px 0' }}>• {label}</div>
+                ))}
+              </div>
+            )}
+
+            <div style={{
+              background: T.bgSurface, border: `1px solid ${T.cardBorder}`, borderRadius: T.radiusMd,
+              padding: '10px 14px', marginBottom: 20,
+            }}>
+              <p style={{ color: T.textMuted, fontSize: '0.78rem', lineHeight: 1.45, margin: 0 }}>
+                The project will be marked <strong style={{ color: T.textSecondary }}>Approved</strong>, but the score still
+                counts the delays, so the designer&apos;s KPI keeps reflecting the missing paperwork.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setPendingApproval(null)}
+                style={{
+                  flex: 1, padding: '11px 18px', borderRadius: T.radiusPill,
+                  border: `1px solid ${T.cardBorder}`, background: T.bgSurface,
+                  color: T.textSecondary, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => { setPendingApproval(null); await saveIntake({ forceApprove: true }); }}
+                style={{
+                  flex: 1, padding: '11px 18px', borderRadius: T.radiusPill,
+                  border: 'none', background: T.yellow,
+                  color: '#1a1000', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                Approve anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

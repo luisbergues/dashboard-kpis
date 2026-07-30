@@ -562,7 +562,7 @@ function App() {
         }
         return isDesigner ? null : <DesignQualityView data={mergedData} />;
       case 'designer-performance':
-        return <DesignerPerformanceApp data={mergedData} projectDesigners={projectDesigners} />;
+        return <DesignerPerformanceApp data={mergedData} projectDesigners={projectDesigners} userProfile={userProfile} />;
       case 'admin':
         return isSuperAdminRole(userProfile?.role) ? <AdminUsersView userProfile={userProfile} data={mergedData} /> : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
       default: return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
