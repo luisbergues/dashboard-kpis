@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchAndParseData, fetchAndParseProjectMaterials } from './utils/sheetParser'
+import { fetchAndParseMasterSchedule } from './utils/masterSchedule'
 import { getCachedData, setCachedData, isCacheFresh } from './utils/dbCache'
 import { checkDbSizeAndArchive } from './utils/archiveHelpers'
 import { archiveMissingCompletedProjects, archiveCurrentlyCompletedProjects, fetchArchivedCompletedProjects, purgeExpiredArchives } from './utils/completedProjectsArchive'
@@ -110,6 +111,16 @@ function App() {
       }
       return dataToReturn;
     },
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
+  });
+
+  // Fuente de Designer Performance: la pestaña "Master Schedule Mirror", aguas
+  // arriba del weekly KPI. Va en su propia query — no en el cache de
+  // dashboardData — para no invalidar las entradas de cache ya guardadas.
+  const { data: masterProjects } = useQuery({
+    queryKey: ['masterSchedule'],
+    queryFn: fetchAndParseMasterSchedule,
     refetchInterval: 30000,
     refetchIntervalInBackground: false,
   });
@@ -588,7 +599,7 @@ function App() {
         }
         return isDesigner ? null : <DesignQualityView data={mergedData} />;
       case 'designer-performance':
-        return <DesignerPerformanceApp data={mergedData} projectDesigners={projectDesigners} userProfile={userProfile} />;
+        return <DesignerPerformanceApp data={mergedData} projectDesigners={projectDesigners} userProfile={userProfile} masterProjects={masterProjects} />;
       case 'admin':
         return isSuperAdminRole(userProfile?.role) ? <AdminUsersView userProfile={userProfile} data={mergedData} /> : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
       default: return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;

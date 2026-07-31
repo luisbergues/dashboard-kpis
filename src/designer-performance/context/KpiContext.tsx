@@ -56,11 +56,14 @@ export const KpiProvider: React.FC<{
   externalData?: any;
   projectDesigners?: Record<string, string>;
   userProfile?: { role?: string } | null;
+  /** Proyectos activos de "Master Schedule Mirror": `{ so, name, spaces }`. */
+  masterProjects?: { so: string; name: string; spaces: number | null }[] | null;
 }> = ({
   children,
   externalData,
   projectDesigners = {},
   userProfile = null,
+  masterProjects = null,
 }) => {
   const [performanceProjects, setPerformanceProjects] = useState<Record<string, Partial<Project>>>({});
   const [projects, setProjects] = useState<Project[]>([]);
@@ -100,11 +103,16 @@ export const KpiProvider: React.FC<{
     return () => unsub();
   }, []);
 
-  // 3. Merge externalData + projectDesigners + performanceData
+  // 3. Merge fuente de proyectos + projectDesigners + performanceData
   useEffect(() => {
-    if (!externalData?.priorityAnalysis) return;
+    // La lista de proyectos sale de "Master Schedule Mirror" (aguas arriba del
+    // weekly KPI), para que el intake de Fase 1 se evalúe en su etapa real.
+    // Si esa lectura falla o todavía no llegó, se cae a priorityAnalysis: es
+    // preferible mostrar los proyectos que ya venían que dejar el módulo vacío.
+    const source = masterProjects?.length ? masterProjects : externalData?.priorityAnalysis;
+    if (!source?.length) return;
 
-    const merged: Project[] = externalData.priorityAnalysis.map((p: any) => {
+    const merged: Project[] = source.map((p: any) => {
       const so = String(p.so);
       const baseDesignerName = projectDesigners[so] || 'Unassigned';
       const perfData = performanceProjects[so] || {};
@@ -150,7 +158,7 @@ export const KpiProvider: React.FC<{
     });
 
     setProjects(merged);
-  }, [externalData, projectDesigners, performanceProjects]);
+  }, [masterProjects, externalData, projectDesigners, performanceProjects]);
 
   // designerNames: canonical list + any extra assigned via projectDesigners
   const designerNames: string[] = React.useMemo(() => {
