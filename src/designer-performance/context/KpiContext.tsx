@@ -5,6 +5,7 @@ import { calculateDesignerStats } from '../utils/scoreCalculator';
 import { db, ref, set, get, onValue } from '../../utils/firebase';
 import { shortProjectName } from '../../utils/projectName';
 import { canForceApproveIntake } from '../../utils/intakePermissions';
+import { deriveComplexity, complexityFromSheet } from '../utils/complexity';
 
 // Result of a project_designers/{so} write attempt. `project_designers` is
 // also written directly from MyProjectsView (the main app's "Designer in
@@ -108,15 +109,11 @@ export const KpiProvider: React.FC<{
       const baseDesignerName = projectDesigners[so] || 'Unassigned';
       const perfData = performanceProjects[so] || {};
 
-      // Auto-derive complexity from project materials data
+      // La complejidad se re-deriva de la planilla en cada lectura: si el
+      // proyecto se dio de alta antes de que existieran sus materiales, se
+      // completa solo en cuanto aparecen. Ver deriveComplexity.
       const matReq = externalData.materialRequirements?.find((m: any) => String(m.so) === so);
-      const autoComplexity: Project['complexity'] = {
-        colorsDefined:     perfData.complexity?.colorsDefined     ?? false,
-        thermofoilDoors:   perfData.complexity?.thermofoilDoors   ?? (matReq?.thermofoil === 'Yes'),
-        customBoreHoles:   perfData.complexity?.customBoreHoles   ?? (matReq?.noHoles === 'Yes'),
-        routingRequired:   perfData.complexity?.routingRequired   ?? (matReq?.dovetail === 'Yes'),
-        customPanels:      perfData.complexity?.customPanels      ?? (matReq?.element === 'Yes'),
-      };
+      const autoComplexity = deriveComplexity(perfData.complexity, matReq);
 
       if (perfData.createdAt === undefined && sessionCreatedAt.current[so] === undefined) {
         sessionCreatedAt.current[so] = Date.now();
@@ -175,16 +172,8 @@ export const KpiProvider: React.FC<{
   };
 
   // Helper to get the auto-derived complexity for any SO (used in Phase1Form pre-fill)
-  const getProjectComplexity = (soNumber: string): Partial<Project['complexity']> => {
-    const matReq = externalData?.materialRequirements?.find((m: any) => String(m.so) === soNumber);
-    if (!matReq) return {};
-    return {
-      thermofoilDoors: matReq.thermofoil === 'Yes',
-      customBoreHoles: matReq.noHoles    === 'Yes',
-      routingRequired: matReq.dovetail   === 'Yes',
-      customPanels:    matReq.element    === 'Yes',
-    };
-  };
+  const getProjectComplexity = (soNumber: string): Partial<Project['complexity']> =>
+    complexityFromSheet(externalData?.materialRequirements?.find((m: any) => String(m.so) === soNumber));
 
   // Re-reads project_designers/{so} right before writing and refuses to
   // overwrite it if it changed since this form last saw it (`expectedValue`,
