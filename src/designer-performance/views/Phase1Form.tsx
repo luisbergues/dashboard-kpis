@@ -72,6 +72,10 @@ const selectStyle: React.CSSProperties = {
    pill: the OS/browser calendar can't be restyled (rounded corners, gray
    background, blue borders) since it isn't part of the page DOM, so this is
    a small custom popover calendar matching the pill's look instead. */
+// Alto aproximado del popover (cabecera + 6 filas de dias). Solo se usa para
+// decidir si abre hacia arriba o hacia abajo, no para dibujarlo.
+const POPOVER_HEIGHT = 300;
+
 export const MiniDatePicker: React.FC<{
   value: number; // timestamp of the currently selected date
   onChange: (ts: number) => void;
@@ -79,6 +83,9 @@ export const MiniDatePicker: React.FC<{
 }> = ({ value, onChange, children }) => {
   const [open, setOpen] = useState(false);
   const [viewDate, setViewDate] = useState(() => new Date(value));
+  // Hacia arriba cuando abajo no entra — pasa con los ultimos items del
+  // checklist, que quedaban con el calendario fuera de la pantalla.
+  const [dropUp, setDropUp] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -97,7 +104,13 @@ export const MiniDatePicker: React.FC<{
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!open) setViewDate(new Date(value));
+    if (!open) {
+      setViewDate(new Date(value));
+      const r = wrapperRef.current?.getBoundingClientRect();
+      // Solo se invierte si arriba SI entra: si no entra en ningun lado,
+      // abrir hacia abajo es lo menos malo (la pagina scrollea).
+      setDropUp(!!r && r.bottom + POPOVER_HEIGHT > window.innerHeight && r.top > POPOVER_HEIGHT);
+    }
     setOpen(o => !o);
   };
 
@@ -125,8 +138,18 @@ export const MiniDatePicker: React.FC<{
           // <label>, asi que cualquier click suyo (flechas de mes, dias) tiene
           // que quedar aislado o destilda el item.
           onClick={e => { e.preventDefault(); e.stopPropagation(); }}
+          role="dialog"
+          aria-label="Correct the recorded date"
           style={{
-            position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 20,
+            position: 'absolute',
+            // Anclado a la derecha: la pildora vive pegada al borde derecho de
+            // la tarjeta, asi que abrir hacia la izquierda es lo unico que
+            // entra sin desbordar la pagina.
+            right: 0,
+            ...(dropUp ? { bottom: 'calc(100% + 6px)' } : { top: 'calc(100% + 6px)' }),
+            // Por encima del chat flotante (.project-chatbot-widget, z-index
+            // 1000), que si no tapa el calendario.
+            zIndex: 1200,
             background: T.bgSurface, border: `1px solid ${T.blue}`, borderRadius: T.radiusMd,
             padding: 14, width: 240, boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
           }}>
@@ -231,34 +254,34 @@ export const Phase1Form: React.FC = () => {
   const effectiveCreatedAt = existingProject?.createdAt || Date.now();
   const livePreview = soNumber ? calculatePhase1ScoreAndStatus(checklist, effectiveCreatedAt) : null;
 
-  /* When selecting an active project in New mode, auto-fill name + designer */
+  /* When selecting an active project in New mode, load THAT project's data.
+     Todos los campos se reescriben siempre, incluso cuando el proyecto elegido
+     no aporta valor: antes solo se pisaban los que tenian dato, asi que al
+     cambiar de seleccion quedaban puestos el checklist tildado, la complejidad
+     y el diseñador del proyecto anterior, y se guardaban en el nuevo SO. */
   const handleNewProjectSelect = (selectedSo: string) => {
     setSoNumber(selectedSo);
     if (!selectedSo) { resetForm(); return; }
     const proj = projects.find(p => p.id === selectedSo);
-    if (proj) {
-      setProjectName(proj.projectName);
-      // Pull the designer from My Projects/Pipeline (the source of truth), not
-      // from whatever may already be stored on the Designer Perf. project record.
-      const assignedDesigner = projectDesigners[selectedSo];
-      if (assignedDesigner) setDesignerName(assignedDesigner);
-      else if (proj.designerName && proj.designerName !== 'Unassigned') setDesignerName(proj.designerName);
-      // Removed auto-fill for totalRooms per user request so it must be entered manually
-      setTotalRooms('');
-    }
-    // auto-fill complexity from project elements
+
+    setProjectName(proj?.projectName ?? '');
+    // Pull the designer from My Projects/Pipeline (the source of truth), not
+    // from whatever may already be stored on the Designer Perf. project record.
+    const assignedDesigner = projectDesigners[selectedSo];
+    const recordDesigner = proj && proj.designerName !== 'Unassigned' ? proj.designerName : '';
+    setDesignerName(assignedDesigner || recordDesigner || '');
+    // Removed auto-fill for totalRooms per user request so it must be entered manually
+    setTotalRooms('');
+    setChecklist({ ...emptyChecklist, ...(proj?.checklist ?? {}) });
+    // proj.complexity ya viene derivada de la planilla (ver deriveComplexity),
+    // asi que alcanza con copiarla tal cual.
+    setComplexity({ ...emptyComplexity, ...(proj?.complexity ?? {}) });
+
+    // El badge "N synced" cuenta solo lo que aporto la planilla.
     const auto = getProjectComplexity(selectedSo);
-    if (Object.keys(auto).length > 0) {
-      const filled = new Set<string>();
-      setComplexity(prev => {
-        const updated = { ...prev };
-        (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(k => {
-          if (auto[k] !== undefined) { updated[k] = auto[k] as boolean; if (auto[k]) filled.add(k); }
-        });
-        return updated;
-      });
-      setAutoFilledFields(filled);
-    }
+    const filled = new Set<string>();
+    (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(k => { if (auto[k]) filled.add(k); });
+    setAutoFilledFields(filled);
   };
 
   /* auto-fill complexity from project elements when SO is typed (fallback for manual entry) */

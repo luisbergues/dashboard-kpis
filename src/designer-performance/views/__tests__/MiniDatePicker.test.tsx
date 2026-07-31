@@ -4,7 +4,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { MiniDatePicker } from '../Phase1Form';
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 // 3-jul-2026 14:30 — la hora importa: al elegir otro dia debe preservarse.
 const VALUE = new Date(2026, 6, 3, 14, 30, 0).getTime();
@@ -96,5 +96,66 @@ describe('MiniDatePicker dentro de un <label>', () => {
     expect(screen.queryByText('July 2026')).not.toBeNull();
     fireEvent.mouseDown(document.body);
     expect(screen.queryByText('July 2026')).toBeNull();
+  });
+});
+
+/* Verificado en el navegador: el calendario se abria hacia la derecha desde una
+   pildora ya pegada al borde derecho de la tarjeta (scroll horizontal de toda
+   la pagina) y por debajo del chat flotante, que lo tapaba. */
+describe('posicion del calendario', () => {
+  // jsdom deja innerHeight en 768 y devuelve todo en cero, asi que la posicion
+  // del disparador se simula explicitamente.
+  const stubTriggerAt = (top: number) => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      top, bottom: top + 22, left: 0, right: 0, width: 0, height: 22, x: 0, y: top,
+      toJSON: () => ({}),
+    } as DOMRect);
+  };
+
+  // Se busca por selector y no con getByRole: la query por rol pasa por
+  // getComputedStyle, que revienta en esta version de jsdom.
+  const openPopover = () => {
+    renderInLabel();
+    fireEvent.click(screen.getByTestId('pill'));
+    const el = document.querySelector('[role="dialog"]') as HTMLElement | null;
+    expect(el).not.toBeNull();
+    return el!;
+  };
+
+  it('se ancla a la derecha para no desbordar la tarjeta', () => {
+    const popover = openPopover();
+    expect(popover.style.right).toBe('0px');
+    expect(popover.style.left).toBe('');
+  });
+
+  it('queda por encima del chat flotante (z-index 1000)', () => {
+    const popover = openPopover();
+    expect(Number(popover.style.zIndex)).toBeGreaterThan(1000);
+  });
+
+  it('abre hacia abajo cuando hay lugar', () => {
+    stubTriggerAt(100); // 122 + 300 < 768
+    const popover = openPopover();
+    expect(popover.style.top).toBe('calc(100% + 6px)');
+    expect(popover.style.bottom).toBe('');
+  });
+
+  it('abre hacia arriba cuando abajo no entra', () => {
+    stubTriggerAt(700); // 722 + 300 > 768, y 700 > 300
+    const popover = openPopover();
+    expect(popover.style.bottom).toBe('calc(100% + 6px)');
+    expect(popover.style.top).toBe('');
+  });
+
+  it('abre hacia abajo si no entra en ningun lado', () => {
+    // Viewport bajo: no entra abajo (222+300 > 400) y arriba tampoco (200 < 300).
+    const realHeight = window.innerHeight;
+    window.innerHeight = 400;
+    try {
+      stubTriggerAt(200);
+      expect(openPopover().style.top).toBe('calc(100% + 6px)');
+    } finally {
+      window.innerHeight = realHeight;
+    }
   });
 });
