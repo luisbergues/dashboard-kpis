@@ -981,7 +981,9 @@ export const Phase1Form: React.FC = () => {
                 name="outcomeReason"
                 value={outcomeReason}
                 onChange={e => setOutcomeReason(e.target.value)}
-                rows={3}
+                // La nota redactada trae saludo, la lista de documentos y el
+                // cierre: con 3 filas quedaba scrolleando desde el primer uso.
+                rows={12}
                 placeholder={outcome === '' ? 'Explain what happened or what is missing…' : REASON_PLACEHOLDER[outcome]}
                 style={{ ...inputStyle, borderRadius: T.radiusMd, resize: 'vertical', lineHeight: 1.5 }}
               />
@@ -1001,15 +1003,17 @@ export const Phase1Form: React.FC = () => {
                   onClick={() => void draftNote(outcome, outcomeDeadline, true)}
                   disabled={draftingNote}
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
-                    padding: '6px 13px', borderRadius: T.radiusPill,
+                    // Mismas medidas que la pildora de "Pick a deadline…" para
+                    // que los dos controles de la tarjeta se vean iguales.
+                    display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0,
+                    padding: '8px 16px', borderRadius: T.radiusPill,
                     border: `1px solid ${T.cardBorder}`, background: T.bgSurface,
                     color: draftingNote ? T.textMuted : T.textSecondary,
-                    fontSize: '0.74rem', fontWeight: 600,
+                    fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap',
                     cursor: draftingNote ? 'default' : 'pointer',
                   }}
                 >
-                  <Sparkles size={12} />
+                  <Sparkles size={13} />
                   {draftingNote ? 'Drafting…' : 'Draft again'}
                 </button>
               </div>
