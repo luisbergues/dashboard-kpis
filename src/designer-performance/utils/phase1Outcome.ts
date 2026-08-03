@@ -18,12 +18,19 @@ export const OUTCOME_DEFINITION: Record<Phase1Outcome, string> = {
     'The project is sold, but it is currently on hold because vital files (such as the contract or the .job KCD file) are missing. The project is incomplete.',
 };
 
-// Complete y Deferred se explican solos; los otros dos piden por escrito que
-// se dice y para cuando.
+// Los tres resultados llevan nota escrita: el diseñador tiene que poder leer que
+// paso o que falto. En Deficient y Deferred es obligatoria; en Complete es
+// opcional, para dejar un comentario de cierre.
 export const REASON_LABEL: Record<Phase1Outcome, string> = {
-  Complete: '',
+  Complete: 'Note for the designer (optional)',
   Deficient: 'Written notice — what has to be corrected',
   Deferred: 'Reason — what is missing',
+};
+
+export const REASON_PLACEHOLDER: Record<Phase1Outcome, string> = {
+  Complete: 'e.g., Approved as is. The revised elevation arrived on time — thanks.',
+  Deficient: 'e.g., Wall dimensions on page 3 do not match the KCD file.',
+  Deferred: 'e.g., Signed contract and .job KCD file still missing.',
 };
 
 export const DEADLINE_LABEL: Record<Phase1Outcome, string> = {

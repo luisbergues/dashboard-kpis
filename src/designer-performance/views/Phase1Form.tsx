@@ -7,7 +7,7 @@ import { Link2, FileText, CheckSquare, Zap, RefreshCw, Send, AlertTriangle, Clip
 import { T } from '../utils/theme';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import {
-  OUTCOMES, OUTCOME_DEFINITION, REASON_LABEL, DEADLINE_LABEL,
+  OUTCOMES, OUTCOME_DEFINITION, REASON_LABEL, REASON_PLACEHOLDER, DEADLINE_LABEL,
   requiresReasonAndDeadline, outcomeToStatus, statusToOutcome, missingOutcomeFields,
 } from '../utils/phase1Outcome';
 
@@ -401,11 +401,14 @@ export const Phase1Form: React.FC = () => {
      documento del checklist entregado tarde. */
   const buildOutcomeRecord = (result: Phase1Outcome, now: number): Phase1OutcomeRecord => {
     if (result === 'Complete') {
-      const hadDeadline = savedOutcome?.deadline;
+      const hadDeadline = savedOutcome?.deadline ?? 0;
       return {
         result: 'Complete',
-        reason: hadDeadline ? savedOutcome!.reason : '',
-        deadline: hadDeadline || 0,
+        // La nota escrita se guarda tambien en Complete. Al subsanar un
+        // Deficient el campo ya viene cargado con el aviso original, asi que
+        // se conserva salvo que el ingeniero lo reescriba a proposito.
+        reason: outcomeReason.trim(),
+        deadline: hadDeadline,
         setAt: savedOutcome?.setAt ?? now,
         // Si ya estaba sellado se respeta la fecha original de subsanacion.
         resolvedAt: hadDeadline ? (savedOutcome!.resolvedAt ?? now) : now,
@@ -895,22 +898,25 @@ export const Phase1Form: React.FC = () => {
             })}
           </div>
 
-          {/* Deficient y Deferred no se pueden dejar sin explicar ni sin fecha. */}
-          {outcome !== '' && requiresReasonAndDeadline(outcome) && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 16 }}>
-              <Field label={REASON_LABEL[outcome]}>
-                <textarea
-                  name="outcomeReason"
-                  value={outcomeReason}
-                  onChange={e => setOutcomeReason(e.target.value)}
-                  rows={3}
-                  placeholder={outcome === 'Deficient'
-                    ? 'e.g., Wall dimensions on page 3 do not match the KCD file.'
-                    : 'e.g., Signed contract and .job KCD file still missing.'}
-                  style={{ ...inputStyle, borderRadius: T.radiusMd, resize: 'vertical', lineHeight: 1.5 }}
-                />
-              </Field>
+          {/* La nota va para los tres resultados: es lo que el diseñador lee
+              para entender por que su proyecto quedo con ese status. En
+              Deficient y Deferred ademas es obligatoria. */}
+          <div style={{ marginTop: 16 }}>
+            <Field label={outcome === '' ? 'Note for the designer' : REASON_LABEL[outcome]}>
+              <textarea
+                name="outcomeReason"
+                value={outcomeReason}
+                onChange={e => setOutcomeReason(e.target.value)}
+                rows={3}
+                placeholder={outcome === '' ? 'Explain what happened or what is missing…' : REASON_PLACEHOLDER[outcome]}
+                style={{ ...inputStyle, borderRadius: T.radiusMd, resize: 'vertical', lineHeight: 1.5 }}
+              />
+            </Field>
+          </div>
 
+          {/* El plazo solo tiene sentido cuando hay algo que subsanar. */}
+          {outcome !== '' && requiresReasonAndDeadline(outcome) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 14 }}>
               <Field label={DEADLINE_LABEL[outcome]}>
                 <div>
                   <MiniDatePicker

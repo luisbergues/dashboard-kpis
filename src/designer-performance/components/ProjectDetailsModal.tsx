@@ -182,9 +182,12 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
                 gap: 10, flexWrap: 'wrap', marginBottom: 8,
               }}>
                 <span style={{ color: statusColor, fontSize: '0.8rem', fontWeight: 700 }}>
-                  {project.outcome.result === 'Complete'
-                    ? 'Resolved — was returned before being marked Complete'
-                    : project.outcome.result === 'Deficient' ? 'Written notice' : 'Deferral reason'}
+                  {project.outcome.result === 'Deficient' ? 'Written notice'
+                    : project.outcome.result === 'Deferred' ? 'Deferral reason'
+                    // Un Complete con plazo estuvo devuelto antes de aprobarse;
+                    // sin plazo es simplemente una nota de cierre.
+                    : project.outcome.deadline ? 'Resolved — was returned before being marked Complete'
+                    : 'Note for the designer'}
                 </span>
                 {!!project.outcome.deadline && (
                   <span style={{

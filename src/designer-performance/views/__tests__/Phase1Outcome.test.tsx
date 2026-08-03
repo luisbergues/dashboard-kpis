@@ -104,6 +104,21 @@ const savedArg = () => updateProject.mock.calls[0][0] as unknown as {
 beforeEach(() => { updateProject.mockClear(); toastError.mockClear(); });
 afterEach(cleanup);
 
+describe('la nota escrita esta siempre disponible', () => {
+  it('se ve aun sin haber elegido resultado', () => {
+    const c = renderNew();
+    expect(c.querySelector('textarea[name="outcomeReason"]')).not.toBeNull();
+  });
+
+  it('lo escrito sobrevive al cambiar de resultado', () => {
+    const c = renderNew();
+    typeReason(c, 'falta la firma del cliente');
+    chooseOutcome(c, 'Deferred');
+    expect((c.querySelector('textarea[name="outcomeReason"]') as HTMLTextAreaElement).value)
+      .toBe('falta la firma del cliente');
+  });
+});
+
 describe('elegir un resultado es obligatorio', () => {
   it('no guarda si no se eligio ninguno', () => {
     renderNew();
@@ -196,11 +211,36 @@ describe('Deferred exige razon escrita y plazo', () => {
 });
 
 describe('Complete', () => {
-  it('no pide motivo ni plazo', () => {
+  it('no pide plazo', () => {
     const c = renderNew();
     chooseOutcome(c, 'Complete');
-    expect(c.querySelector('textarea[name="outcomeReason"]')).toBeNull();
     expect(screen.queryByText(/Pick a deadline/)).toBeNull();
+  });
+
+  it('igual ofrece la nota, para que el diseñador sepa como cerro', () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Complete');
+    expect(c.querySelector('textarea[name="outcomeReason"]')).not.toBeNull();
+  });
+
+  it('guarda la nota escrita en vez de descartarla', async () => {
+    const c = renderNew();
+    checkAllDocs();
+    chooseOutcome(c, 'Complete');
+    typeReason(c, 'aprobado tal cual, la elevacion revisada llego a tiempo');
+    submit();
+
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    expect(savedArg().outcome.reason).toBe('aprobado tal cual, la elevacion revisada llego a tiempo');
+  });
+
+  it('la nota es opcional: sin escribir nada igual se aprueba', async () => {
+    const c = renderNew();
+    checkAllDocs();
+    chooseOutcome(c, 'Complete');
+    submit();
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    expect(savedArg().status).toBe('Approved');
   });
 
   it('se bloquea si falta documentacion', () => {
