@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useKpi } from '../context/KpiContext';
 import { ProjectDetailsModal } from '../components/ProjectDetailsModal';
 import type { Project, ProjectStatus } from '../types';
@@ -7,6 +7,7 @@ import { useTheme } from '../../utils/ThemeContext';
 import { useLanguage } from '../../utils/LanguageContext';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import { effectivePhase1Score, isOverdue, overdueBusinessDays, overduePenalty } from '../utils/phase1Outcome';
+import { getSharedProjectSo } from '../../utils/projectDeepLink';
 
 const STATUS_STYLES: Record<string, { bg: string; color: string; border: string; dot: string }> = {
   Pending:    { bg: 'rgba(100,116,139,0.12)', color: '#94a3b8', border: 'rgba(100,116,139,0.25)', dot: '#64748b' },
@@ -69,6 +70,20 @@ export const ProjectsView: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<ProjectStatus | 'All'>('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  /* Link compartido con el disenador (?so=12705): abre la ficha de ese proyecto
+     apenas termina de cargar la lista. Solo una vez — si la cierra, no se le
+     vuelve a abrir sola. */
+  const deepLinkOpened = useRef(false);
+  useEffect(() => {
+    if (deepLinkOpened.current) return;
+    const so = getSharedProjectSo();
+    if (!so) return;
+    const target = projects.find(p => p.id === so);
+    if (!target) return;
+    deepLinkOpened.current = true;
+    setSelectedProject(target);
+  }, [projects]);
 
   const filtered = useMemo(() => {
     return projects.filter(p => {

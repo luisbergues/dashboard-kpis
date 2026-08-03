@@ -3,7 +3,9 @@ import { useKpi } from '../context/KpiContext';
 import { calculatePhase1ScoreAndStatus, calculateTechnicalPoints } from '../utils/scoreCalculator';
 import toast from 'react-hot-toast';
 import type { Project, ProjectStatus, Phase1Outcome, Phase1OutcomeRecord } from '../types';
-import { Link2, FileText, CheckSquare, Zap, RefreshCw, Send, AlertTriangle, ClipboardCheck } from 'lucide-react';
+import { Link2, FileText, CheckSquare, Zap, RefreshCw, Send, AlertTriangle, ClipboardCheck, Sparkles, Link as LinkIcon } from 'lucide-react';
+import { generateReviewNote } from '../utils/reviewNoteApi';
+import { buildSharedProjectLink } from '../../utils/projectDeepLink';
 import { T } from '../utils/theme';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import {
@@ -250,6 +252,17 @@ export const Phase1Form: React.FC = () => {
   const [outcomeDeadline, setOutcomeDeadline] = useState<number | null>(null);
   // El registro guardado, para conservar el plazo original al subsanar.
   const [savedOutcome, setSavedOutcome] = useState<Phase1OutcomeRecord | undefined>(undefined);
+  const [draftingNote, setDraftingNote] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  // Ultimo borrador automatico. Sirve para saber si el ingeniero toco la nota:
+  // si la edito, no se la volvemos a pisar al cambiar el resultado o el plazo.
+  const lastAutoDraft = useRef('');
+  // Identifica cada borrador en vuelo, para descartar respuestas viejas.
+  const draftSeq = useRef(0);
+  // Espejo de outcomeReason legible desde un closure async, que si no ve el
+  // valor congelado del render en que arrancó.
+  const outcomeReasonRef = useRef('');
+  useEffect(() => { outcomeReasonRef.current = outcomeReason; }, [outcomeReason]);
   // Solo para administrative: lo que falta, mientras se confirma aprobar igual.
   const [pendingApproval, setPendingApproval] = useState<{ basics: string[]; docs: string[] } | null>(null);
 
@@ -346,6 +359,8 @@ export const Phase1Form: React.FC = () => {
   const loadOutcomeFrom = (proj?: Project) => {
     const rec = proj?.outcome;
     setSavedOutcome(rec);
+    // Una nota ya guardada cuenta como escrita a mano: no se redacta encima.
+    lastAutoDraft.current = '';
     setOutcome(rec?.result ?? (proj ? statusToOutcome(proj.status) ?? '' : ''));
     setOutcomeReason(rec?.reason ?? '');
     setOutcomeDeadline(rec?.deadline || null);
@@ -385,6 +400,65 @@ export const Phase1Form: React.FC = () => {
       missing.push('Final Measurements delivered');
     }
     return missing;
+  };
+
+  /* Redacta la nota que va a leer el diseñador. El contenido sale del checklist
+     (reviewNoteDraft); Gemini solo lo reescribe, y si no está disponible se usa
+     el texto determinístico — ver reviewNoteApi. */
+  const draftNote = async (chosen: Phase1Outcome, deadline: number | null, force = false) => {
+    const seq = ++draftSeq.current;
+    const before = outcomeReasonRef.current;
+    setDraftingNote(true);
+    try {
+      const text = await generateReviewNote({
+        outcome: chosen,
+        soNumber,
+        projectName,
+        designerName,
+        missingDocs: missingDocs(),
+        deadline,
+      });
+      // Empezó otro borrador mientras este estaba en vuelo: gana el último.
+      if (seq !== draftSeq.current) return;
+      // El ingeniero escribió mientras el modelo redactaba: gana lo suyo. Sin
+      // esto, tipear apenas elegido el resultado perdía el texto sin aviso.
+      if (!force && outcomeReasonRef.current !== before) return;
+      lastAutoDraft.current = text;
+      setOutcomeReason(text);
+    } finally {
+      if (seq === draftSeq.current) setDraftingNote(false);
+    }
+  };
+
+  // Solo se redacta sola si no hay nada escrito a mano: lo que el ingeniero
+  // tipeó tiene prioridad sobre cualquier borrador automático.
+  const noteIsUntouched = () => !outcomeReason.trim() || outcomeReason === lastAutoDraft.current;
+
+  const handleOutcomeSelect = (chosen: Phase1Outcome) => {
+    setOutcome(chosen);
+    if (noteIsUntouched()) void draftNote(chosen, outcomeDeadline);
+  };
+
+  /* Copia el link al portapapeles. Con clipboard bloqueado (http, permisos) se
+     muestra igual la URL para poder copiarla a mano en vez de fallar en
+     silencio. */
+  const copyDesignerLink = async () => {
+    const url = buildSharedProjectLink(soNumber);
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      toast(url, { duration: 8000 });
+    }
+  };
+
+  const handleDeadlineSelect = (ts: number) => {
+    setOutcomeDeadline(ts);
+    // El plazo se elige después del resultado, así que el primer borrador salió
+    // sin fecha: se rehace para que la nota la incluya.
+    if (outcome !== '' && noteIsUntouched()) void draftNote(outcome, ts);
   };
 
   const outcomeMessage = (status: ProjectStatus) =>
@@ -874,7 +948,7 @@ export const Phase1Form: React.FC = () => {
                     name="phase1Outcome"
                     value={o}
                     checked={selected}
-                    onChange={() => setOutcome(o)}
+                    onChange={() => handleOutcomeSelect(o)}
                     style={{ position: 'absolute', opacity: 0, width: 18, height: 18, margin: 0, cursor: 'pointer' }}
                   />
                   <div aria-hidden="true" style={{
@@ -912,6 +986,55 @@ export const Phase1Form: React.FC = () => {
                 style={{ ...inputStyle, borderRadius: T.radiusMd, resize: 'vertical', lineHeight: 1.5 }}
               />
             </Field>
+
+            {outcome !== '' && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                gap: 10, marginTop: 8, flexWrap: 'wrap',
+              }}>
+                <span style={{ fontSize: '0.71rem', color: T.textMuted, lineHeight: 1.4 }}>
+                  Drafted automatically in English from the checklist. Edit it freely — or redraft
+                  after changing the checklist.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void draftNote(outcome, outcomeDeadline, true)}
+                  disabled={draftingNote}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
+                    padding: '6px 13px', borderRadius: T.radiusPill,
+                    border: `1px solid ${T.cardBorder}`, background: T.bgSurface,
+                    color: draftingNote ? T.textMuted : T.textSecondary,
+                    fontSize: '0.74rem', fontWeight: 600,
+                    cursor: draftingNote ? 'default' : 'pointer',
+                  }}
+                >
+                  <Sparkles size={12} />
+                  {draftingNote ? 'Drafting…' : 'Draft again'}
+                </button>
+              </div>
+            )}
+
+            {/* El disenador abre este link y ve el status, la nota y que
+                documentos le faltan. Pide iniciar sesion: la ficha lleva
+                nombre de cliente y notas internas. */}
+            {!!soNumber && (
+              <button
+                type="button"
+                onClick={copyDesignerLink}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 12,
+                  padding: '8px 15px', borderRadius: T.radiusPill,
+                  border: `1px solid ${linkCopied ? 'rgba(16,185,129,0.35)' : T.cardBorder}`,
+                  background: linkCopied ? 'rgba(16,185,129,0.1)' : T.bgSurface,
+                  color: linkCopied ? T.green : T.textSecondary,
+                  fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                <LinkIcon size={12} />
+                {linkCopied ? 'Link copied' : 'Copy status link for the designer'}
+              </button>
+            )}
           </div>
 
           {/* El plazo solo tiene sentido cuando hay algo que subsanar. */}
@@ -921,7 +1044,7 @@ export const Phase1Form: React.FC = () => {
                 <div>
                   <MiniDatePicker
                     value={outcomeDeadline ?? Date.now()}
-                    onChange={ts => setOutcomeDeadline(ts)}
+                    onChange={handleDeadlineSelect}
                   >
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: 7,

@@ -86,6 +86,14 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
   const statusColor = getStatusColor(project.status);
   const overdue = isOverdue(project.outcome);
 
+  // Items del checklist sin tildar. Es lo que el disenador abre el link a ver.
+  const missingDocs = [
+    ...checklistItems.filter(i => project.checklist[i.key] === false).map(i => i.label),
+    ...(project.checklist.finalMeasurementsApplies !== false
+      && project.checklist.finalMeasurementsDelivered === false
+        ? [t('designerPerf.modal.finalMeasurements')] : []),
+  ];
+
   const STATUS_LABEL_KEYS: Record<string, string> = {
     All: 'statusAll', Pending: 'statusPending', 'To review': 'statusToReview',
     Approved: 'statusApproved', Rejected: 'statusRejected', Completed: 'statusCompleted',
@@ -203,6 +211,21 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
               <p style={{ color: T.textSecondary, fontSize: '0.84rem', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-wrap' }}>
                 {project.outcome.reason}
               </p>
+
+              {/* Lo accionable, aparte de la prosa: que hay que mandar. */}
+              {missingDocs.length > 0 && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.cardBorder}` }}>
+                  <div style={{
+                    color: T.textMuted, fontSize: '0.68rem', fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6,
+                  }}>
+                    Missing documents
+                  </div>
+                  {missingDocs.map(label => (
+                    <div key={label} style={{ color: T.red, fontSize: '0.82rem', padding: '2px 0' }}>• {label}</div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

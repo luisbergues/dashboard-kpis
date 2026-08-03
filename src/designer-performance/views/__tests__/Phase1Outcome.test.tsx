@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor, act } from '@testing-library/react';
 import type { Phase1OutcomeRecord } from '../../types';
 
 // La revision manual (Complete / Deficient / Deferred) es lo que aprueba la
@@ -56,6 +56,14 @@ vi.mock('react-hot-toast', () => ({
   default: { error: (...a: unknown[]) => toastError(...a), success: vi.fn() },
 }));
 
+// La redaccion automatica se prueba aparte (reviewNoteApi.test.ts); aca solo
+// interesa que rellene la nota, asi que devuelve un texto fijo.
+const AUTO_DRAFT = 'Auto-drafted note for the designer.';
+const generateReviewNote = vi.fn(async () => AUTO_DRAFT);
+vi.mock('../../utils/reviewNoteApi', () => ({
+  generateReviewNote: (...a: unknown[]) => generateReviewNote(...(a as [])),
+}));
+
 import { Phase1Form } from '../Phase1Form';
 
 const REQUIRED_DOCS = [
@@ -101,8 +109,84 @@ const savedArg = () => updateProject.mock.calls[0][0] as unknown as {
   status: string; outcome: Phase1OutcomeRecord; phase1Score: number;
 };
 
-beforeEach(() => { updateProject.mockClear(); toastError.mockClear(); });
+beforeEach(() => { updateProject.mockClear(); toastError.mockClear(); generateReviewNote.mockClear(); });
 afterEach(cleanup);
+
+describe('redaccion automatica de la nota', () => {
+  const reasonValue = (c: HTMLElement) =>
+    (c.querySelector('textarea[name="outcomeReason"]') as HTMLTextAreaElement).value;
+
+  it('al elegir un resultado redacta la nota sola', async () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    await waitFor(() => expect(reasonValue(c)).toBe(AUTO_DRAFT));
+  });
+
+  it('le pasa el resultado y los documentos faltantes del checklist', async () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    await waitFor(() => expect(generateReviewNote).toHaveBeenCalled());
+    const arg = generateReviewNote.mock.calls[0][0] as unknown as {
+      outcome: string; missingDocs: string[]; soNumber: string;
+    };
+    expect(arg.outcome).toBe('Deficient');
+    expect(arg.soNumber).toBe(PENDING.id);
+    // Nada tildado todavia: tienen que ir los 6 obligatorios.
+    expect(arg.missingDocs).toEqual(expect.arrayContaining(REQUIRED_DOCS));
+  });
+
+  it('solo lista lo que realmente falta', async () => {
+    const c = renderNew();
+    checkAllDocs();
+    chooseOutcome(c, 'Complete');
+    await waitFor(() => expect(generateReviewNote).toHaveBeenCalled());
+    const arg = generateReviewNote.mock.calls[0][0] as unknown as { missingDocs: string[] };
+    expect(arg.missingDocs).toEqual([]);
+  });
+
+  it('NO pisa lo que el ingeniero ya habia escrito', async () => {
+    const c = renderNew();
+    typeReason(c, 'texto propio del ingeniero');
+    chooseOutcome(c, 'Deferred');
+    await waitFor(() => expect(generateReviewNote).not.toHaveBeenCalled());
+    expect(reasonValue(c)).toBe('texto propio del ingeniero');
+  });
+
+  it('tampoco pisa lo escrito mientras el modelo redactaba', async () => {
+    let resolver: (v: string) => void = () => {};
+    generateReviewNote.mockImplementationOnce(() => new Promise(r => { resolver = r; }));
+
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');        // arranca el borrador
+    typeReason(c, 'lo escribo yo mismo'); // el ingeniero no espera
+
+    // act(async) vacia microtareas y efectos: sin esto la asercion corria antes
+    // de que React procesara la resolucion y pasaba aun sin la guarda.
+    await act(async () => { resolver(AUTO_DRAFT); });
+
+    expect(reasonValue(c)).toBe('lo escribo yo mismo');
+  });
+
+  it('"Draft again" si pisa lo escrito: es un pedido explicito', async () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    await waitFor(() => expect(reasonValue(c)).toBe(AUTO_DRAFT));
+    typeReason(c, 'algo mio');
+
+    fireEvent.click(screen.getByText('Draft again'));
+    await waitFor(() => expect(reasonValue(c)).toBe(AUTO_DRAFT));
+  });
+
+  it('elegir el plazo rehace la nota para que incluya la fecha', async () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    await waitFor(() => expect(generateReviewNote).toHaveBeenCalledTimes(1));
+    pickDeadline();
+    await waitFor(() => expect(generateReviewNote).toHaveBeenCalledTimes(2));
+    const arg = generateReviewNote.mock.calls[1][0] as unknown as { deadline: number | null };
+    expect(arg.deadline).toBeGreaterThan(0);
+  });
+});
 
 describe('la nota escrita esta siempre disponible', () => {
   it('se ve aun sin haber elegido resultado', () => {
@@ -136,9 +220,10 @@ describe('elegir un resultado es obligatorio', () => {
 });
 
 describe('Deficient exige aviso escrito y plazo de subsanacion', () => {
-  it('no guarda sin nada de eso', () => {
+  it('no guarda si el ingeniero borra el aviso redactado', () => {
     const c = renderNew();
     chooseOutcome(c, 'Deficient');
+    typeReason(c, ''); // borra el borrador automatico
     submit();
     expect(updateProject).not.toHaveBeenCalled();
   });
@@ -188,10 +273,11 @@ describe('Deficient exige aviso escrito y plazo de subsanacion', () => {
 });
 
 describe('Deferred exige razon escrita y plazo', () => {
-  it('no guarda sin la razon', () => {
+  it('no guarda si se borra la razon', () => {
     const c = renderNew();
     chooseOutcome(c, 'Deferred');
     pickDeadline();
+    typeReason(c, '');
     submit();
     expect(updateProject).not.toHaveBeenCalled();
   });

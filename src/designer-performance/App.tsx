@@ -7,9 +7,12 @@ import { DashboardView } from './views/DashboardView';
 import { ProjectsView } from './views/ProjectsView';
 import { Phase1Form } from './views/Phase1Form';
 import { Phase2Form } from './views/Phase2Form';
+import { getSharedProjectSo } from '../utils/projectDeepLink';
 
 const AppContent: React.FC = () => {
-  const [currentView, setCurrentView] = useState('dashboard');
+  // Un link compartido (?so=12705) abre directo la lista, que es donde
+  // ProjectsView levanta la ficha de ese proyecto.
+  const [currentView, setCurrentView] = useState(getSharedProjectSo() ? 'projects' : 'dashboard');
   const { canEditIntake } = useKpi();
 
   // Sidebar ya oculta estas dos vistas para un designer; el guard aca evita

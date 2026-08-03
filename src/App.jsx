@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchAndParseData, fetchAndParseProjectMaterials } from './utils/sheetParser'
 import { fetchAndParseMasterSchedule } from './utils/masterSchedule'
+import { getSharedProjectSo } from './utils/projectDeepLink'
 import { getCachedData, setCachedData, isCacheFresh } from './utils/dbCache'
 import { checkDbSizeAndArchive } from './utils/archiveHelpers'
 import { archiveMissingCompletedProjects, archiveCurrentlyCompletedProjects, fetchArchivedCompletedProjects, purgeExpiredArchives } from './utils/completedProjectsArchive'
@@ -34,6 +35,9 @@ import { normalizeNotesBySo } from './utils/projectNotes'
 function App() {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState(() => {
+    // Un link compartido (?so=12705) manda directo a Designer Perf., por encima
+    // de la ultima pestana usada: el disenador lo abre para ver ese proyecto.
+    if (getSharedProjectSo()) return 'designer-performance';
     return localStorage.getItem('active_tab') || 'dashboard';
   });
   const [projectNotes, setProjectNotes] = useState({});
