@@ -15,17 +15,23 @@ export function usePagedModal({ so, createDefaultPage, loadData, saveData, trans
   // change to those inputs doesn't trigger an unwanted refetch.
   useEffect(() => {
     let isMounted = true;
+    // Si loadData rechaza, isLoading tiene que apagarse igual: antes el
+    // setIsLoading(false) vivia despues del await, asi que un rechazo dejaba
+    // el modal clavado en "Loading..." sin error ni salida posible.
     const fetch = async () => {
-      const data = await loadData(so);
-      if (isMounted) {
-        if (data) {
+      try {
+        const data = await loadData(so);
+        if (isMounted && data) {
           const parsed = Array.isArray(data) ? data : Object.values(data);
           const sanitized = parsed.filter(Boolean);
           if (sanitized.length > 0) {
             setPages(transformLoaded ? transformLoaded(sanitized) : sanitized);
           }
         }
-        setIsLoading(false);
+      } catch (error) {
+        console.error(`Failed to load saved draft for ${so}, starting from a blank page:`, error);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     };
     fetch();

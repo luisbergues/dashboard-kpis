@@ -29,3 +29,20 @@ export const formatDisplayDate = (raw, language = 'en') => {
   if (!d) return String(raw ?? '');
   return format(d, 'MMM dd, yyyy', { locale: language === 'es' ? es : enUS });
 };
+
+// Parses a project install date into a local-midnight Date. Sheet install
+// values are day-granular strings like "2026-06-12"; `new Date("2026-06-12")`
+// parses as midnight UTC, which in negative-offset timezones (all of the
+// Americas) lands on the previous local day — so a later `setHours(0,0,0,0)`,
+// which truncates in LOCAL time, silently rewinds the date by one day and
+// drops an install scheduled for today. Split the YYYY-MM-DD ourselves and
+// build a local Date so day comparisons are timezone-stable. Falls back to
+// Date parsing for other formats. Returns null when unparseable.
+export function parseInstallDateLocal(install) {
+  const iso = String(install).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  }
+  const d = new Date(install);
+  return isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}

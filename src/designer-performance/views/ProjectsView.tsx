@@ -5,6 +5,8 @@ import type { Project, ProjectStatus } from '../types';
 import { Search, User, Hash, LayoutList, Star } from 'lucide-react';
 import { useTheme } from '../../utils/ThemeContext';
 import { useLanguage } from '../../utils/LanguageContext';
+import { formatDisplayDate } from '../../utils/dateFormat';
+import { effectivePhase1Score, isOverdue, overdueBusinessDays, overduePenalty } from '../utils/phase1Outcome';
 
 const STATUS_STYLES: Record<string, { bg: string; color: string; border: string; dot: string }> = {
   Pending:    { bg: 'rgba(100,116,139,0.12)', color: '#94a3b8', border: 'rgba(100,116,139,0.25)', dot: '#64748b' },
@@ -12,6 +14,9 @@ const STATUS_STYLES: Record<string, { bg: string; color: string; border: string;
   Approved:   { bg: 'rgba(59,130,246,0.10)',  color: '#60a5fa', border: 'rgba(59,130,246,0.25)',  dot: '#3b82f6' },
   Rejected:   { bg: 'rgba(239,68,68,0.10)',   color: '#f87171', border: 'rgba(239,68,68,0.25)',   dot: '#ef4444' },
   Completed:  { bg: 'rgba(16,185,129,0.10)',  color: '#34d399', border: 'rgba(16,185,129,0.25)',  dot: '#10b981' },
+  // Resultados de la revision manual que dejan el proyecto trabado.
+  Deficient:  { bg: 'rgba(239,68,68,0.10)',   color: '#f87171', border: 'rgba(239,68,68,0.25)',   dot: '#ef4444' },
+  Deferred:   { bg: 'rgba(249,115,22,0.10)',  color: '#fb923c', border: 'rgba(249,115,22,0.25)',  dot: '#f97316' },
 };
 
 const ScorePill: React.FC<{ score: number | null; label: string; isLight: boolean }> = ({ score, label, isLight }) => (
@@ -28,7 +33,7 @@ const ScorePill: React.FC<{ score: number | null; label: string; isLight: boolea
   </div>
 );
 
-const FILTER_OPTIONS: Array<ProjectStatus | 'All'> = ['All', 'Pending', 'To review', 'Approved', 'Rejected', 'Completed'];
+const FILTER_OPTIONS: Array<ProjectStatus | 'All'> = ['All', 'Pending', 'To review', 'Approved', 'Deficient', 'Deferred', 'Rejected', 'Completed'];
 
 export const ProjectsView: React.FC = () => {
   const { projects } = useKpi();
@@ -86,6 +91,7 @@ export const ProjectsView: React.FC = () => {
   const STATUS_LABEL_KEYS: Record<string, string> = {
     All: 'statusAll', Pending: 'statusPending', 'To review': 'statusToReview',
     Approved: 'statusApproved', Rejected: 'statusRejected', Completed: 'statusCompleted',
+    Deficient: 'statusDeficient', Deferred: 'statusDeferred',
   };
   const statusLabel = (s: string) => t(`designerPerf.projects.${STATUS_LABEL_KEYS[s] || 'statusAll'}`);
 
@@ -261,8 +267,9 @@ export const ProjectsView: React.FC = () => {
                         {project.totalRooms}
                       </div>
 
-                      {/* P1 Score */}
-                      <ScorePill score={project.phase1Score} label="" isLight={isLight} />
+                      {/* P1 Score — el efectivo: un plazo de revision vencido
+                          sigue descontando aunque nadie reabra el formulario. */}
+                      <ScorePill score={effectivePhase1Score(project)} label="" isLight={isLight} />
 
                       {/* P2 Score */}
                       <ScorePill score={project.phase2Score} label="" isLight={isLight} />
@@ -282,6 +289,19 @@ export const ProjectsView: React.FC = () => {
                           <span style={{ width: 5, height: 5, borderRadius: '50%', background: st.dot, flexShrink: 0 }} />
                           {statusLabel(project.status)}
                         </span>
+
+                        {/* Plazo de subsanacion, mientras siga abierto. */}
+                        {!!project.outcome?.deadline && project.outcome.resolvedAt === null && (
+                          <div style={{
+                            fontSize: '0.66rem', marginTop: 4,
+                            color: isOverdue(project.outcome) ? '#f87171' : C.muted,
+                            fontWeight: isOverdue(project.outcome) ? 700 : 500,
+                          }}>
+                            {isOverdue(project.outcome)
+                              ? `${overdueBusinessDays(project.outcome)}d overdue · -${overduePenalty(project.outcome)}`
+                              : `due ${formatDisplayDate(new Date(project.outcome.deadline))}`}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

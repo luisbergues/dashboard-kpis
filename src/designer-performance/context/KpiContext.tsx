@@ -5,6 +5,7 @@ import { calculateDesignerStats } from '../utils/scoreCalculator';
 import { db, ref, set, get, onValue } from '../../utils/firebase';
 import { shortProjectName } from '../../utils/projectName';
 import { canForceApproveIntake } from '../../utils/intakePermissions';
+import { normalizeNotesBySo } from '../../utils/projectNotes';
 import { deriveComplexity, complexityFromSheet } from '../utils/complexity';
 
 // Result of a project_designers/{so} write attempt. `project_designers` is
@@ -25,6 +26,11 @@ interface KpiContextType {
   getProjectNotes: (soNumber: string) => DesignerNote[];
   // Si el usuario puede aprobar un intake con documentacion faltante.
   canForceApprove: boolean;
+  // Si el usuario puede escribir en designer_performance_projects. Los
+  // designers son solo-lectura de este modulo (ven su KPI, no lo editan), y
+  // asi lo exige la regla de RTDB — exponerlo aca deja que la UI oculte los
+  // formularios en vez de mostrarlos y fallar con un error de permisos.
+  canEditIntake: boolean;
 }
 
 // Canonical list of designers — separate from engineers
@@ -98,7 +104,9 @@ export const KpiProvider: React.FC<{
     if (!db) return;
     const notesRef = ref(db, 'project_notes');
     const unsub = onValue(notesRef, (snapshot) => {
-      setProjectNotes(snapshot.val() || {});
+      // Ver projectNotes.js: normaliza el formato viejo (array indexado) y el
+      // nuevo (una clave por nota) a un mismo array por SO.
+      setProjectNotes(normalizeNotesBySo(snapshot.val()));
     });
     return () => unsub();
   }, []);
@@ -120,7 +128,11 @@ export const KpiProvider: React.FC<{
       // La complejidad se re-deriva de la planilla en cada lectura: si el
       // proyecto se dio de alta antes de que existieran sus materiales, se
       // completa solo en cuanto aparecen. Ver deriveComplexity.
-      const matReq = externalData.materialRequirements?.find((m: any) => String(m.so) === so);
+      // `externalData` puede ser null cuando masterProjects ya resolvio pero el
+      // fetch principal fallo sin cache: la linea del `source` arriba ya lo
+      // contempla con `?.`, asi que aca tambien hace falta o el modulo entero
+      // (y con el todo renderView, envuelto en un solo ErrorBoundary) se cae.
+      const matReq = externalData?.materialRequirements?.find((m: any) => String(m.so) === so);
       const autoComplexity = deriveComplexity(perfData.complexity, matReq);
 
       if (perfData.createdAt === undefined && sessionCreatedAt.current[so] === undefined) {
@@ -150,6 +162,9 @@ export const KpiProvider: React.FC<{
           ...(perfData.checklist || {}),
         },
         complexity: autoComplexity,
+        // Resultado de la revision manual de Fase 1 (Complete/Deficient/Deferred)
+        // con su motivo y plazo. Ausente en los proyectos que aun no se revisaron.
+        outcome: perfData.outcome,
         // Sin default fabricado: un proyecto que nunca se cerro no tiene datos
         // de Fase 2, y inventarle ceros hacia que el detalle mostrara
         // "Friction Metrics 0 / 0" en proyectos Pending.
@@ -221,7 +236,7 @@ export const KpiProvider: React.FC<{
   };
 
   return (
-    <KpiContext.Provider value={{ projects, designers, designerNames, projectDesigners, addProject, updateProject, getProjectComplexity, getProjectNotes, canForceApprove: canForceApproveIntake(userProfile) }}>
+    <KpiContext.Provider value={{ projects, designers, designerNames, projectDesigners, addProject, updateProject, getProjectComplexity, getProjectNotes, canForceApprove: canForceApproveIntake(userProfile), canEditIntake: userProfile?.role !== 'designer' }}>
       {children}
     </KpiContext.Provider>
   );

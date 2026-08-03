@@ -1,4 +1,26 @@
-export type ProjectStatus = 'Pending' | 'Approved' | 'Rejected' | 'Completed' | 'To review';
+// 'Approved' es el estado que la revision manual llama "Complete": el proyecto
+// paso el control y esta listo para ingenieria. Se conserva el nombre interno
+// porque es el que habilita Fase 2 en todos los registros ya guardados.
+export type ProjectStatus =
+  | 'Pending' | 'Approved' | 'Rejected' | 'Completed' | 'To review'
+  | 'Deficient' | 'Deferred';
+
+// Resultado de la revision manual de Fase 1 (definiciones del documento de
+// status del area de ingenieria).
+export type Phase1Outcome = 'Complete' | 'Deficient' | 'Deferred';
+
+// Deficient y Deferred no se pueden registrar "a secas": ambos exigen dejar por
+// escrito el motivo y la fecha limite para subsanarlo.
+export interface Phase1OutcomeRecord {
+  result: Phase1Outcome;
+  /** Aviso escrito (Deficient) o razon del diferimiento (Deferred). */
+  reason: string;
+  /** Fecha limite para subsanar. Vence al terminar ese dia. */
+  deadline: number;
+  setAt: number;
+  /** Cuando paso a Complete. Congela el conteo de dias vencidos. */
+  resolvedAt: number | null;
+}
 
 export interface Project {
   id: string; // Used for SO Number
@@ -30,6 +52,10 @@ export interface Project {
     routingRequired: boolean;
     customPanels: boolean;
   };
+
+  /** Resultado de la revision manual. Ausente en los proyectos anteriores a
+   *  la funcion y en los que todavia estan Pending. */
+  outcome?: Phase1OutcomeRecord;
   
   // Phase 2 specific data
   phase2Data?: {

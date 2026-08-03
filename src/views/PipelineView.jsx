@@ -8,6 +8,7 @@ import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
 import { sendStageEvent, sendNoteEvent, sendEngineerAssignEvent } from '../utils/sheetSync';
 import { shortProjectName } from '../utils/projectName';
 import { formatDisplayDate } from '../utils/dateFormat';
+import { noteStorageKey, stripInternalFields, normalizeNotesBySo } from '../utils/projectNotes';
 import './PipelineView.css';
 
 const getNoteEffectiveType = (note) => note.noteType || (note.priority ? 'priority' : 'normal');
@@ -138,9 +139,11 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   // Listen for project notes, engineering checks, collaborators, stages, and nesting checks from Firebase in real-time
   useEffect(() => {
     if (!db) return;
+    // Normalizado: el resto de la vista espera un array por SO, sin importar
+    // si la nota se guardo en formato viejo o nuevo (ver projectNotes.js).
     const notesRef = ref(db, 'project_notes');
     const unsubscribeNotes = onValue(notesRef, (snapshot) => {
-      setProjectNotes(snapshot.val() || {});
+      setProjectNotes(normalizeNotesBySo(snapshot.val()));
     });
 
     const engChecksRef = ref(db, 'engineering_checks');
@@ -263,15 +266,15 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
       newNote.attachments = attachments;
     }
 
-    const currentNotes = projectNotes[so] ? [...projectNotes[so]] : [];
-    currentNotes.unshift(newNote);
-
     if (db) {
       try {
         if (noteType === 'obs') {
           sendNoteEvent(so, newNote.text, newNote.createdBy, { name: '', eng: engName }, 'obs');
         }
-        await set(ref(db, `project_notes/${so}`), currentNotes);
+        // Se escribe SOLO la nota nueva, bajo su propia clave, en vez de
+        // reescribir el array entero del proyecto: asi la regla de RTDB puede
+        // evaluar esta nota en particular (ver projectNotes.js).
+        await set(ref(db, `project_notes/${so}/${noteStorageKey(newNote)}`), stripInternalFields(newNote));
         setNewNoteTexts(prev => ({ ...prev, [so]: '' }));
         setCommentTypes(prev => ({ ...prev, [so]: 'normal' }));
         setNoteImages(prev => ({ ...prev, [so]: null }));
@@ -734,8 +737,8 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
             <div className="no-results text-muted">{t('pipeline.noProjects')}</div>
           ) : (
           projects.map((project, idx) => {
-            const onHoldNote = project.status.toUpperCase() === 'ON HOLD' 
-              ? (project.onHoldReason || getOnHoldNote(project.name)) 
+            const onHoldNote = (project.status || '').toUpperCase() === 'ON HOLD'
+              ? (project.onHoldReason || getOnHoldNote(project.name))
               : null;
             
             const progress = calculateAutomaticStages(project);
@@ -744,9 +747,9 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
             const isCollapsed = !expandedProjects[project.so];
 
             return (
-              <div 
-                id={`project-card-${project.so}`} 
-                key={idx} 
+              <div
+                id={`project-card-${project.so}`}
+                key={project.so}
                 className={`project-card glass-card ${isCollapsed ? 'collapsed' : 'expanded'}`}
               >
                 <div className="project-header-row" onClick={() => toggleCollapse(project.so)}>

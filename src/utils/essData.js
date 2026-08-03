@@ -44,9 +44,18 @@ export const loadESSData = async (so) => {
     }
   }
 
-  // Fallback to local storage
+  // Fallback to local storage. Un JSON corrupto (escritura cortada por cuota,
+  // formato viejo, edicion manual) lanzaba desde aca y la promesa quedaba
+  // rechazada: usePagedModal no la atrapa, asi que el modal se quedaba en
+  // "Loading..." para siempre. Degradar a null es equivalente a "no hay cache".
   const localData = localStorage.getItem(`${CACHE_PREFIX}${so}`);
-  return localData ? JSON.parse(localData) : null;
+  if (!localData) return null;
+  try {
+    return JSON.parse(localData);
+  } catch (error) {
+    console.warn(`⚠️ Corrupt local ESS cache for ${so}, ignoring it:`, error);
+    return null;
+  }
 };
 
 /**

@@ -44,9 +44,18 @@ export const loadLogbookData = async (so) => {
     }
   }
 
-  // Fallback to local storage
+  // Fallback to local storage. Un JSON corrupto (escritura cortada por cuota,
+  // formato viejo, edicion manual) lanzaba desde aca y la promesa quedaba
+  // rechazada, dejando la vista colgada en su estado de carga. Degradar a null
+  // es equivalente a "no hay cache".
   const localData = localStorage.getItem(`${CACHE_PREFIX}${so}`);
-  return localData ? JSON.parse(localData) : null;
+  if (!localData) return null;
+  try {
+    return JSON.parse(localData);
+  } catch (error) {
+    console.warn(`⚠️ Corrupt local Logbook cache for ${so}, ignoring it:`, error);
+    return null;
+  }
 };
 
 /**

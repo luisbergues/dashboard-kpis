@@ -2,10 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useKpi } from '../context/KpiContext';
 import { calculatePhase1ScoreAndStatus, calculateTechnicalPoints } from '../utils/scoreCalculator';
 import toast from 'react-hot-toast';
-import type { Project, ProjectStatus } from '../types';
-import { Link2, FileText, CheckSquare, Zap, RefreshCw, Send, AlertTriangle } from 'lucide-react';
+import type { Project, ProjectStatus, Phase1Outcome, Phase1OutcomeRecord } from '../types';
+import { Link2, FileText, CheckSquare, Zap, RefreshCw, Send, AlertTriangle, ClipboardCheck } from 'lucide-react';
 import { T } from '../utils/theme';
 import { formatDisplayDate } from '../../utils/dateFormat';
+import {
+  OUTCOMES, OUTCOME_DEFINITION, REASON_LABEL, DEADLINE_LABEL,
+  requiresReasonAndDeadline, outcomeToStatus, statusToOutcome, missingOutcomeFields,
+} from '../utils/phase1Outcome';
 
 /* ── tiny primitives ─────────────────────────────────────────────────── */
 const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => (
@@ -240,6 +244,12 @@ export const Phase1Form: React.FC = () => {
   const [checklist, setChecklist]     = useState<ChecklistState>(emptyChecklist);
   const [complexity, setComplexity]   = useState(emptyComplexity);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
+  // Resultado de la revision manual: es lo que aprueba la etapa.
+  const [outcome, setOutcome] = useState<Phase1Outcome | ''>('');
+  const [outcomeReason, setOutcomeReason] = useState('');
+  const [outcomeDeadline, setOutcomeDeadline] = useState<number | null>(null);
+  // El registro guardado, para conservar el plazo original al subsanar.
+  const [savedOutcome, setSavedOutcome] = useState<Phase1OutcomeRecord | undefined>(undefined);
   // Solo para administrative: lo que falta, mientras se confirma aprobar igual.
   const [pendingApproval, setPendingApproval] = useState<{ basics: string[]; docs: string[] } | null>(null);
 
@@ -276,6 +286,7 @@ export const Phase1Form: React.FC = () => {
     // proj.complexity ya viene derivada de la planilla (ver deriveComplexity),
     // asi que alcanza con copiarla tal cual.
     setComplexity({ ...emptyComplexity, ...(proj?.complexity ?? {}) });
+    loadOutcomeFrom(proj);
 
     // El badge "N synced" cuenta solo lo que aporto la planilla.
     const auto = getProjectComplexity(selectedSo);
@@ -311,6 +322,7 @@ export const Phase1Form: React.FC = () => {
         setTotalRooms(existing.totalRooms);
         setChecklist(existing.checklist);
         setComplexity(existing.complexity);
+        loadOutcomeFrom(existing);
         const auto = getProjectComplexity(soNumber);
         const filled = new Set<string>();
         (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(k => { if (auto[k]) filled.add(k); });
@@ -325,6 +337,18 @@ export const Phase1Form: React.FC = () => {
     setSoNumber(''); setProjectName(''); setDesignerName('');
     setTotalRooms(''); setChecklist(emptyChecklist);
     setComplexity(emptyComplexity); setAutoFilledFields(new Set());
+    loadOutcomeFrom(undefined);
+  };
+
+  /* Carga el resultado ya registrado. Los proyectos anteriores a esta funcion no
+     tienen `outcome`, asi que se deduce del estado: un Approved viejo se muestra
+     como Complete en vez de aparecer sin revisar. */
+  const loadOutcomeFrom = (proj?: Project) => {
+    const rec = proj?.outcome;
+    setSavedOutcome(rec);
+    setOutcome(rec?.result ?? (proj ? statusToOutcome(proj.status) ?? '' : ''));
+    setOutcomeReason(rec?.reason ?? '');
+    setOutcomeDeadline(rec?.deadline || null);
   };
 
   const handleChecklistToggle = (field: keyof ChecklistState) => {
@@ -363,6 +387,42 @@ export const Phase1Form: React.FC = () => {
     return missing;
   };
 
+  const outcomeMessage = (status: ProjectStatus) =>
+    status === 'Approved'  ? 'Marked Complete — ready for engineering. ✓'
+    : status === 'Deficient' ? 'Marked Deficient — returned to the designer.'
+    : status === 'Deferred'  ? 'Marked Deferred — project on hold.'
+    : 'Saved.';
+
+  /* Arma el registro del resultado que se guarda con el proyecto.
+
+     Al pasar a Complete desde un Deficient/Deferred NO se descarta el plazo: se
+     conserva y se sella con `resolvedAt`, de modo que lo que se acumulo por
+     pasarse de la fecha sigue descontando despues de corregir — igual que un
+     documento del checklist entregado tarde. */
+  const buildOutcomeRecord = (result: Phase1Outcome, now: number): Phase1OutcomeRecord => {
+    if (result === 'Complete') {
+      const hadDeadline = savedOutcome?.deadline;
+      return {
+        result: 'Complete',
+        reason: hadDeadline ? savedOutcome!.reason : '',
+        deadline: hadDeadline || 0,
+        setAt: savedOutcome?.setAt ?? now,
+        // Si ya estaba sellado se respeta la fecha original de subsanacion.
+        resolvedAt: hadDeadline ? (savedOutcome!.resolvedAt ?? now) : now,
+      };
+    }
+    // Cambiar de Deficient a Deferred (o corregir el plazo) reinicia el reloj:
+    // es una decision nueva, con su propia fecha limite.
+    const sameAsSaved = savedOutcome?.result === result && savedOutcome.deadline === outcomeDeadline;
+    return {
+      result,
+      reason: outcomeReason.trim(),
+      deadline: outcomeDeadline as number,
+      setAt: sameAsSaved ? savedOutcome!.setAt : now,
+      resolvedAt: null,
+    };
+  };
+
   /* Guarda el intake. `forceApprove` deja el proyecto en Approved aunque falte
      documentación — es una decisión administrativa. El puntaje NO se toca: se
      calcula igual por las demoras, así que el KPI sigue reflejando la realidad
@@ -375,12 +435,18 @@ export const Phase1Form: React.FC = () => {
     const createdAt = existingForCreatedAt?.createdAt || now;
 
     let finalStatus: ProjectStatus, score: number | null;
+    let outcomeRecord: Phase1OutcomeRecord | undefined = savedOutcome;
     if (forceReview) {
       finalStatus = 'To review'; score = null;
     } else {
       const r = calculatePhase1ScoreAndStatus(checklist, createdAt);
       score = r.score;
-      finalStatus = forceApprove ? 'Approved' : r.status;
+      // El estado sale de la revision manual, no del checklist: el checklist ya
+      // solo determina el puntaje. `forceApprove` es la excepcion
+      // administrativa, que aprueba con papeleo faltante.
+      const chosen: Phase1Outcome = forceApprove ? 'Complete' : (outcome as Phase1Outcome);
+      finalStatus = outcomeToStatus(chosen);
+      outcomeRecord = buildOutcomeRecord(chosen, now);
     }
 
     // Al forzar, los básicos pueden venir vacíos: se completan con algo usable
@@ -397,7 +463,8 @@ export const Phase1Form: React.FC = () => {
         createdAt,
         approvedAt: finalStatus === 'Approved' ? now : null,
         projectName: safeName, designerName, status: finalStatus, totalRooms: safeRooms, icp,
-        phase1Score: score, phase2Score: existing?.phase2Score ?? null, checklist, complexity
+        phase1Score: score, phase2Score: existing?.phase2Score ?? null, checklist, complexity,
+        ...(outcomeRecord ? { outcome: outcomeRecord } : {}),
       });
       if (result.conflict) {
         toast.error(`Designer was just changed to "${result.currentDesignerName}" by someone else. Reload and try again.`);
@@ -405,22 +472,34 @@ export const Phase1Form: React.FC = () => {
       }
       toast.success(
         forceApprove ? 'Approved with missing documentation.'
-        : finalStatus === 'Approved' ? 'Project Approved! ✓'
         : finalStatus === 'To review' ? 'Saved for review.'
-        : 'Registered (missing docs).');
+        : outcomeMessage(finalStatus));
       resetForm();
     } else {
       const existing = projects.find(p => p.id === soNumber);
       if (!existing) return;
-      const result = await updateProject({ ...existing, projectName: safeName, designerName, status: finalStatus,
+      // Un proyecto ya cerrado en Fase 2 se puede seguir corrigiendo (un typo
+      // del checklist), pero su cierre no se toca: calculatePhase1ScoreAndStatus
+      // solo devuelve Approved/Rejected/To review, asi que recalcular el status
+      // aca lo revertia a "abierto" y Phase2Form lo volvia a ofrecer para
+      // cerrar, sobrescribiendo el phase2Score ya registrado.
+      const isClosed = existing.status === 'Completed';
+      const result = await updateProject({ ...existing, projectName: safeName, designerName,
+        status: isClosed ? existing.status : finalStatus,
         totalRooms: safeRooms, icp, phase1Score: score, checklist, complexity,
-        approvedAt: finalStatus === 'Approved' ? now : existing.approvedAt });
+        ...(outcomeRecord ? { outcome: outcomeRecord } : {}),
+        approvedAt: isClosed ? existing.approvedAt : (finalStatus === 'Approved' ? now : existing.approvedAt) });
       if (result.conflict) {
         toast.error(`Designer was just changed to "${result.currentDesignerName}" by someone else. Reload and try again.`);
         return;
       }
-      toast.success(forceApprove ? 'Approved with missing documentation.' : finalStatus === 'Approved' ? 'Updated & Approved! ✓' : 'Saved.');
-      if (finalStatus === 'Approved') { resetForm(); setMode('New'); }
+      // Un proyecto cerrado no se "aprueba" de nuevo: avisar que solo se
+      // guardaron las correcciones, y no resetear el form como si hubiera
+      // cambiado de etapa.
+      toast.success(isClosed ? 'Changes saved. Project stays Completed.'
+        : forceApprove ? 'Approved with missing documentation.'
+        : outcomeMessage(finalStatus));
+      if (!isClosed && finalStatus === 'Approved') { resetForm(); setMode('New'); }
     }
   };
 
@@ -435,17 +514,34 @@ export const Phase1Form: React.FC = () => {
       toast.error('A project with this SO Number has already been processed.'); return;
     }
 
+    // "Save for Later Review" no cierra la revisión: deja el proyecto en espera,
+    // así que no exige haber elegido un resultado.
+    if (forceReview) { await saveIntake({ forceReview: true }); return; }
+
+    const missingOutcome = missingOutcomeFields(outcome, outcomeReason, outcomeDeadline);
+    if (missingOutcome.length > 0) {
+      toast.error(`Missing: ${missingOutcome.join(', ')}.`); return;
+    }
+
     const basics = missingBasics();
     const docs = missingDocs();
 
-    // "Save for Later Review" no aprueba nada, así que no dispara la confirmación.
-    if (!forceReview && canForceApprove && (basics.length > 0 || docs.length > 0)) {
-      setPendingApproval({ basics, docs });
+    // Deficient y Deferred existen precisamente para registrar que falta algo,
+    // así que no se valida el papeleo contra ellos. Solo Complete —"listo para
+    // ingeniería"— exige el checklist entero.
+    const needsFullDocs = outcome === 'Complete';
+    const blockingDocs = needsFullDocs ? docs : [];
+
+    if (canForceApprove && (basics.length > 0 || blockingDocs.length > 0)) {
+      setPendingApproval({ basics, docs: blockingDocs });
       return;
     }
 
     if (basics.length > 0) {
       toast.error('Please fill in all basic project details.'); return;
+    }
+    if (blockingDocs.length > 0) {
+      toast.error('Cannot mark Complete while documentation is missing.'); return;
     }
 
     await saveIntake({ forceReview });
@@ -748,6 +844,105 @@ export const Phase1Form: React.FC = () => {
               );
             })}
           </div>
+        </Card>
+
+        {/* ── Review Result ───────────────────────────────────────── */}
+        <Card>
+          <SectionTitle
+            icon={<ClipboardCheck size={15} color={T.blue} />}
+            title="Review Result"
+            subtitle="The manual quality review is what approves this phase. The checklist above only drives the score."
+          />
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {OUTCOMES.map(o => {
+              const selected = outcome === o;
+              const tint = o === 'Complete' ? T.green : o === 'Deficient' ? T.red : T.yellow;
+              return (
+                <label key={o} style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 11, cursor: 'pointer',
+                  padding: '12px 14px', borderRadius: T.radiusMd, position: 'relative',
+                  background: selected ? `${tint}12` : T.bgSurface,
+                  border: `1px solid ${selected ? `${tint}55` : T.cardBorder}`,
+                  transition: 'all 0.2s',
+                }}>
+                  <input
+                    type="radio"
+                    name="phase1Outcome"
+                    value={o}
+                    checked={selected}
+                    onChange={() => setOutcome(o)}
+                    style={{ position: 'absolute', opacity: 0, width: 18, height: 18, margin: 0, cursor: 'pointer' }}
+                  />
+                  <div aria-hidden="true" style={{
+                    width: 18, height: 18, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+                    border: `2px solid ${selected ? tint : T.textMuted}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s',
+                  }}>
+                    {selected && <span style={{ width: 8, height: 8, borderRadius: '50%', background: tint }} />}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: selected ? tint : T.textPrimary, marginBottom: 2 }}>
+                      {o}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: T.textMuted, lineHeight: 1.45 }}>
+                      {OUTCOME_DEFINITION[o]}
+                    </div>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+
+          {/* Deficient y Deferred no se pueden dejar sin explicar ni sin fecha. */}
+          {outcome !== '' && requiresReasonAndDeadline(outcome) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 16 }}>
+              <Field label={REASON_LABEL[outcome]}>
+                <textarea
+                  name="outcomeReason"
+                  value={outcomeReason}
+                  onChange={e => setOutcomeReason(e.target.value)}
+                  rows={3}
+                  placeholder={outcome === 'Deficient'
+                    ? 'e.g., Wall dimensions on page 3 do not match the KCD file.'
+                    : 'e.g., Signed contract and .job KCD file still missing.'}
+                  style={{ ...inputStyle, borderRadius: T.radiusMd, resize: 'vertical', lineHeight: 1.5 }}
+                />
+              </Field>
+
+              <Field label={DEADLINE_LABEL[outcome]}>
+                <div>
+                  <MiniDatePicker
+                    value={outcomeDeadline ?? Date.now()}
+                    onChange={ts => setOutcomeDeadline(ts)}
+                  >
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 7,
+                      fontSize: '0.8rem', cursor: 'pointer',
+                      color: outcomeDeadline ? T.blue : T.textMuted,
+                      background: outcomeDeadline ? 'rgba(59,130,246,0.1)' : T.bgSurface,
+                      border: `1px solid ${outcomeDeadline ? 'rgba(59,130,246,0.25)' : T.cardBorder}`,
+                      borderRadius: T.radiusPill, padding: '8px 16px', whiteSpace: 'nowrap',
+                    }}>
+                      {outcomeDeadline ? formatDisplayDate(new Date(outcomeDeadline)) : 'Pick a deadline…'}
+                    </span>
+                  </MiniDatePicker>
+                </div>
+              </Field>
+
+              <div style={{
+                background: 'rgba(234,179,8,0.07)', border: '1px solid rgba(234,179,8,0.2)',
+                borderRadius: T.radiusMd, padding: '10px 14px',
+              }}>
+                <p style={{ color: T.textMuted, fontSize: '0.76rem', lineHeight: 1.45, margin: 0 }}>
+                  Choosing this costs no points by itself. Past the deadline it starts costing
+                  <strong style={{ color: T.yellow }}> -1 pt per business day</strong> (-2 after 4 days, max -20),
+                  and keeps counting until the project is marked Complete.
+                </p>
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* ── Actions ─────────────────────────────────────────────── */}

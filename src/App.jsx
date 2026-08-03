@@ -29,6 +29,7 @@ import { canManageDesignerNotes } from './utils/notePermissions'
 import { noteDaysOpen } from './designer-performance/utils/redFlags'
 import { auth, db, onAuthStateChanged, ref, onValue, set, get, child, signOut } from './utils/firebase'
 import { shortProjectName } from './utils/projectName'
+import { normalizeNotesBySo } from './utils/projectNotes'
 
 function App() {
   const { t } = useLanguage();
@@ -267,9 +268,12 @@ function App() {
       setOverrides(snapshot.val() || {});
     });
 
+    // Normalizar aca deja a todos los consumidores viendo el mismo array de
+    // siempre, sin importar si la nota se guardo con el formato viejo (array
+    // indexado) o el nuevo (una clave por nota). Ver projectNotes.js.
     const notesRef = ref(db, 'project_notes');
     const unsubscribeNotes = onValue(notesRef, (snapshot) => {
-      setProjectNotes(snapshot.val() || {});
+      setProjectNotes(normalizeNotesBySo(snapshot.val()));
     });
 
     const matOverridesRef = ref(db, 'project_materials');

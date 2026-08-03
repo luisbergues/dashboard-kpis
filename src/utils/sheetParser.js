@@ -352,6 +352,30 @@ export async function fetchAndParseData() {
       }
     }
 
+    // Un 200 no garantiza que el cuerpo sea la planilla: Google puede devolver
+    // un interstitial de permisos, una pagina de rate limit, o un CSV cortado a
+    // la mitad. En ese caso ninguna cabecera de seccion matchea y esto retorna
+    // un parsedData perfectamente formado pero vacio, sin lanzar nada — y
+    // App.jsx lo escribe en firebase_cache/data, que es un nodo COMPARTIDO por
+    // todos los clientes, pisando el cache bueno de todo el mundo.
+    // Si no se reconocio ni una sola seccion, es un cuerpo invalido, no una
+    // planilla legitimamente vacia: lanzar para que App.jsx caiga a su
+    // fallback de cache expirado en vez de propagar el vacio.
+    const recognizedAnySection =
+      parsedData.priorityAnalysis.length > 0 ||
+      parsedData.materialRequirements.length > 0 ||
+      parsedData.statusHistory.length > 0 ||
+      parsedData.weekOverWeek.length > 0 ||
+      parsedData.topCostProjects.length > 0 ||
+      parsedData.onHoldNotes.length > 0 ||
+      parsedData.meetingPoints.length > 0;
+
+    if (!recognizedAnySection) {
+      throw new Error(
+        'Sheet parsed but no known section was recognized — the CSV response is probably not the spreadsheet (permissions interstitial, rate limit, or truncated body).'
+      );
+    }
+
     return parsedData;
 
   } catch (error) {

@@ -4,6 +4,7 @@ import { useLanguage } from '../utils/LanguageContext';
 import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
 import { useDesignerContacts } from '../utils/useDesignerContacts';
 import { shortProjectName } from '../utils/projectName';
+import { normalizeNotes } from '../utils/projectNotes';
 
 // Resolves what this view should show for notes/stages/materials/checks,
 // preferring the archive's `snapshot` (captured before the live nodes were
@@ -14,7 +15,12 @@ import { shortProjectName } from '../utils/projectName';
 export function resolveArchivedView(project, isArchived, liveNotes = []) {
   const snapshot = isArchived ? (project?.snapshot || null) : null;
   return {
-    notes: snapshot?.notes || liveNotes || [],
+    // El snapshot guarda project_notes tal como estaba en RTDB, que puede ser
+    // un array indexado (formato viejo) o un mapa por nota (formato nuevo).
+    // normalizeNotes deja ambos como array; sin esto, un snapshot en formato
+    // nuevo llegaba como objeto y la seccion de notas desaparecia en silencio
+    // (`.length` de un objeto es undefined).
+    notes: snapshot?.notes ? normalizeNotes(snapshot.notes) : (liveNotes || []),
     // project_stages (RTDB) hasn't been written to in a long time — real
     // per-stage dates come from the sheet's statusHistory, which is what
     // calculateAutomaticStages() actually reads.

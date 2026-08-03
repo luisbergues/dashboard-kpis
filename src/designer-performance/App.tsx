@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './index.css';
 import { Toaster } from 'react-hot-toast';
-import { KpiProvider } from './context/KpiContext';
+import { KpiProvider, useKpi } from './context/KpiContext';
 import { Layout } from './components/Layout';
 import { DashboardView } from './views/DashboardView';
 import { ProjectsView } from './views/ProjectsView';
@@ -10,13 +10,19 @@ import { Phase2Form } from './views/Phase2Form';
 
 const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
+  const { canEditIntake } = useKpi();
+
+  // Sidebar ya oculta estas dos vistas para un designer; el guard aca evita
+  // que queden accesibles por un currentView heredado si el rol cambia en
+  // caliente (aprobacion/revocacion sin recargar la pagina).
+  const showIntakeForms = canEditIntake;
 
   return (
     <Layout currentView={currentView} setCurrentView={setCurrentView}>
       {currentView === 'dashboard' && <DashboardView />}
       {currentView === 'projects' && <ProjectsView />}
-      {currentView === 'phase1' && <Phase1Form />}
-      {currentView === 'phase2' && <Phase2Form />}
+      {currentView === 'phase1' && showIntakeForms && <Phase1Form />}
+      {currentView === 'phase2' && showIntakeForms && <Phase2Form />}
     </Layout>
   );
 };

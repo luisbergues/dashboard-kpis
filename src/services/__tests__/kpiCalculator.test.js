@@ -7,8 +7,22 @@ import {
   calculateFileRequestsPercentage,
   predictBottlenecks,
   getDelayedProjectsCount,
-  getProjectLocation
+  getProjectLocation,
+  getUpcomingDeadlines,
+  calculatePersonalStageAverages
 } from '../kpiCalculator';
+
+// Helper: arma "YYYY-MM-DD" a partir de un Date, en componentes LOCALES —
+// toISOString() convertiria a UTC y reintroduciria el mismo corrimiento de dia
+// que estos tests existen para detectar.
+const localISODate = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const daysFromToday = (n) => {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return localISODate(d);
+};
 
 describe('KPI Calculator Service Tests', () => {
 
@@ -178,6 +192,84 @@ describe('KPI Calculator Service Tests', () => {
 
       const count = getDelayedProjectsCount(projects, history, '2026-06-11T12:00:00.000Z');
       expect(count).toBe(1); // Only 11854 has been on hold for > 3 days
+    });
+  });
+
+  // Regresion de zona horaria: getUpcomingDeadlines hacia new Date(p.install)
+  // (medianoche UTC) y despues setHours(0,0,0,0) (trunca en local). En
+  // cualquier zona UTC-negativa eso retrocedia la fecha un dia, asi que el
+  // install de HOY quedaba antes de "hoy" y se caia de la lista, y el resto
+  // de los daysLeft quedaba corrido. Ahora usa parseInstallDateLocal.
+  describe('getUpcomingDeadlines', () => {
+    it('incluye un install agendado para HOY con 0 dias restantes', () => {
+      const result = getUpcomingDeadlines([
+        { so: '1', name: 'Hoy', install: daysFromToday(0) },
+      ]);
+      expect(result).toHaveLength(1);
+      expect(result[0].daysLeft).toBe(0);
+    });
+
+    it('cuenta los dias restantes exactos, sin corrimiento', () => {
+      const result = getUpcomingDeadlines([
+        { so: '1', name: 'En 3 dias', install: daysFromToday(3) },
+        { so: '2', name: 'En 10 dias', install: daysFromToday(10) },
+      ]);
+      expect(result.find(r => r.so === '1').daysLeft).toBe(3);
+      expect(result.find(r => r.so === '2').daysLeft).toBe(10);
+    });
+
+    it('excluye instalaciones pasadas y ordena por proximidad', () => {
+      const result = getUpcomingDeadlines([
+        { so: 'lejos', name: 'Lejos', install: daysFromToday(9) },
+        { so: 'ayer', name: 'Ayer', install: daysFromToday(-1) },
+        { so: 'cerca', name: 'Cerca', install: daysFromToday(1) },
+      ]);
+      expect(result.map(r => r.so)).toEqual(['cerca', 'lejos']);
+    });
+
+    it('ignora proyectos sin fecha o con fecha imparseable, sin lanzar', () => {
+      expect(() => getUpcomingDeadlines([
+        { so: '1', name: 'Sin fecha' },
+        { so: '2', name: 'TBD', install: 'TBD' },
+        { so: '3', name: 'Vacio', install: '' },
+      ])).not.toThrow();
+      expect(getUpcomingDeadlines([{ so: '2', name: 'TBD', install: 'TBD' }])).toEqual([]);
+    });
+  });
+
+  // Regresion: 'install' figuraba en STAGES_CONFIG y se inicializaba en 0, pero
+  // nunca se le asignaba una duracion, asi que la fila Install del grafico
+  // Personal Stage Averages daba 0 para todos los ingenieros, siempre.
+  describe('calculatePersonalStageAverages — etapa Install', () => {
+    const stagesFor = (nestingISO, installISO) => ([
+      { completed: true, timestamp: '2026-06-01T08:00:00.000Z' }, // 0 ingenieria
+      { completed: true, timestamp: '2026-06-01T09:00:00.000Z' }, // 1 check1
+      { completed: true, timestamp: '2026-06-01T10:00:00.000Z' }, // 2 paperwork
+      { completed: true, timestamp: '2026-06-01T11:00:00.000Z' }, // 3 check2
+      { completed: true, timestamp: nestingISO },                 // 4 nesting
+      { completed: true, timestamp: installISO },                 // 5 install
+    ]);
+
+    it('calcula las horas entre Nesting completado e Install completado', () => {
+      const projects = [{ so: '1', totalAmt: '$1,000.00' }];
+      const stages = { '1': stagesFor('2026-06-02T10:00:00.000Z', '2026-06-04T10:00:00.000Z') };
+
+      const result = calculatePersonalStageAverages(stages, projects, {}, {}, []);
+      const install = result.find(r => r.label === 'Install');
+      expect(install.averageHours).toBe(48); // 2 dias
+    });
+
+    it('sigue en 0 cuando la etapa Install no esta completada', () => {
+      const projects = [{ so: '1', totalAmt: '$1,000.00' }];
+      const stages = {
+        '1': [
+          ...stagesFor('2026-06-02T10:00:00.000Z', '2026-06-04T10:00:00.000Z').slice(0, 5),
+          { completed: false },
+        ],
+      };
+
+      const result = calculatePersonalStageAverages(stages, projects, {}, {}, []);
+      expect(result.find(r => r.label === 'Install').averageHours).toBe(0);
     });
   });
 

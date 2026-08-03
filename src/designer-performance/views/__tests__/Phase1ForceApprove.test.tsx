@@ -56,11 +56,15 @@ const submit = () => fireEvent.click(screen.getByText('Submit Project Intake'));
 const MODAL_TITLE = /Approve with missing information/i;
 
 // El SO es obligatorio siempre (es la clave del registro en Firebase), asi que
-// se elige el proyecto antes de probar el resto de las validaciones.
+// se elige el proyecto antes de probar el resto de las validaciones. Tambien se
+// elige "Complete" como resultado: la aprobacion forzada es justamente marcar
+// Complete un proyecto al que le falta papeleo.
 const renderWithProject = () => {
   const { container } = render(<Phase1Form />);
   const select = container.querySelector('select[name="soNumber"]') as HTMLSelectElement;
   fireEvent.change(select, { target: { value: PENDING.id } });
+  const complete = container.querySelector('input[name="phase1Outcome"][value="Complete"]') as HTMLInputElement;
+  fireEvent.click(complete);
   return container;
 };
 

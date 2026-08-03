@@ -27,7 +27,10 @@ describe('resolveArchivedView', () => {
 
     const result = resolveArchivedView(project, true, liveNotes);
 
-    expect(result.notes).toEqual(project.snapshot.notes);
+    // Las notas del snapshot ganan sobre las vivas. Vienen normalizadas (con
+    // su clave de storage en _key), no como referencia cruda al snapshot.
+    expect(result.notes).toHaveLength(1);
+    expect(result.notes[0].text).toBe('from snapshot');
     expect(result.materials).toEqual({ thermofoil: true });
     expect(result.engineeringChecks).toEqual({ started: '2026-01-01', user: 'Bob' });
     expect(result.nestingChecks).toEqual({ started: '2026-01-02', user: 'Cal' });
@@ -65,5 +68,42 @@ describe('resolveArchivedView', () => {
   it('returns an empty notes array, not undefined, when there is neither a snapshot nor live notes', () => {
     const result = resolveArchivedView({ so: '1' }, true, undefined);
     expect(result.notes).toEqual([]);
+  });
+
+  // project_notes paso a guardarse como mapa por id de nota. El archivador
+  // snapshotea el nodo TAL CUAL viene de RTDB, asi que un proyecto archivado
+  // despues del cambio trae un objeto, no un array — y `.length` de un objeto
+  // es undefined, con lo cual la seccion de notas desaparecia sin ningun error.
+  it('normaliza un snapshot de notas guardado como mapa por id (formato nuevo)', () => {
+    const project = {
+      so: '900',
+      snapshot: {
+        notes: {
+          'n1': { id: 'n1', text: 'vieja', createdAt: '2026-01-01T00:00:00.000Z' },
+          'n2': { id: 'n2', text: 'nueva', createdAt: '2026-06-01T00:00:00.000Z' },
+        },
+      },
+    };
+
+    const result = resolveArchivedView(project, true, []);
+    expect(Array.isArray(result.notes)).toBe(true);
+    expect(result.notes).toHaveLength(2);
+    expect(result.notes[0].text).toBe('nueva'); // mas nueva primero
+  });
+
+  it('sigue normalizando un snapshot de notas en formato viejo (array indexado)', () => {
+    const project = {
+      so: '901',
+      snapshot: {
+        notes: {
+          '0': { id: 'a', text: 'primera', createdAt: '2026-06-01T00:00:00.000Z' },
+          '1': { id: 'b', text: 'segunda', createdAt: '2026-01-01T00:00:00.000Z' },
+        },
+      },
+    };
+
+    const result = resolveArchivedView(project, true, []);
+    expect(result.notes).toHaveLength(2);
+    expect(result.notes.map(n => n.text)).toEqual(['primera', 'segunda']);
   });
 });

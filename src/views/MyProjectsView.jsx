@@ -30,6 +30,7 @@ import { cleanupLogbookData } from '../utils/logbookData';
 import { cleanupChecklistData } from '../utils/checklistData';
 import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
 import { useTheme } from '../utils/ThemeContext';
+import { noteStorageKey, stripInternalFields, normalizeNotesBySo } from '../utils/projectNotes';
 import './MyProjectsView.css';
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Title, ChartTooltip, Legend, Filler);
@@ -425,11 +426,12 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       setNestingChecks(dbData);
     });
 
-    // Load Project Notes
+    // Load Project Notes — normalizado para que el resto de la vista siga
+    // viendo un array por SO, venga el dato en formato viejo (array indexado)
+    // o nuevo (una clave por nota). Ver projectNotes.js.
     const notesRef = ref(db, 'project_notes');
     const unsubscribeNotes = onValue(notesRef, (snapshot) => {
-      const dbData = snapshot.val() || {};
-      setProjectNotes(dbData);
+      setProjectNotes(normalizeNotesBySo(snapshot.val()));
     });
 
     // Load Project Collaborators
@@ -774,16 +776,16 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       newNote.attachments = attachments;
     }
 
-    const currentNotes = projectNotes[so] ? [...projectNotes[so]] : [];
-    currentNotes.unshift(newNote);
-
     if (db && currentUser) {
       try {
-        await set(ref(db, `project_notes/${so}`), currentNotes);
+        // Una nota por clave: se escribe solo la nueva, no el array entero
+        // (ver projectNotes.js — habilita reglas de RTDB por nota).
+        await set(ref(db, `project_notes/${so}/${noteStorageKey(newNote)}`), stripInternalFields(newNote));
       } catch (err) {
         console.error('Failed to save note to Firebase:', err);
       }
     } else {
+      const currentNotes = [newNote, ...(projectNotes[so] || [])];
       localStorage.setItem(`project_notes_${so}`, JSON.stringify(currentNotes));
       setProjectNotes(prev => ({ ...prev, [so]: currentNotes }));
     }
@@ -803,15 +805,19 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
     if (userProfile && (userProfile.role === 'administrative' || userProfile.role === 'admin')) {
       return;
     }
-    const currentNotes = (projectNotes[so] || []).filter(n => n.id !== noteId);
+    const target = (projectNotes[so] || []).find(n => n.id === noteId);
+    if (!target) return;
 
     if (db && currentUser) {
       try {
-        await set(ref(db, `project_notes/${so}`), currentNotes.length > 0 ? currentNotes : null);
+        // Borrar = poner en null solo esa clave, sin tocar el resto de las
+        // notas del proyecto (ver projectNotes.js).
+        await set(ref(db, `project_notes/${so}/${noteStorageKey(target)}`), null);
       } catch (err) {
         console.error('Failed to delete note from Firebase:', err);
       }
     } else {
+      const currentNotes = (projectNotes[so] || []).filter(n => n.id !== noteId);
       localStorage.setItem(`project_notes_${so}`, JSON.stringify(currentNotes));
       setProjectNotes(prev => ({ ...prev, [so]: currentNotes }));
     }
@@ -833,7 +839,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
 
     if (db && currentUser) {
       try {
-        await set(ref(db, `project_notes/${so}`), currentNotes);
+        await set(ref(db, `project_notes/${so}/${noteStorageKey(updatedNote)}`), stripInternalFields(updatedNote));
       } catch (err) {
         console.error('Failed to update note type in Firebase:', err);
       }
@@ -853,7 +859,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
 
     if (db && currentUser) {
       try {
-        await set(ref(db, `project_notes/${so}`), currentNotes);
+        await set(ref(db, `project_notes/${so}/${noteStorageKey(currentNotes[idx])}`), stripInternalFields(currentNotes[idx]));
       } catch (err) {
         console.error('Failed to update note urgency in Firebase:', err);
       }
@@ -878,7 +884,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
 
     if (db && currentUser) {
       try {
-        await set(ref(db, `project_notes/${so}`), currentNotes);
+        await set(ref(db, `project_notes/${so}/${noteStorageKey(currentNotes[idx])}`), stripInternalFields(currentNotes[idx]));
       } catch (err) {
         console.error('Failed to update note resolution in Firebase:', err);
       }

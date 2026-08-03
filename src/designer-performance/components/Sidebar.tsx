@@ -1,6 +1,7 @@
 import React from 'react';
 import { LayoutDashboard, FileText, CheckSquare, FolderOpen, Activity } from 'lucide-react';
 import { useLanguage } from '../../utils/LanguageContext';
+import { useKpi } from '../context/KpiContext';
 
 interface SidebarProps {
   currentView: string;
@@ -9,6 +10,8 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
   const { t } = useLanguage();
+  const { canEditIntake } = useKpi();
+
   const navGroups = [
     {
       label: t('designerPerf.sidebar.overview'),
@@ -17,13 +20,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView })
         { id: 'projects',  label: t('designerPerf.sidebar.projects'),    icon: FolderOpen },
       ],
     },
-    {
+    // Fase 1 y 2 escriben en designer_performance_projects, que para un
+    // designer es solo-lectura por regla de RTDB. Ocultar el grupo entero en
+    // vez de dejar que el formulario falle recien al guardar.
+    ...(canEditIntake ? [{
       label: t('designerPerf.sidebar.workflow'),
       items: [
         { id: 'phase1', label: t('designerPerf.sidebar.phase1'), icon: FileText },
         { id: 'phase2', label: t('designerPerf.sidebar.phase2'), icon: CheckSquare },
       ],
-    },
+    }] : []),
   ];
 
   return (

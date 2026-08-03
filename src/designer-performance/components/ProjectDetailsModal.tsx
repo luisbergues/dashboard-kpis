@@ -4,6 +4,7 @@ import type { Project } from '../types';
 import { T } from '../utils/theme';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import { useLanguage } from '../../utils/LanguageContext';
+import { isOverdue, overdueBusinessDays, overduePenalty } from '../utils/phase1Outcome';
 
 interface ModalProps {
   project: Project | null;
@@ -76,15 +77,19 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
       case 'Completed': return T.green;
       case 'Approved': return T.blue;
       case 'To review': return T.yellow;
+      case 'Deferred': return '#f97316';
+      case 'Deficient':
       case 'Rejected': return T.red;
       default: return T.textSecondary;
     }
   };
   const statusColor = getStatusColor(project.status);
+  const overdue = isOverdue(project.outcome);
 
   const STATUS_LABEL_KEYS: Record<string, string> = {
     All: 'statusAll', Pending: 'statusPending', 'To review': 'statusToReview',
     Approved: 'statusApproved', Rejected: 'statusRejected', Completed: 'statusCompleted',
+    Deficient: 'statusDeficient', Deferred: 'statusDeferred',
   };
   const statusLabel = (s: string) => t(`designerPerf.projects.${STATUS_LABEL_KEYS[s] || 'statusAll'}`);
 
@@ -163,7 +168,41 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
 
         {/* Scrollable Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
-          
+
+          {/* Resultado de la revision manual. Deficient y Deferred llevan
+              siempre el motivo escrito y la fecha limite para subsanarlo. */}
+          {!!project.outcome?.reason && (
+            <div style={{
+              marginBottom: 24, padding: '14px 16px', borderRadius: T.radiusMd,
+              background: overdue ? 'rgba(239,68,68,0.07)' : 'rgba(234,179,8,0.06)',
+              border: `1px solid ${overdue ? 'rgba(239,68,68,0.25)' : 'rgba(234,179,8,0.2)'}`,
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                gap: 10, flexWrap: 'wrap', marginBottom: 8,
+              }}>
+                <span style={{ color: statusColor, fontSize: '0.8rem', fontWeight: 700 }}>
+                  {project.outcome.result === 'Complete'
+                    ? 'Resolved — was returned before being marked Complete'
+                    : project.outcome.result === 'Deficient' ? 'Written notice' : 'Deferral reason'}
+                </span>
+                {!!project.outcome.deadline && (
+                  <span style={{
+                    fontSize: '0.72rem', fontWeight: 700,
+                    color: overdue ? T.red : T.textMuted,
+                  }}>
+                    {overdue
+                      ? `${overdueBusinessDays(project.outcome)} business days overdue · -${overduePenalty(project.outcome)} pts`
+                      : `Deadline: ${formatDisplayDate(new Date(project.outcome.deadline))}`}
+                  </span>
+                )}
+              </div>
+              <p style={{ color: T.textSecondary, fontSize: '0.84rem', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-wrap' }}>
+                {project.outcome.reason}
+              </p>
+            </div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
             
             {/* Left Column: Checklist & Complexity */}

@@ -343,7 +343,11 @@ export const translations = {
         statusAll: "All",
         statusPending: "Pending",
         statusToReview: "To review",
-        statusApproved: "Approved",
+        // "Complete" es como llama el documento de status de ingenieria al
+        // estado que internamente sigue siendo 'Approved'.
+        statusApproved: "Complete",
+        statusDeficient: "Deficient",
+        statusDeferred: "Deferred",
         statusRejected: "Rejected",
         statusCompleted: "Completed"
       },
@@ -416,6 +420,7 @@ export const translations = {
       revokeConfirm: "Revoke this user's access? They will no longer be able to see any data.",
       approveError: "Could not approve this user. The change was not saved — check your permissions and try again.",
       revokeError: "Could not revoke this user. The change was not saved — check your permissions and try again.",
+      roleChangeError: "Could not change this user's role. The change was not saved — check your permissions and try again.",
       statusPending: "Pending",
       statusApproved: "Approved",
       statusRejected: "Revoked",
@@ -769,7 +774,9 @@ export const translations = {
         statusAll: "Todos",
         statusPending: "Pendiente",
         statusToReview: "A revisar",
-        statusApproved: "Aprobado",
+        statusApproved: "Completo",
+        statusDeficient: "Deficiente",
+        statusDeferred: "Diferido",
         statusRejected: "Rechazado",
         statusCompleted: "Completado"
       },
@@ -842,6 +849,7 @@ export const translations = {
       revokeConfirm: "¿Revocar el acceso de este usuario? Ya no podrá ver ningún dato.",
       approveError: "No se pudo aprobar a este usuario. El cambio no se guardó — revisá tus permisos e intentá de nuevo.",
       revokeError: "No se pudo revocar a este usuario. El cambio no se guardó — revisá tus permisos e intentá de nuevo.",
+      roleChangeError: "No se pudo cambiar el rol de este usuario. El cambio no se guardó — revisá tus permisos e intentá de nuevo.",
       statusPending: "Pendiente",
       statusApproved: "Aprobado",
       statusRejected: "Revocado",

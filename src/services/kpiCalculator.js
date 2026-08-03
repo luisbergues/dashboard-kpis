@@ -3,6 +3,7 @@
  * Contains isolated mathematical formulas and business logic for JL Closets metrics.
  */
 import { shortProjectName } from '../utils/projectName';
+import { parseInstallDateLocal } from '../utils/dateFormat';
 
 /**
  * Parses a currency string to a float number
@@ -152,7 +153,15 @@ export function calculateFileRequestsPercentage(onHoldNotes, projects = []) {
 export function predictBottlenecks(projects, referenceDateStr = new Date().toISOString()) {
   if (!Array.isArray(projects)) return [];
 
-  const refDate = new Date(referenceDateStr);
+  // Ambos lados se truncan al DIA local antes de comparar. Antes refDate era
+  // un instante completo (toISOString() trae la hora) y installDate se parseaba
+  // como medianoche UTC, asi que un install de hoy caia "antes" de la
+  // referencia y quedaba fuera de la ventana de 7 dias.
+  const refRaw = new Date(referenceDateStr);
+  const refDate = isNaN(refRaw.getTime())
+    ? null
+    : new Date(refRaw.getFullYear(), refRaw.getMonth(), refRaw.getDate());
+  if (!refDate) return [];
   const oneDayMs = 24 * 60 * 60 * 1000;
   const next7DaysEnd = new Date(refDate.getTime() + 7 * oneDayMs);
 
@@ -161,9 +170,9 @@ export function predictBottlenecks(projects, referenceDateStr = new Date().toISO
 
   projects.forEach(p => {
     if (!p.install) return;
-    const installDate = new Date(p.install);
-    
-    if (!isNaN(installDate)) {
+    const installDate = parseInstallDateLocal(p.install);
+
+    if (installDate) {
       // 1. Tracks workload by designer for active pre-production projects
       if (p.eng && ['engineering', 'check', 'review'].includes(p.status?.toLowerCase())) {
         workloadByDesigner[p.eng] = (workloadByDesigner[p.eng] || 0) + 1;
@@ -263,8 +272,10 @@ export function getDelayedProjectsCount(projects, projectHistory = {}, currentDa
         // Fallback: If no history, see if the install date is past or within 3 days.
         // If so, we assume it has been delayed.
         if (p.install) {
-          const installDate = new Date(p.install);
-          if (!isNaN(installDate) && installDate.getTime() - currentDate.getTime() < threeDaysMs) {
+          // Medianoche local, no UTC: si no, en zonas UTC-negativas la fecha
+          // se corre un dia y marca proyectos como atrasados de mas.
+          const installDate = parseInstallDateLocal(p.install);
+          if (installDate && installDate.getTime() - currentDate.getTime() < threeDaysMs) {
             delayedCount++;
           }
         }
@@ -355,6 +366,13 @@ export function calculatePersonalStageAverages(projectStages, projects, projectH
 
       // Nesting: between Check 2 completed (stage[3]) and Nesting completed (stage[4])
       durations['nesting'] = getStageDuration(3, 4);
+
+      // Install: between Nesting completed (stage[4]) and Install completed
+      // (stage[5]). Faltaba: 'install' se inicializaba en 0 y nunca se
+      // asignaba, asi que `hours > 0` nunca se cumplia, totalWeight jamas
+      // acumulaba y la fila Install del grafico daba 0 para todos los
+      // ingenieros, siempre.
+      durations['install'] = getStageDuration(4, 5);
     }
 
       // Assign weighted hours for existing stages (now without ingenieria)
@@ -559,9 +577,11 @@ export function getUpcomingDeadlines(projects) {
   const deadlines = [];
   projects.forEach(p => {
     if (p.install) {
-      const instDate = new Date(p.install);
-      if (!isNaN(instDate)) {
-        instDate.setHours(0, 0, 0, 0);
+      // parseInstallDateLocal ya devuelve medianoche LOCAL: hacer
+      // new Date('2026-06-12') + setHours(0,0,0,0) mezclaba UTC con local y
+      // corria la fecha un dia hacia atras en toda America.
+      const instDate = parseInstallDateLocal(p.install);
+      if (instDate) {
         if (instDate >= today) {
           const diff = instDate.getTime() - today.getTime();
           const daysLeft = Math.round(diff / (1000 * 60 * 60 * 24));

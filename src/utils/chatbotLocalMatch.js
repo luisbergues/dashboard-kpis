@@ -3,6 +3,7 @@
 // import — a script that reimplements this by hand in a test file silently
 // drifts the moment the component's matching logic changes.
 import { normalizeText, searchEngineeringManual } from './engineeringManual';
+import { parseInstallDateLocal } from './dateFormat';
 
 // Trigger phrases that precede an entity name in a status/lookup question.
 // Stripped out before entity search so "How is Eindar Khant?" searches for
@@ -280,20 +281,6 @@ export function findOnHoldProjects(projects = []) {
   return projects.filter(p => String(p.status || '').toUpperCase().includes('HOLD'));
 }
 
-// Parses a project install date into a local-midnight Date. Sheet install
-// values are day-granular strings like "2026-06-12"; `new Date("2026-06-12")`
-// parses as midnight UTC, which in negative-offset timezones lands on the
-// previous local day and would wrongly drop an install dated "today". Split
-// the YYYY-MM-DD ourselves and build a local Date so day comparisons are
-// timezone-stable. Falls back to Date parsing for other formats.
-function parseInstallDateLocal(install) {
-  const iso = String(install).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) {
-    return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
-  }
-  const d = new Date(install);
-  return isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
 
 // Projects with an upcoming installation date, excluding completed/cancelled
 // and ON HOLD (they aren't actionable installs), sorted soonest-first. A

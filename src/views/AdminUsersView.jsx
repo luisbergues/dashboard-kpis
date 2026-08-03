@@ -62,8 +62,16 @@ export default function AdminUsersView({ userProfile, data }) {
     }
   };
 
+  // Mismo motivo que handleApprove/handleRevoke arriba: sin este catch, un
+  // write rechazado dejaba el dropdown mostrando el rol nuevo mientras en la
+  // base seguia el viejo, sin ninguna senal para el admin.
   const handleRoleChange = async (uid, role) => {
-    await update(ref(db, `users/${uid}`), { role });
+    try {
+      await update(ref(db, `users/${uid}`), { role });
+    } catch (err) {
+      console.error('Failed to change user role:', err);
+      window.alert(t('admin.roleChangeError'));
+    }
   };
 
   if (!isSuperAdminRole(userProfile?.role)) return null;
