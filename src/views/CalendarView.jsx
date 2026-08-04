@@ -72,11 +72,17 @@ export default function CalendarView({ data, currentUser, userProfile }) {
     const unsubscribe = onValue(notesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        // Convert the notes object from RTDB into an array
-        const notesList = Object.keys(data).map(key => ({
-          id: key,
-          ...data[key]
-        }));
+        // Convert the notes object from RTDB into an array. calendar_notes
+        // briefly (2026-05-27 to 2026-07-02) stored notes nested under
+        // calendar_notes/<uid>/<noteId> before reverting to the current flat
+        // calendar_notes/<noteId> shape; those legacy per-uid buckets were
+        // never migrated and are still sitting at the top level. Without this
+        // filter, each surviving bucket gets treated as one note with no
+        // `text`, rendering as an empty row (and sorting first, since '' <
+        // any real date string).
+        const notesList = Object.keys(data)
+          .map(key => ({ id: key, ...data[key] }))
+          .filter(note => typeof note.text === 'string');
         setNotes(notesList);
       } else {
         setNotes([]);

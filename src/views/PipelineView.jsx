@@ -408,7 +408,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   };
 
   const getStatusLabel = (status) => {
-    if (!status) return '';
+    if (!status) return '—';
     const s = status.toUpperCase();
     if (s.includes('HOLD')) return language === 'es' ? 'EN PAUSA' : 'ON HOLD';
     if (s.includes('CHECK')) return 'Check';
@@ -707,7 +707,9 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                       <h4 className="kanban-project-name">{shortProjectName(project.name)}</h4>
                       <div className="kanban-card-meta">
                         <span className="meta-item" style={{ fontSize: '0.82rem' }}><Calendar size={13}/> {formatDisplayDate(project.install, language)}</span>
-                        <span className="meta-item eng-badge" style={{ fontSize: '0.82rem' }}>ENG: {project.eng}</span>
+                        <span className="meta-item eng-badge" style={{ fontSize: '0.82rem' }}>
+                          ENG: {assignedEngineers[project.so] || project.eng || (language === 'es' ? 'No asignado' : 'Unassigned')}
+                        </span>
                       </div>
                       <div className="kanban-card-bottom" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', gap: '4px' }}>
@@ -857,7 +859,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                       {!isDesigner && (
                       <div className="pipeline-eng-check-controls card-eng">
                         <div className="pipeline-eng-check-header">
-                          <span className="pipeline-eng-check-title">{t('myProjects.engineeringCheck', 'Engineering Time')}</span>
+                          <span className="pipeline-eng-check-title">{t('myProjects.engineeringCheck')}</span>
                         </div>
                         <div className="pipeline-eng-check-buttons">
                           <button 

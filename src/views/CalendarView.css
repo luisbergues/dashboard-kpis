@@ -26,12 +26,14 @@
   }
 }
 
-/* Header */
-.view-header {
+/* Header — row layout (title/subtitle + "Add Custom Note" action), unlike the
+   shared stacked .view-header in index.css. Bell clearance comes from that
+   shared rule's padding-right, which pushes .view-header-actions left of the
+   fixed bell since this container uses justify-content: space-between. */
+.calendar-view .view-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-lg);
   flex-wrap: wrap;
   gap: 12px;
 }

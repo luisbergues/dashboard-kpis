@@ -411,7 +411,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
   };
 
   const getStatusLabel = (status) => {
-    if (!status) return '';
+    if (!status) return '—';
     const s = status.toUpperCase();
     if (s.includes('HOLD')) return language === 'es' ? 'EN PAUSA' : 'ON HOLD';
     if (s.includes('CHECK')) return 'Check';
@@ -445,7 +445,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
           <span className="kpi-value">{avgValidationTime} hrs</span>
         </div>
         {bottleneckAlerts.length > 0 && (
-          <div className="glass-card kpi-card" style={{ borderColor: 'var(--color-pink)' }}>
+          <div className="glass-card kpi-card is-alert">
             <span className="kpi-label text-danger">Bottleneck Alerts</span>
             <span className="kpi-value">{bottleneckAlerts.length} Active</span>
           </div>
@@ -477,8 +477,8 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
                     >
                       <span className="alert-item-so">#{p.so}</span>
                       <span className="alert-item-name">{shortProjectName(p.name)}</span>
-                      {p.designer && <span className="alert-item-meta">{p.designer}</span>}
-                      {p.install && <span className="alert-item-meta">{formatDisplayDate(p.install, language)}</span>}
+                      <span className="alert-item-meta">{p.designer || (language === 'es' ? 'No asignado' : 'Unassigned')}</span>
+                      <span className="alert-item-meta">{p.install ? formatDisplayDate(p.install, language) : 'TBD'}</span>
                     </a>
                   ))}
                 </div>

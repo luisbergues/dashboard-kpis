@@ -1,8 +1,17 @@
 import React from 'react';
 import './SkeletonLoader.css';
 
-export default function SkeletonLoader({ type = 'card', count = 1 }) {
+export default function SkeletonLoader({ type = 'card', count = 1, width, height, className = '' }) {
   const items = Array.from({ length: count });
+
+  if (type === 'text') {
+    return (
+      <div
+        className={`skeleton-line ${className}`.trim()}
+        style={{ width: width || '100%', height: height || '14px' }}
+      />
+    );
+  }
 
   if (type === 'chart') {
     return (

@@ -47,6 +47,12 @@
   --spacing-md: 1rem;
   --spacing-lg: 1.5rem;
   --spacing-xl: 2rem;
+
+  /* Fixed notification bell (NotificationBubble.css): top/right 24px, ~56px
+     wide + dismiss-button overhang. Reserve this much on the right of page
+     headers so content never sits underneath it (desktop only — the bell
+     isn't suppressed on mobile but headers stack full-width there anyway). */
+  --bell-safe-area: 90px;
   
   /* Radii - Súper redondeados */
   --radius-sm: 100px;  /* Pills for buttons, inputs, tabs, chips */
@@ -126,6 +132,29 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* Shared page header (title + subtitle), used by every top-level view.
+   Previously each view either didn't define it (Materials, Admin) or relied
+   on whichever view's CSS happened to load last (Pipeline vs Calendar both
+   define .view-header globally with row-layout at the same specificity —
+   import order in App.jsx made Calendar's win everywhere, throwing bare
+   title+subtitle headers into space-between and pushing the subtitle under
+   the fixed notification bell). Views that need a row layout with actions
+   (Calendar, Pipeline) opt into it with a view-scoped selector instead. */
+.view-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+@media (min-width: 768px) {
+  /* Reserve room for the fixed notification bell (top:24px/right:24px,
+     ~56px wide + dismiss-button overhang) so no header content sits under it. */
+  .view-header {
+    padding-right: var(--bell-safe-area);
+  }
+}
+
 .main-content.no-sidebar {
   margin: 0 !important;
   margin-left: 0 !important;
@@ -133,6 +162,52 @@ h1, h2, h3, h4, h5, h6 {
   max-width: none !important;
   width: 100vw;
   min-height: 100vh;
+}
+
+/* App-wide loading/error states (App.jsx's initial "Loading application...",
+   "Loading project...", pending-approval screen, etc). These previously had
+   no CSS at all and rendered as plain unstyled text at the top-left corner. */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  min-height: 60vh;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  text-align: center;
+  padding: var(--spacing-xl);
+}
+
+.error-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: var(--color-pink);
+  font-size: 0.95rem;
+  text-align: center;
+  padding: var(--spacing-xl);
+}
+
+.pending-approval-state {
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.mt-sm {
+  margin-top: var(--spacing-sm);
+}
+
+/* Spin animation for loading icons (e.g. <Loader2 className="animate-spin" />).
+   Referenced from several JSX files already but never defined anywhere in
+   the codebase, so those icons have always rendered static, not spinning. */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
 /* Custom Scrollbar */
@@ -304,6 +379,24 @@ h1, h2, h3, h4, h5, h6 {
   
   :root.light-theme .kpi-card .kpi-value {
     color: #FFFFFF !important;
+  }
+
+  /* Alert variant must stay visually distinct from the generic cyan KPI
+     fill above — same specificity trick (extra class = higher specificity
+     than the plain .kpi-card block, so this wins without needing !important
+     wars beyond matching the pattern already used here). */
+  :root.light-theme .kpi-card.is-alert {
+    background: rgba(255, 46, 147, 0.08) !important;
+    border-color: var(--color-pink) !important;
+    box-shadow: 0 4px 12px rgba(255, 46, 147, 0.15) !important;
+  }
+
+  :root.light-theme .kpi-card.is-alert .kpi-label {
+    color: var(--color-pink) !important;
+  }
+
+  :root.light-theme .kpi-card.is-alert .kpi-value {
+    color: var(--color-pink) !important;
   }
 
 :root.light-theme .insight-point-card:hover,

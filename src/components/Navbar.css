@@ -34,6 +34,10 @@
 .nav-btn {
   background: none;
   border: none;
+  /* .nav-btn is a <button>; without this it renders in the platform's
+     default UI font (wider than Inter), which was part of why
+     "Designer Perf." wrapped to two lines despite fitting on paper. */
+  font: inherit;
   color: var(--text-muted);
   display: flex;
   flex-direction: column;
@@ -59,6 +63,7 @@
 .nav-label {
   font-size: 0.75rem;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .nav-icon-wrapper {

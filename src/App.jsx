@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { Loader2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchAndParseData, fetchAndParseProjectMaterials } from './utils/sheetParser'
 import { fetchAndParseMasterSchedule } from './utils/masterSchedule'
@@ -33,7 +34,7 @@ import { shortProjectName } from './utils/projectName'
 import { normalizeNotesBySo } from './utils/projectNotes'
 
 function App() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState(() => {
     // Un link compartido (?so=12705) manda directo a Designer Perf., por encima
     // de la ultima pestana usada: el disenador lo abre para ver ese proyecto.
@@ -310,6 +311,23 @@ function App() {
   const mergedData = useMemo(() => {
     if (!data) return null;
 
+    // The sheet parser keeps status history as a separate top-level array
+    // (parsedData.statusHistory, { so, name, status, statusDate, history })
+    // instead of nesting it onto each project — so project.statusHistory is
+    // always undefined on active projects. calculateAutomaticStages then has
+    // no dates to work with and falls back to "today" for every stage,
+    // collapsing all of a project's stage timestamps onto the same date
+    // (breaks the weekly-completions chart, which needs stages spread across
+    // real weeks to draw anything but isolated points). Join it here, once,
+    // centrally, the same way ProjectDetailView.jsx does for archived
+    // projects' nested snapshot.statusHistory.
+    const statusHistoryBySo = new Map();
+    (data.statusHistory || []).forEach(h => {
+      const so = String(h.so);
+      if (!statusHistoryBySo.has(so)) statusHistoryBySo.set(so, []);
+      statusHistoryBySo.get(so).push(h);
+    });
+
     const mergedPriorityAnalysis = data.priorityAnalysis.map(p => {
       const override = overrides[p.so];
       const costData = data.topCostProjects?.find(cp => cp.name === p.name);
@@ -326,7 +344,8 @@ function App() {
         status,
         onHoldReason,
         designer: projectDesigners[p.so] || p.designer || '',
-        totalAmt: costData ? costData.cost : '$0'
+        totalAmt: costData ? costData.cost : '$0',
+        statusHistory: statusHistoryBySo.get(String(p.so)) || []
       };
     });
 
@@ -379,9 +398,13 @@ function App() {
     if (isSuperAdminRole(userProfile.role) && pendingUsersCount > 0) {
       alerts.push({
         type: 'admin_request',
-        text: pendingUsersCount === 1
-          ? 'Hay 1 solicitud de cuenta pendiente de aprobación'
-          : `Hay ${pendingUsersCount} solicitudes de cuenta pendientes de aprobación`
+        text: language === 'es'
+          ? (pendingUsersCount === 1
+            ? 'Hay 1 solicitud de cuenta pendiente de aprobación'
+            : `Hay ${pendingUsersCount} solicitudes de cuenta pendientes de aprobación`)
+          : (pendingUsersCount === 1
+            ? '1 account request pending approval'
+            : `${pendingUsersCount} account requests pending approval`)
       });
     }
     const myDesignerName = userProfile.designerName.trim().toLowerCase();
@@ -398,7 +421,9 @@ function App() {
       alerts.push({
         so: p.so,
         type: 'warning',
-        text: `SO #${p.so} "${shortProjectName(p.name)}" está ON HOLD${reason}`
+        text: language === 'es'
+          ? `SO #${p.so} "${shortProjectName(p.name)}" está ON HOLD${reason}`
+          : `SO #${p.so} "${shortProjectName(p.name)}" is ON HOLD${reason}`
       });
     });
 
@@ -452,7 +477,9 @@ function App() {
           alerts.push({
             so: p.so,
             type: 'urgent',
-            text: `¡Urgente! SO #${p.so} tiene instalación en ${diffDays} días: ${shortProjectName(p.name)}`
+            text: language === 'es'
+              ? `¡Urgente! SO #${p.so} tiene instalación en ${diffDays} día${diffDays === 1 ? '' : 's'}: ${shortProjectName(p.name)}`
+              : `Urgent! SO #${p.so} installs in ${diffDays} day${diffDays === 1 ? '' : 's'}: ${shortProjectName(p.name)}`
           });
         }
       }
@@ -492,7 +519,9 @@ function App() {
           alerts.push({
             so: p.so,
             type: 'note',
-            text: `SO #${p.so}: ${unreadCount} nota${unreadCount > 1 ? 's' : ''} nueva${unreadCount > 1 ? 's' : ''} en ${shortProjectName(p.name)}`
+            text: language === 'es'
+              ? `SO #${p.so}: ${unreadCount} nota${unreadCount > 1 ? 's' : ''} nueva${unreadCount > 1 ? 's' : ''} en ${shortProjectName(p.name)}`
+              : `SO #${p.so}: ${unreadCount} new note${unreadCount > 1 ? 's' : ''} on ${shortProjectName(p.name)}`
           });
         }
       }
@@ -513,9 +542,13 @@ function App() {
           alerts.push({
             so: p.so,
             type: 'designer_review',
-            text: count === 1
-              ? `SO #${p.so} "${shortProjectName(p.name)}": revisar nota Designer (${maxDays} día${maxDays === 1 ? '' : 's'} abierta) — ¿lo solicitó el diseñador?`
-              : `SO #${p.so} "${shortProjectName(p.name)}": ${count} notas Designer sin revisar (hasta ${maxDays} días abiertas)`
+            text: language === 'es'
+              ? (count === 1
+                ? `SO #${p.so} "${shortProjectName(p.name)}": revisar nota Designer (${maxDays} día${maxDays === 1 ? '' : 's'} abierta) — ¿lo solicitó el diseñador?`
+                : `SO #${p.so} "${shortProjectName(p.name)}": ${count} notas Designer sin revisar (hasta ${maxDays} días abiertas)`)
+              : (count === 1
+                ? `SO #${p.so} "${shortProjectName(p.name)}": review Designer note (open ${maxDays} day${maxDays === 1 ? '' : 's'}) — did the designer request it?`
+                : `SO #${p.so} "${shortProjectName(p.name)}": ${count} Designer notes to review (up to ${maxDays} days open)`)
           });
         }
       }
@@ -533,7 +566,7 @@ function App() {
     }
 
     return alerts;
-  }, [mergedData, userProfile, projectNotes, currentUser, pendingUsersCount]);
+  }, [mergedData, userProfile, projectNotes, currentUser, pendingUsersCount, language]);
 
   const renderView = () => {
     // Standalone shareable project detail page (intentionally public/read-only —
@@ -541,7 +574,7 @@ function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const projectSoParam = urlParams.get('project');
     if (projectSoParam) {
-      if (loading || authLoading) return <div className="loading-state">Loading project...</div>;
+      if (loading || authLoading) return <div className="loading-state"><Loader2 size={20} className="animate-spin" /> Loading project...</div>;
       return (
         <ProjectDetailView
           data={mergedData}
@@ -552,7 +585,7 @@ function App() {
       );
     }
 
-    if (loading || authLoading) return <div className="loading-state">Loading application...</div>;
+    if (loading || authLoading) return <div className="loading-state"><Loader2 size={20} className="animate-spin" /> Loading application...</div>;
     if (error) return <div className="error-state">Error: {error}</div>;
 
     if (!currentUser) {
@@ -589,7 +622,7 @@ function App() {
     // Redirect designer away from restricted tabs
     if (isDesigner && !['pipeline', 'calendar', 'designer-performance'].includes(activeTab)) {
       setTimeout(() => setActiveTab('pipeline'), 0);
-      return <div className="loading-state">Loading...</div>;
+      return <div className="loading-state"><Loader2 size={20} className="animate-spin" /> Loading...</div>;
     }
 
     switch (activeTab) {

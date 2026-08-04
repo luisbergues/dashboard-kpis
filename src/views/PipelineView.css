@@ -23,17 +23,17 @@
   flex: 0 0 auto;
 }
 
-.view-header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
-
+/* Pipeline's header needs a row layout (title + search/filter controls side
+   by side), unlike the shared stacked .view-header in index.css. Bell
+   clearance is handled via .controls's margin-right below, not the shared
+   rule's padding-right, so cancel that back to 0 here to avoid reserving the
+   space twice. */
 @media (min-width: 768px) {
-  .view-header {
+  .pipeline-view .view-header {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+    padding-right: 0;
   }
 }
 
@@ -46,9 +46,9 @@
 @media (min-width: 768px) {
   .controls {
     align-items: flex-end;
-    /* Leaves room for the fixed notification bell widget (top:24px/
-       right:24px, ~56px wide) so the search bar never sits underneath it. */
-    margin-right: 90px;
+    /* Leaves room for the fixed notification bell widget so the search bar
+       never sits underneath it (see --bell-safe-area in index.css). */
+    margin-right: var(--bell-safe-area);
   }
 }
 
@@ -67,7 +67,11 @@
   font-family: inherit;
   font-size: 0.95rem;
   outline: none;
-  width: 200px;
+  /* Wide enough for the longest placeholder in either language
+     ("Buscar por SO#, Nombre o Ingeniero (ENG)...") without clipping —
+     200px cut it mid-word ("...Name or EN" instead of "...or ENG..."). */
+  width: 330px;
+  max-width: 100%;
 }
 
 .search-bar input::placeholder {

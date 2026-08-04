@@ -131,6 +131,13 @@
   margin-bottom: 8px;
 }
 
+/* Alert variant (e.g. Bottleneck Alerts) — a real modifier class instead of
+   an inline style, so it can be overridden per-theme with the same
+   specificity the light-theme .kpi-card rules use (see index.css). */
+.kpi-card.is-alert {
+  border-color: var(--color-pink);
+}
+
 .kpi-value {
   font-size: 1.5rem;
   font-weight: 700;

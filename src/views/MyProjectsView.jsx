@@ -177,17 +177,25 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
   };
 
   // Filter projects where eng matches the logged in designer (bypass if role is administrative, admin, or engineer_nester)
-  const myProjectsRaw = priorityAnalysis.filter(p => {
+  // Memoized so derivedProjectStages below (keyed on these two arrays) only
+  // recomputes when the underlying data actually changes — plain .filter()
+  // calls return a new array reference on every render, which meant that
+  // useMemo never hit and calculateAutomaticStages's "no date found, fall
+  // back to today" branch kept regenerating timestamps continuously.
+  const myProjectsRaw = React.useMemo(() => priorityAnalysis.filter(p => {
     if (!userProfile) return false;
     if (userProfile.role === 'administrative' || userProfile.role === 'admin' || userProfile.role === 'engineer_nester') {
       return true;
     }
     return p.eng && p.eng.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
-  });
+  }), [priorityAnalysis, userProfile]);
 
   // Alimenta las metricas personales: solo lo que es de uno. Ver
   // archivedVisibility.js para por que esto y la lista de Completados difieren.
-  const myArchivedProjects = ownedArchivedProjects(data.archivedProjects, userProfile);
+  const myArchivedProjects = React.useMemo(
+    () => ownedArchivedProjects(data.archivedProjects, userProfile),
+    [data.archivedProjects, userProfile]
+  );
 
   // Some Priority Analysis rows carry a placeholder like "SO #12480" in the
   // Name column instead of the real project name (e.g. a test/incomplete
@@ -260,8 +268,10 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       if (sortBy === 'kanban') {
         const columnA = kanbanState[a.so] || 'projects';
         const columnB = kanbanState[b.so] || 'projects';
-        const kanbanA = KANBAN_ORDER[columnA] ?? 2;
-        const kanbanB = KANBAN_ORDER[columnB] ?? 2;
+        // Unknown column ids fall back to the 'projects' slot (3), matching
+        // the default columnA/columnB above — not the 'nesting' slot (2).
+        const kanbanA = KANBAN_ORDER[columnA] ?? 3;
+        const kanbanB = KANBAN_ORDER[columnB] ?? 3;
         if (kanbanA !== kanbanB) return kanbanA - kanbanB;
 
         // Same column: respect the nester's manual drag order from Pipeline
@@ -1404,9 +1414,9 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
           <button
             className={`btn-sm ${sortBy === 'kanban' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setSortBy('kanban')}
-            title={language === 'es' ? 'Ordenar por prioridad: Procurement → Material → Projects' : 'Sort by priority: Procurement → Material → Projects'}
+            title={language === 'es' ? 'Ordenar por columna Kanban: Procurement → Material → Nesting → Projects (mismo orden que el tablero de Pipeline)' : 'Sort by Kanban column: Procurement → Material → Nesting → Projects (same order as the Pipeline board)'}
           >
-            <LayoutGrid size={14} /> Kanban
+            <LayoutGrid size={14} /> {language === 'es' ? 'Orden Kanban' : 'Kanban Order'}
           </button>
         </div>
       </div>

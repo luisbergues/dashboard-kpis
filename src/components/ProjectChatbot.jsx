@@ -213,9 +213,14 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
   }, [messages]);
 
   // Persist history across page reloads / widget close-reopen (session-lasting).
+  // Error bubbles (server down, rate-limited, expired session, ...) are
+  // transient infrastructure noise, not real conversation — persisting them
+  // meant a single outage stuck around until 25 newer messages pushed it out
+  // of the capped history. Skip them so a reload starts clean instead.
   useEffect(() => {
     try {
-      localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages));
+      const toPersist = messages.filter(m => !m.isError);
+      localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(toPersist));
     } catch (err) {
       console.error('Chatbot: failed to persist history to localStorage:', err);
     }
@@ -433,6 +438,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       // and this class of outage is indistinguishable from normal NLU misses.
       if (err.status === 401) {
         return {
+          isError: true,
           text: isES
             ? '⚠️ Tu sesión expiró. Recargá la página para volver a iniciar sesión.'
             : '⚠️ Your session expired. Please reload the page to sign in again.'
@@ -443,6 +449,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       // rather than implying their question was the problem.
       if (err.status === 503) {
         return {
+          isError: true,
           text: isES
             ? '⚠️ El asistente está sobrecargado en este momento. Volvé a intentar en unos segundos — no es un problema con tu consulta.'
             : '⚠️ The assistant is overloaded right now. Try again in a few seconds — nothing is wrong with your question.'
@@ -450,6 +457,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       }
       if (err.status === 502 || err.status === 500) {
         return {
+          isError: true,
           text: isES
             ? '⚠️ El asistente no puede conectarse en este momento (error del servidor). Probá de nuevo en unos minutos, o usá los botones rápidos de abajo.'
             : '⚠️ The assistant can\'t connect right now (server error). Try again in a few minutes, or use the quick-action buttons below.'
@@ -457,6 +465,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       }
       if (err.status === 429) {
         return {
+          isError: true,
           text: isES
             ? '⚠️ Demasiadas consultas por ahora. Esperá un momento y volvé a intentar.'
             : '⚠️ Too many requests right now. Wait a moment and try again.'
@@ -500,6 +509,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       console.error('processInput crashed:', err);
       const isES = language === 'es';
       reply = {
+        isError: true,
         text: isES
           ? '⚠️ Ocurrió un error inesperado al procesar tu mensaje. Probá de nuevo o usá los botones rápidos.'
           : '⚠️ An unexpected error occurred while processing your message. Try again or use the quick-action buttons.'
@@ -515,6 +525,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       text: reply.text,
       options: reply.options,
       viaLLM: !!reply.viaLLM,
+      isError: !!reply.isError,
       timestamp: new Date()
     } : m));
   };

@@ -84,11 +84,12 @@ export const translations = {
       deleteBtn: "Delete Note"
     },
     myProjects: {
-      title: "Mis Proyectos", // Keep exact user naming
+      title: "My Projects",
       subtitle: "Manage the design and production stages of your assigned projects",
       emptyTitle: "You have no assigned projects",
       emptySubtitle: "There are currently no projects assigned to your profile",
       loading: "Loading project stages...",
+      engineeringCheck: "Engineering Time",
       releaseHold: "Release hold",
       pauseProject: "Pause project (On Hold)",
       holdReasonLabel: "Hold Reason:",
@@ -236,7 +237,7 @@ export const translations = {
         room: "Room",
         removeRoom: "Remove Room",
         roomName: "Room Name",
-        roomNamePlaceholder: "Ej: Master Kitchen",
+        roomNamePlaceholder: "e.g. Master Kitchen",
         tflColors: "TFL Colors",
         name: "Name",
         sheetSize: "Sheet Size",
@@ -520,6 +521,7 @@ export const translations = {
       emptyTitle: "No tienes proyectos asignados",
       emptySubtitle: "Actualmente no hay proyectos asignados a tu perfil",
       loading: "Cargando etapas de proyectos...",
+      engineeringCheck: "Tiempo de Ingeniería",
       releaseHold: "Liberar pausa",
       pauseProject: "Pausar proyecto (On Hold)",
       holdReasonLabel: "Motivo del Hold:",
@@ -724,7 +726,7 @@ export const translations = {
     pipeline: {
       title: "Tubería de Proyectos (Pipeline)",
       subtitle: "Seguimiento de cada proyecto activo a través de las etapas de ingeniería, nesting y producción",
-      searchPlaceholder: "Buscar por SO#, Nombre o Diseñador (ENG)...",
+      searchPlaceholder: "Buscar por SO#, Nombre o Ingeniero (ENG)...",
       noProjects: "No se encontraron proyectos."
     },
     designerPerf: {

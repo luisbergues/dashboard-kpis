@@ -435,10 +435,18 @@ export async function fetchAndParseQualityData() {
         }
 
         const engineer = row[0]?.trim();
-        const ownPoints = parseFloat(row[1]?.replace(/[^0-9.-]+/g, "")) || 0;
-        const revisionPoints = parseFloat(row[2]?.replace(/[^0-9.-]+/g, "")) || 0;
-        const nestingPoints = parseFloat(row[3]?.replace(/[^0-9.-]+/g, "")) || 0;
-        const totalKPI = parseFloat(row[4]?.replace(/[^0-9.-]+/g, "")) || 0;
+        // Round each component to 2 decimals BEFORE summing (matching how
+        // DesignQualityView displays each one via Intl.NumberFormat), then
+        // derive totalKPI from those rounded values instead of trusting the
+        // sheet's own total column (E). Column E is computed upstream from
+        // full-precision values and rounded independently, so it could differ
+        // from the displayed sum of the three components by a cent or two —
+        // this way what's shown always adds up exactly.
+        const round2 = (n) => Math.round(n * 100) / 100;
+        const ownPoints = round2(parseFloat(row[1]?.replace(/[^0-9.-]+/g, "")) || 0);
+        const revisionPoints = round2(parseFloat(row[2]?.replace(/[^0-9.-]+/g, "")) || 0);
+        const nestingPoints = round2(parseFloat(row[3]?.replace(/[^0-9.-]+/g, "")) || 0);
+        const totalKPI = round2(ownPoints + revisionPoints + nestingPoints);
         // Parse % of total which is likely in column index 5 (6th col) or we look at the second table.
         // We can get it from the secondary table or directly if it's there
         const percent = parseFloat(row[5]?.replace(/[^0-9.-]+/g, "")) || 0;
