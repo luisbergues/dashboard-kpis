@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { canManageDesignerNotes } from '../utils/notePermissions';
+import { ownedArchivedProjects, visibleArchivedProjects } from '../utils/archivedVisibility';
 import { noteDaysOpen, notePenalty } from '../designer-performance/utils/redFlags';
 import { Chart as ChartJS, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
 import { Line } from 'react-chartjs-2';
@@ -184,13 +185,9 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
     return p.eng && p.eng.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
   });
 
-  const myArchivedProjects = (data.archivedProjects || []).filter(p => {
-    if (!userProfile) return false;
-    if (userProfile.role === 'administrative' || userProfile.role === 'admin' || userProfile.role === 'engineer_nester') {
-      return true;
-    }
-    return p.eng && p.eng.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
-  });
+  // Alimenta las metricas personales: solo lo que es de uno. Ver
+  // archivedVisibility.js para por que esto y la lista de Completados difieren.
+  const myArchivedProjects = ownedArchivedProjects(data.archivedProjects, userProfile);
 
   // Some Priority Analysis rows carry a placeholder like "SO #12480" in the
   // Name column instead of the real project name (e.g. a test/incomplete
@@ -218,12 +215,23 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
     return p.name;
   };
 
+  // Archivados sin ingeniero asignado. Pasa con los que se recuperan desde
+  // Orphaned Projects: se reconstruyen a partir de restos en la base y muchas
+  // veces no hay de donde sacar quien los trabajo, asi que quedan con `eng`
+  // vacio. El filtro personal de arriba los descartaba, con lo cual no
+  // aparecian en la vista de NADIE salvo los tres roles que lo saltean.
+  //
+  // Se suman a la lista de completados, pero deliberadamente NO a
+  // myArchivedProjects: ese es el que alimenta las metricas personales, y un
+  // proyecto sin dueño no puede contar como trabajo de todos.
+  const visibleArchived = visibleArchivedProjects(data.archivedProjects, userProfile);
+
   // "Completed Projects" should show every finished project: ones already removed
-  // from the sheet (myArchivedProjects, from Firestore) AND ones still sitting in
-  // the sheet with status Completed (myProjectsRaw) that haven't been removed yet.
+  // from the sheet (visibleArchived, from the RTDB archive) AND ones still sitting
+  // in the sheet with status Completed (myProjectsRaw) that haven't been removed yet.
   const myCompletedProjects = [
     ...myProjectsRaw.filter(p => p.status && p.status.toLowerCase() === 'completed'),
-    ...myArchivedProjects,
+    ...visibleArchived,
   ]
     .filter((p, idx, arr) => arr.findIndex(x => x.so === p.so) === idx)
     .map(p => ({ ...p, name: resolveProjectName(p) }));
@@ -1002,8 +1010,8 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
 
     doc.setTextColor(70, 223, 177); // Mint color
     doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(22);
-    doc.text('JL Engineering Dashboard', 15, 20);
+    doc.setFontSize(19);
+    doc.text('JL Closets Engineering Dashboard', 15, 20);
 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(14);

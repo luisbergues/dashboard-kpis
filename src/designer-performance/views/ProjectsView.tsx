@@ -69,21 +69,23 @@ export const ProjectsView: React.FC = () => {
 
   const [filterStatus, setFilterStatus] = useState<ProjectStatus | 'All'>('All');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  /* Se guarda el SO, NO el objeto del proyecto.
+     Los datos de Firebase llegan despues que la lista de la planilla, asi que
+     el proyecto empieza vacio (Pending, checklist en 0, fecha de hoy) y recien
+     despues se completa. Guardando el objeto quedaba latcheada esa version
+     vacia y la ficha nunca se actualizaba; derivandolo de `projects` sigue
+     siempre el dato vivo. */
+  const [selectedSo, setSelectedSo] = useState<string | null>(null);
+  const selectedProject: Project | null =
+    selectedSo ? projects.find(p => p.id === selectedSo) ?? null : null;
 
-  /* Link compartido con el disenador (?so=12705): abre la ficha de ese proyecto
-     apenas termina de cargar la lista. Solo una vez — si la cierra, no se le
-     vuelve a abrir sola. */
-  const deepLinkOpened = useRef(false);
+  // Link compartido con el disenador (?so=12705). Se lee una sola vez al montar:
+  // no hace falta esperar a que el proyecto exista, la ficha aparece sola en
+  // cuanto entra en la lista.
   useEffect(() => {
-    if (deepLinkOpened.current) return;
     const so = getSharedProjectSo();
-    if (!so) return;
-    const target = projects.find(p => p.id === so);
-    if (!target) return;
-    deepLinkOpened.current = true;
-    setSelectedProject(target);
-  }, [projects]);
+    if (so) setSelectedSo(so);
+  }, []);
 
   const filtered = useMemo(() => {
     return projects.filter(p => {
@@ -239,7 +241,7 @@ export const ProjectsView: React.FC = () => {
                   return (
                     <div
                       key={project.id}
-                      onClick={() => setSelectedProject(project)}
+                      onClick={() => setSelectedSo(project.id)}
                       style={{
                         display: 'grid',
                         gridTemplateColumns: '90px minmax(180px, 1fr) 160px 80px 90px 90px 130px',
@@ -327,7 +329,7 @@ export const ProjectsView: React.FC = () => {
         </div>
       </div>
 
-      <ProjectDetailsModal project={selectedProject} onClose={() => setSelectedProject(null)} />
+      <ProjectDetailsModal project={selectedProject} onClose={() => setSelectedSo(null)} />
     </div>
   );
 };
