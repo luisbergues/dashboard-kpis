@@ -610,7 +610,19 @@ export const Phase1Form: React.FC = () => {
         forceApprove ? 'Approved with missing documentation.'
         : finalStatus === 'To review' ? 'Saved for review.'
         : outcomeMessage(finalStatus));
-      resetForm();
+      if (forceReview) {
+        // "Save for Later Review" no aprueba: el proyecto deja de ser Pending
+        // y ya no aparece en "Register New". Pasar a "Update Project" con el
+        // mismo SO, en vez de dejar la pantalla en blanco en una pestaña
+        // donde el proyecto no vuelve a listarse. hydratedKey se marca como
+        // ya cargado para este SO: lo que se acaba de guardar es exactamente
+        // lo que ya esta en pantalla, no hace falta (ni conviene, mientras la
+        // vuelta de Firebase todavia no llega) volver a leerlo de `projects`.
+        hydratedKey.current = `Update:${soNumber}`;
+        setMode('Update');
+      } else {
+        resetForm();
+      }
     } else {
       const existing = projects.find(p => p.id === soNumber);
       if (!existing) return;

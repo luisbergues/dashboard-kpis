@@ -363,6 +363,79 @@ describe('"Save for Later Review" tambien guarda el resultado, si hay uno elegid
   });
 });
 
+// Pedido: despues de "Save for Later Review" en Register New, el proyecto ya
+// no es Pending — desaparece de esa pestaña — asi que quedaba una pantalla en
+// blanco sin forma facil de encontrarlo de nuevo salvo cambiar de pestaña a
+// mano y volver a elegirlo. Que pase solo a "Update Project", con el mismo
+// SO ya cargado.
+describe('"Save for Later Review" en Register New pasa a Update Project', () => {
+  // Marca exclusiva de "Update Project": solo ese modo dibuja este campo.
+  const isInUpdateMode = () => screen.queryByText('Select Project (SO Number)') !== null;
+
+  it('cambia de pestaña despues de guardar', async () => {
+    renderNew();
+    expect(isInUpdateMode()).toBe(false);
+
+    fireEvent.click(screen.getByText('Save for Later Review'));
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+
+    expect(isInUpdateMode()).toBe(true);
+  });
+
+  it('deja el mismo proyecto seleccionado, no la pestaña vacia', async () => {
+    renderNew();
+    fireEvent.click(screen.getByText('Save for Later Review'));
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    expect(savedArg().id).toBe(PENDING.id);
+
+    // Prueba indirecta de que soNumber quedo en PENDING.id: en Update Project,
+    // guardar de nuevo busca `existing` por ese soNumber y no llama a
+    // updateProject si no lo encuentra (ver saveIntake). El mock de `projects`
+    // no refleja el guardado anterior (sigue mostrando "Pending"), asi que la
+    // opcion del <select> no es una forma confiable de verificarlo aca.
+    fireEvent.click(screen.getByText('Save for Later Review'));
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(2));
+    expect(updateProject.mock.calls[1][0].id).toBe(PENDING.id);
+  });
+
+  it('no pisa lo que se acababa de cargar con datos viejos del proyecto', async () => {
+    // El SO seguia figurando "Pending" en `projects` (la vuelta de Firebase
+    // no llego todavia), asi que si el formulario se re-hidratara desde ahi
+    // perderia el checklist recien tildado. No se re-hidrata: se preserva
+    // el estado local, que ya es lo que se acaba de guardar.
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    typeReason(c, 'faltan medidas de la pared 3');
+    pickDeadline();
+    fireEvent.click(screen.getByText('Save for Later Review'));
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+
+    const radio = c.querySelector('input[name="phase1Outcome"][value="Deficient"]') as HTMLInputElement;
+    expect(radio.checked).toBe(true);
+    expect((c.querySelector('textarea[name="outcomeReason"]') as HTMLTextAreaElement).value)
+      .toBe('faltan medidas de la pared 3');
+  });
+
+  it('sin elegir ningun resultado, tambien pasa a Update Project', async () => {
+    // El cambio de pestaña depende de haber usado "Save for Later Review",
+    // no de haber elegido un resultado.
+    renderNew();
+    fireEvent.click(screen.getByText('Save for Later Review'));
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    expect(isInUpdateMode()).toBe(true);
+  });
+
+  it('una aprobacion completa (no forceReview) sigue reseteando y quedandose en Register New', async () => {
+    const c = renderNew();
+    checkAllDocs();
+    chooseOutcome(c, 'Complete');
+    submit(); // "Submit Project Intake", no "Save for Later Review"
+
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    expect(isInUpdateMode()).toBe(false);
+  });
+});
+
 describe('Deficient exige aviso escrito y plazo de subsanacion', () => {
   it('no guarda si el ingeniero borra el aviso redactado', () => {
     const c = renderNew();
