@@ -9,6 +9,12 @@ export type ProjectStatus =
 // status del area de ingenieria).
 export type Phase1Outcome = 'Complete' | 'Deficient' | 'Deferred';
 
+/** Quien hizo el cambio. Ver utils/actorIdentity.js. */
+export interface Actor {
+  uid: string | null;
+  name: string;
+}
+
 // Deficient y Deferred no se pueden registrar "a secas": ambos exigen dejar por
 // escrito el motivo y la fecha limite para subsanarlo.
 export interface Phase1OutcomeRecord {
@@ -20,6 +26,20 @@ export interface Phase1OutcomeRecord {
   setAt: number;
   /** Cuando paso a Complete. Congela el conteo de dias vencidos. */
   resolvedAt: number | null;
+  /** Quien fijo este resultado. Ausente en los registros anteriores al sello. */
+  setBy?: Actor;
+}
+
+/** Entrada del historial designer_performance_history/{so}. Append-only: cada
+ *  cambio de estado o de resultado agrega una, ninguna se modifica ni se borra. */
+export interface Phase1HistoryEntry {
+  at: number;
+  by: Actor;
+  status: ProjectStatus;
+  result: Phase1Outcome | null;
+  reason: string;
+  deadline: number | null;
+  phase1Score: number | null;
 }
 
 export interface Project {

@@ -236,7 +236,7 @@ const emptyComplexity = {
 
 /* ── main component ──────────────────────────────────────────────────── */
 export const Phase1Form: React.FC = () => {
-  const { designerNames, projects, projectDesigners, addProject, updateProject, getProjectComplexity, canForceApprove } = useKpi();
+  const { designerNames, projects, projectDesigners, addProject, updateProject, getProjectComplexity, canForceApprove, actor } = useKpi();
 
   const [mode, setMode] = useState<'New' | 'Update'>('New');
   const [soNumber, setSoNumber]       = useState('');
@@ -478,6 +478,7 @@ export const Phase1Form: React.FC = () => {
       const hadDeadline = savedOutcome?.deadline ?? 0;
       return {
         result: 'Complete',
+        setBy: actor,
         // La nota escrita se guarda tambien en Complete. Al subsanar un
         // Deficient el campo ya viene cargado con el aviso original, asi que
         // se conserva salvo que el ingeniero lo reescriba a proposito.
@@ -493,6 +494,7 @@ export const Phase1Form: React.FC = () => {
     const sameAsSaved = savedOutcome?.result === result && savedOutcome.deadline === outcomeDeadline;
     return {
       result,
+      setBy: actor,
       reason: outcomeReason.trim(),
       deadline: outcomeDeadline as number,
       setAt: sameAsSaved ? savedOutcome!.setAt : now,
@@ -547,6 +549,7 @@ export const Phase1Form: React.FC = () => {
         toast.error(`Designer was just changed to "${result.currentDesignerName}" by someone else. Reload and try again.`);
         return;
       }
+      if (result.error) { toast.error(result.error); return; }
       toast.success(
         forceApprove ? 'Approved with missing documentation.'
         : finalStatus === 'To review' ? 'Saved for review.'
@@ -570,6 +573,7 @@ export const Phase1Form: React.FC = () => {
         toast.error(`Designer was just changed to "${result.currentDesignerName}" by someone else. Reload and try again.`);
         return;
       }
+      if (result.error) { toast.error(result.error); return; }
       // Un proyecto cerrado no se "aprueba" de nuevo: avisar que solo se
       // guardaron las correcciones, y no resetear el form como si hubiera
       // cambiado de etapa.

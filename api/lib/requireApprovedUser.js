@@ -6,29 +6,40 @@
 // the Realtime Database (e.g. api/sync.js -> Google Sheets) get no protection
 // from database.rules.json, so they must check approval server-side here.
 //
-// Fails closed: any doubt (missing record, unreadable DB) is a 403.
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { getDatabase } from 'firebase-admin/database';
-import { requireAuth } from './verifyAuth.js';
+// The profile is read over the RTDB REST API using the CALLER'S OWN ID token
+// rather than a service account. database.rules.json already grants
+// users/$uid/.read to that same uid, and status/role are writable only by an
+// engineer-admin, so the values stay authoritative while this endpoint needs
+// no private key of its own.
+//
+// Why not the admin SDK: getDatabase() requires Application Default
+// Credentials, which do not exist on Vercel. Without them it does not throw —
+// it retries the connection indefinitely, so `await once('value')` hangs until
+// the function times out instead of failing closed.
+//
+// Fails closed: any doubt (missing record, unreachable DB, timeout) is a 403.
+import { requireAuth, getBearerToken } from './verifyAuth.js';
 
-const PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID;
-const DATABASE_URL = process.env.VITE_FIREBASE_DATABASE_URL;
-
-function getAdminApp() {
-  if (getApps().length > 0) return getApps()[0];
-  return initializeApp({ projectId: PROJECT_ID, databaseURL: DATABASE_URL });
-}
+// Bounded so a slow or unreachable RTDB fails closed quickly instead of
+// holding the request open for the whole function timeout.
+const LOOKUP_TIMEOUT_MS = 5000;
 
 export async function requireApprovedUser(req, res, options = {}) {
   const decoded = await requireAuth(req, res);
   if (!decoded) return null; // requireAuth already wrote a 401.
 
+  const databaseUrl = (process.env.VITE_FIREBASE_DATABASE_URL || '').replace(/\/+$/, '');
+  const token = getBearerToken(req);
+
   let profile;
   try {
-    const snapshot = await getDatabase(getAdminApp())
-      .ref(`users/${decoded.uid}`)
-      .once('value');
-    profile = snapshot.val();
+    if (!databaseUrl) throw new Error('VITE_FIREBASE_DATABASE_URL is not configured');
+    if (!token) throw new Error('missing bearer token');
+
+    const url = `${databaseUrl}/users/${encodeURIComponent(decoded.uid)}.json?auth=${encodeURIComponent(token)}`;
+    const resp = await fetch(url, { signal: AbortSignal.timeout(LOOKUP_TIMEOUT_MS) });
+    if (!resp.ok) throw new Error(`RTDB REST returned ${resp.status}`);
+    profile = await resp.json();
   } catch (err) {
     console.error('requireApprovedUser: user lookup failed:', err?.message || err);
     res.status(403).json({ error: 'Could not verify account status' });

@@ -80,7 +80,7 @@
       ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
       "$so": {
         "$noteId": {
-          ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && (root.child('users').child(auth.uid).child('role').val() === 'engineer' || root.child('users').child(auth.uid).child('role').val() === 'engineer_nester' || root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' || root.child('users').child(auth.uid).child('role').val() === 'administrative' || ((!newData.exists() || newData.child('noteType').val() !== 'designer') && (!data.exists() || data.child('noteType').val() !== 'designer')))"
+          ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && (root.child('users').child(auth.uid).child('role').val() === 'engineer' || root.child('users').child(auth.uid).child('role').val() === 'engineer_nester' || root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' || ((!newData.exists() || newData.child('noteType').val() !== 'designer') && (!data.exists() || data.child('noteType').val() !== 'designer')))"
         }
       }
     },
@@ -90,7 +90,19 @@
     },
     "designer_performance_projects": {
       ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
-      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
+      ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'",
+      "$so": {
+        ".validate": "newData.child('status').val() !== 'Approved' || data.child('status').val() === 'Approved' || root.child('users').child(auth.uid).child('role').val() === 'administrative' || (newData.child('checklist/kcdFile').isNumber() && newData.child('checklist/jlContract').isNumber() && newData.child('checklist/quoteComplete').isNumber() && newData.child('checklist/quoteBreakdown').isNumber() && newData.child('checklist/creditCardForm').isNumber() && newData.child('checklist/drawingsSigned').isNumber() && (!newData.child('checklist/finalMeasurementsApplies').isNumber() || newData.child('checklist/finalMeasurementsDelivered').isNumber()))"
+      }
+    },
+    "designer_performance_history": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      "$so": {
+        "$entryId": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer' && !data.exists() && newData.exists()",
+          ".validate": "newData.hasChildren(['at', 'by', 'status'])"
+        }
+      }
     },
     "engineering_checks": {
       ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",

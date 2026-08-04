@@ -123,6 +123,7 @@ export const Phase2Form: React.FC = () => {
       toast.error(`Designer was just changed to "${updateResult.currentDesignerName}" by someone else. Reload and try again.`);
       return;
     }
+    if (updateResult.error) { toast.error(updateResult.error); return; }
     toast.success(`Project Closed! IFR Score: ${finalResult.score}`);
     setSelectedProjectId('');
   };

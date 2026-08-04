@@ -1,13 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock the two collaborators before importing the unit under test.
-vi.mock('./verifyAuth.js', () => ({ requireAuth: vi.fn() }));
-vi.mock('firebase-admin/database', () => ({ getDatabase: vi.fn() }));
-vi.mock('firebase-admin/app', () => ({ getApps: vi.fn(() => [{}]), initializeApp: vi.fn() }));
+// Mock the identity check; the profile lookup is plain fetch, stubbed per test.
+vi.mock('./verifyAuth.js', () => ({
+  requireAuth: vi.fn(),
+  getBearerToken: vi.fn(() => 'id-token-123'),
+}));
 
-import { requireAuth } from './verifyAuth.js';
-import { getDatabase } from 'firebase-admin/database';
+import { requireAuth, getBearerToken } from './verifyAuth.js';
 import { requireApprovedUser } from './requireApprovedUser.js';
+
+const DB_URL = 'https://example-rtdb.firebaseio.com';
 
 // Minimal res double: records the status code and JSON body.
 function makeRes() {
@@ -17,15 +19,19 @@ function makeRes() {
   return res;
 }
 
-// Stubs getDatabase().ref(path).once('value') -> snapshot of `profile`.
+// Stubs the RTDB REST read -> `profile`.
 function stubProfile(profile) {
-  getDatabase.mockReturnValue({
-    ref: () => ({ once: async () => ({ val: () => profile }) }),
-  });
+  global.fetch = vi.fn(async () => ({ ok: true, json: async () => profile }));
 }
 
 describe('requireApprovedUser', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getBearerToken.mockReturnValue('id-token-123');
+    process.env.VITE_FIREBASE_DATABASE_URL = DB_URL;
+  });
+
+  afterEach(() => { delete global.fetch; });
 
   it('returns null when requireAuth rejects (already wrote 401)', async () => {
     requireAuth.mockResolvedValue(null);
@@ -84,13 +90,39 @@ describe('requireApprovedUser', () => {
     expect(result.uid).toBe('u1');
   });
 
-  it('returns 403 (fail closed) when the database read throws', async () => {
+  it('reads the caller own record, authenticated with the caller own token', async () => {
     requireAuth.mockResolvedValue({ uid: 'u1' });
-    getDatabase.mockReturnValue({
-      ref: () => ({ once: async () => { throw new Error('rtdb down'); } }),
-    });
+    stubProfile({ status: 'approved', role: 'engineer' });
+    await requireApprovedUser({}, makeRes());
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(global.fetch.mock.calls[0][0]).toBe(`${DB_URL}/users/u1.json?auth=id-token-123`);
+  });
+
+  it('returns 403 (fail closed) when the lookup throws', async () => {
+    requireAuth.mockResolvedValue({ uid: 'u1' });
+    global.fetch = vi.fn(async () => { throw new Error('network down'); });
     const res = makeRes();
     expect(await requireApprovedUser({}, res)).toBe(null);
     expect(res.statusCode).toBe(403);
+  });
+
+  // The admin-SDK version of this helper hung forever when it had no
+  // credentials; a non-OK REST response must fail closed instead.
+  it('returns 403 (fail closed) when RTDB denies the read', async () => {
+    requireAuth.mockResolvedValue({ uid: 'u1' });
+    global.fetch = vi.fn(async () => ({ ok: false, status: 401, json: async () => ({}) }));
+    const res = makeRes();
+    expect(await requireApprovedUser({}, res)).toBe(null);
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('returns 403 (fail closed) when the database URL is not configured', async () => {
+    requireAuth.mockResolvedValue({ uid: 'u1' });
+    delete process.env.VITE_FIREBASE_DATABASE_URL;
+    global.fetch = vi.fn();
+    const res = makeRes();
+    expect(await requireApprovedUser({}, res)).toBe(null);
+    expect(res.statusCode).toBe(403);
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

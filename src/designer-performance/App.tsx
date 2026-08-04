@@ -30,9 +30,9 @@ const AppContent: React.FC = () => {
   );
 };
 
-function App({ data, projectDesigners, userProfile, masterProjects }) {
+function App({ data, projectDesigners, userProfile, currentUser, masterProjects }) {
   return (
-    <KpiProvider externalData={data} projectDesigners={projectDesigners} userProfile={userProfile} masterProjects={masterProjects}>
+    <KpiProvider externalData={data} projectDesigners={projectDesigners} userProfile={userProfile} currentUser={currentUser} masterProjects={masterProjects}>
       <AppContent />
       <Toaster position="top-right" />
     </KpiProvider>

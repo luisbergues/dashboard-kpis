@@ -1,8 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import type { Project, Designer, DesignerNote } from '../types';
+import type { Project, Designer, DesignerNote, Actor, Phase1HistoryEntry } from '../types';
 import { calculateDesignerStats } from '../utils/scoreCalculator';
-import { db, ref, set, get, onValue } from '../../utils/firebase';
+import { db, ref, set, get, push, onValue } from '../../utils/firebase';
+import { actorFrom } from '../../utils/actorIdentity';
+import { reviewChanged, buildHistoryEntry } from '../utils/reviewHistory';
+import { stripUndefined } from '../../utils/stripUndefined';
 import { shortProjectName } from '../../utils/projectName';
 import { canForceApproveIntake } from '../../utils/intakePermissions';
 import { normalizeNotesBySo } from '../../utils/projectNotes';
@@ -13,7 +16,12 @@ import { deriveComplexity, complexityFromSheet } from '../utils/complexity';
 // Charge" button) with no coordination between the two UIs — last write
 // wins silently. `conflict: true` means the value changed underneath this
 // form between load and submit; the caller should warn instead of clobbering it.
-export type SaveProjectResult = { conflict: false } | { conflict: true; currentDesignerName: string };
+// `error` cubre el rechazo de la base: las reglas pueden negar una escritura
+// (aprobar con documentacion faltante sin ser administrative, por ejemplo) y
+// sin devolverlo el formulario se quedaba mudo, como si hubiera guardado.
+export type SaveProjectResult =
+  | { conflict: false; error?: string }
+  | { conflict: true; currentDesignerName: string };
 
 interface KpiContextType {
   projects: Project[];
@@ -24,6 +32,10 @@ interface KpiContextType {
   updateProject: (project: Project) => Promise<SaveProjectResult>;
   getProjectComplexity: (soNumber: string) => Partial<Project['complexity']>;
   getProjectNotes: (soNumber: string) => DesignerNote[];
+  /** Secuencia completa de cambios de estado/resultado, mas vieja primero. */
+  getProjectHistory: (soNumber: string) => Phase1HistoryEntry[];
+  /** Quien esta operando, para sellar lo que se guarda. */
+  actor: Actor;
   // Si el usuario puede aprobar un intake con documentacion faltante.
   canForceApprove: boolean;
   // Si el usuario puede escribir en designer_performance_projects. Los
@@ -61,7 +73,9 @@ export const KpiProvider: React.FC<{
   children: ReactNode;
   externalData?: any;
   projectDesigners?: Record<string, string>;
-  userProfile?: { role?: string } | null;
+  userProfile?: { role?: string; designerName?: string } | null;
+  /** Usuario de Firebase Auth, para firmar los cambios con su uid. */
+  currentUser?: { uid?: string; displayName?: string; email?: string } | null;
   /** Proyectos activos de "Master Schedule Mirror": `{ so, name, spaces }`. */
   masterProjects?: { so: string; name: string; spaces: number | null }[] | null;
 }> = ({
@@ -69,11 +83,14 @@ export const KpiProvider: React.FC<{
   externalData,
   projectDesigners = {},
   userProfile = null,
+  currentUser = null,
   masterProjects = null,
 }) => {
+  const actor = React.useMemo(() => actorFrom(userProfile, currentUser), [userProfile, currentUser]);
   const [performanceProjects, setPerformanceProjects] = useState<Record<string, Partial<Project>>>({});
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectNotes, setProjectNotes] = useState<Record<string, DesignerNote[]>>({});
+  const [projectHistory, setProjectHistory] = useState<Record<string, Record<string, Phase1HistoryEntry>>>({});
 
   // Session-stable fallback for createdAt on a project that hasn't persisted
   // one yet (perfData.createdAt is undefined until the first addProject/
@@ -107,6 +124,16 @@ export const KpiProvider: React.FC<{
       // Ver projectNotes.js: normaliza el formato viejo (array indexado) y el
       // nuevo (una clave por nota) a un mismo array por SO.
       setProjectNotes(normalizeNotesBySo(snapshot.val()));
+    });
+    return () => unsub();
+  }, []);
+
+  // 2c. Historial de la revision de Fase 1 — append-only, ver appendHistory.
+  useEffect(() => {
+    if (!db) return;
+    const histRef = ref(db, 'designer_performance_history');
+    const unsub = onValue(histRef, (snapshot) => {
+      setProjectHistory(snapshot.val() || {});
     });
     return () => unsub();
   }, []);
@@ -194,6 +221,30 @@ export const KpiProvider: React.FC<{
     return list.filter(Boolean);
   };
 
+  // Las entradas se crean con push(), asi que llegan como objeto indexado por
+  // clave autogenerada. Se ordenan por fecha porque el orden de las claves no
+  // es algo con lo que convenga contar.
+  const getProjectHistory = (soNumber: string): Phase1HistoryEntry[] => {
+    const raw = projectHistory[soNumber];
+    if (!raw) return [];
+    return Object.values(raw).filter(Boolean).sort((a, b) => (a.at || 0) - (b.at || 0));
+  };
+
+  /* Agrega una entrada al historial cuando cambia el estado o el resultado de la
+     revision. Nunca modifica ni borra: la secuencia completa queda registrada,
+     que es lo que permite responder "quien lo aprobo, y cuando cambio antes".
+
+     Si esta escritura falla no se rompe el guardado del proyecto: perder la
+     traza es malo, pero perder el trabajo del ingeniero es peor. */
+  const appendHistory = async (project: Project, previous?: Partial<Project>) => {
+    if (!db || !reviewChanged(previous, project)) return;
+    try {
+      await push(ref(db, `designer_performance_history/${project.id}`), stripUndefined(buildHistoryEntry(project, actor)));
+    } catch (err) {
+      console.error('No se pudo registrar el historial de Fase 1:', err);
+    }
+  };
+
   // Helper to get the auto-derived complexity for any SO (used in Phase1Form pre-fill)
   const getProjectComplexity = (soNumber: string): Partial<Project['complexity']> =>
     complexityFromSheet(externalData?.materialRequirements?.find((m: any) => String(m.so) === soNumber));
@@ -215,13 +266,37 @@ export const KpiProvider: React.FC<{
     return { conflict: false };
   };
 
+  /* Escribe el proyecto y traduce un rechazo de las reglas en un mensaje. Sin
+     esto, un PERMISSION_DENIED solo quedaba en la consola: el formulario no
+     mostraba error ni exito, y parecia que habia guardado. */
+  const writeProject = async (project: Project): Promise<SaveProjectResult> => {
+    try {
+      // stripUndefined es obligatorio: el proyecto se arma con spread y arrastra
+      // claves opcionales sin valor (phase2Data en uno que nunca cerro Fase 2).
+      // Firebase rechaza el set entero por una sola de esas claves.
+      await set(ref(db, `designer_performance_projects/${project.id}`), stripUndefined(project));
+    } catch (err: any) {
+      console.error('No se pudo guardar el proyecto:', err);
+      const denied = String(err?.code || err?.message || '').toUpperCase().includes('PERMISSION');
+      return {
+        conflict: false,
+        error: denied
+          ? 'The database rejected this change — you may not have permission for it.'
+          : 'Could not save. Check your connection and try again.',
+      };
+    }
+    return { conflict: false };
+  };
+
   const addProject = async (project: Project): Promise<SaveProjectResult> => {
     if (!db) return { conflict: false };
     if (project.designerName) {
       const result = await saveDesignerName(project.id, project.designerName);
       if (result.conflict) return result;
     }
-    await set(ref(db, `designer_performance_projects/${project.id}`), project);
+    const written = await writeProject(project);
+    if (written.error) return written;
+    await appendHistory(project, performanceProjects[project.id]);
     return { conflict: false };
   };
 
@@ -231,12 +306,17 @@ export const KpiProvider: React.FC<{
       const result = await saveDesignerName(updatedProject.id, updatedProject.designerName);
       if (result.conflict) return result;
     }
-    await set(ref(db, `designer_performance_projects/${updatedProject.id}`), updatedProject);
+    // El estado anterior se lee ANTES de escribir: es con lo que se compara para
+    // saber si este guardado cambio algo digno de historial.
+    const previous = performanceProjects[updatedProject.id];
+    const written = await writeProject(updatedProject);
+    if (written.error) return written;
+    await appendHistory(updatedProject, previous);
     return { conflict: false };
   };
 
   return (
-    <KpiContext.Provider value={{ projects, designers, designerNames, projectDesigners, addProject, updateProject, getProjectComplexity, getProjectNotes, canForceApprove: canForceApproveIntake(userProfile), canEditIntake: userProfile?.role !== 'designer' }}>
+    <KpiContext.Provider value={{ projects, designers, designerNames, projectDesigners, addProject, updateProject, getProjectComplexity, getProjectNotes, getProjectHistory, actor, canForceApprove: canForceApproveIntake(userProfile), canEditIntake: userProfile?.role !== 'designer' }}>
       {children}
     </KpiContext.Provider>
   );

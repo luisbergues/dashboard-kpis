@@ -9,7 +9,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "deploy:rules": "npx --yes --package firebase-tools firebase deploy --only database"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.2",

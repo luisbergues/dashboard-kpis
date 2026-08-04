@@ -1,5 +1,6 @@
 import React from 'react';
-import { X, Calendar, CheckCircle2, User, Layers, CheckSquare, Zap, Target } from 'lucide-react';
+import { X, Calendar, CheckCircle2, User, Layers, CheckSquare, Zap, Target, History } from 'lucide-react';
+import { useKpi } from '../context/KpiContext';
 import type { Project } from '../types';
 import { T } from '../utils/theme';
 import { formatDisplayDate } from '../../utils/dateFormat';
@@ -52,7 +53,11 @@ const ChecklistItem: React.FC<{ checked: boolean; label: string; date?: number |
 
 export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) => {
   const { t } = useLanguage();
+  // Antes del early return: los hooks no pueden quedar detras de un condicional.
+  const { getProjectHistory } = useKpi();
   if (!project) return null;
+
+  const history = getProjectHistory(project.id);
 
   // Calculate checklist progress
   const checklistItems = [
@@ -226,6 +231,48 @@ export const ProjectDetailsModal: React.FC<ModalProps> = ({ project, onClose }) 
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Secuencia completa de la revision. Append-only: cada cambio agrega
+              una entrada, ninguna se pisa, asi que "quien lo aprobo" y "cambio
+              antes" tienen respuesta. */}
+          {history.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ color: T.textPrimary, fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <History size={16} color={T.blue} /> Review history
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {history.map((h, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    {/* linea de tiempo */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, alignSelf: 'stretch' }}>
+                      <span style={{
+                        width: 9, height: 9, borderRadius: '50%', marginTop: 4, flexShrink: 0,
+                        background: getStatusColor(h.status),
+                      }} />
+                      {i < history.length - 1 && (
+                        <span style={{ width: 1, flex: 1, minHeight: 18, background: T.cardBorder }} />
+                      )}
+                    </div>
+                    <div style={{ paddingBottom: 14, flex: 1 }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                        <span style={{ color: getStatusColor(h.status), fontSize: '0.83rem', fontWeight: 700 }}>
+                          {h.result || statusLabel(h.status)}
+                        </span>
+                        <span style={{ color: T.textMuted, fontSize: '0.75rem' }}>
+                          {formatDisplayDate(new Date(h.at))} · {h.by?.name || 'Unknown User'}
+                        </span>
+                      </div>
+                      {!!h.deadline && (
+                        <div style={{ color: T.textMuted, fontSize: '0.73rem', marginTop: 2 }}>
+                          Deadline: {formatDisplayDate(new Date(h.deadline))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

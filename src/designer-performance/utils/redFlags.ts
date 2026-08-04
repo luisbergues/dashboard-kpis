@@ -1,6 +1,5 @@
 import type { DesignerNote, Urgency, RedFlagLine, Phase2Result } from '../types';
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+import { businessDaysBetween } from './businessDays';
 
 // Fecha en que la feature sale a producción. Las notas creadas antes empiezan
 // a contar desde acá: nadie arrastra antigüedad que no pudo resolver porque el
@@ -10,15 +9,9 @@ export const RED_FLAG_SCORING_SINCE = new Date(2026, 6, 28).getTime();
 // Puntos por día. Se duplican a partir del día 5.
 export const RATE: Record<Urgency, number> = { green: 0.5, yellow: 1, red: 2 };
 
-// Techo por nota — equivale a 12 días abiertos en las tres urgencias, así que
-// el semáforo mantiene su jerarquía (una roja siempre pesa 4× una verde).
+// Techo por nota — equivale a 12 días hábiles abiertos en las tres urgencias,
+// así que el semáforo mantiene su jerarquía (una roja siempre pesa 4× una verde).
 export const CAP: Record<Urgency, number> = { green: 10, yellow: 20, red: 40 };
-
-const startOfDay = (ts: number): number => {
-  const d = new Date(ts);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-};
 
 const urgencyOf = (note: DesignerNote): Urgency =>
   note.urgency && note.urgency in RATE ? note.urgency : 'green';
@@ -31,11 +24,15 @@ const parseDate = (value: string | null | undefined, fallback: number): number =
   return Number.isNaN(ms) ? fallback : ms;
 };
 
+// Días HÁBILES abierta. Antes se contaban días corridos, lo que hacía que una
+// nota abierta durante un fin de semana costara más que un documento del
+// checklist entregado ese mismo fin de semana. Ahora las dos fases usan el
+// mismo calendario: nadie trabaja sábado, así que ese día no es demora de nadie.
 export const noteDaysOpen = (note: DesignerNote, until: number): number => {
   const created = parseDate(note.createdAt, RED_FLAG_SCORING_SINCE);
-  const start = startOfDay(Math.max(created, RED_FLAG_SCORING_SINCE));
-  const end = startOfDay(note.resolvedAt ? parseDate(note.resolvedAt, until) : until);
-  return Math.max(0, Math.round((end - start) / MS_PER_DAY));
+  const start = Math.max(created, RED_FLAG_SCORING_SINCE);
+  const end = note.resolvedAt ? parseDate(note.resolvedAt, until) : until;
+  return businessDaysBetween(start, end);
 };
 
 export const notePenalty = (note: DesignerNote, until: number): number => {

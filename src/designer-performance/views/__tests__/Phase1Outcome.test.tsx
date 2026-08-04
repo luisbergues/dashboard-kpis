@@ -46,6 +46,8 @@ const KPI_VALUE = {
   updateProject,
   getProjectComplexity: () => ({}),
   getProjectNotes: () => [],
+  getProjectHistory: () => [],
+  actor: { uid: 'u1', name: 'Monica Gabriel' },
   canForceApprove: false,
 };
 
@@ -108,6 +110,44 @@ const submit = () => fireEvent.click(screen.getByText('Submit Project Intake'));
 const savedArg = () => updateProject.mock.calls[0][0] as unknown as {
   status: string; outcome: Phase1OutcomeRecord; phase1Score: number;
 };
+
+describe('un rechazo de las reglas no pasa desapercibido', () => {
+  it('avisa cuando la base niega el guardado, en vez de quedarse mudo', async () => {
+    updateProject.mockResolvedValueOnce({
+      conflict: false, error: 'The database rejected this change — you may not have permission for it.',
+    } as never);
+
+    const c = renderNew();
+    checkAllDocs();
+    chooseOutcome(c, 'Complete');
+    submit();
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(expect.stringContaining('rejected')));
+  });
+});
+
+describe('queda registrado quien fijo el resultado', () => {
+  it('sella setBy al marcar Deficient', async () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    typeReason(c, 'faltan medidas');
+    pickDeadline();
+    submit();
+
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    expect(savedArg().outcome.setBy).toEqual({ uid: 'u1', name: 'Monica Gabriel' });
+  });
+
+  it('sella setBy tambien al aprobar', async () => {
+    const c = renderNew();
+    checkAllDocs();
+    chooseOutcome(c, 'Complete');
+    submit();
+
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    expect(savedArg().outcome.setBy).toEqual({ uid: 'u1', name: 'Monica Gabriel' });
+  });
+});
 
 beforeEach(() => { updateProject.mockClear(); toastError.mockClear(); generateReviewNote.mockClear(); });
 afterEach(cleanup);
