@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User, Briefcase, ChevronDown, Award, Sun, Moon, Activity, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User, Briefcase, ChevronDown, ChevronLeft, ChevronRight, Award, Sun, Moon, Activity, ShieldCheck } from 'lucide-react';
 import { auth, db, ref, set, signOut } from '../utils/firebase';
 import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
@@ -10,6 +10,20 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
   const { theme, toggleTheme } = useTheme();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
+
+  // Mirrors ThemeContext's approach: toggle a class on the root element so
+  // index.css's .main-content can react to the sidebar width without prop
+  // drilling the collapse state through App.jsx.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isSidebarCollapsed) {
+      root.classList.add('sidebar-collapsed');
+    } else {
+      root.classList.remove('sidebar-collapsed');
+    }
+    localStorage.setItem('sidebarCollapsed', String(isSidebarCollapsed));
+  }, [isSidebarCollapsed]);
 
   const isDesigner = userProfile?.role === 'designer';
 
@@ -126,7 +140,17 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
       )}
 
       {/* Main Navigation (Sidebar on Desktop, Tabbar on Mobile) */}
-      <nav className="navbar glass-card">
+      <nav className={`navbar glass-card ${isSidebarCollapsed ? 'nav-collapsed' : ''}`}>
+        <button
+          type="button"
+          className="nav-collapse-toggle"
+          onClick={() => setIsSidebarCollapsed(prev => !prev)}
+          title={isSidebarCollapsed
+            ? (language === 'es' ? 'Expandir menú' : 'Expand menu')
+            : (language === 'es' ? 'Colapsar menú' : 'Collapse menu')}
+        >
+          {isSidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
         <div className="nav-brand">
           <span className="brand-logo">JL</span>
           <span className="brand-text text-gradient">Engineering</span>

@@ -609,7 +609,7 @@ function App() {
       case 'designer-performance':
         return <DesignerPerformanceApp data={mergedData} projectDesigners={projectDesigners} userProfile={userProfile} currentUser={currentUser} masterProjects={masterProjects} />;
       case 'admin':
-        return isSuperAdminRole(userProfile?.role) ? <AdminUsersView userProfile={userProfile} data={mergedData} /> : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
+        return isSuperAdminRole(userProfile?.role) ? <AdminUsersView userProfile={userProfile} data={mergedData} masterProjects={masterProjects} /> : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
       default: return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
     }
   };

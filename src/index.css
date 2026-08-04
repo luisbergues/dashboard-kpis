@@ -116,6 +116,13 @@ h1, h2, h3, h4, h5, h6 {
     padding: var(--spacing-lg); /* Reset spacing for desktop */
     margin-left: 264px; /* Space for desktop sidebar (240px width + 12px left offset + 12px margin gap) */
     width: calc(100% - 264px); /* Prevent overflow: sidebar is fixed and out of flow, so width:100% + margin-left would overflow */
+    transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  /* Sidebar collapsed to icons-only (76px, see Navbar.css .nav-collapsed) —
+     shrink the reserved space to match: 76px width + 12px left offset + 12px gap */
+  :root.sidebar-collapsed .main-content {
+    margin-left: 100px;
+    width: calc(100% - 100px);
   }
 }
 

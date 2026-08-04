@@ -19,6 +19,11 @@
   display: none;
 }
 
+/* Desktop-only sidebar collapse toggle, hidden on the mobile tabbar */
+.nav-collapse-toggle {
+  display: none;
+}
+
 .nav-links {
   list-style: none;
   display: flex;
@@ -204,6 +209,67 @@
     background: rgba(255, 46, 147, 0.15) !important;
     color: var(--color-pink) !important;
     border-color: rgba(255, 46, 147, 0.3) !important;
+  }
+
+  /* ─── Sidebar collapse toggle ─────────────────────────── */
+  .navbar {
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .nav-collapse-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 28px;
+    right: -12px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-surface);
+    border: 1px solid var(--card-border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s ease;
+  }
+
+  .nav-collapse-toggle:hover {
+    color: var(--text-primary);
+    background: var(--card-hover);
+  }
+
+  /* Collapsed state: icons + generous padding only, no labels */
+  .navbar.nav-collapsed {
+    width: 76px;
+    padding-left: var(--spacing-sm);
+    padding-right: var(--spacing-sm);
+  }
+
+  .navbar.nav-collapsed .nav-brand {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .navbar.nav-collapsed .brand-text,
+  .navbar.nav-collapsed .nav-label,
+  .navbar.nav-collapsed .user-details,
+  .navbar.nav-collapsed .nav-controls-row {
+    display: none;
+  }
+
+  .navbar.nav-collapsed .nav-btn {
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .navbar.nav-collapsed .nav-user-profile {
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .navbar.nav-collapsed .signout-btn {
+    padding: 12px;
   }
 }
 

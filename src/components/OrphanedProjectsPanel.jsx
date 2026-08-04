@@ -4,6 +4,7 @@ import { Search, Archive, Loader2, AlertTriangle } from 'lucide-react';
 import { db, ref, get } from '../utils/firebase';
 import { manuallyArchiveProject } from '../utils/completedProjectsArchive';
 import { useLanguage } from '../utils/LanguageContext';
+import { buildKnownSoSet, isOrphanSo } from '../utils/orphanDetection';
 
 // SO-keyed Realtime Database nodes that can still hold data for a project
 // after it's gone from both the live sheet and the Firestore archive.
@@ -19,7 +20,7 @@ const SO_KEYED_NODES = [
   'designer_performance_projects',
 ];
 
-export default function OrphanedProjectsPanel({ data }) {
+export default function OrphanedProjectsPanel({ data, masterProjects }) {
   const { language } = useLanguage();
   const queryClient = useQueryClient();
   const [scanning, setScanning] = useState(false);
@@ -38,8 +39,14 @@ export default function OrphanedProjectsPanel({ data }) {
     if (!db) return;
     setScanning(true);
     try {
-      const liveSoSet = new Set((data?.priorityAnalysis || []).map(p => String(p.so)));
-      const archivedSoSet = new Set((data?.archivedProjects || []).map(p => String(p.so)));
+      // Incluye Master Schedule Mirror: tiene los proyectos en etapas previas al
+      // weekly KPI, y sin esa fuente el panel los daba por huerfanos y ofrecia
+      // archivarlos como Completados estando activos. Ver orphanDetection.js.
+      const knownSoSet = buildKnownSoSet({
+        priorityAnalysis: data?.priorityAnalysis,
+        masterProjects,
+        archivedProjects: data?.archivedProjects,
+      });
 
       const snapshots = await Promise.all(SO_KEYED_NODES.map(node => get(ref(db, node))));
 
@@ -48,7 +55,7 @@ export default function OrphanedProjectsPanel({ data }) {
         const val = snapshots[i].val();
         if (!val) return;
         Object.keys(val).forEach(so => {
-          if (liveSoSet.has(so) || archivedSoSet.has(so)) return; // not orphaned
+          if (!isOrphanSo(so, knownSoSet)) return;
 
           if (!bySo[so]) bySo[so] = { so, sources: [] };
           bySo[so].sources.push(node);

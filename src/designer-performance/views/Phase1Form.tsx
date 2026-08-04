@@ -262,6 +262,12 @@ export const Phase1Form: React.FC = () => {
   // Espejo de outcomeReason legible desde un closure async, que si no ve el
   // valor congelado del render en que arrancó.
   const outcomeReasonRef = useRef('');
+  // Que "mode:soNumber" ya se cargo en el formulario. App.jsx refetchea cada
+  // 30s y KpiContext arma un `projects` nuevo en cada refetch (aunque el dato
+  // no haya cambiado), y el efecto de carga de Update Project tiene `projects`
+  // en sus dependencias. Sin esta marca, cada refetch volvia a pisar el
+  // checklist/fecha/nota que el ingeniero estaba tildando en ese momento.
+  const hydratedKey = useRef<string | null>(null);
   useEffect(() => { outcomeReasonRef.current = outcomeReason; }, [outcomeReason]);
   // Solo para administrative: lo que falta, mientras se confirma aprobar igual.
   const [pendingApproval, setPendingApproval] = useState<{ basics: string[]; docs: string[] } | null>(null);
@@ -327,21 +333,30 @@ export const Phase1Form: React.FC = () => {
   }, [soNumber, mode]);
 
   useEffect(() => {
-    if (mode === 'Update' && soNumber) {
-      const existing = projects.find(p => p.id === soNumber);
-      if (existing) {
-        setProjectName(existing.projectName);
-        setDesignerName(projectDesigners[soNumber] || existing.designerName);
-        setTotalRooms(existing.totalRooms);
-        setChecklist(existing.checklist);
-        setComplexity(existing.complexity);
-        loadOutcomeFrom(existing);
-        const auto = getProjectComplexity(soNumber);
-        const filled = new Set<string>();
-        (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(k => { if (auto[k]) filled.add(k); });
-        setAutoFilledFields(filled);
-      }
-    }
+    if (mode !== 'Update' || !soNumber) return;
+
+    // Ya se cargo este proyecto para esta seleccion: un refetch con `projects`
+    // nuevo no debe volver a pisar lo que se este editando ahora mismo.
+    const key = `${mode}:${soNumber}`;
+    if (hydratedKey.current === key) return;
+
+    const existing = projects.find(p => p.id === soNumber);
+    // Sin dato todavia (p.ej. se entro por un link compartido antes de que
+    // Firebase responda): no marcar como cargado, para reintentar en cuanto
+    // `projects` traiga el proyecto.
+    if (!existing) return;
+
+    hydratedKey.current = key;
+    setProjectName(existing.projectName);
+    setDesignerName(projectDesigners[soNumber] || existing.designerName);
+    setTotalRooms(existing.totalRooms);
+    setChecklist(existing.checklist);
+    setComplexity(existing.complexity);
+    loadOutcomeFrom(existing);
+    const auto = getProjectComplexity(soNumber);
+    const filled = new Set<string>();
+    (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(k => { if (auto[k]) filled.add(k); });
+    setAutoFilledFields(filled);
   }, [mode, soNumber, projects, projectDesigners]);
 
   useEffect(() => { if (mode === 'New') resetForm(); }, [mode]);
@@ -351,6 +366,10 @@ export const Phase1Form: React.FC = () => {
     setTotalRooms(''); setChecklist(emptyChecklist);
     setComplexity(emptyComplexity); setAutoFilledFields(new Set());
     loadOutcomeFrom(undefined);
+    // Sin esto, salir de Update Project y volver a elegir el mismo SO se
+    // encontraba con la marca de "ya cargado" y dejaba el formulario recien
+    // limpiado por resetForm sin volver a hidratarlo.
+    hydratedKey.current = null;
   };
 
   /* Carga el resultado ya registrado. Los proyectos anteriores a esta funcion no
@@ -581,6 +600,12 @@ export const Phase1Form: React.FC = () => {
         : forceApprove ? 'Approved with missing documentation.'
         : outcomeMessage(finalStatus));
       if (!isClosed && finalStatus === 'Approved') { resetForm(); setMode('New'); }
+      // Se sigue en el mismo proyecto: reflejar lo recien guardado en
+      // savedOutcome. Antes esto lo resincronizaba el efecto de carga al
+      // rehidratar con cada refetch; con la guarda de hydratedKey ese efecto
+      // ya no se dispara solo, asi que hay que hacerlo a mano aca (si no,
+      // hadDeadline/sameAsSaved seguirian comparando contra el valor viejo).
+      else { setSavedOutcome(outcomeRecord); }
     }
   };
 

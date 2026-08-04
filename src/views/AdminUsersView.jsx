@@ -7,7 +7,7 @@ import OrphanedProjectsPanel from '../components/OrphanedProjectsPanel';
 
 const ROLES = ['engineer', 'engineer_nester', 'administrative', 'designer'];
 
-export default function AdminUsersView({ userProfile, data }) {
+export default function AdminUsersView({ userProfile, data, masterProjects }) {
   const { t } = useLanguage();
   const [users, setUsers] = useState({});
   const [pendingRoleChoice, setPendingRoleChoice] = useState({});
@@ -168,7 +168,7 @@ export default function AdminUsersView({ userProfile, data }) {
         </table>
       </div>
 
-      <OrphanedProjectsPanel data={data} />
+      <OrphanedProjectsPanel data={data} masterProjects={masterProjects} />
     </div>
   );
 }
