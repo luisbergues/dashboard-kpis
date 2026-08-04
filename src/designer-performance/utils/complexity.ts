@@ -22,6 +22,10 @@ export const complexityFromSheet = (matReq?: MaterialRow | null): Partial<Projec
   };
 };
 
+/** Los 4 campos que la planilla puede determinar (todo `complexity` salvo
+ *  `colorsDefined`, que no tiene columna equivalente y siempre es manual). */
+type SheetField = 'thermofoilDoors' | 'customBoreHoles' | 'routingRequired' | 'customPanels';
+
 /**
  * Complejidad efectiva de un proyecto.
  *
@@ -33,17 +37,24 @@ export const complexityFromSheet = (matReq?: MaterialRow | null): Partial<Projec
  * `??` sobre cada campo, y como un valor guardado en `false` no es nullish, el
  * fallback a la planilla no volvia a aplicarse nunca despues del primer guardado.
  *
- * Contrapartida a tener presente: si alguien destilda a mano un campo que la
- * planilla marca como "Yes", al reabrir el proyecto vuelve a aparecer tildado.
- * La planilla gana.
+ * `overrides` es la excepcion a esa regla: marca los campos que alguien
+ * corrigio a mano en este proyecto puntual. Para esos, gana lo guardado sin
+ * importar lo que diga la planilla — en cualquiera de las dos direcciones.
+ * Sin marca, sigue ganando la planilla como siempre.
  */
 export const deriveComplexity = (
   saved: Partial<Project['complexity']> | undefined,
   matReq?: MaterialRow | null,
-): Project['complexity'] => ({
-  colorsDefined:   saved?.colorsDefined ?? false,
-  thermofoilDoors: matReq ? matReq.thermofoil === 'Yes' : (saved?.thermofoilDoors ?? false),
-  customBoreHoles: matReq ? matReq.noHoles    === 'Yes' : (saved?.customBoreHoles ?? false),
-  routingRequired: matReq ? matReq.dovetail   === 'Yes' : (saved?.routingRequired ?? false),
-  customPanels:    matReq ? matReq.element    === 'Yes' : (saved?.customPanels    ?? false),
-});
+  overrides?: Partial<Record<SheetField, boolean>>,
+): Project['complexity'] => {
+  const pick = (field: SheetField, fromSheet: boolean): boolean =>
+    overrides?.[field] ? (saved?.[field] ?? false) : (matReq ? fromSheet : (saved?.[field] ?? false));
+
+  return {
+    colorsDefined:   saved?.colorsDefined ?? false,
+    thermofoilDoors: pick('thermofoilDoors', matReq?.thermofoil === 'Yes'),
+    customBoreHoles: pick('customBoreHoles', matReq?.noHoles    === 'Yes'),
+    routingRequired: pick('routingRequired', matReq?.dovetail   === 'Yes'),
+    customPanels:    pick('customPanels',    matReq?.element    === 'Yes'),
+  };
+};

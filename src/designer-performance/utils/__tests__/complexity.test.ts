@@ -76,3 +76,47 @@ describe('deriveComplexity — colorsDefined es siempre manual', () => {
     expect(deriveComplexity(undefined, YES).colorsDefined).toBe(false);
   });
 });
+
+// Reportado en produccion: se tildaban a mano hasta 5 casillas de Technical
+// Complexity, se guardaba, y al releer el proyecto solo quedaban las que la
+// planilla ya traia en "Yes" — el resto (corregidas a mano contra un "No" de
+// la planilla) volvian a aparecer destildadas. "La planilla gana" corria en
+// las dos direcciones sin dar forma de fijar una correccion manual.
+describe('deriveComplexity — override manual por campo', () => {
+  it('sin override, la planilla sigue ganando (comportamiento previo intacto)', () => {
+    const guardado = { ...allFalse, routingRequired: true };
+    expect(deriveComplexity(guardado, NO).routingRequired).toBe(false);
+  });
+
+  it('con el campo marcado como override, lo guardado gana aunque la planilla diga No', () => {
+    const guardado = { ...allFalse, routingRequired: true };
+    const overrides = { routingRequired: true };
+    expect(deriveComplexity(guardado, NO, overrides).routingRequired).toBe(true);
+  });
+
+  it('con el campo marcado como override, lo guardado gana aunque la planilla diga Yes', () => {
+    // El caso inverso: alguien destildo a mano un campo que la planilla
+    // marca "Yes" porque en este proyecto puntual no aplica.
+    const guardado = { ...allFalse, thermofoilDoors: false };
+    const overrides = { thermofoilDoors: true };
+    expect(deriveComplexity(guardado, YES, overrides).thermofoilDoors).toBe(false);
+  });
+
+  it('el override es por campo: los demas campos siguen gobernados por la planilla', () => {
+    const guardado = { ...allFalse, routingRequired: true, customPanels: true };
+    const overrides = { routingRequired: true }; // solo este se toco a mano
+    const result = deriveComplexity(guardado, NO, overrides);
+    expect(result.routingRequired).toBe(true);   // manual, se respeta
+    expect(result.customPanels).toBe(false);     // sin tocar, la planilla (No) gana
+  });
+
+  it('un override sin match en la planilla se comporta igual que sin override', () => {
+    const guardado = { ...allFalse, routingRequired: true };
+    expect(deriveComplexity(guardado, null, { routingRequired: true }).routingRequired).toBe(true);
+    expect(deriveComplexity(guardado, null, {}).routingRequired).toBe(true);
+  });
+
+  it('colorsDefined ignora los overrides: siempre fue manual, no necesita marca', () => {
+    expect(deriveComplexity({ ...allFalse, colorsDefined: true }, YES, {}).colorsDefined).toBe(true);
+  });
+});

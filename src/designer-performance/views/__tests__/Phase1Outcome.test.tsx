@@ -259,6 +259,110 @@ describe('elegir un resultado es obligatorio', () => {
   });
 });
 
+// Pedido: poder dejar guardado un resultado (Complete/Deficient/Deferred)
+// aunque el proyecto en si no se apruebe todavia — asi queda de registro
+// cuando se guardo y, si despues cambia a otro de los tres, cuando cambio.
+// Antes "Save for Later Review" descartaba el resultado elegido: solo
+// guardaba status "To review" y listo, sin tocar `outcome`.
+describe('"Save for Later Review" tambien guarda el resultado, si hay uno elegido', () => {
+  const saveForLaterReview = () => fireEvent.click(screen.getByText('Save for Later Review'));
+
+  it('guarda Deficient con aviso y plazo sin aprobar el proyecto', async () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    typeReason(c, 'faltan medidas de la pared 3');
+    pickDeadline();
+    saveForLaterReview();
+
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    const saved = savedArg();
+    // El proyecto sigue "To review": no se aprueba ni se cierra por esto.
+    expect(saved.status).toBe('To review');
+    // Pero el resultado elegido queda guardado, con su propia fecha.
+    expect(saved.outcome.result).toBe('Deficient');
+    expect(saved.outcome.reason).toBe('faltan medidas de la pared 3');
+    expect(saved.outcome.deadline).toBeGreaterThan(0);
+    expect(saved.outcome.setAt).toBeGreaterThan(0);
+  });
+
+  it('guarda Deferred de la misma forma', async () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deferred');
+    typeReason(c, 'falta el contrato firmado');
+    pickDeadline();
+    saveForLaterReview();
+
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    const saved = savedArg();
+    expect(saved.status).toBe('To review');
+    expect(saved.outcome.result).toBe('Deferred');
+  });
+
+  it('guarda Complete sin exigir el checklist completo: el proyecto no se aprueba', async () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Complete'); // checklist entero sin tildar
+    saveForLaterReview();
+
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    const saved = savedArg();
+    // Ni siquiera para Complete se exige la documentacion aca: el proyecto no
+    // pasa a Approved, sigue "To review". La exigencia de docs es para
+    // aprobar de verdad (Submit Project Intake / Save & Validate).
+    expect(saved.status).toBe('To review');
+    expect(saved.outcome.result).toBe('Complete');
+  });
+
+  it('sigue exigiendo aviso y plazo para Deficient, aunque no se apruebe el proyecto', () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    typeReason(c, ''); // borra el borrador automatico
+    saveForLaterReview();
+    expect(updateProject).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith(expect.stringContaining('Missing'));
+  });
+
+  it('sigue exigiendo plazo para Deferred', () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deferred');
+    typeReason(c, 'falta el contrato');
+    saveForLaterReview(); // sin elegir plazo
+    expect(updateProject).not.toHaveBeenCalled();
+  });
+
+  it('sin elegir ningun resultado, se sigue guardando igual que antes (nada que validar)', async () => {
+    renderNew();
+    saveForLaterReview();
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    expect(savedArg().status).toBe('To review');
+    expect(savedArg().outcome).toBeUndefined();
+  });
+
+  it('si se cambia a otro resultado sobre un proyecto ya guardado, la fecha se actualiza', async () => {
+    // DEFICIENT ya tiene un resultado guardado (SAVED_OUTCOME, Deficient).
+    // En Update mode un guardado que no aprueba no resetea el formulario, asi
+    // que se puede cambiar de opinion y volver a guardar en la misma sesion.
+    const c = render(<Phase1Form />).container;
+    fireEvent.click(screen.getByText('Update Project'));
+    fireEvent.change(c.querySelector('select[name="soNumber"]') as HTMLSelectElement,
+      { target: { value: DEFICIENT.id } });
+
+    chooseOutcome(c, 'Deferred');
+    typeReason(c, 'ahora falta el contrato, no las medidas');
+    // No hace falta elegir plazo: DEFICIENT ya trae uno cargado
+    // (SAVED_OUTCOME.deadline) y cambiar de resultado no lo borra.
+    saveForLaterReview();
+
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    const saved = savedArg();
+    // Sigue sin aprobarse: pasa a "To review", no queda en Deferred.
+    expect(saved.status).toBe('To review');
+    expect(saved.outcome.result).toBe('Deferred');
+    // Es una decision nueva sobre el mismo proyecto: su propia fecha, distinta
+    // de SAVED_OUTCOME.setAt (3-ago-2026).
+    expect(saved.outcome.setAt).toBeGreaterThan(SAVED_OUTCOME.setAt);
+  });
+});
+
 describe('Deficient exige aviso escrito y plazo de subsanacion', () => {
   it('no guarda si el ingeniero borra el aviso redactado', () => {
     const c = renderNew();

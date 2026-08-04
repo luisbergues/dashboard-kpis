@@ -72,6 +72,16 @@ export interface Project {
     routingRequired: boolean;
     customPanels: boolean;
   };
+  /** Que campos de complexity se corrigieron a mano: la planilla deja de
+   *  pisarlos aunque diga lo contrario, para ese proyecto. Ausente = ninguno
+   *  tocado todavia (todos se siguen completando solos con la planilla).
+   *  Ver deriveComplexity en utils/complexity.ts. */
+  complexityOverrides?: Partial<{
+    thermofoilDoors: boolean;
+    customBoreHoles: boolean;
+    routingRequired: boolean;
+    customPanels: boolean;
+  }>;
 
   /** Resultado de la revision manual. Ausente en los proyectos anteriores a
    *  la funcion y en los que todavia estan Pending. */

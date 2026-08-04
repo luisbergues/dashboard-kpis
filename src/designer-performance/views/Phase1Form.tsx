@@ -245,6 +245,9 @@ export const Phase1Form: React.FC = () => {
   const [totalRooms, setTotalRooms]   = useState<number | ''>('');
   const [checklist, setChecklist]     = useState<ChecklistState>(emptyChecklist);
   const [complexity, setComplexity]   = useState(emptyComplexity);
+  // Que campos de complexity se corrigieron a mano en este proyecto: la
+  // planilla deja de pisarlos (ver deriveComplexity en utils/complexity.ts).
+  const [complexityOverrides, setComplexityOverrides] = useState<Partial<Record<keyof typeof emptyComplexity, boolean>>>({});
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
   // Resultado de la revision manual: es lo que aprueba la etapa.
   const [outcome, setOutcome] = useState<Phase1Outcome | ''>('');
@@ -268,6 +271,11 @@ export const Phase1Form: React.FC = () => {
   // en sus dependencias. Sin esta marca, cada refetch volvia a pisar el
   // checklist/fecha/nota que el ingeniero estaba tildando en ese momento.
   const hydratedKey = useRef<string | null>(null);
+  // Espejo de `projects` para lecturas puntuales (p.ej. el fallback de SO
+  // tipeado a mano) sin meter `projects` en la dependencia de un efecto y
+  // reabrir el mismo problema que hydratedKey soluciona arriba.
+  const projectsRef = useRef(projects);
+  useEffect(() => { projectsRef.current = projects; });
   useEffect(() => { outcomeReasonRef.current = outcomeReason; }, [outcomeReason]);
   // Solo para administrative: lo que falta, mientras se confirma aprobar igual.
   const [pendingApproval, setPendingApproval] = useState<{ basics: string[]; docs: string[] } | null>(null);
@@ -305,12 +313,16 @@ export const Phase1Form: React.FC = () => {
     // proj.complexity ya viene derivada de la planilla (ver deriveComplexity),
     // asi que alcanza con copiarla tal cual.
     setComplexity({ ...emptyComplexity, ...(proj?.complexity ?? {}) });
+    setComplexityOverrides(proj?.complexityOverrides ?? {});
     loadOutcomeFrom(proj);
 
-    // El badge "N synced" cuenta solo lo que aporto la planilla.
+    // El badge "N synced" cuenta solo lo que aporto la planilla y sigue bajo
+    // su control (un campo con override ya paso a ser manual).
     const auto = getProjectComplexity(selectedSo);
     const filled = new Set<string>();
-    (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(k => { if (auto[k]) filled.add(k); });
+    (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(k => {
+      if (auto[k] && !proj?.complexityOverrides?.[k as keyof typeof emptyComplexity]) filled.add(k);
+    });
     setAutoFilledFields(filled);
   };
 
@@ -318,11 +330,16 @@ export const Phase1Form: React.FC = () => {
   useEffect(() => {
     if (mode === 'New' && soNumber && soNumber.length > 3) {
       const auto = getProjectComplexity(soNumber);
+      // Leido de la ref, no de `projects` directo: este efecto solo debe
+      // correr cuando el usuario escribe un SO nuevo, no en cada refetch de
+      // los 30s (mismo motivo que hydratedKey mas arriba).
+      const overrides = projectsRef.current.find(p => p.id === soNumber)?.complexityOverrides;
       if (Object.keys(auto).length > 0) {
         const filled = new Set<string>();
         setComplexity(prev => {
           const updated = { ...prev };
           (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(k => {
+            if (overrides?.[k as keyof typeof emptyComplexity]) return; // manual: la planilla no lo toca
             if (auto[k] !== undefined) { updated[k] = auto[k] as boolean; if (auto[k]) filled.add(k); }
           });
           return updated;
@@ -352,10 +369,15 @@ export const Phase1Form: React.FC = () => {
     setTotalRooms(existing.totalRooms);
     setChecklist(existing.checklist);
     setComplexity(existing.complexity);
+    setComplexityOverrides(existing.complexityOverrides ?? {});
     loadOutcomeFrom(existing);
     const auto = getProjectComplexity(soNumber);
     const filled = new Set<string>();
-    (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(k => { if (auto[k]) filled.add(k); });
+    // Un campo marcado como override ya no es "de la planilla" aunque la
+    // planilla coincida con lo guardado: quedo bajo control manual.
+    (Object.keys(auto) as Array<keyof typeof emptyComplexity>).forEach(k => {
+      if (auto[k] && !existing.complexityOverrides?.[k as keyof typeof emptyComplexity]) filled.add(k);
+    });
     setAutoFilledFields(filled);
   }, [mode, soNumber, projects, projectDesigners]);
 
@@ -364,7 +386,7 @@ export const Phase1Form: React.FC = () => {
   const resetForm = () => {
     setSoNumber(''); setProjectName(''); setDesignerName('');
     setTotalRooms(''); setChecklist(emptyChecklist);
-    setComplexity(emptyComplexity); setAutoFilledFields(new Set());
+    setComplexity(emptyComplexity); setComplexityOverrides({}); setAutoFilledFields(new Set());
     loadOutcomeFrom(undefined);
     // Sin esto, salir de Update Project y volver a elegir el mismo SO se
     // encontraba con la marca de "ya cargado" y dejaba el formulario recien
@@ -396,9 +418,18 @@ export const Phase1Form: React.FC = () => {
     setChecklist(prev => ({ ...prev, [field]: ts }));
   };
 
+  // colorsDefined no tiene columna en la planilla — siempre fue manual, no
+  // necesita marca de override (deriveComplexity la ignora para ese campo).
+  const SHEET_COMPLEXITY_FIELDS = ['thermofoilDoors', 'customBoreHoles', 'routingRequired', 'customPanels'] as const;
+
   const handleComplexityChange = (field: keyof typeof complexity) => {
     setComplexity(prev => ({ ...prev, [field]: !prev[field] }));
     setAutoFilledFields(prev => { const n = new Set(prev); n.delete(field); return n; });
+    // Se toco a mano: fija esta eleccion para el proyecto, la planilla deja
+    // de pisarla (en cualquiera de las dos direcciones) de aca en mas.
+    if ((SHEET_COMPLEXITY_FIELDS as readonly string[]).includes(field)) {
+      setComplexityOverrides(prev => ({ ...prev, [field]: true }));
+    }
   };
 
   /* Qué le falta al formulario. Se usa para decidir si se bloquea el envío
@@ -535,7 +566,12 @@ export const Phase1Form: React.FC = () => {
     let finalStatus: ProjectStatus, score: number | null;
     let outcomeRecord: Phase1OutcomeRecord | undefined = savedOutcome;
     if (forceReview) {
+      // El proyecto se queda "To review": esto no aprueba ni cierra la etapa.
+      // Pero si ya se eligio un resultado (Complete/Deficient/Deferred), se
+      // guarda igual — sirve de registro de cuando se evaluo y que se
+      // decidio, aunque todavia no sea la decision final del proyecto entero.
       finalStatus = 'To review'; score = null;
+      if (outcome !== '') outcomeRecord = buildOutcomeRecord(outcome as Phase1Outcome, now);
     } else {
       const r = calculatePhase1ScoreAndStatus(checklist, createdAt);
       score = r.score;
@@ -562,6 +598,7 @@ export const Phase1Form: React.FC = () => {
         approvedAt: finalStatus === 'Approved' ? now : null,
         projectName: safeName, designerName, status: finalStatus, totalRooms: safeRooms, icp,
         phase1Score: score, phase2Score: existing?.phase2Score ?? null, checklist, complexity,
+        complexityOverrides,
         ...(outcomeRecord ? { outcome: outcomeRecord } : {}),
       });
       if (result.conflict) {
@@ -585,7 +622,7 @@ export const Phase1Form: React.FC = () => {
       const isClosed = existing.status === 'Completed';
       const result = await updateProject({ ...existing, projectName: safeName, designerName,
         status: isClosed ? existing.status : finalStatus,
-        totalRooms: safeRooms, icp, phase1Score: score, checklist, complexity,
+        totalRooms: safeRooms, icp, phase1Score: score, checklist, complexity, complexityOverrides,
         ...(outcomeRecord ? { outcome: outcomeRecord } : {}),
         approvedAt: isClosed ? existing.approvedAt : (finalStatus === 'Approved' ? now : existing.approvedAt) });
       if (result.conflict) {
@@ -621,8 +658,20 @@ export const Phase1Form: React.FC = () => {
     }
 
     // "Save for Later Review" no cierra la revisión: deja el proyecto en espera,
-    // así que no exige haber elegido un resultado.
-    if (forceReview) { await saveIntake({ forceReview: true }); return; }
+    // así que no exige haber elegido un resultado. Pero si se eligió uno, se
+    // guarda igual como registro — y por eso tiene que cumplir la misma regla
+    // de siempre: Deficient/Deferred no se guardan sin aviso y plazo, sea cual
+    // sea el botón usado.
+    if (forceReview) {
+      if (outcome !== '') {
+        const missingOutcome = missingOutcomeFields(outcome, outcomeReason, outcomeDeadline);
+        if (missingOutcome.length > 0) {
+          toast.error(`Missing: ${missingOutcome.join(', ')}.`); return;
+        }
+      }
+      await saveIntake({ forceReview: true });
+      return;
+    }
 
     const missingOutcome = missingOutcomeFields(outcome, outcomeReason, outcomeDeadline);
     if (missingOutcome.length > 0) {

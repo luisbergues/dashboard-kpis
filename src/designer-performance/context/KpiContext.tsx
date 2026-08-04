@@ -160,7 +160,7 @@ export const KpiProvider: React.FC<{
       // contempla con `?.`, asi que aca tambien hace falta o el modulo entero
       // (y con el todo renderView, envuelto en un solo ErrorBoundary) se cae.
       const matReq = externalData?.materialRequirements?.find((m: any) => String(m.so) === so);
-      const autoComplexity = deriveComplexity(perfData.complexity, matReq);
+      const autoComplexity = deriveComplexity(perfData.complexity, matReq, perfData.complexityOverrides);
 
       if (perfData.createdAt === undefined && sessionCreatedAt.current[so] === undefined) {
         sessionCreatedAt.current[so] = Date.now();
@@ -189,6 +189,9 @@ export const KpiProvider: React.FC<{
           ...(perfData.checklist || {}),
         },
         complexity: autoComplexity,
+        // Que campos de complexity se corrigieron a mano: se reescribe tal
+        // cual en cada guardado, la planilla no lo toca (ver deriveComplexity).
+        complexityOverrides: perfData.complexityOverrides,
         // Resultado de la revision manual de Fase 1 (Complete/Deficient/Deferred)
         // con su motivo y plazo. Ausente en los proyectos que aun no se revisaron.
         outcome: perfData.outcome,
