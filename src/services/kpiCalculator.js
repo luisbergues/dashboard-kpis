@@ -408,7 +408,8 @@ export function calculateMonthlyCompletions(projectStages, myProjects = []) {
 
     // Helper to process a stage and increment its monthly count
     const processStage = (stageObj, stageKey) => {
-      if (stageObj && stageObj.completed && stageObj.timestamp) {
+      // Descarta fechas fabricadas, igual que calculateWeeklyCompletions.
+      if (stageObj && stageObj.completed && stageObj.timestamp && !stageObj.estimated) {
         const d = new Date(stageObj.timestamp);
         if (!isNaN(d)) {
           const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -502,7 +503,12 @@ export function calculateWeeklyCompletions(projectStages, myProjects = [], weekC
     if (!myProjectSos.has(so)) return;
 
     const processStage = (stageObj, stageKey) => {
-      if (stageObj && stageObj.completed && stageObj.timestamp) {
+      // `estimated` marca una fecha fabricada por calculateAutomaticStages
+      // (el sheet solo trae una fecha por proyecto, asi que las etapas
+      // anteriores se rellenaban con "hoy"). Contarlas amontonaba todo en la
+      // semana en curso y el grafico mostraba un unico punto. Solo cuentan las
+      // transiciones realmente observadas — ver statusTransitions.js.
+      if (stageObj && stageObj.completed && stageObj.timestamp && !stageObj.estimated) {
         const d = new Date(stageObj.timestamp);
         if (!isNaN(d)) {
           const { key: weekKey, weekStart } = isoWeekKey(d);

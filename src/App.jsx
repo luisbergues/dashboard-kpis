@@ -32,6 +32,7 @@ import { noteDaysOpen } from './designer-performance/utils/redFlags'
 import { auth, db, onAuthStateChanged, ref, onValue, set, get, child, signOut } from './utils/firebase'
 import { shortProjectName } from './utils/projectName'
 import { normalizeNotesBySo } from './utils/projectNotes'
+import { recordStatusTransitions } from './utils/statusTransitions'
 
 function App() {
   const { t, language } = useLanguage();
@@ -98,6 +99,13 @@ function App() {
               await archiveMissingCompletedProjects(cached.parsedData, parsedData, projectDesigners);
             }
             await archiveCurrentlyCompletedProjects(parsedData, projectDesigners);
+            // Dentro del lease a proposito: es el unico lock de escritura
+            // compartido que hay, y sin el cada navegador abierto registraria
+            // la misma transicion. Los designers no pueden escribir
+            // project_history (ver database.rules.json), asi que se saltea.
+            if (userProfile?.role !== 'designer') {
+              await recordStatusTransitions(parsedData.priorityAnalysis || []);
+            }
             await checkDbSizeAndArchive();
             await purgeExpiredArchives();
           }).catch(console.error);

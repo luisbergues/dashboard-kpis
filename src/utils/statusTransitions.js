@@ -65,3 +65,40 @@ export function pendingStatusTransitions(projects = [], historyBySo = {}, timest
 
   return pending;
 }
+
+/**
+ * Registra en project_history las transiciones de etapa observadas en esta
+ * lectura del sheet.
+ *
+ * DEBE llamarse dentro de withArchiveLease (ver App.jsx): sin ese lock, cada
+ * navegador abierto registraria el mismo cambio y el historial quedaria con
+ * un evento duplicado por cliente conectado.
+ */
+export async function recordStatusTransitions(projects = []) {
+  if (!db || !projects.length) return 0;
+
+  try {
+    const historySnap = await get(ref(db, 'project_history'));
+    const historyBySo = historySnap.exists() ? (historySnap.val() || {}) : {};
+
+    const pending = pendingStatusTransitions(projects, historyBySo);
+    if (pending.length === 0) return 0;
+
+    // Un solo update() multi-path: es atomico, asi que una caida a mitad de
+    // camino no deja el historial con algunos proyectos actualizados y otros no.
+    const updates = {};
+    pending.forEach(({ so, event }) => {
+      const existing = Array.isArray(historyBySo[so])
+        ? historyBySo[so]
+        : Object.values(historyBySo[so] || {});
+      updates[so] = [...existing, event];
+    });
+
+    await update(ref(db, 'project_history'), updates);
+    console.log(`🕒 Recorded ${pending.length} stage transition(s).`);
+    return pending.length;
+  } catch (error) {
+    console.error('❌ Error recording stage transitions:', error);
+    return 0;
+  }
+}

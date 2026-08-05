@@ -302,10 +302,13 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
     const obj = {};
     const allProj = [...myProjectsRaw, ...myArchivedProjects];
     allProj.forEach(p => {
-      obj[p.so] = calculateAutomaticStages(p);
+      // projectHistory trae las transiciones de etapa realmente observadas
+      // (ver statusTransitions.js). Sin eso, calculateAutomaticStages solo
+      // puede fechar la etapa actual y estima el resto con "hoy".
+      obj[p.so] = calculateAutomaticStages(p, projectHistory[p.so]);
     });
     return obj;
-  }, [myProjectsRaw, myArchivedProjects]);
+  }, [myProjectsRaw, myArchivedProjects, projectHistory]);
 
   const weeklyData = calculateWeeklyCompletions(derivedProjectStages, [...myProjectsRaw, ...myArchivedProjects]);
   const upcomingDeadlines = getUpcomingDeadlines(myProjectsRaw);
