@@ -4,6 +4,7 @@ import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
 import { shortProjectName } from '../utils/projectName';
 import { formatDisplayDate } from '../utils/dateFormat';
+import { formatWeekAxisLabel } from '../utils/weeklyHistory';
 import {
   Chart as ChartJS,
   LinearScale,
@@ -168,15 +169,15 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
     // If we have history from Firebase, use it for multi-bar chart
     if (weeklyHistory.length > 0) {
       // Each entry in weeklyHistory has: label, metrics: { 'Total Active Projects': N, ... }
-      const labels = weeklyHistory.map(w => {
-        // Shorten label: "JUNE 8, 2026" -> "Jun 8"
-        const parts = w.label.match(/([A-Za-z]+)\s+(\d+)/);
-        if (parts) {
-          const month = parts[1].charAt(0).toUpperCase() + parts[1].slice(1, 3).toLowerCase();
-          return `${month} ${parts[2]}`;
-        }
-        return w.label;
-      });
+      // El label se deriva de la FECHA ya parseada (weekDate), no del texto del
+      // sheet. Antes se acortaba con un regex que conservaba los digitos tal
+      // cual, asi que "JULY 06, 2026" daba "Jul 06" y "JULY 6, 2026" daba
+      // "Jul 6": la misma semana con dos etiquetas distintas.
+      const labels = weeklyHistory.map(w => (
+        w.weekDate
+          ? formatWeekAxisLabel(w.weekDate, language)
+          : w.label
+      ));
 
       const datasets = [];
 
