@@ -2,6 +2,7 @@ import React from 'react';
 import { LayoutDashboard, FileText, CheckSquare, FolderOpen, Activity } from 'lucide-react';
 import { useLanguage } from '../../utils/LanguageContext';
 import { useKpi } from '../context/KpiContext';
+import { T } from '../utils/theme';
 
 interface SidebarProps {
   currentView: string;
@@ -37,24 +38,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView })
       style={{
         width: 240,
         flexShrink: 0,
-        background: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(16px)',
-        borderRight: '1px solid rgba(255,255,255,0.07)',
+        // Solid dark surface + real border + large radius, matching the main
+        // app sidebar (Navbar.css .navbar) instead of this panel's previous
+        // one-off translucent/blurred look.
+        background: T.bgDeep,
+        border: `1px solid ${T.cardBorder}`,
         display: 'flex',
         flexDirection: 'column',
         height: 'calc(100% - 16px)',
         margin: '8px 0 8px 8px',
-        borderRadius: 16,
+        borderRadius: T.radiusLg,
         overflow: 'hidden',
       }}
     >
       {/* Header */}
-      <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <div style={{ padding: '20px 20px 16px', borderBottom: `1px solid ${T.cardBorder}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <Activity size={18} color="#3b82f6" />
-          <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.95rem' }}>{t('designerPerf.sidebar.title')}</span>
+          <Activity size={18} color={T.blue} />
+          <span style={{ color: T.textPrimary, fontWeight: 700, fontSize: '0.95rem' }}>{t('designerPerf.sidebar.title')}</span>
         </div>
-        <span style={{ color: '#475569', fontSize: '0.72rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+        <span style={{ color: T.textMuted, fontSize: '0.72rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
           {t('designerPerf.sidebar.subtitle')}
         </span>
       </div>
@@ -67,13 +70,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView })
             style={{
               paddingTop: groupIdx === 0 ? 0 : 12,
               marginTop: groupIdx === 0 ? 0 : 12,
-              borderTop: groupIdx === 0 ? 'none' : '1px solid rgba(255,255,255,0.07)',
+              borderTop: groupIdx === 0 ? 'none' : `1px solid ${T.cardBorder}`,
             }}
           >
             <div
               style={{
                 padding: '0 14px 6px',
-                color: '#475569',
+                color: T.textMuted,
                 fontSize: '0.68rem',
                 fontWeight: 600,
                 letterSpacing: '0.06em',
@@ -93,32 +96,38 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView })
                     width: '100%',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 10,
-                    padding: '10px 14px',
-                    borderRadius: 10,
-                    border: isActive ? '1px solid rgba(59,130,246,0.25)' : '1px solid transparent',
-                    background: isActive ? 'rgba(59,130,246,0.12)' : 'transparent',
-                    color: isActive ? '#60a5fa' : '#94a3b8',
+                    gap: 12,
+                    padding: '12px 20px',
+                    // Fully rounded pill + solid active fill + glow, matching
+                    // Navbar.css .nav-btn / .nav-btn.active exactly (that
+                    // sidebar's active state is a solid color with a glow
+                    // shadow, not a tinted/bordered rectangle).
+                    borderRadius: T.radiusPill,
+                    border: 'none',
+                    background: isActive ? T.neonGreen : 'transparent',
+                    boxShadow: isActive ? '0 4px 15px rgba(0, 122, 255, 0.4)' : 'none',
+                    color: isActive ? '#FFFFFF' : T.textMuted,
                     cursor: 'pointer',
                     fontSize: '0.85rem',
+                    fontFamily: 'inherit',
                     fontWeight: isActive ? 600 : 400,
                     textAlign: 'left',
-                    transition: 'all 0.15s',
+                    transition: 'all 0.3s ease',
                   }}
                   onMouseEnter={e => {
                     if (!isActive) {
-                      (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.04)';
-                      (e.currentTarget as HTMLButtonElement).style.color = '#e2e8f0';
+                      (e.currentTarget as HTMLButtonElement).style.background = 'var(--overlay-05)';
+                      (e.currentTarget as HTMLButtonElement).style.color = T.textPrimary;
                     }
                   }}
                   onMouseLeave={e => {
                     if (!isActive) {
                       (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                      (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8';
+                      (e.currentTarget as HTMLButtonElement).style.color = T.textMuted;
                     }
                   }}
                 >
-                  <Icon size={16} color={isActive ? '#3b82f6' : '#64748b'} />
+                  <Icon size={16} color="currentColor" />
                   <span>{item.label}</span>
                 </button>
               );
@@ -127,7 +136,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView })
         ))}
       </nav>
 
-      <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.07)', color: '#64748b', fontSize: '0.72rem', textAlign: 'center' }}>
+      <div style={{ padding: '12px 20px', borderTop: `1px solid ${T.cardBorder}`, color: T.textMuted, fontSize: '0.72rem', textAlign: 'center' }}>
         JL Closets · KPI v2.0
       </div>
     </div>

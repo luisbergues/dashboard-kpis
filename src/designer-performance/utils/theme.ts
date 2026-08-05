@@ -26,6 +26,11 @@ export const T = {
   green: '#10B981',
   yellow: '#EAB308',
   red: '#EF4444',
+  // Active-nav highlight used by the main app sidebar (Navbar.css
+  // .nav-btn.active) — a distinct, brighter blue from the `blue` accent
+  // above, kept as its own token so nested sidebars (e.g. designer-perf's
+  // Sidebar.tsx) can match the exact same active-state color.
+  neonGreen: 'var(--color-neon-green)',
   radiusLg: 28,
   radiusMd: 20,
   radiusPill: 100,
