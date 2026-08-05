@@ -85,6 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView })
             >
               {group.label}
             </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {group.items.map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.id;
@@ -132,6 +133,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView })
                 </button>
               );
             })}
+            </div>
           </div>
         ))}
       </nav>
