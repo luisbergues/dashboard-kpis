@@ -38,10 +38,19 @@ const DEFICIENT = {
   status: 'Deficient', phase1Score: 90, outcome: SAVED_OUTCOME,
 };
 
+// El diseñador ya respondio (12-ago-2026), pero nadie marco el proyecto
+// Complete todavia: el atraso tiene que quedar congelado en esa fecha.
+const RESPONDED_AT = new Date(2026, 7, 12).getTime();
+const RESPONDED = {
+  ...PENDING, id: '3003', projectName: 'Gamma Residence',
+  status: 'Deficient', phase1Score: 85,
+  outcome: { ...SAVED_OUTCOME, resolvedAt: RESPONDED_AT },
+};
+
 const KPI_VALUE = {
   designerNames: ['Monica Gabriel'],
-  projects: [PENDING, DEFICIENT],
-  projectDesigners: { '1001': 'Monica Gabriel', '2002': 'Monica Gabriel' },
+  projects: [PENDING, DEFICIENT, RESPONDED],
+  projectDesigners: { '1001': 'Monica Gabriel', '2002': 'Monica Gabriel', '3003': 'Monica Gabriel' },
   addProject: vi.fn(),
   updateProject,
   getProjectComplexity: () => ({}),
@@ -87,6 +96,15 @@ const typeReason = (container: HTMLElement, text: string) =>
 // El plazo usa el MiniDatePicker: se abre la pildora y se elige un dia.
 const pickDeadline = (dayNumber = 28) => {
   fireEvent.click(screen.getByText(/Pick a deadline/));
+  const popover = document.querySelector('[role="dialog"]') as HTMLElement;
+  const btn = Array.from(popover.querySelectorAll('button'))
+    .find(b => b.textContent === String(dayNumber)) as HTMLButtonElement;
+  fireEvent.click(btn);
+};
+
+// Misma mecanica que pickDeadline, para el boton de "en que fecha respondio".
+const pickResponseDate = (dayNumber = 20) => {
+  fireEvent.click(screen.getByText(/Mark response date/));
   const popover = document.querySelector('[role="dialog"]') as HTMLElement;
   const btn = Array.from(popover.querySelectorAll('button'))
     .find(b => b.textContent === String(dayNumber)) as HTMLButtonElement;
@@ -596,5 +614,122 @@ describe('subsanar un Deficient', () => {
     // El plazo sobrevive: lo acumulado por llegar tarde se sigue descontando.
     expect(saved.outcome.deadline).toBe(DEADLINE);
     expect(saved.outcome.resolvedAt).not.toBeNull();
+  });
+});
+
+// Pedido: un boton junto al plazo para registrar en que fecha respondio el
+// diseñador, sin tener que marcar el proyecto Complete para congelar el
+// atraso. Antes resolvedAt quedaba hardcodeado en null para Deficient/
+// Deferred (buildOutcomeRecord): la unica forma de frenar el conteo era
+// aprobar, aunque el diseñador ya hubiera respondido dias antes de que
+// alguien revisara el proyecto — el atraso seguia sumando por la demora de
+// la revision, no la del diseñador.
+describe('fecha de respuesta: congela el atraso sin marcar Complete', () => {
+  const responseButton = () => screen.queryByText(/Mark response date/) ?? screen.queryByText(/Responded/);
+
+  it('no aparece sin haber elegido un plazo', () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    expect(responseButton()).toBeNull();
+  });
+
+  it('aparece despues de elegir el plazo', () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    pickDeadline();
+    expect(responseButton()).not.toBeNull();
+  });
+
+  it('se guarda en outcome.resolvedAt sin mover el proyecto a Complete', async () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    typeReason(c, 'faltan medidas de la pared 3');
+    pickDeadline();
+    pickResponseDate();
+    fireEvent.click(screen.getByText('Save for Later Review'));
+
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    const saved = savedArg();
+    expect(saved.outcome.result).toBe('Deficient');
+    expect(saved.status).toBe('To review'); // "Save for Later Review": no aprueba
+    expect(saved.outcome.resolvedAt).toBeGreaterThan(0);
+  });
+
+  it('sin tocar el boton, resolvedAt se sigue guardando en null (compatibilidad)', async () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    typeReason(c, 'faltan medidas de la pared 3');
+    pickDeadline();
+    fireEvent.click(screen.getByText('Save for Later Review'));
+
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    expect(savedArg().outcome.resolvedAt).toBeNull();
+  });
+
+  it('se puede quitar una fecha de respuesta marcada por error', async () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    typeReason(c, 'faltan medidas de la pared 3');
+    pickDeadline();
+    pickResponseDate();
+    expect(screen.queryByText(/Responded/)).not.toBeNull();
+
+    fireEvent.click(screen.getByTitle('Clear response date'));
+    expect(screen.queryByText(/Responded/)).toBeNull();
+    expect(screen.queryByText(/Mark response date/)).not.toBeNull();
+
+    fireEvent.click(screen.getByText('Save for Later Review'));
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    expect(savedArg().outcome.resolvedAt).toBeNull();
+  });
+
+  it('cambiar el plazo borra una fecha de respuesta ya marcada: pertenecia al plazo anterior', () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    pickDeadline(20);
+    pickResponseDate();
+    expect(screen.queryByText(/Responded/)).not.toBeNull();
+
+    // Ya elegido, el plazo no se re-abre con "Pick a deadline…" (esa etiqueta
+    // solo se ve sin elegir): se reabre por posicion, la primera pildora del
+    // campo "Cure deadline".
+    const label = Array.from(c.querySelectorAll('label')).find(l => /deadline/i.test(l.textContent || ''))!;
+    fireEvent.click(label.parentElement!.querySelector('span') as HTMLElement);
+    const popover = document.querySelector('[role="dialog"]') as HTMLElement;
+    fireEvent.click(Array.from(popover.querySelectorAll('button')).find(b => b.textContent === '27') as HTMLButtonElement);
+
+    expect(screen.queryByText(/Responded/)).toBeNull();
+  });
+
+  it('precarga la fecha de respuesta ya guardada al abrir el proyecto', () => {
+    const c = render(<Phase1Form />).container;
+    fireEvent.click(screen.getByText('Update Project'));
+    fireEvent.change(c.querySelector('select[name="soNumber"]') as HTMLSelectElement,
+      { target: { value: RESPONDED.id } });
+
+    expect(screen.queryByText(/Responded/)).not.toBeNull();
+  });
+
+  it('al pasar a Complete conserva la fecha de respuesta marcada a mano, no la de "ahora"', async () => {
+    const c = renderNew();
+    chooseOutcome(c, 'Deficient');
+    typeReason(c, 'faltan medidas de la pared 3');
+    pickDeadline();
+    pickResponseDate(15); // el diseñador respondio este dia
+    fireEvent.click(screen.getByText('Save for Later Review'));
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    const markedResolvedAt = savedArg().outcome.resolvedAt;
+
+    // Mas tarde, en la misma sesion, se revisa de verdad y se aprueba.
+    updateProject.mockClear();
+    checkAllDocs();
+    chooseOutcome(c, 'Complete');
+    fireEvent.click(screen.getByText('Save & Validate'));
+
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    const saved = savedArg();
+    expect(saved.status).toBe('Approved');
+    // Se sella con la fecha que el diseñador realmente respondio, no con "hoy".
+    expect(saved.outcome.resolvedAt).toBe(markedResolvedAt);
   });
 });

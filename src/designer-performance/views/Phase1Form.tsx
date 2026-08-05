@@ -3,7 +3,7 @@ import { useKpi } from '../context/KpiContext';
 import { calculatePhase1ScoreAndStatus, calculateTechnicalPoints } from '../utils/scoreCalculator';
 import toast from 'react-hot-toast';
 import type { Project, ProjectStatus, Phase1Outcome, Phase1OutcomeRecord } from '../types';
-import { Link2, FileText, CheckSquare, Zap, RefreshCw, Send, AlertTriangle, ClipboardCheck, Sparkles, Link as LinkIcon } from 'lucide-react';
+import { Link2, FileText, CheckSquare, Zap, RefreshCw, Send, AlertTriangle, ClipboardCheck, Sparkles, Link as LinkIcon, CalendarCheck2, X } from 'lucide-react';
 import { generateReviewNote } from '../utils/reviewNoteApi';
 import { buildSharedProjectLink } from '../../utils/projectDeepLink';
 import { T } from '../utils/theme';
@@ -253,6 +253,10 @@ export const Phase1Form: React.FC = () => {
   const [outcome, setOutcome] = useState<Phase1Outcome | ''>('');
   const [outcomeReason, setOutcomeReason] = useState('');
   const [outcomeDeadline, setOutcomeDeadline] = useState<number | null>(null);
+  // Fecha en que el diseñador realmente respondio. Se puede registrar sin
+  // marcar el proyecto Complete, para congelar el atraso apenas responde y no
+  // seguir sumando por la demora de quien todavia no reviso el proyecto.
+  const [outcomeResolvedAt, setOutcomeResolvedAt] = useState<number | null>(null);
   // El registro guardado, para conservar el plazo original al subsanar.
   const [savedOutcome, setSavedOutcome] = useState<Phase1OutcomeRecord | undefined>(undefined);
   const [draftingNote, setDraftingNote] = useState(false);
@@ -405,6 +409,7 @@ export const Phase1Form: React.FC = () => {
     setOutcome(rec?.result ?? (proj ? statusToOutcome(proj.status) ?? '' : ''));
     setOutcomeReason(rec?.reason ?? '');
     setOutcomeDeadline(rec?.deadline || null);
+    setOutcomeResolvedAt(rec?.resolvedAt || null);
   };
 
   const handleChecklistToggle = (field: keyof ChecklistState) => {
@@ -506,10 +511,16 @@ export const Phase1Form: React.FC = () => {
 
   const handleDeadlineSelect = (ts: number) => {
     setOutcomeDeadline(ts);
+    // Una fecha de respuesta ya marcada pertenecia al plazo anterior: al
+    // corregir el plazo, queda desactualizada.
+    setOutcomeResolvedAt(null);
     // El plazo se elige después del resultado, así que el primer borrador salió
     // sin fecha: se rehace para que la nota la incluya.
     if (outcome !== '' && noteIsUntouched()) void draftNote(outcome, ts);
   };
+
+  const handleResponseDateSelect = (ts: number) => setOutcomeResolvedAt(ts);
+  const clearResponseDate = () => setOutcomeResolvedAt(null);
 
   const outcomeMessage = (status: ProjectStatus) =>
     status === 'Approved'  ? 'Marked Complete — ready for engineering. ✓'
@@ -535,8 +546,10 @@ export const Phase1Form: React.FC = () => {
         reason: outcomeReason.trim(),
         deadline: hadDeadline,
         setAt: savedOutcome?.setAt ?? now,
-        // Si ya estaba sellado se respeta la fecha original de subsanacion.
-        resolvedAt: hadDeadline ? (savedOutcome!.resolvedAt ?? now) : now,
+        // Si el diseñador ya respondio (marcado a mano mientras seguia
+        // Deficient/Deferred) se respeta esa fecha; si no, se sella con la
+        // de guardado ya registrada o, en su defecto, ahora.
+        resolvedAt: hadDeadline ? (outcomeResolvedAt ?? savedOutcome!.resolvedAt ?? now) : now,
       };
     }
     // Cambiar de Deficient a Deferred (o corregir el plazo) reinicia el reloj:
@@ -548,7 +561,9 @@ export const Phase1Form: React.FC = () => {
       reason: outcomeReason.trim(),
       deadline: outcomeDeadline as number,
       setAt: sameAsSaved ? savedOutcome!.setAt : now,
-      resolvedAt: null,
+      // Se puede registrar sin marcar Complete: congela el atraso desde que
+      // el diseñador realmente respondio, no desde que alguien lo revisa.
+      resolvedAt: outcomeResolvedAt,
     };
   };
 
@@ -620,6 +635,11 @@ export const Phase1Form: React.FC = () => {
         // vuelta de Firebase todavia no llega) volver a leerlo de `projects`.
         hydratedKey.current = `Update:${soNumber}`;
         setMode('Update');
+        // Sin esto, savedOutcome quedaba en lo que tenia ANTES de este
+        // guardado (undefined en un alta nueva): un segundo guardado en la
+        // misma sesion (p.ej. pasar a Complete) no sabia que el plazo o la
+        // fecha de respuesta ya estaban guardados y los perdia.
+        if (outcomeRecord) setSavedOutcome(outcomeRecord);
       } else {
         resetForm();
       }
@@ -1135,7 +1155,7 @@ export const Phase1Form: React.FC = () => {
           {outcome !== '' && requiresReasonAndDeadline(outcome) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 14 }}>
               <Field label={DEADLINE_LABEL[outcome]}>
-                <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <MiniDatePicker
                     value={outcomeDeadline ?? Date.now()}
                     onChange={handleDeadlineSelect}
@@ -1151,6 +1171,44 @@ export const Phase1Form: React.FC = () => {
                       {outcomeDeadline ? formatDisplayDate(new Date(outcomeDeadline)) : 'Pick a deadline…'}
                     </span>
                   </MiniDatePicker>
+
+                  {/* Congela el atraso apenas el diseñador responde, sin
+                      esperar a que alguien marque el proyecto Complete. Solo
+                      tiene sentido con un plazo ya elegido: la respuesta se
+                      mide contra esa fecha. */}
+                  {!!outcomeDeadline && (
+                    <MiniDatePicker
+                      value={outcomeResolvedAt ?? Date.now()}
+                      onChange={handleResponseDateSelect}
+                    >
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 7,
+                        fontSize: '0.8rem', cursor: 'pointer',
+                        color: outcomeResolvedAt ? T.green : T.textMuted,
+                        background: outcomeResolvedAt ? 'rgba(16,185,129,0.1)' : T.bgSurface,
+                        border: `1px solid ${outcomeResolvedAt ? 'rgba(16,185,129,0.3)' : T.cardBorder}`,
+                        borderRadius: T.radiusPill, padding: '8px 16px', whiteSpace: 'nowrap',
+                      }}>
+                        <CalendarCheck2 size={13} />
+                        {outcomeResolvedAt ? `Responded ${formatDisplayDate(new Date(outcomeResolvedAt))}` : 'Mark response date…'}
+                      </span>
+                    </MiniDatePicker>
+                  )}
+                  {!!outcomeResolvedAt && (
+                    <button
+                      type="button"
+                      onClick={clearResponseDate}
+                      title="Clear response date"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: 26, height: 26, borderRadius: '50%',
+                        border: `1px solid ${T.cardBorder}`, background: T.bgSurface,
+                        color: T.textMuted, cursor: 'pointer', flexShrink: 0,
+                      }}
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
                 </div>
               </Field>
 
@@ -1160,8 +1218,9 @@ export const Phase1Form: React.FC = () => {
               }}>
                 <p style={{ color: T.textMuted, fontSize: '0.76rem', lineHeight: 1.45, margin: 0 }}>
                   Choosing this costs no points by itself. Past the deadline it starts costing
-                  <strong style={{ color: T.yellow }}> -1 pt per business day</strong> (-2 after 4 days, max -20),
-                  and keeps counting until the project is marked Complete.
+                  <strong style={{ color: T.yellow }}> -1 pt per business day</strong> (-2 after 4 days, max -20).
+                  It keeps counting until the project is marked Complete — or you record when the
+                  designer actually responded, which freezes it right there.
                 </p>
               </div>
             </div>
