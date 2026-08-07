@@ -32,10 +32,22 @@
    fixed bell since this container uses justify-content: space-between. */
 .calendar-view .view-header {
   display: flex;
+  flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 12px;
+}
+
+.calendar-view .view-header-title,
+.calendar-view .view-header-actions {
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .calendar-view .view-header {
+    flex-wrap: wrap;
+  }
 }
 
 .calendar-header {
@@ -943,6 +955,7 @@
   color: var(--text-secondary);
   font-weight: 500;
   transition: color 0.2s;
+  white-space: nowrap;
 }
 
 .toggle-checkbox:checked ~ .toggle-label {
