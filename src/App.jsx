@@ -24,6 +24,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import NotificationBubble from './components/NotificationBubble'
 import ProjectChatbot from './components/ProjectChatbot'
 import AdminUsersView from './views/AdminUsersView'
+import EssView from './views/EssView'
 import { useLanguage } from './utils/LanguageContext'
 import { isSuperAdminRole } from './utils/adminConfig'
 import { usePendingUsersCount } from './utils/usePendingUsersCount'
@@ -613,6 +614,8 @@ function App() {
         return <DesignerPerformanceApp data={mergedData} projectDesigners={projectDesigners} userProfile={userProfile} currentUser={currentUser} masterProjects={masterProjects} />;
       case 'admin':
         return isSuperAdminRole(userProfile?.role) ? <AdminUsersView userProfile={userProfile} data={mergedData} masterProjects={masterProjects} /> : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
+      case 'ess':
+        return isSuperAdminRole(userProfile?.role) ? <EssView data={mergedData} /> : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
       default: return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
     }
   };

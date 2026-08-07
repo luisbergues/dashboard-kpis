@@ -26,7 +26,8 @@ export const translations = {
       pipeline: "Pipeline",
       costs: "Cost Analysis",
       materials: "Materials",
-      admin: "Admin"
+      admin: "Admin",
+      ess: "ESS"
     },
     login: {
       titleSignIn: "Welcome Back",
@@ -458,7 +459,8 @@ export const translations = {
       pipeline: "Pipeline",
       costs: "Análisis de Costos",
       materials: "Materiales",
-      admin: "Admin"
+      admin: "Admin",
+      ess: "ESS"
     },
     login: {
       titleSignIn: "Iniciar Sesión",
