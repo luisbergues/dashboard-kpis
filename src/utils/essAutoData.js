@@ -49,13 +49,15 @@ export const hasEssAutoData = async (so) => {
 // in essRules.js/essMatcher.js/the parsers. See design doc "Corrección de
 // errores".
 export const saveEssCorrection = async (so, note) => {
-  if (!isConfigured || !db) return;
+  if (!isConfigured || !db) return false;
   try {
     await push(ref(db, `ess_corrections/${so}`), {
       note,
       reportedAt: new Date().toISOString(),
     });
+    return true;
   } catch (error) {
     console.error('Failed to save ESS correction report:', error);
+    return false;
   }
 };

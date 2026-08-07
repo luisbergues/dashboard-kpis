@@ -97,8 +97,12 @@ export default function EssAutoGeneratorModal({ project, onClose }) {
     if (!note) return;
     setIsReporting(true);
     try {
-      await saveEssCorrection(project.so, note);
-      window.alert(language === 'es' ? 'Reporte guardado.' : 'Report saved.');
+      const saved = await saveEssCorrection(project.so, note);
+      window.alert(
+        saved
+          ? (language === 'es' ? 'Reporte guardado.' : 'Report saved.')
+          : (language === 'es' ? 'No se pudo guardar el reporte. Intentá de nuevo.' : 'Could not save the report. Please try again.')
+      );
     } finally {
       setIsReporting(false);
     }
