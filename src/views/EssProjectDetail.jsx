@@ -29,13 +29,21 @@ export default function EssProjectDetail({ project, onBack }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const entries = await Promise.all(DOC_TYPES.map(async docType => {
-        const file = await loadEssFile(project.so, docType);
-        return [docType, file?.name || null];
-      }));
-      if (!cancelled) setUploadedNames(Object.fromEntries(entries));
-      const exists = await hasEssAutoData(project.so);
-      if (!cancelled) setEssExists(exists);
+      try {
+        const entries = await Promise.all(DOC_TYPES.map(async docType => {
+          const file = await loadEssFile(project.so, docType);
+          return [docType, file?.name || null];
+        }));
+        if (!cancelled) setUploadedNames(Object.fromEntries(entries));
+        const exists = await hasEssAutoData(project.so);
+        if (!cancelled) setEssExists(exists);
+      } catch (error) {
+        // Don't let a transient RTDB read failure leave essExists stuck at
+        // false — that would silently defeat the regenerate-confirm guard
+        // in handleGenerate. Just log; state is left as-is (matching the
+        // catch-and-log resilience pattern used elsewhere, e.g. essAutoData.js).
+        console.error('Failed to load ESS upload/generation state:', error);
+      }
     })();
     return () => { cancelled = true; };
   }, [project.so]);
@@ -52,10 +60,26 @@ export default function EssProjectDetail({ project, onBack }) {
     }
 
     setIsUploading(prev => ({ ...prev, [docType]: true }));
+
+    // Save first. If this fails, nothing was persisted — report a real
+    // upload failure and stop; don't run the sanity check on a file that
+    // was never saved.
     try {
       await saveEssFile(project.so, docType, file);
       setUploadedNames(prev => ({ ...prev, [docType]: file.name }));
+    } catch (error) {
+      console.error(`Failed to upload ${docType}:`, error);
+      setUploadErrors(prev => ({ ...prev, [docType]: t('No se pudo subir este archivo.', 'Failed to upload this file.') }));
+      setIsUploading(prev => ({ ...prev, [docType]: false }));
+      return;
+    }
 
+    // The upload already succeeded at this point — this is just a
+    // best-effort "does this look like the right doc type" check, so its
+    // own failure (e.g. the PDF can't be parsed) must never be reported as
+    // an upload error. It gets a warning instead, distinct from a failed
+    // upload.
+    try {
       const arrayBuffer = await file.arrayBuffer();
       const pages = await extractPdfPages(arrayBuffer);
       const text = pagesToPlainText(pages);
@@ -69,8 +93,11 @@ export default function EssProjectDetail({ project, onBack }) {
         }));
       }
     } catch (error) {
-      console.error(`Failed to upload ${docType}:`, error);
-      setUploadErrors(prev => ({ ...prev, [docType]: t('No se pudo subir este archivo.', 'Failed to upload this file.') }));
+      console.error(`Sanity check failed for ${docType} (file was still uploaded):`, error);
+      setSlotWarnings(prev => ({
+        ...prev,
+        [docType]: t('No pudimos verificar este archivo, pero se subió correctamente.', "We couldn't verify this file, but it uploaded successfully."),
+      }));
     } finally {
       setIsUploading(prev => ({ ...prev, [docType]: false }));
     }
