@@ -51,6 +51,30 @@ describe('buildEssPages', () => {
     expect(result.pages[0].rods).toEqual([]);
   });
 
+  it('builds jobName exactly like the manual ESS modal does, stripping the sheet-name suffix', () => {
+    // Sheet Name cells arrive as "Cliente:[SO#] Nombre". EssAutoGeneratorModal's
+    // createDefaultPage runs them through shortProjectName, so pages added by
+    // hand and pages produced here must not disagree on the header.
+    const sheetProject = { so: '12485', name: 'Ashley Frankel:[12485] Ashley Frankel' };
+    const quote = { areas: [{ name: 'MASTER WIC', items: [] }], warnings: [] };
+    const drawings = { areas: [], warnings: [] };
+
+    const generated = buildEssPages({ project: sheetProject, contract: {}, quote, drawings });
+    expect(generated.pages[0].headerData.jobName).toBe('12485 - Ashley Frankel');
+
+    const blank = buildEssPages({ project: sheetProject, contract: {}, quote: { areas: [], warnings: [] }, drawings });
+    expect(blank.pages[0].headerData.jobName).toBe('12485 - Ashley Frankel');
+  });
+
+  it('tolerates a quote area with no items array at all', () => {
+    const quote = { areas: [{ name: 'MASTER WIC' }], warnings: [] };
+    const drawings = { areas: [], warnings: [] };
+    expect(() => buildEssPages({ project, contract: {}, quote, drawings })).not.toThrow();
+    const result = buildEssPages({ project, contract: {}, quote, drawings });
+    expect(result.pages[0].rods).toEqual([]);
+    expect(result.unmatchedQuoteItems).toEqual([]);
+  });
+
   it('uses the Dovetail formula when boxType is DOVETAIL', () => {
     const quote = { areas: [{ name: 'MASTER WIC', items: [] }], warnings: [] };
     const drawings = { areas: [{ name: 'MASTER WIC', openings: [{ width: 24, height: null, depth: null }], unclassified: [] }], warnings: [] };

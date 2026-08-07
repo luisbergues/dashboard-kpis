@@ -10,14 +10,12 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       workbox: {
-        // Default is 2 MiB. The ESS feature's PDF upload screen pulls
-        // pdfjs-dist into the eagerly-loaded main bundle (App.jsx -> EssView.jsx
-        // -> EssProjectDetail.jsx -> essPdfExtract.js are all static imports),
-        // pushing the main chunk to ~2.14 MB, which trips the default precache
-        // limit and fails the build. Raised comfortably above that so small
-        // future growth doesn't immediately re-trip it. A future improvement
-        // would be lazy-loading the ESS tab so non-admin users don't pay for
-        // pdfjs-dist at all — out of scope here.
+        // Default is 2 MiB. The ESS tab is now lazy-loaded (see the
+        // React.lazy(() => import('./views/EssView')) in App.jsx), so
+        // pdfjs-dist lives in its own chunk and no longer inflates the main
+        // bundle every user downloads. This raised ceiling stays as headroom
+        // so a single large chunk doesn't fail the build outright — it is a
+        // safety margin now, not the fix.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       manifest: {

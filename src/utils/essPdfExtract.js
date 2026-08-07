@@ -16,8 +16,8 @@ if (typeof window !== 'undefined' && !import.meta.env.SSR) {
     if (pdfWorkerUrl) {
       pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
     }
-  }).catch(() => {
-    // Ignore import errors in dev/test environments
+  }).catch((error) => {
+    console.error('Failed to load pdf.js worker; PDF parsing will fall back to the main thread and may freeze the UI on large files:', error);
   });
 }
 

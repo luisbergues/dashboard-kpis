@@ -58,6 +58,11 @@ export function parseDrawingPages(pages) {
     const labels = classifyLabels(page.items);
     const numbers = page.items.filter(item => NUMBER_RE.test(item.text.trim()));
     const claimed = new Set();
+    // HEIGHT/DEPTH labels are consumed one-per-opening, same as the numbers
+    // are: two openings sitting within MAX_LABEL_DISTANCE of the same HEIGHT
+    // label would otherwise both bind to it and silently take the same
+    // dimension.
+    const claimedLabels = new Set();
 
     const openings = labels
       .filter(l => l.labelType === 'opening')
@@ -66,11 +71,12 @@ export function parseDrawingPages(pages) {
         ['opening', 'height', 'depth'].forEach(type => {
           const labelForType = type === 'opening'
             ? openingLabel
-            : labels.find(l => l.labelType === type && distance(l, openingLabel) <= MAX_LABEL_DISTANCE);
+            : labels.find(l => l.labelType === type && !claimedLabels.has(l) && distance(l, openingLabel) <= MAX_LABEL_DISTANCE);
           if (!labelForType) return;
           const nearest = nearestUnclaimed(numbers, claimed, labelForType);
           if (!nearest) return;
           claimed.add(nearest.n);
+          claimedLabels.add(labelForType);
           const value = parseFloat(nearest.n.text);
           if (type === 'opening') opening.width = value;
           if (type === 'height') opening.height = value;

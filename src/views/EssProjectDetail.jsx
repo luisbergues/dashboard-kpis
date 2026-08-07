@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Upload, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
-import { saveEssFile, loadEssFile, validateFileSize, base64ToArrayBuffer } from '../utils/essFiles';
+import { saveEssFile, loadEssFile, loadEssFileIndexEntry, validateFileSize, base64ToArrayBuffer } from '../utils/essFiles';
 import { extractPdfPages, pagesToPlainText } from '../utils/essPdfExtract';
 import { parseContractText, looksLikeContract } from '../utils/essParsers/parseContract';
 import { parseQuoteText, looksLikeQuote } from '../utils/essParsers/parseQuote';
@@ -30,9 +30,13 @@ export default function EssProjectDetail({ project, onBack }) {
     let cancelled = false;
     (async () => {
       try {
+        // Metadata index only — all this needs is the stored file's name.
+        // loadEssFile would pull the full Base64 PDF for all 3 slots just to
+        // render a filename. handleGenerate still uses it, where the bytes are
+        // actually needed.
         const entries = await Promise.all(DOC_TYPES.map(async docType => {
-          const file = await loadEssFile(project.so, docType);
-          return [docType, file?.name || null];
+          const entry = await loadEssFileIndexEntry(project.so, docType);
+          return [docType, entry?.name || null];
         }));
         if (!cancelled) setUploadedNames(Object.fromEntries(entries));
         const exists = await hasEssAutoData(project.so);
@@ -55,7 +59,7 @@ export default function EssProjectDetail({ project, onBack }) {
 
     const sizeCheck = validateFileSize(file);
     if (!sizeCheck.valid) {
-      setUploadErrors(prev => ({ ...prev, [docType]: t('Este archivo es demasiado grande (máx 8MB).', 'This file is too large (max 8MB).') }));
+      setUploadErrors(prev => ({ ...prev, [docType]: t('Este archivo es demasiado grande (máx 7MB).', 'This file is too large (max 7MB).') }));
       return;
     }
 
@@ -220,10 +224,27 @@ export default function EssProjectDetail({ project, onBack }) {
       {summary && (
         <div className="glass-card" style={{ padding: '12px', marginTop: '16px' }}>
           <h3>{t('Resumen de extracción', 'Extraction summary')}</h3>
-          {summary.unmatchedQuoteItems.length === 0 && summary.unmatchedDrawingOpenings.length === 0 ? (
+          {/* warnings has to be part of the success condition: when the Quote or
+              Drawings parse to zero areas/openings, both unmatched lists come
+              back empty by construction, so checking only those would report a
+              total parse failure as "everything matched cleanly". */}
+          {summary.unmatchedQuoteItems.length === 0 && summary.unmatchedDrawingOpenings.length === 0 && summary.warnings.length === 0 ? (
             <p>{t('Todo matcheó correctamente.', 'Everything matched cleanly.')}</p>
           ) : (
             <>
+              {summary.warnings.length > 0 && (
+                <div>
+                  <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <AlertTriangle size={14} color="var(--color-warning, orange)" />
+                    {t('Advertencias de extracción:', 'Extraction warnings:')}
+                  </strong>
+                  <ul>
+                    {summary.warnings.map((warning, i) => (
+                      <li key={i}>{warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {summary.unmatchedQuoteItems.length > 0 && (
                 <div>
                   <strong>{t('Ítems del Quote sin área en el plano:', 'Quote items with no matching drawing area:')}</strong>

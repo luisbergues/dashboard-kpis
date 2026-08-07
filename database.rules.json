@@ -162,6 +162,10 @@
       ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' && root.child('users').child(auth.uid).child('status').val() === 'approved'",
       ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' && root.child('users').child(auth.uid).child('status').val() === 'approved'"
     },
+    "ess_file_index": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' && root.child('users').child(auth.uid).child('status').val() === 'approved'"
+    },
     "essAutoData": {
       ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' && root.child('users').child(auth.uid).child('status').val() === 'approved'",
       ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' && root.child('users').child(auth.uid).child('status').val() === 'approved'"

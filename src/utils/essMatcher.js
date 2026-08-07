@@ -1,4 +1,5 @@
 import { translateColor, calcPrfvWidth, calcDovetailWidth } from './essRules';
+import { shortProjectName } from './projectName';
 
 function normalizeAreaName(name) {
   return (name || '').trim().toUpperCase();
@@ -7,7 +8,10 @@ function normalizeAreaName(name) {
 function blankPage(project) {
   return {
     headerData: {
-      jobName: project ? `${project.so} - ${project.name || ''}`.trim() : '',
+      // Same construction as createDefaultPage in EssAutoGeneratorModal.jsx —
+      // otherwise the header changes depending on whether a page came from the
+      // generator or was added by hand afterwards in the same modal.
+      jobName: project ? `${project.so} - ${shortProjectName(project.name)}` : '',
       color: '',
       rooms: '',
       designer: project?.designer || '',
@@ -37,7 +41,7 @@ export function buildEssPages({ project, contract, quote, drawings, boxType = 'P
     const drawingArea = drawingAreas.find(d => normalizeAreaName(d.name) === normalizeAreaName(quoteArea.name));
 
     if (!drawingArea) {
-      quoteArea.items.forEach(item => unmatchedQuoteItems.push({ area: quoteArea.name, ...item }));
+      (quoteArea.items || []).forEach(item => unmatchedQuoteItems.push({ area: quoteArea.name, ...item }));
     }
 
     const openings = drawingArea ? drawingArea.openings : [];
@@ -52,13 +56,13 @@ export function buildEssPages({ project, contract, quote, drawings, boxType = 'P
         handles: '',
       }));
 
-    const rods = quoteArea.items
+    const rods = (quoteArea.items || [])
       .filter(item => /rod/i.test(item.description))
       .map(item => ({ room: quoteArea.name, type: item.description, qty: item.qty, size: '' }));
 
     return {
       headerData: {
-        jobName: project ? `${project.so} - ${project.name || ''}`.trim() : '',
+        jobName: project ? `${project.so} - ${shortProjectName(project.name)}` : '',
         color: translateColor(project?.color) || project?.color || '',
         rooms: quoteArea.name,
         designer: project?.designer || '',

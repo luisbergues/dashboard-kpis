@@ -20,8 +20,20 @@ export default function EssView({ data }) {
 
   useEffect(() => {
     if (!db) return;
-    const unsubFiles = onValue(ref(db, 'ess_files'), snap => setFilesBySo(snap.val() || {}));
-    const unsubAuto = onValue(ref(db, 'essAutoData'), snap => setAutoDataBySo(snap.val() || {}));
+    // ess_file_index, not ess_files: this list only needs to know *whether* a
+    // file exists per SO/docType, and ess_files carries the full Base64 PDF of
+    // every file of every project — subscribing to that here would pull tens of
+    // megabytes on every tab open.
+    const unsubFiles = onValue(
+      ref(db, 'ess_file_index'),
+      snap => setFilesBySo(snap.val() || {}),
+      (error) => console.error('Failed to subscribe to ESS data:', error)
+    );
+    const unsubAuto = onValue(
+      ref(db, 'essAutoData'),
+      snap => setAutoDataBySo(snap.val() || {}),
+      (error) => console.error('Failed to subscribe to ESS data:', error)
+    );
     return () => { unsubFiles(); unsubAuto(); };
   }, []);
 
