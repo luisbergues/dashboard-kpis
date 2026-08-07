@@ -122,7 +122,7 @@ El repo no usa Firebase Storage en ningún lado — el único precedente de subi
 Como no hay aprendizaje automático, cada mejora del parser es un cambio de código deliberado. Dos niveles:
 
 1. **Corrección puntual:** editar el campo mal calculado directamente en `EssAutoGeneratorModal` (mismos inputs que ya tiene `PDFGeneratorModal`) — arregla ese proyecto, no el parser.
-2. **Corrección de la regla:** en `EssAutoGeneratorModal`, cada fila de drawer/rod tiene un ícono de inspección que muestra el texto crudo extraído, su posición en el PDF, y qué regla decidió su clasificación. Botón "Reportar error" guarda el caso en `ess_corrections/{so}/{campo}` (valor del parser vs. valor correcto + referencia al PDF). Esos reportes son la lista de casos a revisar y convertir en ajustes de `essRules.js`/`essMatcher.js`/los parsers.
+2. **Corrección de la regla:** botón "Reportar error" en `EssAutoGeneratorModal` (no por celda — un reporte de texto libre por generación, para minimizar los cambios sobre el modal clonado) que guarda una nota en `ess_corrections/{so}` (texto libre + timestamp). Esos reportes son la lista de casos a revisar manualmente y convertir en ajustes de `essRules.js`/`essMatcher.js`/los parsers. Un modo de inspección por celda queda fuera de esta v1 — se puede agregar después si el volumen de correcciones lo justifica.
 
 ## Testing
 
