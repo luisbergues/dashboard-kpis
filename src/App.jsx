@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchAndParseData, fetchAndParseProjectMaterials } from './utils/sheetParser'
@@ -9,21 +9,38 @@ import { checkDbSizeAndArchive } from './utils/archiveHelpers'
 import { archiveMissingCompletedProjects, archiveCurrentlyCompletedProjects, fetchArchivedCompletedProjects, purgeExpiredArchives } from './utils/completedProjectsArchive'
 import { withArchiveLease } from './utils/archiveCoordinator'
 import Navbar from './components/Navbar'
+import ErrorBoundary from './components/ErrorBoundary'
+import ViewSkeleton from './components/ViewSkeleton'
+
+/* Estaticas a proposito. Las tres primeras: son las unicas pantallas que
+   pueden ser la primera (login, landing de ingenieria, landing de diseñador),
+   asi que partirlas solo agregaria un round-trip antes del primer render util.
+   CalendarView ademas es la que define, en su CSS, los primitivos compartidos
+   de toda la app —.btn-primary/.btn-secondary, .form-input, .modal-overlay,
+   .status-badge, .toggle-label—, que hoy llegan a las demas vistas solo porque
+   este import es estatico. Mientras esas reglas no se muden a index.css, este
+   archivo NO puede pasar a lazy sin dejar sin estilo al login, al Navbar y a
+   todos los modales. */
 import DashboardView from './views/DashboardView'
 import PipelineView from './views/PipelineView'
-import MaterialsView from './views/MaterialsView'
-import CalendarView from './views/CalendarView'
 import LoginView from './views/LoginView'
-import MyProjectsView from './views/MyProjectsView'
-import DesignQualityView from './views/DesignQualityView'
-import ProjectDetailView from './views/ProjectDetailView'
-import LogbookView from './views/LogbookView'
-import ChecklistView from './views/ChecklistView'
-import DesignerPerformanceApp from './designer-performance/App'
-import ErrorBoundary from './components/ErrorBoundary'
+import CalendarView from './views/CalendarView'
+
+/* El resto entra por code splitting: todo el bundle era un unico archivo de
+   ~1.6 MB, asi que abrir el login descargaba tambien Designer Performance
+   entera, el calendario y las tablas de admin. Cada una de estas vistas se
+   pide recien cuando el usuario la abre; el <Suspense> de mas abajo muestra
+   el skeleton mientras llega el chunk. */
+const MaterialsView = lazy(() => import('./views/MaterialsView'))
+const MyProjectsView = lazy(() => import('./views/MyProjectsView'))
+const DesignQualityView = lazy(() => import('./views/DesignQualityView'))
+const ProjectDetailView = lazy(() => import('./views/ProjectDetailView'))
+const LogbookView = lazy(() => import('./views/LogbookView'))
+const ChecklistView = lazy(() => import('./views/ChecklistView'))
+const AdminUsersView = lazy(() => import('./views/AdminUsersView'))
+const DesignerPerformanceApp = lazy(() => import('./designer-performance/App'))
 import NotificationBubble from './components/NotificationBubble'
 import ProjectChatbot from './components/ProjectChatbot'
-import AdminUsersView from './views/AdminUsersView'
 import { useLanguage } from './utils/LanguageContext'
 import { isSuperAdminRole } from './utils/adminConfig'
 import { usePendingUsersCount } from './utils/usePendingUsersCount'
@@ -544,7 +561,7 @@ function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const projectSoParam = urlParams.get('project');
     if (projectSoParam) {
-      if (loading || authLoading) return <div className="loading-state"><Loader2 size={20} className="animate-spin" /> Loading project...</div>;
+      if (loading || authLoading) return <ViewSkeleton />;
       return (
         <ProjectDetailView
           data={mergedData}
@@ -555,7 +572,7 @@ function App() {
       );
     }
 
-    if (loading || authLoading) return <div className="loading-state"><Loader2 size={20} className="animate-spin" /> Loading application...</div>;
+    if (loading || authLoading) return <ViewSkeleton />;
     if (error) return <div className="error-state">Error: {error}</div>;
 
     if (!currentUser) {
@@ -600,7 +617,7 @@ function App() {
         return isDesigner ? null : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
       case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
       case 'my-projects':
-        return isDesigner ? null : <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} setActiveTab={setActiveTab} setFocusedProjectSo={setFocusedProjectSo} />;
+        return isDesigner ? null : <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} setActiveTab={setActiveTab} setFocusedProjectSo={setFocusedProjectSo} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} />;
       case 'pipeline': return <PipelineView data={mergedData} currentUser={currentUser} userProfile={userProfile} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} />;
       case 'materials':
         return isDesigner ? null : <MaterialsView data={mergedData} />;
@@ -633,7 +650,12 @@ function App() {
       )}
       <main className={`main-content ${(!currentUser || !(isApproved || isSuperAdmin)) ? 'no-sidebar' : ''}`}>
         <ErrorBoundary>
-          {renderView()}
+          {/* El ErrorBoundary queda por fuera a proposito: si falla la
+              descarga de un chunk, React la propaga como error de render y
+              tiene que atraparla el boundary, no el fallback. */}
+          <Suspense fallback={<ViewSkeleton />}>
+            {renderView()}
+          </Suspense>
         </ErrorBoundary>
       </main>
       {currentUser && (isApproved || isSuperAdmin) && (
@@ -644,9 +666,8 @@ function App() {
           userProfile={userProfile}
         />
       )}
-      <NotificationBubble 
-        alerts={realAlerts} 
-        activeTab={activeTab}
+      <NotificationBubble
+        alerts={realAlerts}
         onAlertClick={(alert) => {
           if (alert.type === 'admin_request') {
             setActiveTab('admin');
@@ -658,7 +679,10 @@ function App() {
             set(ref(db, refPath), new Date().toISOString());
           }
           setFocusedProjectSo(alert.so);
-          setActiveTab('pipeline');
+          // Las notas Designer se resuelven desde My Projects (ahi estan los
+          // controles para marcarlas resueltas y cambiarles el tipo); Pipeline
+          // solo las muestra. Las demas alertas siguen yendo a Pipeline.
+          setActiveTab(alert.type === 'designer_review' ? 'my-projects' : 'pipeline');
         }}
       />
     </div>

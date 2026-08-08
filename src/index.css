@@ -66,6 +66,14 @@
   padding: 0;
 }
 
+/* Red de seguridad: ningun desborde interno debe poder mover la pagina entera
+   (arrastraba tambien al sidebar fijo). El scroll horizontal se contiene en el
+   contenedor que lo genera — ver .table-scroll-container y .filter-chips. */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background: var(--bg-surface);
@@ -102,10 +110,14 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  /* Sin esto un hijo flex usa min-width:auto (= su ancho de contenido) y se
+     niega a encogerse, asi que cualquier fila ancha empuja el layout entero. */
+  min-width: 0;
 }
 
 .main-content {
   flex: 1;
+  min-width: 0; /* idem: deja que el contenido se encoja en vez de desbordar */
   padding: var(--spacing-lg);
   padding-top: 80px; /* Space for mobile top header */
   padding-bottom: 90px; /* Space for mobile bottom nav */
@@ -114,12 +126,43 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
 }
 
+/* Foco visible en toda la app. Antes solo se veia el outline por defecto del
+   navegador, que varios resets pisaban: navegar por teclado era casi ciego.
+   :focus-visible no molesta al usuario de mouse. */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #007AFF;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Patron unico de scroll horizontal contenido, extraido del Projects Directory
+   de Designer Perf. (el unico que lo hacia bien): el scroll vive DENTRO del
+   contenedor, no se propaga a la pagina. Usar en tablas anchas y filas de
+   chips/filtros.
+   Los dos nombres viejos entran aca: .table-container solo existia dentro de
+   MaterialsView.css (Admin y el modal de PDF dependian de que esa vista
+   estuviera cargada para tener scroll) y .table-responsive no tenia ninguna
+   regla en todo el proyecto, asi que la tabla de OrphanedProjectsPanel
+   —min-width: 800px— desbordaba sin contenedor que la frenara. */
+.table-scroll-container,
+.table-container,
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  min-width: 0;
+}
+
 @media (min-width: 768px) {
   .app-container {
     flex-direction: row;
   }
   .main-content {
     padding: var(--spacing-lg); /* Reset spacing for desktop */
+    /* Espacio para el FAB del chat (56px + 24px de offset + margen): sin esto
+       se montaba sobre los controles de la ultima fila — en Admin llegaba a
+       tapar "Revoke Access", que es destructivo. */
+    padding-bottom: 96px;
     margin-left: 264px; /* Space for desktop sidebar (240px width + 12px left offset + 12px margin gap) */
     width: calc(100% - 264px); /* Prevent overflow: sidebar is fixed and out of flow, so width:100% + margin-left would overflow */
     transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -145,6 +188,15 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
+  min-width: 0; /* ver .main-content: permite encoger en vez de desbordar */
+}
+
+/* El parrafo descriptivo de cada vista se envolvia en una columna angosta
+   heredada. 65ch es el ancho de linea legible estandar y ademas evita que
+   estire la fila cuando hay espacio de sobra. */
+.view-header p,
+.view-subtitle {
+  max-width: 65ch;
 }
 
 @media (min-width: 768px) {

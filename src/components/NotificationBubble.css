@@ -219,26 +219,7 @@
   color: var(--text-primary);
 }
 
-.notification-dismiss-btn {
-  position: absolute;
-  top: -6px;
-  left: -6px;
-  background: var(--card-bg);
-  color: var(--text-secondary);
-  border: 1px solid var(--card-border);
-  border-radius: 50%;
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 10;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-.notification-dismiss-btn:hover {
-  color: var(--text-primary);
-  background: var(--card-hover);
-}
+/* .notification-dismiss-btn eliminado: era una X de 22x22 solapada sobre la
+   campana que ocultaba el widget entero por el resto de la sesion, sin
+   confirmacion ni deshacer. Ver NotificationBubble.jsx. */
 

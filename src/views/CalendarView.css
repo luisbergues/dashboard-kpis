@@ -2,12 +2,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+  min-width: 0; /* ver .main-content en index.css */
 }
 
 .calendar-layout {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+  min-width: 0;
 }
 
 @media (min-width: 1024px) {
@@ -17,6 +19,7 @@
   }
   .calendar-container {
     flex: 1;
+    min-width: 0;
   }
   .calendar-sidebar {
     width: 320px;
@@ -35,13 +38,22 @@
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: nowrap;
+  /* Antes era nowrap con ambos hijos en flex-shrink:0: nada podia encogerse,
+     asi que a anchos medios el boton "Add Custom Note" se empujaba fuera del
+     contenedor y quedaba clippeado contra el borde/la campana. */
+  flex-wrap: wrap;
   gap: 12px;
 }
 
-.calendar-view .view-header-title,
+.calendar-view .view-header-title {
+  /* El titulo cede espacio primero: es texto y puede envolver. */
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .calendar-view .view-header-actions {
-  flex-shrink: 0;
+  /* La accion conserva su tamano, pero puede bajar de linea si no entra. */
+  flex: 0 0 auto;
 }
 
 @media (max-width: 767px) {
@@ -160,10 +172,20 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  cursor: default;
+  /* Todo badge abre el detalle del dia: el click ya burbujeaba a la celda,
+     pero `cursor: default` lo hacia parecer inerte — de ahi la sensacion de
+     que INST respondia y FIN no. Ahora la afordancia coincide con el
+     comportamiento real. */
+  cursor: pointer;
   display: flex;
   gap: 4px;
   align-items: center;
+}
+
+/* Los dias fuera del mes no abren nada: no deben parecer interactivos. */
+.cal-cell.disabled,
+.cal-cell.disabled .cal-event {
+  cursor: default;
 }
 
 .cal-event-time {

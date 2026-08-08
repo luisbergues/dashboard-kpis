@@ -245,6 +245,11 @@
   margin-top: 8px;
   flex-wrap: wrap;
   gap: 16px 0;
+  /* Sin esto los 6 .stage-step (flex:1, min-width:auto) imponian su ancho de
+     contenido y aparecia un scrollbar horizontal DENTRO de la tarjeta
+     expandida, desplazando todo su contenido. */
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Timeline connecting bar: starts/ends at the center of the first/last

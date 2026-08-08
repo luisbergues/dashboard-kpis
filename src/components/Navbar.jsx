@@ -30,15 +30,15 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
   const tabs = isDesigner ? [
     { id: 'pipeline', label: t('navbar.pipeline'), icon: ListTodo },
     { id: 'calendar', label: t('navbar.calendar'), icon: CalendarDays },
-    { id: 'designer-performance', label: 'Designer Perf.', icon: Activity },
+    { id: 'designer-performance', label: t('navbar.designerPerf'), icon: Activity },
   ] : [
     { id: 'dashboard', label: t('navbar.dashboard'), icon: LayoutDashboard },
     { id: 'calendar', label: t('navbar.calendar'), icon: CalendarDays },
     ...(userProfile ? [{ id: 'my-projects', label: t('navbar.myProjects'), icon: Briefcase }] : []),
     { id: 'pipeline', label: t('navbar.pipeline'), icon: ListTodo },
     { id: 'materials', label: t('navbar.materials'), icon: Hammer },
-    ...(userProfile?.role !== 'administrative' ? [{ id: 'quality', label: 'Team Stats', icon: Award }] : []),
-    { id: 'designer-performance', label: 'Designer Perf.', icon: Activity },
+    ...(userProfile?.role !== 'administrative' ? [{ id: 'quality', label: t('navbar.teamStats'), icon: Award }] : []),
+    { id: 'designer-performance', label: t('navbar.designerPerf'), icon: Activity },
     ...(isSuperAdmin ? [{ id: 'admin', label: t('navbar.admin'), icon: ShieldCheck, badge: pendingUsersCount > 0 }] : [])
   ];
 
@@ -161,8 +161,17 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
             return (
               <li key={tab.id}>
                 <button
+                  type="button"
                   className={`nav-btn ${activeTab === tab.id ? 'active' : ''}`}
                   onClick={() => setActiveTab(tab.id)}
+                  /* Con el sidebar colapsado el .nav-label se oculta por CSS,
+                     asi que el boton se quedaba sin nombre accesible: en el
+                     arbol de accesibilidad aparecia como un boton vacio.
+                     aria-label lo mantiene siempre, y title da el tooltip
+                     visible al pasar el mouse. */
+                  aria-label={tab.label}
+                  aria-current={activeTab === tab.id ? 'page' : undefined}
+                  title={tab.label}
                 >
                   <span className="nav-icon-wrapper">
                     <Icon className="nav-icon" size={20} />

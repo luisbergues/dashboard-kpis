@@ -61,7 +61,7 @@ const getStageLabel = (stageId, language) => {
 };
 
 
-export default function MyProjectsView({ data, currentUser, userProfile, setActiveTab, setFocusedProjectSo }) {
+export default function MyProjectsView({ data, currentUser, userProfile, setActiveTab, setFocusedProjectSo, focusedProjectSo, clearFocusedProjectSo }) {
   const { t, language } = useLanguage();
   const { theme } = useTheme();
   const isLight = theme === 'light';
@@ -310,7 +310,24 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
     return obj;
   }, [myProjectsRaw, myArchivedProjects, projectHistory]);
 
-  const weeklyData = calculateWeeklyCompletions(derivedProjectStages, [...myProjectsRaw, ...myArchivedProjects]);
+  const weeklyDataRaw = calculateWeeklyCompletions(
+    derivedProjectStages,
+    [...myProjectsRaw, ...myArchivedProjects],
+    8,
+    language
+  );
+  // Los labels de las series salen del diccionario estatico (antes estaban
+  // fijos en ingles dentro de kpiCalculator).
+  const weeklyData = React.useMemo(() => ({
+    ...weeklyDataRaw,
+    datasets: weeklyDataRaw.datasets.map(ds => ({
+      ...ds,
+      label: ds.labelKey ? t(ds.labelKey) : ds.label,
+    })),
+  }), [weeklyDataRaw, t]);
+  // Con una sola semana el grafico degenera en puntos sueltos sin linea; ahi
+  // conviene el mismo empty state que ya usa Team Stats.
+  const hasEnoughWeeklyHistory = (weeklyDataRaw.weeksWithData || 0) >= 2;
   const upcomingDeadlines = getUpcomingDeadlines(myProjectsRaw);
 
   const lineOptions = {
@@ -334,6 +351,28 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       }
     }
   };
+
+  // Expandir y hacer scroll al proyecto que llega desde una notificacion.
+  // Mismo comportamiento que PipelineView: las notas Designer se resuelven
+  // desde aca, asi que el click en esa notificacion aterriza en esta vista y
+  // tiene que dejar la tarjeta a la vista, no solo abrir la pestaña.
+  useEffect(() => {
+    if (!focusedProjectSo) return;
+
+    setExpandedProjects(prev => ({ ...prev, [focusedProjectSo]: true }));
+
+    const timer = setTimeout(() => {
+      const element = document.getElementById(`project-card-${focusedProjectSo}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('focused-glow');
+        setTimeout(() => element.classList.remove('focused-glow'), 3000);
+      }
+      if (clearFocusedProjectSo) clearFocusedProjectSo();
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [focusedProjectSo, clearFocusedProjectSo]);
 
   // Cleanup ESS & IP data for completed projects
   useEffect(() => {
@@ -1353,10 +1392,12 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                 <div className="analytics-card">
                   <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Projects Completed (Weekly)</h4>
                   <div style={{ height: '220px' }}>
-                    {weeklyData.labels.length > 0 ? (
+                    {hasEnoughWeeklyHistory ? (
                       <Line data={weeklyData} options={lineOptions} />
                     ) : (
-                      <div className="text-muted" style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>No completed projects yet</div>
+                      <div className="text-muted" style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 16px' }}>
+                        {t('charts.notEnoughWeekly')}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1447,7 +1488,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
             const isCollapsed = !expandedProjects[project.so];
 
             return (
-              <div key={project.so} className={`project-card glass-card ${isCollapsed ? '' : 'is-expanded'}`} style={{ paddingBottom: isCollapsed ? '12px' : '24px' }}>
+              <div id={`project-card-${project.so}`} key={project.so} className={`project-card glass-card ${isCollapsed ? '' : 'is-expanded'}`} style={{ paddingBottom: isCollapsed ? '12px' : '24px' }}>
                 <div className="project-card-layout">
                   <div className="project-card-main">
                     <div className="card-header-main" onClick={() => toggleCollapse(project.so)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

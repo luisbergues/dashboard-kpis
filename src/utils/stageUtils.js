@@ -1,10 +1,14 @@
+// `id` es la clave de persistencia (project_qa_checklist/{so}/{id}) — NO tocar.
+// `labelKey` apunta al diccionario estatico: antes cada label estaba fijo en
+// codigo y "Ingeniería" quedaba en español incluso con la app en ingles.
+// `label` se conserva como respaldo para contextos sin acceso a t().
 export const STAGES = [
-  { id: 'ingenieria', label: 'Ingeniería' },
-  { id: 'check1', label: 'Eng. Check' },
-  { id: 'paperwork', label: 'Paperwork' },
-  { id: 'check2', label: 'PW Check' },
-  { id: 'nesting', label: 'Nesting' },
-  { id: 'install', label: 'Install' }
+  { id: 'ingenieria', labelKey: 'stages.ingenieria', label: 'Engineering' },
+  { id: 'check1', labelKey: 'stages.check1', label: 'Eng. Check' },
+  { id: 'paperwork', labelKey: 'stages.paperwork', label: 'Paperwork' },
+  { id: 'check2', labelKey: 'stages.check2', label: 'PW Check' },
+  { id: 'nesting', labelKey: 'stages.nesting', label: 'Nesting' },
+  { id: 'install', labelKey: 'stages.install', label: 'Install' }
 ];
 
 // statusHistory.statusDate is raw sheet text — it can be empty, "N/A", or an

@@ -26,7 +26,26 @@ export const translations = {
       pipeline: "Pipeline",
       costs: "Cost Analysis",
       materials: "Materials",
-      admin: "Admin"
+      admin: "Admin",
+      teamStats: "Team Stats",
+      designerPerf: "Designer Perf."
+    },
+    // Etapas del proceso. Vivian hardcodeadas en stageUtils.js, con
+    // "Ingeniería" en español fijo — se veia en español incluso con la app
+    // en ingles (Process Timeline del detalle de proyecto).
+    stages: {
+      ingenieria: "Engineering",
+      check1: "Eng. Check",
+      paperwork: "Paperwork",
+      check2: "PW Check",
+      nesting: "Nesting",
+      install: "Install"
+    },
+    charts: {
+      engineeringCompleted: "Engineering Completed",
+      nestingCompleted: "Nesting Completed",
+      fullyCompleted: "Fully Completed",
+      notEnoughWeekly: "Not enough weekly history yet to chart the evolution. Check back on this view in the coming weeks."
     },
     login: {
       titleSignIn: "Welcome Back",
@@ -403,7 +422,10 @@ export const translations = {
         noHoles: "No Holes",
         dovetail: "Dovetail",
         element: "Element"
-      }
+      },
+      empty: "No material requirements to show.",
+      showMore: "Show more",
+      showAll: "Show all"
     },
     admin: {
       title: "User Management",
@@ -458,7 +480,23 @@ export const translations = {
       pipeline: "Pipeline",
       costs: "Análisis de Costos",
       materials: "Materiales",
-      admin: "Admin"
+      admin: "Admin",
+      teamStats: "Estadísticas del Equipo",
+      designerPerf: "Rend. Diseñador"
+    },
+    stages: {
+      ingenieria: "Ingeniería",
+      check1: "Chequeo Ing.",
+      paperwork: "Papeleo",
+      check2: "Chequeo Pap.",
+      nesting: "Nesting",
+      install: "Instalación"
+    },
+    charts: {
+      engineeringCompleted: "Ingeniería Completada",
+      nestingCompleted: "Nesting Completado",
+      fullyCompleted: "Completado Total",
+      notEnoughWeekly: "Todavía no hay suficiente historial semanal para graficar la evolución. Volvé a esta vista en las próximas semanas."
     },
     login: {
       titleSignIn: "Iniciar Sesión",
@@ -833,7 +871,10 @@ export const translations = {
         noHoles: "Sin Agujeros",
         dovetail: "Cola de Milano",
         element: "Elemento"
-      }
+      },
+      empty: "No hay requerimientos de materiales para mostrar.",
+      showMore: "Ver más",
+      showAll: "Ver todo"
     },
     admin: {
       title: "Gestión de Usuarios",

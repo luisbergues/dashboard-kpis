@@ -494,7 +494,7 @@ function isoWeekKey(date) {
  * @param {Array} myProjects
  * @param {number} weekCount - how many of the most recent weeks (with data) to keep
  */
-export function calculateWeeklyCompletions(projectStages, myProjects = [], weekCount = 8) {
+export function calculateWeeklyCompletions(projectStages, myProjects = [], weekCount = 8, language = 'en') {
   const weeksData = {};
 
   const myProjectSos = new Set(myProjects.map(p => p.so));
@@ -527,10 +527,34 @@ export function calculateWeeklyCompletions(projectStages, myProjects = [], weekC
     processStage(stages[5], 'complete');
   });
 
-  const sortedKeys = Object.keys(weeksData).sort().slice(-weekCount);
+  const presentKeys = Object.keys(weeksData).sort();
+
+  // Rellenar las semanas SIN datos con 0 en vez de omitirlas. Antes el eje X
+  // solo contenia semanas con actividad, asi que dos semanas separadas por un
+  // hueco quedaban contiguas y, con una sola semana, el grafico degeneraba en
+  // puntos sueltos sin linea. La serie ahora es continua.
+  const filledKeys = [];
+  if (presentKeys.length > 0) {
+    const cursor = new Date(weeksData[presentKeys[0]].weekStart);
+    const lastStart = weeksData[presentKeys[presentKeys.length - 1]].weekStart;
+    while (cursor <= lastStart) {
+      const { key } = isoWeekKey(cursor);
+      if (!weeksData[key]) {
+        weeksData[key] = { eng: 0, nesting: 0, complete: 0, weekStart: new Date(cursor) };
+      }
+      filledKeys.push(key);
+      cursor.setDate(cursor.getDate() + 7);
+    }
+  }
+
+  const sortedKeys = filledKeys.slice(-weekCount);
   const labels = sortedKeys.map(k => {
     const { weekStart } = weeksData[k];
-    return weekStart.toLocaleString('default', { month: 'short', day: 'numeric' });
+    // Respeta el idioma de la app en vez del locale del sistema operativo.
+    return weekStart.toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
   });
 
   const engData = sortedKeys.map(k => weeksData[k].eng);
@@ -539,8 +563,14 @@ export function calculateWeeklyCompletions(projectStages, myProjects = [], weekC
 
   return {
     labels,
+    // `weekCount` real tras el relleno: la vista lo usa para decidir si hay
+    // suficiente historial como para graficar algo util.
+    weeksWithData: presentKeys.length,
     datasets: [
       {
+        // `labelKey` alimenta el diccionario estatico (ver translations.js);
+        // `label` queda como respaldo en ingles para contextos sin t().
+        labelKey: 'charts.engineeringCompleted',
         label: 'Engineering Completed',
         data: engData,
         borderColor: '#09D1C7',
@@ -549,6 +579,7 @@ export function calculateWeeklyCompletions(projectStages, myProjects = [], weekC
         fill: true
       },
       {
+        labelKey: 'charts.nestingCompleted',
         label: 'Nesting Completed',
         data: nestingData,
         borderColor: '#FF2E93',
@@ -557,6 +588,7 @@ export function calculateWeeklyCompletions(projectStages, myProjects = [], weekC
         fill: true
       },
       {
+        labelKey: 'charts.fullyCompleted',
         label: 'Fully Completed',
         data: completeData,
         borderColor: '#80EE98',

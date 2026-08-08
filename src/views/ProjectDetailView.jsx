@@ -69,7 +69,7 @@ function getStatusColor(status) {
 }
 
 export default function ProjectDetailView({ data, projectNotes = {}, projectDesigners = {}, overrides = {} }) {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const { phoneLookup } = useDesignerContacts();
   const [copied, setCopied] = useState(false);
 
@@ -211,7 +211,7 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
                   {isCompleted && <Check size={14} color="#fff" strokeWidth={3} />}
                 </div>
                 <span style={{ ...styles.stageLabel, color: isCompleted ? '#10b981' : 'var(--text-muted)' }}>
-                  {stage.label}
+                  {t(stage.labelKey)}
                 </span>
               </div>
             );

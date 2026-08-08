@@ -3,36 +3,35 @@ import { Bell, X, AlertCircle, Clock, MessageSquare, Flag } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import './NotificationBubble.css';
 
-export default function NotificationBubble({ alerts = [], activeTab, onAlertClick }) {
+// El widget ya no se puede "ocultar" de forma permanente. Antes una X de 22x22
+// flotaba encima de la campana y, al tocarla, hacia desaparecer TODO el widget
+// por el resto de la sesion: sin confirmacion, sin deshacer y sin manera de
+// recuperarlo salvo recargar — y lo que se perdia eran las alertas de
+// instalaciones urgentes y notas. La unica via de retorno era un efecto que lo
+// restauraba al entrar a Dashboard, un comportamiento invisible para el
+// usuario. Ahora la X solo cierra el desplegable abierto, que es lo que
+// cualquiera espera de una X en un popover.
+export default function NotificationBubble({ alerts = [], onAlertClick }) {
   const { language } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
-  const [isSuppressed, setIsSuppressed] = useState(false);
 
-  React.useEffect(() => {
-    if (activeTab === 'dashboard') {
-      setIsSuppressed(false);
-    }
-  }, [activeTab]);
+  if (!alerts || alerts.length === 0) return null;
 
-  if (!alerts || alerts.length === 0 || isSuppressed) return null;
+  const toggleLabel = isOpen
+    ? (language === 'es' ? 'Cerrar notificaciones' : 'Close notifications')
+    : (language === 'es'
+      ? `Notificaciones: ${alerts.length} sin leer`
+      : `Notifications: ${alerts.length} unread`);
 
   return (
     <div className="notification-bubble-widget">
-      {/* Dismiss Button */}
-      {!isOpen && activeTab !== 'dashboard' && (
-        <button 
-          className="notification-dismiss-btn"
-          onClick={() => setIsSuppressed(true)}
-          title={language === 'es' ? 'Ocultar notificaciones' : 'Hide notifications'}
-        >
-          <X size={12} />
-        </button>
-      )}
-
       {/* Floating Toggle Button */}
-      <button 
-        className={`notification-toggle-btn ${isOpen ? 'active' : ''}`} 
+      <button
+        type="button"
+        className={`notification-toggle-btn ${isOpen ? 'active' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
+        aria-label={toggleLabel}
+        aria-expanded={isOpen}
         title={language === 'es' ? 'Notificaciones de Instalaciones Urgentes y Notas' : 'Urgent Install and Note Notifications'}
       >
         {isOpen ? <X size={24} /> : <Bell size={24} />}
@@ -48,15 +47,16 @@ export default function NotificationBubble({ alerts = [], activeTab, onAlertClic
             <h3>{language === 'es' ? 'Notificaciones' : 'Notifications'}</h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span className="notification-count">{alerts.length} {language === 'es' ? 'nuevas' : 'new'}</span>
-              {activeTab !== 'dashboard' && (
-                <button
-                  className="notification-dismiss-btn-inline"
-                  onClick={() => { setIsOpen(false); setIsSuppressed(true); }}
-                  title={language === 'es' ? 'Ocultar notificaciones' : 'Hide notifications'}
-                >
-                  {language === 'es' ? 'Ocultar' : 'Dismiss'}
-                </button>
-              )}
+              {/* Cierra el desplegable, no oculta el widget: las alertas
+                  siguen accesibles desde la campana. */}
+              <button
+                type="button"
+                className="notification-dismiss-btn-inline"
+                onClick={() => setIsOpen(false)}
+                aria-label={language === 'es' ? 'Cerrar notificaciones' : 'Close notifications'}
+              >
+                {language === 'es' ? 'Cerrar' : 'Close'}
+              </button>
             </div>
           </div>
 

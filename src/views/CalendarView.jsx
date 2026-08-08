@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   format, addMonths, subMonths, startOfMonth, endOfMonth, 
   startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, parse 
@@ -182,9 +182,23 @@ export default function CalendarView({ data, currentUser, userProfile }) {
   // Calendar month state navigation
   const initialDate = projectsWithDates.length > 0 ? projectsWithDates[0].dateObj : new Date();
   const [currentMonth, setCurrentMonth] = useState(initialDate);
+  const calendarTopRef = useRef(null);
 
-  const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
-  const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
+  // Un mes con 6 filas es mas alto que uno con 5, asi que al cambiar de mes la
+  // pagina cambiaba de alto sin avisar y el navegador conservaba el scroll
+  // anterior: el header quedaba cortado a media altura. Se lleva la vista al
+  // tope del calendario en cada cambio.
+  const goToMonth = (nextValue) => {
+    setCurrentMonth(nextValue);
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        calendarTopRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' });
+      });
+    }
+  };
+
+  const nextMonth = () => goToMonth(addMonths(currentMonth, 1));
+  const prevMonth = () => goToMonth(subMonths(currentMonth, 1));
 
   const getStatusColor = (status) => {
     // Same guard as PipelineView: a blank Status cell in the sheet arrives here
@@ -448,7 +462,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
       </header>
 
       <div className="calendar-layout">
-        <div className="calendar-container glass-card">
+        <div className="calendar-container glass-card" ref={calendarTopRef}>
           {renderHeader()}
           {renderDays()}
           {renderCells()}

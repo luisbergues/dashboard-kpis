@@ -656,9 +656,14 @@
 .mt-lg { margin-top: var(--spacing-lg); }
 
 /* Split action plan sectors & small cards */
+/* min() en vez de 320px pelado: a 375px de ancho quedan 279px utiles
+   (24px de padding en .main-content + 24px del .glass-card, por lado), asi
+   que la pista de 320px desbordaba ~40px y las tarjetas del Action Plan
+   quedaban cortadas a la derecha. Con min(320px, 100%) el desktop no cambia
+   —el contenedor siempre supera los 320px— y en movil la columna se adapta. */
 .action-plan-split-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 24px;
   width: 100%;
 }
