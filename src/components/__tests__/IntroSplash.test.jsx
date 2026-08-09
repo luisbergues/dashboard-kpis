@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import IntroSplash from '../IntroSplash';
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe('IntroSplash', () => {
   it('renders the intro video ready to autoplay muted and inline, without looping', () => {
@@ -55,6 +58,20 @@ describe('IntroSplash', () => {
     const overlay = screen.getByTestId('intro-splash-overlay');
 
     fireEvent.ended(video);
+    expect(overlay.style.opacity).toBe('0');
+
+    fireEvent.transitionEnd(overlay);
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts the fade-out on its own after 4s, even without any interaction', () => {
+    vi.useFakeTimers();
+    const onDone = vi.fn();
+    render(<IntroSplash onDone={onDone} />);
+    const overlay = screen.getByTestId('intro-splash-overlay');
+
+    expect(overlay.style.opacity).toBe('1');
+    act(() => { vi.advanceTimersByTime(4000); });
     expect(overlay.style.opacity).toBe('0');
 
     fireEvent.transitionEnd(overlay);

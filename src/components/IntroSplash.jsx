@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 
 const VIDEO_SRC = '/jl-engineering-intro.mp4';
 
+// The video runs 6s, but holding the splash open that long on every single
+// refresh got in the way of just signing in — cut it short once the logo,
+// wordmark and progress bar have fully settled (~3.9s in the source video),
+// instead of waiting for the full clip or requiring a manual skip.
+const AUTO_SKIP_MS = 4000;
+
 export default function IntroSplash({ onDone }) {
   const [skipping, setSkipping] = useState(false);
 
@@ -13,6 +19,11 @@ export default function IntroSplash({ onDone }) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(handleSkip, AUTO_SKIP_MS);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
