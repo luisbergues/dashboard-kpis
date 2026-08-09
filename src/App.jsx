@@ -11,6 +11,7 @@ import { withArchiveLease } from './utils/archiveCoordinator'
 import Navbar from './components/Navbar'
 import ErrorBoundary from './components/ErrorBoundary'
 import ViewSkeleton from './components/ViewSkeleton'
+import IntroSplash from './components/IntroSplash'
 
 /* Estaticas a proposito. Las tres primeras: son las unicas pantallas que
    pueden ser la primera (login, landing de ingenieria, landing de diseñador),
@@ -78,6 +79,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
   const [weeklyHistory, setWeeklyHistory] = useState([]);
   const [focusedProjectSo, setFocusedProjectSo] = useState(null);
   const [projectDesigners, setProjectDesigners] = useState({});
@@ -639,6 +641,7 @@ function App() {
 
   return (
     <div className="app-container">
+      {showSplash && <IntroSplash onDone={() => setShowSplash(false)} />}
       {(!loading && !authLoading && currentUser && (isApproved || isSuperAdmin)) && (
         <Navbar
           activeTab={activeTab}
