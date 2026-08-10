@@ -516,44 +516,14 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
         </SectionErrorBoundary>
       )}
 
-      {/* Week over Week Comparison (2/3 width, under Budget Deviation + Avg Validation Time)
-          alongside a compact Financial Impact Analysis pill (1/3 width, under Conversion Rate) */}
-      <div className="chart-and-fi-row" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px', marginBottom: '24px', alignItems: 'stretch' }}>
-        {fiTotal && (
-          <SectionErrorBoundary title="Financial Analysis Error">
-            <section className="glass-card fi-summary-pill">
-              <h3 className="section-title">
-                <DollarSign className="text-neon-green" size={18} />
-                {t('dashboard.financialTitle')}
-              </h3>
-              <div className="fi-summary-pill-total">
-                <span className="pipeline-label">{t('dashboard.totalPipeline')}</span>
-                <span className="pipeline-value">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(realPipelineTotal)}</span>
-              </div>
-              <div className="fi-summary-pill-rows">
-                {fiOnHold && (
-                  <div className="fi-summary-mini-card fi-card-hold">
-                    <span className="fi-card-label">{t('dashboard.onHoldValue')}</span>
-                    <span className="fi-card-value fi-hold">{formatCurrency(fiOnHold.value)}</span>
-                  </div>
-                )}
-                {fiInProgress && (
-                  <div className="fi-summary-mini-card fi-card-progress">
-                    <span className="fi-card-label">{t('dashboard.inProgressValue')}</span>
-                    <span className="fi-card-value fi-progress">{formatCurrency(fiInProgress.value)}</span>
-                  </div>
-                )}
-                {fiDelayedRisk && (
-                  <div className="fi-summary-mini-card fi-card-risk">
-                    <span className="fi-card-label">{fiDelayedRisk.status}</span>
-                    <span className="fi-card-value fi-risk">{formatCurrency(fiDelayedRisk.value)}</span>
-                  </div>
-                )}
-              </div>
-            </section>
-          </SectionErrorBoundary>
-        )}
-
+      {/* Week over Week Comparison (2/3 width, left) alongside a side column
+          (1/3 width, right) stacking the compact Financial Impact pill (when
+          there's data) and the Executive/Weekly Summary — previously that
+          summary card sat in its own full-width row below, leaving the space
+          right of the chart empty whenever there was no Financial Impact data
+          (the chart, as the grid's only item, fell into the first/narrow
+          track instead of the row staying balanced). */}
+      <div className="chart-and-fi-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '24px', alignItems: 'stretch' }}>
         <SectionErrorBoundary title="Historical Data Error">
           <section className="glass-card chart-section-full">
             <div className="chart-section-header">
@@ -570,27 +540,61 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
             </div>
           </section>
         </SectionErrorBoundary>
-      </div>
 
-      {/* Summaries Row */}
-      <div className="dashboard-summaries-row">
-        <section className="glass-card insights-card">
-          <div className="summary-block">
-            <h3 className="section-title">
-              <Clock className="text-mint" size={20} />
-              {t('dashboard.execSummary')}
-            </h3>
-            <p className="insight-text">{(showTranslatedInsights && translatedInsights.executive) || insights.executive}</p>
-          </div>
+        <div className="dashboard-chart-side-column" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {fiTotal && (
+            <SectionErrorBoundary title="Financial Analysis Error">
+              <section className="glass-card fi-summary-pill">
+                <h3 className="section-title">
+                  <DollarSign className="text-neon-green" size={18} />
+                  {t('dashboard.financialTitle')}
+                </h3>
+                <div className="fi-summary-pill-total">
+                  <span className="pipeline-label">{t('dashboard.totalPipeline')}</span>
+                  <span className="pipeline-value">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(realPipelineTotal)}</span>
+                </div>
+                <div className="fi-summary-pill-rows">
+                  {fiOnHold && (
+                    <div className="fi-summary-mini-card fi-card-hold">
+                      <span className="fi-card-label">{t('dashboard.onHoldValue')}</span>
+                      <span className="fi-card-value fi-hold">{formatCurrency(fiOnHold.value)}</span>
+                    </div>
+                  )}
+                  {fiInProgress && (
+                    <div className="fi-summary-mini-card fi-card-progress">
+                      <span className="fi-card-label">{t('dashboard.inProgressValue')}</span>
+                      <span className="fi-card-value fi-progress">{formatCurrency(fiInProgress.value)}</span>
+                    </div>
+                  )}
+                  {fiDelayedRisk && (
+                    <div className="fi-summary-mini-card fi-card-risk">
+                      <span className="fi-card-label">{fiDelayedRisk.status}</span>
+                      <span className="fi-card-value fi-risk">{formatCurrency(fiDelayedRisk.value)}</span>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </SectionErrorBoundary>
+          )}
 
-          <div className="summary-block mt-lg">
-            <h3 className="section-title">
-              <CheckCircle className="text-neon-green" size={20} />
-              {t('dashboard.weeklySummary')}
-            </h3>
-            <p className="insight-text">{(showTranslatedInsights && translatedInsights.weekly) || insights.weekly}</p>
-          </div>
-        </section>
+          <section className="glass-card insights-card" style={{ flex: 1 }}>
+            <div className="summary-block">
+              <h3 className="section-title">
+                <Clock className="text-mint" size={20} />
+                {t('dashboard.execSummary')}
+              </h3>
+              <p className="insight-text">{(showTranslatedInsights && translatedInsights.executive) || insights.executive}</p>
+            </div>
+
+            <div className="summary-block mt-lg">
+              <h3 className="section-title">
+                <CheckCircle className="text-neon-green" size={20} />
+                {t('dashboard.weeklySummary')}
+              </h3>
+              <p className="insight-text">{(showTranslatedInsights && translatedInsights.weekly) || insights.weekly}</p>
+            </div>
+          </section>
+        </div>
       </div>
 
       {/* Action Plan Sector Split */}

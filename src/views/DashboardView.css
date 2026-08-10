@@ -288,13 +288,6 @@
   font-size: 1.15rem;
 }
 
-/* ─── Summaries Row ─────────────────────────────────────── */
-.dashboard-summaries-row {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--spacing-lg);
-}
-
 /* Insights Summary Card */
 .insights-card {
   padding: var(--spacing-lg);
