@@ -63,6 +63,36 @@ describe('parseDrawingPages', () => {
     expect(result.warnings.some(w => w.startsWith('UNCLASSIFIED_NUMBERS'))).toBe(true);
   });
 
+  it('parses dimensions written as whole-plus-fraction, the format this shop uses', () => {
+    // The decimal-only NUMBER_RE this parser shipped with skipped these
+    // entirely, so a real drawing produced an opening-less area and the draft
+    // came out empty with no indication anything had been missed.
+    const items = [
+      { text: 'MASTER WIC', x: 50, y: 700 },
+      { text: 'OPENING', x: 100, y: 500 },
+      { text: '23 5/8"', x: 130, y: 498 },
+      { text: 'HEIGHT', x: 100, y: 470 },
+      { text: '84-1/2"', x: 130, y: 468 },
+      { text: 'DEPTH', x: 100, y: 440 },
+      { text: '14', x: 130, y: 438 },
+    ];
+    const result = parseDrawingPages([{ pageNumber: 1, items }]);
+    expect(result.areas[0].openings[0]).toEqual({ width: 23.625, height: 84.5, depth: 14 });
+    expect(result.areas[0].unclassified).toEqual([]);
+  });
+
+  it('surfaces an unparseable dimension verbatim instead of dropping it', () => {
+    const items = [
+      { text: 'MASTER WIC', x: 50, y: 700 },
+      { text: 'OPENING', x: 100, y: 500 },
+      { text: '12 3/4"', x: 130, y: 498 },
+      { text: '19 7/8"', x: 400, y: 100 },
+    ];
+    const result = parseDrawingPages([{ pageNumber: 1, items }]);
+    expect(result.areas[0].openings[0].width).toBe(12.75);
+    expect(result.areas[0].unclassified).toContain('19 7/8"');
+  });
+
   it('flags pages with no text at all', () => {
     const result = parseDrawingPages([{ pageNumber: 1, items: [] }]);
     expect(result.warnings).toContain('EMPTY_TEXT');

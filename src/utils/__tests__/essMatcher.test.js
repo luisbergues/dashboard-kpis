@@ -79,7 +79,97 @@ describe('buildEssPages', () => {
     const quote = { areas: [{ name: 'MASTER WIC', items: [] }], warnings: [] };
     const drawings = { areas: [{ name: 'MASTER WIC', openings: [{ width: 24, height: null, depth: null }], unclassified: [] }], warnings: [] };
     const result = buildEssPages({ project, contract: {}, quote, drawings, boxType: 'DOVETAIL' });
-    expect(result.pages[0].drawers[0].box).toBe('23.625" W');
+    expect(result.pages[0].drawers[0].box).toBe('23 5/8" W');
     expect(result.pages[0].drawerOptions.box).toBe('DOVETAIL');
+  });
+
+  it('writes dimensions as fractions, not decimals, like the hand-entered sheet', () => {
+    const quote = { areas: [{ name: 'MASTER WIC', items: [] }], warnings: [] };
+    const drawings = { areas: [{ name: 'MASTER WIC', openings: [{ width: 23.625, height: null, depth: null }], unclassified: [] }], warnings: [] };
+    const result = buildEssPages({ project, contract: {}, quote, drawings });
+    expect(result.pages[0].drawers[0].open).toBe('23 5/8"');
+    expect(result.pages[0].drawers[0].box).toBe('22 5/8" W');
+  });
+
+  it('applies the backing-depth rule when the drawing gave a depth', () => {
+    const quote = { areas: [{ name: 'MASTER WIC', items: [] }], warnings: [] };
+    const drawings = { areas: [{ name: 'MASTER WIC', openings: [{ width: 24, height: null, depth: 14 }], unclassified: [] }], warnings: [] };
+    const result = buildEssPages({ project, contract: {}, quote, drawings });
+    expect(result.pages[0].drawers[0].box).toBe('23" W x 13 1/4" D');
+  });
+
+  it('omits the depth segment when the drawing had no depth callout', () => {
+    const quote = { areas: [{ name: 'MASTER WIC', items: [] }], warnings: [] };
+    const drawings = { areas: [{ name: 'MASTER WIC', openings: [{ width: 24, height: null, depth: null }], unclassified: [] }], warnings: [] };
+    const result = buildEssPages({ project, contract: {}, quote, drawings });
+    expect(result.pages[0].drawers[0].box).toBe('23" W');
+  });
+
+  it('sizes a hang rod from the opening it hangs in', () => {
+    const quote = { areas: [{ name: 'MASTER WIC', items: [{ description: 'Oval Chrome rod', productCode: 'OR-10', qty: 1 }] }], warnings: [] };
+    const drawings = { areas: [{ name: 'MASTER WIC', openings: [{ width: 30, height: null, depth: null }], unclassified: [] }], warnings: [] };
+    const result = buildEssPages({ project, contract: {}, quote, drawings });
+    expect(result.pages[0].rods[0].size).toBe('29 3/4"');
+  });
+
+  it('leaves rod size blank and warns when the area has several openings to choose from', () => {
+    const quote = { areas: [{ name: 'MASTER WIC', items: [{ description: 'Oval Chrome rod', productCode: 'OR-10', qty: 1 }] }], warnings: [] };
+    const drawings = {
+      areas: [{ name: 'MASTER WIC', openings: [{ width: 30, height: null, depth: null }, { width: 24, height: null, depth: null }], unclassified: [] }],
+      warnings: [],
+    };
+    const result = buildEssPages({ project, contract: {}, quote, drawings });
+    expect(result.pages[0].rods[0].size).toBe('');
+    expect(result.warnings).toContain('ROD_SIZE_AMBIGUOUS_MASTER WIC');
+  });
+
+  it('notes the 32mm boring pattern on any page that has drawers', () => {
+    const quote = { areas: [{ name: 'MASTER WIC', items: [] }], warnings: [] };
+    const drawings = { areas: [{ name: 'MASTER WIC', openings: [{ width: 24, height: null, depth: null }], unclassified: [] }], warnings: [] };
+    const result = buildEssPages({ project, contract: {}, quote, drawings });
+    expect(result.pages[0].miscCol1).toContain('32mm');
+  });
+
+  it('does not note a boring pattern on a page with no drawers', () => {
+    const quote = { areas: [{ name: 'MASTER WIC', items: [] }], warnings: [] };
+    const drawings = { areas: [], warnings: [] };
+    const result = buildEssPages({ project, contract: {}, quote, drawings });
+    expect(result.pages[0].miscCol1).not.toContain('32mm');
+  });
+
+  it('takes the color from the Quote, which is the only document that carries it', () => {
+    const quote = { areas: [{ name: 'MASTER WIC', items: [] }], color: 'Bleached Linen', warnings: [] };
+    const drawings = { areas: [], warnings: [] };
+    const result = buildEssPages({ project: { so: '1', name: 'X' }, contract: {}, quote, drawings });
+    expect(result.pages[0].headerData.color).toBe('Linen Classic 210');
+  });
+
+  it('keeps an unrecognised Quote color visible and warns instead of blanking it', () => {
+    const quote = { areas: [{ name: 'MASTER WIC', items: [] }], color: 'Coastal Oak', warnings: [] };
+    const drawings = { areas: [], warnings: [] };
+    const result = buildEssPages({ project: { so: '1', name: 'X' }, contract: {}, quote, drawings });
+    expect(result.pages[0].headerData.color).toBe('Coastal Oak');
+    expect(result.warnings).toContain('COLOR_NOT_IN_MAP: Coastal Oak');
+  });
+
+  it('passes the fronts option through from the materials matrix', () => {
+    const quote = { areas: [{ name: 'MASTER WIC', items: [] }], warnings: [] };
+    const drawings = { areas: [], warnings: [] };
+    const result = buildEssPages({ project, contract: {}, quote, drawings, fronts: 'THERMOFOIL' });
+    expect(result.pages[0].drawerOptions.fronts).toBe('THERMOFOIL');
+  });
+
+  it('gives the fallback blank page the same box type and color as a real page', () => {
+    const result = buildEssPages({
+      project,
+      contract: {},
+      quote: { areas: [], color: 'Bleached Linen', warnings: [] },
+      drawings: { areas: [], warnings: [] },
+      boxType: 'DOVETAIL',
+      fronts: 'THERMOFOIL',
+    });
+    expect(result.pages[0].drawerOptions.box).toBe('DOVETAIL');
+    expect(result.pages[0].drawerOptions.fronts).toBe('THERMOFOIL');
+    expect(result.pages[0].headerData.color).toBe('Linen Classic 210');
   });
 });

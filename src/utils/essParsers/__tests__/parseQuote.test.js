@@ -44,6 +44,42 @@ describe('parseQuoteText', () => {
     const result = parseQuoteText('just some unrelated text');
     expect(result.warnings).toContain('NO_AREAS_FOUND');
   });
+
+  // The project record coming off the Google Sheet has no color field at all,
+  // so the Quote is the only place the commercial color exists. Without this
+  // the shop code translation downstream had nothing to translate.
+  it('picks up the color from a labelled Color: line', () => {
+    const result = parseQuoteText('Color: Snow White\nMASTER WIC\nValet Rod - VR-100 - Qty: 2');
+    expect(result.color).toBe('Snow White');
+  });
+
+  it('accepts Finish: as the label too', () => {
+    const result = parseQuoteText('FINISH: Bleached Linen\nMASTER WIC\nValet Rod - VR-100 - Qty: 2');
+    expect(result.color).toBe('Bleached Linen');
+  });
+
+  it('recognises a known color on a line of its own, with no label', () => {
+    const result = parseQuoteText('JL CLOSETS\nBLEACHED LINEN\nMASTER WIC\nValet Rod - VR-100 - Qty: 2');
+    expect(result.color).toBe('BLEACHED LINEN');
+  });
+
+  it('does not also count the bare color line as an empty area', () => {
+    // 'BLEACHED LINEN' satisfies AREA_HEADER_RE as readily as 'MASTER WIC'
+    // does, so without excluding it the draft gains a page with no openings
+    // and no items on it.
+    const result = parseQuoteText('BLEACHED LINEN\nMASTER WIC\nValet Rod - VR-100 - Qty: 2');
+    expect(result.areas.map(a => a.name)).toEqual(['MASTER WIC']);
+  });
+
+  it('does not mistake an area header for a color', () => {
+    const result = parseQuoteText(sampleQuote);
+    expect(result.color).toBeNull();
+  });
+
+  it('warns when no color could be found, rather than silently leaving it blank', () => {
+    const result = parseQuoteText(sampleQuote);
+    expect(result.warnings).toContain('COLOR_NOT_FOUND');
+  });
 });
 
 describe('looksLikeQuote', () => {

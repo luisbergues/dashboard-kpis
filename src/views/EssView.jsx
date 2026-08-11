@@ -49,7 +49,11 @@ export default function EssView({ data }) {
   const selectedProject = selectedSo ? projects.find(p => String(p.so) === String(selectedSo)) || (data?.priorityAnalysis || []).find(p => String(p.so) === String(selectedSo)) : null;
 
   if (selectedProject) {
-    return <EssProjectDetail project={selectedProject} onBack={() => setSelectedSo(null)} />;
+    // Box/front type are not in any of the three PDFs — they come from the
+    // materials matrix, already merged with its manual overrides upstream in
+    // App.jsx, exactly as My Projects feeds the hand-entered ESS modal.
+    const materials = (data?.materialRequirements || []).find(m => String(m.so) === String(selectedProject.so));
+    return <EssProjectDetail project={selectedProject} materials={materials} onBack={() => setSelectedSo(null)} />;
   }
 
   const statusLabel = (status) => {

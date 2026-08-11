@@ -6,7 +6,8 @@
 // against real Drawings PDFs — see the design doc's "Corrección de
 // errores" section. Numbers with no nearby label are surfaced as
 // `unclassified` instead of guessed, so the UI can flag them for review.
-const NUMBER_RE = /^(\d+(?:\.\d+)?)"?$/;
+import { parseInchValue } from '../essRules';
+
 const AREA_NAME_RE = /^[A-Z][A-Z ]{2,40}$/;
 const LABEL_KEYWORDS = [
   { type: 'opening', re: /OPENING/i },
@@ -56,7 +57,7 @@ export function parseDrawingPages(pages) {
   const areas = pages.map(page => {
     const areaName = findAreaName(page.items) || `Page ${page.pageNumber}`;
     const labels = classifyLabels(page.items);
-    const numbers = page.items.filter(item => NUMBER_RE.test(item.text.trim()));
+    const numbers = page.items.filter(item => parseInchValue(item.text) !== null);
     const claimed = new Set();
     // HEIGHT/DEPTH labels are consumed one-per-opening, same as the numbers
     // are: two openings sitting within MAX_LABEL_DISTANCE of the same HEIGHT
@@ -77,7 +78,7 @@ export function parseDrawingPages(pages) {
           if (!nearest) return;
           claimed.add(nearest.n);
           claimedLabels.add(labelForType);
-          const value = parseFloat(nearest.n.text);
+          const value = parseInchValue(nearest.n.text);
           if (type === 'opening') opening.width = value;
           if (type === 'height') opening.height = value;
           if (type === 'depth') opening.depth = value;

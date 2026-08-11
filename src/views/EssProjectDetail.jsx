@@ -7,12 +7,13 @@ import { parseContractText, looksLikeContract } from '../utils/essParsers/parseC
 import { parseQuoteText, looksLikeQuote } from '../utils/essParsers/parseQuote';
 import { parseDrawingPages, looksLikeDrawing } from '../utils/essParsers/parseDrawings';
 import { buildEssPages } from '../utils/essMatcher';
+import { essOptionsFromMaterials } from '../utils/essRules';
 import { saveEssAutoData, hasEssAutoData } from '../utils/essAutoData';
 import EssAutoGeneratorModal from '../components/EssAutoGeneratorModal';
 
 const DOC_TYPES = ['contract', 'quote', 'drawings'];
 
-export default function EssProjectDetail({ project, onBack }) {
+export default function EssProjectDetail({ project, materials, onBack }) {
   const { language } = useLanguage();
   const t = (es, en) => (language === 'es' ? es : en);
 
@@ -148,7 +149,8 @@ export default function EssProjectDetail({ project, onBack }) {
       const quote = parseQuoteText(quoteText);
       const drawings = parseDrawingPages(drawingPages);
 
-      const { pages, unmatchedQuoteItems, unmatchedDrawingOpenings, warnings } = buildEssPages({ project, contract, quote, drawings });
+      const { boxType, fronts } = essOptionsFromMaterials(materials);
+      const { pages, unmatchedQuoteItems, unmatchedDrawingOpenings, warnings } = buildEssPages({ project, contract, quote, drawings, boxType, fronts });
 
       await saveEssAutoData(project.so, pages);
       setEssExists(true);
@@ -280,7 +282,7 @@ export default function EssProjectDetail({ project, onBack }) {
       )}
 
       {showModal && (
-        <EssAutoGeneratorModal project={project} onClose={() => setShowModal(false)} />
+        <EssAutoGeneratorModal project={project} materials={materials} onClose={() => setShowModal(false)} />
       )}
     </div>
   );

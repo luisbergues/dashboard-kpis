@@ -7,6 +7,7 @@ import { saveESSData, loadESSData } from '../utils/essData';
 import { usePagedModal } from '../utils/usePagedModal';
 import { useLanguage } from '../utils/LanguageContext';
 import { shortProjectName } from '../utils/projectName';
+import { essOptionsFromMaterials } from '../utils/essRules';
 import './PDFGeneratorModal.css';
 
 const DEFAULT_DRAWERS = [
@@ -29,8 +30,8 @@ const createDefaultPage = (project, materials) => ({
     engineer: project ? (project.eng || 'JS') : ''
   },
   drawerOptions: {
-    fronts: materials?.thermofoil === 'Yes' ? 'THERMOFOIL' : 'SLAB',
-    box: materials?.dovetail === 'Yes' ? 'DOVETAIL' : 'PRFV',
+    fronts: essOptionsFromMaterials(materials).fronts,
+    box: essOptionsFromMaterials(materials).boxType,
     slides: 'SOFT CLOSE',
     handles: 'STD. CHROME'
   },
@@ -56,12 +57,14 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
     createDefaultPage: () => createDefaultPage(project, materials),
     loadData: loadESSData,
     saveData: saveESSData,
+    // The matrix only forces a value when it says Yes; a saved page that was
+    // edited by hand otherwise keeps whatever it was set to.
     transformLoaded: (sanitized) => sanitized.map(page => ({
       ...page,
       drawerOptions: {
         ...page.drawerOptions,
-        fronts: materials?.thermofoil === 'Yes' ? 'THERMOFOIL' : (page.drawerOptions?.fronts || 'SLAB'),
-        box: materials?.dovetail === 'Yes' ? 'DOVETAIL' : (page.drawerOptions?.box || 'PRFV')
+        fronts: essOptionsFromMaterials(materials).fronts === 'THERMOFOIL' ? 'THERMOFOIL' : (page.drawerOptions?.fronts || 'SLAB'),
+        box: essOptionsFromMaterials(materials).boxType === 'DOVETAIL' ? 'DOVETAIL' : (page.drawerOptions?.box || 'PRFV')
       }
     })),
   });

@@ -7,9 +7,13 @@ import { saveEssAutoData, loadEssAutoData, saveEssCorrection } from '../utils/es
 import { usePagedModal } from '../utils/usePagedModal';
 import { useLanguage } from '../utils/LanguageContext';
 import { shortProjectName } from '../utils/projectName';
+import { essOptionsFromMaterials } from '../utils/essRules';
 import './PDFGeneratorModal.css';
 
-const createDefaultPage = (project) => ({
+// A page added by hand inside the generated draft has to agree with the
+// generated ones about box/front type, so it reads the same materials matrix
+// buildEssPages did rather than assuming PRFV/SLAB.
+const createDefaultPage = (project, materials) => ({
   headerData: {
     jobName: project ? `${project.so} - ${shortProjectName(project.name)}` : '',
     color: '',
@@ -17,14 +21,19 @@ const createDefaultPage = (project) => ({
     designer: project ? (project.designer || '') : '',
     engineer: project ? (project.eng || '') : ''
   },
-  drawerOptions: { fronts: 'SLAB', box: 'PRFV', slides: 'SOFT CLOSE', handles: 'STD. CHROME' },
+  drawerOptions: {
+    fronts: essOptionsFromMaterials(materials).fronts,
+    box: essOptionsFromMaterials(materials).boxType,
+    slides: 'SOFT CLOSE',
+    handles: 'STD. CHROME'
+  },
   drawers: [],
   rods: [],
   miscCol1: '',
   miscCol2: ''
 });
 
-export default function EssAutoGeneratorModal({ project, onClose }) {
+export default function EssAutoGeneratorModal({ project, materials, onClose }) {
   const { t, language } = useLanguage();
   const [isReporting, setIsReporting] = useState(false);
 
@@ -38,7 +47,7 @@ export default function EssAutoGeneratorModal({ project, onClose }) {
     updateCurrentPage,
   } = usePagedModal({
     so: project.so,
-    createDefaultPage: () => createDefaultPage(project),
+    createDefaultPage: () => createDefaultPage(project, materials),
     loadData: loadEssAutoData,
     saveData: saveEssAutoData,
   });
