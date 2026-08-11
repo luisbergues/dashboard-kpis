@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User, Briefcase, ChevronDown, ChevronLeft, ChevronRight, Award, Sun, Moon, Activity, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogOut, User, Briefcase, ChevronDown, ChevronLeft, ChevronRight, Award, Sun, Moon, Activity, ShieldCheck, FileStack } from 'lucide-react';
 import { auth, db, ref, set, signOut } from '../utils/firebase';
 import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
@@ -39,7 +39,8 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
     { id: 'materials', label: t('navbar.materials'), icon: Hammer },
     ...(userProfile?.role !== 'administrative' ? [{ id: 'quality', label: t('navbar.teamStats'), icon: Award }] : []),
     { id: 'designer-performance', label: t('navbar.designerPerf'), icon: Activity },
-    ...(isSuperAdmin ? [{ id: 'admin', label: t('navbar.admin'), icon: ShieldCheck, badge: pendingUsersCount > 0 }] : [])
+    ...(isSuperAdmin ? [{ id: 'admin', label: t('navbar.admin'), icon: ShieldCheck, badge: pendingUsersCount > 0 }] : []),
+    ...(isSuperAdmin ? [{ id: 'ess', label: t('navbar.ess'), icon: FileStack }] : [])
   ];
 
   const openModal = () => {

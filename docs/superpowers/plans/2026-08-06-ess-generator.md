@@ -12,7 +12,7 @@
 
 - No AI/LLM API anywhere in this feature — extraction is 100% regex/position-rule based.
 - New feature is visible and writable only by `role === 'engineer-admin'` (`isSuperAdminRole` from `src/utils/adminConfig.js`).
-- Nothing in this plan modifies `essData.js`, `PDFGeneratorModal.jsx`, or the `essData/{so}` RTDB node — those back the existing manual ESS flow and must keep working exactly as they do today.
+- Nothing in this plan modifies `essData.js` or the `essData/{so}` RTDB node — those back the existing manual ESS flow's data layer and must keep working exactly as they do today. `PDFGeneratorModal.jsx` may be refactored (Task 13) to extract shared UI into `EssFormFields.jsx`, but the refactor must be behavior-preserving — "Completar ESS" in My Projects must look and work identically before and after.
 - PDFs are stored as Base64 strings directly in RTDB (no Firebase Storage bucket — see spec's "Storage" section for why), capped at 8MB per file.
 - Color map and cutting formulas are hardcoded in `essRules.js`, not editable from the UI.
 - Follows the design in `docs/superpowers/specs/2026-08-06-ess-generator-design.md`.
@@ -1106,7 +1106,7 @@ git commit -m "feat(ess): build ESS pages by matching Quote items to Drawing ope
 
 **Interfaces:**
 - Consumes: `db, ref, set, get, push, isConfigured` from `src/utils/firebase.js`.
-- Produces: `saveEssAutoData(so, pages): Promise<void>`, `loadEssAutoData(so): Promise<Array|null>`, `hasEssAutoData(so): Promise<boolean>`, `saveEssCorrection(so, note): Promise<void>`. Consumed by Task 12 (`EssProjectDetail.jsx`) and Task 13 (`EssAutoGeneratorModal.jsx`).
+- Produces: `saveEssAutoData(so, pages): Promise<void>`, `loadEssAutoData(so): Promise<Array|null>`, `hasEssAutoData(so): Promise<boolean>`, `saveEssCorrection(so, note): Promise<void>`. Consumed by Task 12 (`EssProjectDetail.jsx`) and Task 14 (`EssAutoGeneratorModal.jsx`).
 
 No automated test for this task — it's a thin RTDB read/write wrapper with no branching logic to unit test, matching the existing precedent (`essData.js`/`ipData.js` in this repo have no tests either). Task 12's manual verification step exercises it end-to-end against a real (or emulated) Firebase project.
 
@@ -1392,7 +1392,7 @@ git commit -m "feat(ess): add ESS project list view"
 - Create: `src/views/EssProjectDetail.jsx`
 
 **Interfaces:**
-- Consumes: `saveEssFile, loadEssFile, validateFileSize` (Task 2); `extractPdfPages, pagesToPlainText` (Task 1); `parseContractText, looksLikeContract` (Task 5); `parseQuoteText, looksLikeQuote` (Task 6); `parseDrawingPages, looksLikeDrawing` (Task 7); `buildEssPages` (Task 8); `saveEssAutoData, hasEssAutoData` (Task 9); `EssAutoGeneratorModal` (Task 13); `base64ToArrayBuffer` (Task 2).
+- Consumes: `saveEssFile, loadEssFile, validateFileSize` (Task 2); `extractPdfPages, pagesToPlainText` (Task 1); `parseContractText, looksLikeContract` (Task 5); `parseQuoteText, looksLikeQuote` (Task 6); `parseDrawingPages, looksLikeDrawing` (Task 7); `buildEssPages` (Task 8); `saveEssAutoData, hasEssAutoData` (Task 9); `EssAutoGeneratorModal` (Task 14); `base64ToArrayBuffer` (Task 2).
 - Produces: default export `EssProjectDetail({ project, onBack })`.
 
 - [ ] **Step 1: Implement**
@@ -1654,38 +1654,275 @@ git commit -m "feat(ess): add PDF upload + ESS generation screen"
 
 ---
 
-### Task 13: Auto-generated ESS editor/print modal (`EssAutoGeneratorModal.jsx`)
+### Task 13: Extract shared ESS form fields (`EssFormFields.jsx`)
+
+**Files:**
+- Create: `src/components/EssFormFields.jsx`
+- Modify: `src/components/PDFGeneratorModal.jsx`
+
+**Interfaces:**
+- Produces: default export `EssFormFields({ t, pages, currentPageIndex, setCurrentPageIndex, addPage, removePage, headerData, handleHeaderChange, drawerOptions, handleOptionsChange, drawers, updateDrawer, removeDrawer, addDrawer, rods, updateRod, removeRod, addRod, miscCol1, setMiscCol1, miscCol2, setMiscCol2 })` — a purely presentational component (no state, no Firebase access) rendering the tab bar plus the four form sections (header fields, drawer options + table, rods table, misc notes). Consumed by `PDFGeneratorModal.jsx` (this task) and Task 14 (`EssAutoGeneratorModal.jsx`).
+
+Both the existing manual ESS modal and the new auto-generated one need the identical editable form UI. Rather than duplicate ~135 lines of JSX between them, this task extracts it once, out of the already-shipping `PDFGeneratorModal.jsx`, into a shared presentational component. This is a pure "move" refactor — every prop this component receives is exactly the value/handler that already existed as a local variable in `PDFGeneratorModal.jsx`; no logic changes. `essData.js` and the `essData/{so}` RTDB node are not touched — only where the JSX lives changes, not what it does or how it's wired.
+
+- [ ] **Step 1: Create the shared component**
+
+Create `src/components/EssFormFields.jsx` with this exact content — it is `src/components/PDFGeneratorModal.jsx`'s current lines 144-279 (the tab system through the misc-notes section), wrapped in a fragment and driven by props instead of closure variables:
+
+```jsx
+import { X, Plus, Trash2 } from 'lucide-react';
+
+export default function EssFormFields({
+  t,
+  pages,
+  currentPageIndex,
+  setCurrentPageIndex,
+  addPage,
+  removePage,
+  headerData,
+  handleHeaderChange,
+  drawerOptions,
+  handleOptionsChange,
+  drawers,
+  updateDrawer,
+  removeDrawer,
+  addDrawer,
+  rods,
+  updateRod,
+  removeRod,
+  addRod,
+  miscCol1,
+  setMiscCol1,
+  miscCol2,
+  setMiscCol2,
+}) {
+  return (
+    <>
+      <div className="pdf-tabs-container">
+        <div className="pdf-tabs">
+          {pages.map((p, index) => (
+            <div
+              key={index}
+              className={`pdf-tab ${index === currentPageIndex ? 'active' : ''}`}
+              onClick={() => setCurrentPageIndex(index)}
+            >
+              {t('myProjects.sheet')} {index + 1}
+              {pages.length > 1 && (
+                <span
+                  className="tab-close"
+                  onClick={(e) => { e.stopPropagation(); removePage(index); }}
+                  title={t('myProjects.deleteSheet')}
+                >
+                  <X size={12} />
+                </span>
+              )}
+            </div>
+          ))}
+          <button className="btn-add-tab" onClick={addPage} title={t('myProjects.addNewSheet')} aria-label={t('myProjects.addNewSheet')}>
+            <Plus size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="pdf-modal-body">
+        <div className="form-section">
+          <h3>{t('myProjects.headerSheet')} {currentPageIndex + 1}</h3>
+          <div className="form-grid">
+            <label>JOB NAME: <input type="text" name="jobName" value={headerData.jobName} onChange={handleHeaderChange} /></label>
+            <label>COLOR: <input type="text" name="color" value={headerData.color} onChange={handleHeaderChange} /></label>
+            <label>ROOM(S): <input type="text" name="rooms" value={headerData.rooms} onChange={handleHeaderChange} /></label>
+            <label>DESIGNER: <input type="text" name="designer" value={headerData.designer} onChange={handleHeaderChange} /></label>
+            <label>ENGINEER: <input type="text" name="engineer" value={headerData.engineer} onChange={handleHeaderChange} /></label>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h3>{t('myProjects.drawerOptions')}</h3>
+          <div className="form-grid">
+            <label>FRONTS:
+              <select name="fronts" value={drawerOptions.fronts} onChange={handleOptionsChange}>
+                <option value="SLAB">SLAB</option>
+                <option value="THERMOFOIL">THERMOFOIL</option>
+              </select>
+            </label>
+            <label>BOX:
+              <select name="box" value={drawerOptions.box} onChange={handleOptionsChange}>
+                <option value="PRFV">PRFV</option>
+                <option value="DOVETAIL">DOVETAIL</option>
+              </select>
+            </label>
+            <label>SLIDES:
+              <select name="slides" value={drawerOptions.slides} onChange={handleOptionsChange}>
+                <option value="SOFT CLOSE">SOFT CLOSE</option>
+                <option value="FULL EXTENSION">FULL EXTENSION</option>
+              </select>
+            </label>
+            <label>HANDLES:
+              <select name="handles" value={drawerOptions.handles} onChange={handleOptionsChange}>
+                <option value="STD. B. NICKEL">STD. B. NICKEL</option>
+                <option value="STD. CHROME">STD. CHROME</option>
+                <option value="STD. M. BLACK">STD. M. BLACK</option>
+                <option value="NONE">NONE</option>
+                <option value="CUSTOMER OWN">CUSTOMER OWN</option>
+                <option value="SPECIAL">SPECIAL</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>FRONT (H x W)</th><th>QTY</th><th>OPEN.</th><th>BOX (W x D x H)</th><th>ROOM</th><th>SPECIAL HANDLES</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {drawers.map((d, i) => (
+                  <tr key={i}>
+                    <td><input name={`drawerFront-${i}`} value={d.front} onChange={e => updateDrawer(i, 'front', e.target.value)} /></td>
+                    <td><input name={`drawerQty-${i}`} type="number" style={{width: '60px'}} value={d.qty} onChange={e => updateDrawer(i, 'qty', e.target.value)} /></td>
+                    <td><input name={`drawerOpen-${i}`} value={d.open} onChange={e => updateDrawer(i, 'open', e.target.value)} /></td>
+                    <td><input name={`drawerBox-${i}`} value={d.box} onChange={e => updateDrawer(i, 'box', e.target.value)} /></td>
+                    <td><input name={`drawerRoom-${i}`} value={d.room} onChange={e => updateDrawer(i, 'room', e.target.value)} /></td>
+                    <td><input name={`drawerHandles-${i}`} value={d.handles} onChange={e => updateDrawer(i, 'handles', e.target.value)} /></td>
+                    <td><button className="btn-icon danger" onClick={() => removeDrawer(i)}><Trash2 size={16} /></button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <button className="btn-secondary btn-sm" onClick={addDrawer} style={{marginTop: '10px'}}><Plus size={14} /> {t('myProjects.addDrawerRow')}</button>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h3>{t('myProjects.rodsTitle')}</h3>
+          <div className="table-container" style={{maxWidth: '500px'}}>
+            <table>
+              <thead>
+                <tr>
+                  <th>ROOM</th><th>TYPE</th><th>QTY</th><th>SIZE</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rods.map((r, i) => (
+                  <tr key={i}>
+                    <td><input name={`rodRoom-${i}`} value={r.room} onChange={e => updateRod(i, 'room', e.target.value)} /></td>
+                    <td><input name={`rodType-${i}`} value={r.type} onChange={e => updateRod(i, 'type', e.target.value)} /></td>
+                    <td><input name={`rodQty-${i}`} type="number" style={{width: '60px'}} value={r.qty} onChange={e => updateRod(i, 'qty', e.target.value)} /></td>
+                    <td><input name={`rodSize-${i}`} value={r.size} onChange={e => updateRod(i, 'size', e.target.value)} /></td>
+                    <td><button className="btn-icon danger" onClick={() => removeRod(i)}><Trash2 size={16} /></button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <button className="btn-secondary btn-sm" onClick={addRod} style={{marginTop: '10px'}}><Plus size={14} /> {t('myProjects.addRod')}</button>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h3>{t('myProjects.miscNotesTitle')}</h3>
+          <div className="misc-columns">
+            <div style={{flex: 1}}>
+              <label>{t('myProjects.leftColumn')}</label>
+              <textarea name="miscCol1" value={miscCol1} onChange={e => setMiscCol1(e.target.value)} rows={6} style={{width:'100%', padding:'8px'}}></textarea>
+            </div>
+            <div style={{flex: 1}}>
+              <label>{t('myProjects.rightColumn')}</label>
+              <textarea name="miscCol2" value={miscCol2} onChange={e => setMiscCol2(e.target.value)} rows={6} style={{width:'100%', padding:'8px'}}></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+```
+
+- [ ] **Step 2: Wire it into `PDFGeneratorModal.jsx`**
+
+In `src/components/PDFGeneratorModal.jsx:2`, drop the now-unused `Plus`/`Trash2` icons (they're only used inside the JSX this task removes) and add the new import:
+
+```jsx
+import { X, Printer } from 'lucide-react';
+import EssFormFields from './EssFormFields';
+```
+
+(insert the `EssFormFields` import line right after the existing `import PDFPrintLayout from './PDFPrintLayout';` line).
+
+Then replace `PDFGeneratorModal.jsx`'s lines 144-279 in full — everything from `{/* Tab System for Multiple Pages */}` through the closing `</div>` of the misc-notes `form-section` (i.e. the entire block between the `pdf-modal-header` `</div>` at line 142 and the `pdf-modal-content` closing `</div>` at line 280) — with:
+
+```jsx
+        <EssFormFields
+          t={t}
+          pages={pages}
+          currentPageIndex={currentPageIndex}
+          setCurrentPageIndex={setCurrentPageIndex}
+          addPage={addPage}
+          removePage={removePage}
+          headerData={headerData}
+          handleHeaderChange={handleHeaderChange}
+          drawerOptions={drawerOptions}
+          handleOptionsChange={handleOptionsChange}
+          drawers={drawers}
+          updateDrawer={updateDrawer}
+          removeDrawer={removeDrawer}
+          addDrawer={addDrawer}
+          rods={rods}
+          updateRod={updateRod}
+          removeRod={removeRod}
+          addRod={addRod}
+          miscCol1={miscCol1}
+          setMiscCol1={setMiscCol1}
+          miscCol2={miscCol2}
+          setMiscCol2={setMiscCol2}
+        />
+```
+
+Every prop above is an existing local variable/function already in scope in `PDFGeneratorModal.jsx` (defined earlier in the same component) — nothing needs to change besides removing the inline JSX and passing those same values down.
+
+- [ ] **Step 3: Verify no regression**
+
+Run: `npm run build`
+Expected: build succeeds with no unused-import warnings for `Plus`/`Trash2` in `PDFGeneratorModal.jsx`.
+
+Run: `npm run dev`, sign in, open My Projects → "Completar ESS" on any project. Confirm the modal looks and behaves exactly as before: header fields editable, drawer/rod rows addable/removable, tabs addable/removable, misc notes editable, auto-save still works, print still works. This view has no automated test coverage in this repo, so this manual pass is the regression check — compare against the behavior before this task if anything looks off.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/components/EssFormFields.jsx src/components/PDFGeneratorModal.jsx
+git commit -m "refactor(ess): extract shared ESS form UI into EssFormFields"
+```
+
+---
+
+### Task 14: Auto-generated ESS editor/print modal (`EssAutoGeneratorModal.jsx`)
 
 **Files:**
 - Create: `src/components/EssAutoGeneratorModal.jsx`
 
 **Interfaces:**
-- Consumes: `usePagedModal` from `src/utils/usePagedModal.js` (existing, unchanged); `PDFPrintLayout` from `src/components/PDFPrintLayout.jsx` (existing, unchanged); `saveEssAutoData, loadEssAutoData, saveEssCorrection` from `src/utils/essAutoData.js` (Task 9); `useLanguage`, `useReactToPrint`, `shortProjectName` (all existing, same imports `PDFGeneratorModal.jsx` already uses).
+- Consumes: `EssFormFields` from `src/components/EssFormFields.jsx` (Task 13); `usePagedModal` from `src/utils/usePagedModal.js` (existing, unchanged); `PDFPrintLayout` from `src/components/PDFPrintLayout.jsx` (existing, unchanged); `saveEssAutoData, loadEssAutoData, saveEssCorrection` from `src/utils/essAutoData.js` (Task 9); `useLanguage`, `useReactToPrint`, `shortProjectName` (all existing).
 - Produces: default export `EssAutoGeneratorModal({ project, onClose })`.
 
-This is a close copy of the existing `PDFGeneratorModal.jsx` — same editable fields, same table UI, same print mechanism — pointed at the new data source instead of `essData`, per the explicit direction to "use the existing ESS creator as a base." The only behavior added on top is a "Report an error" button. `PDFGeneratorModal.jsx` itself is not touched by this task.
+Same editable fields and print mechanism as the existing manual ESS modal (via the shared `EssFormFields`), pointed at the new data source instead of `essData`, plus a "Report an error" button. `PDFGeneratorModal.jsx` is not touched by this task (it was already updated in Task 13 to use the same shared component).
 
 - [ ] **Step 1: Implement**
 
-Create `src/components/EssAutoGeneratorModal.jsx` by copying the full contents of `src/components/PDFGeneratorModal.jsx`, then applying these changes:
-
-1. Replace the import block at the top:
+Create `src/components/EssAutoGeneratorModal.jsx`:
 
 ```jsx
 import { useRef, useState } from 'react';
-import { X, Plus, Trash2, Printer, Flag } from 'lucide-react';
+import { X, Printer, Flag } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import PDFPrintLayout from './PDFPrintLayout';
+import EssFormFields from './EssFormFields';
 import { saveEssAutoData, loadEssAutoData, saveEssCorrection } from '../utils/essAutoData';
 import { usePagedModal } from '../utils/usePagedModal';
 import { useLanguage } from '../utils/LanguageContext';
 import { shortProjectName } from '../utils/projectName';
 import './PDFGeneratorModal.css';
-```
 
-2. Replace `createDefaultPage` — the auto-generator never needs a materials-based blank default (that's only a fallback for the rare case `essAutoData` has nothing yet, which shouldn't happen since `EssProjectDetail` always saves before opening this modal):
-
-```jsx
 const createDefaultPage = (project) => ({
   headerData: {
     jobName: project ? `${project.so} - ${shortProjectName(project.name)}` : '',
@@ -1700,13 +1937,9 @@ const createDefaultPage = (project) => ({
   miscCol1: '',
   miscCol2: ''
 });
-```
 
-3. Replace the component's opening (function signature, `usePagedModal` call, and the added correction-report state):
-
-```jsx
 export default function EssAutoGeneratorModal({ project, onClose }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [isReporting, setIsReporting] = useState(false);
 
   const {
@@ -1723,15 +1956,37 @@ export default function EssAutoGeneratorModal({ project, onClose }) {
     loadData: loadEssAutoData,
     saveData: saveEssAutoData,
   });
-```
 
-(this drops `transformLoaded` — the auto-generator has no materials-override behavior to reapply on load, unlike `PDFGeneratorModal`).
+  const setHeaderData = (newData) => updateCurrentPage(p => ({ ...p, headerData: typeof newData === 'function' ? newData(p.headerData) : newData }));
+  const setDrawerOptions = (newOpts) => updateCurrentPage(p => ({ ...p, drawerOptions: typeof newOpts === 'function' ? newOpts(p.drawerOptions) : newOpts }));
+  const setDrawers = (newDrawers) => updateCurrentPage(p => ({ ...p, drawers: typeof newDrawers === 'function' ? newDrawers(p.drawers) : newDrawers }));
+  const setRods = (newRods) => updateCurrentPage(p => ({ ...p, rods: typeof newRods === 'function' ? newRods(p.rods) : newRods }));
+  const setMiscCol1 = (val) => updateCurrentPage(p => ({ ...p, miscCol1: val }));
+  const setMiscCol2 = (val) => updateCurrentPage(p => ({ ...p, miscCol2: val }));
 
-4. Keep `handleHeaderChange`, `handleOptionsChange`, `addDrawer`/`removeDrawer`/`updateDrawer`, `addRod`/`removeRod`/`updateRod`, `setMiscCol1`/`setMiscCol2` exactly as in `PDFGeneratorModal.jsx` — no changes needed, they only touch `updateCurrentPage`.
+  const currentPage = pages[currentPageIndex] || pages[0];
+  const { headerData, drawerOptions, drawers, rods, miscCol1, miscCol2 } = currentPage;
 
-5. Change the print hook's title so files from this flow are distinguishable from manually-completed ones:
+  const addDrawer = () => setDrawers([...drawers, { front: '', qty: 1, open: '', box: '', room: '', handles: '' }]);
+  const removeDrawer = (index) => setDrawers(drawers.filter((_, i) => i !== index));
+  const updateDrawer = (index, field, value) => {
+    const newDrawers = [...drawers];
+    newDrawers[index][field] = value;
+    setDrawers(newDrawers);
+  };
 
-```jsx
+  const addRod = () => setRods([...rods, { room: '', type: 'Oval Chrome rod', qty: 1, size: '' }]);
+  const removeRod = (index) => setRods(rods.filter((_, i) => i !== index));
+  const updateRod = (index, field, value) => {
+    const newRods = [...rods];
+    newRods[index][field] = value;
+    setRods(newRods);
+  };
+
+  const handleHeaderChange = (e) => setHeaderData({ ...headerData, [e.target.name]: e.target.value });
+  const handleOptionsChange = (e) => setDrawerOptions({ ...drawerOptions, [e.target.name]: e.target.value });
+
+  const printRef = useRef(null);
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: () => {
@@ -1749,7 +2004,7 @@ export default function EssAutoGeneratorModal({ project, onClose }) {
 
   const handleReportError = async () => {
     const note = window.prompt(
-      t('language') === 'es'
+      language === 'es'
         ? 'Describí qué está mal en esta ESS generada:'
         : "Describe what's wrong with this generated ESS:"
     );
@@ -1757,24 +2012,25 @@ export default function EssAutoGeneratorModal({ project, onClose }) {
     setIsReporting(true);
     try {
       await saveEssCorrection(project.so, note);
-      window.alert(t('language') === 'es' ? 'Reporte guardado.' : 'Report saved.');
+      window.alert(language === 'es' ? 'Reporte guardado.' : 'Report saved.');
     } finally {
       setIsReporting(false);
     }
   };
-```
 
-Note: `t('language')` above is wrong — `useLanguage()` also exposes `language` directly, same as every other view in this codebase (see `PDFGeneratorModal.jsx`'s sibling `IPGeneratorModal.jsx`, which destructures `{ t }` only where it doesn't need the raw value). Destructure it alongside `t`:
+  if (isLoading) {
+    return (
+      <div className="pdf-modal-overlay animate-fade-in">
+        <div className="pdf-modal-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+          <p style={{ color: 'var(--color-cyan)' }}>{t('myProjects.loadingSavedData')}</p>
+        </div>
+      </div>
+    );
+  }
 
-```jsx
-  const { t, language } = useLanguage();
-```
-
-and use `language === 'es' ? ... : ...` in `handleReportError` instead of `t('language')`.
-
-6. In the header actions row (the JSX block containing the `Printer`/`X` buttons, mirroring [PDFGeneratorModal.jsx:131-142](../../../src/components/PDFGeneratorModal.jsx#L131-L142)), add the report button and change the title to make clear this is the auto-generated variant:
-
-```jsx
+  return (
+    <div className="pdf-modal-overlay animate-fade-in">
+      <div className="pdf-modal-content">
         <div className="pdf-modal-header">
           <h2>{language === 'es' ? 'ESS Auto-generada' : 'Auto-generated ESS'} — {project.so}</h2>
           <div className="pdf-modal-actions">
@@ -1790,13 +2046,58 @@ and use `language === 'es' ? ... : ...` in `handleReportError` instead of `t('la
             </button>
           </div>
         </div>
-```
 
-7. Leave everything else — the tab system, the header/drawer-options/drawers-table/rods-table/misc-notes form sections, and the hidden `PDFPrintLayout` render block at the bottom — byte-for-byte identical to `PDFGeneratorModal.jsx` (lines 144-298), since they only read/write `pages`/`currentPage` via the same `updateCurrentPage`-based setters already carried over in step 4.
+        <EssFormFields
+          t={t}
+          pages={pages}
+          currentPageIndex={currentPageIndex}
+          setCurrentPageIndex={setCurrentPageIndex}
+          addPage={addPage}
+          removePage={removePage}
+          headerData={headerData}
+          handleHeaderChange={handleHeaderChange}
+          drawerOptions={drawerOptions}
+          handleOptionsChange={handleOptionsChange}
+          drawers={drawers}
+          updateDrawer={updateDrawer}
+          removeDrawer={removeDrawer}
+          addDrawer={addDrawer}
+          rods={rods}
+          updateRod={updateRod}
+          removeRod={removeRod}
+          addRod={addRod}
+          miscCol1={miscCol1}
+          setMiscCol1={setMiscCol1}
+          miscCol2={miscCol2}
+          setMiscCol2={setMiscCol2}
+        />
+      </div>
+
+      {/* Hidden print layout component. Render ALL pages */}
+      <div style={{ display: 'none' }}>
+        <div ref={printRef}>
+          {pages.map((pData, idx) => (
+            <div key={idx} className="print-page-wrapper">
+              <PDFPrintLayout
+                headerData={pData.headerData}
+                drawerOptions={pData.drawerOptions}
+                drawers={pData.drawers}
+                rods={pData.rods}
+                miscCol1={pData.miscCol1}
+                miscCol2={pData.miscCol2}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
 
 - [ ] **Step 2: Manually verify**
 
-From `EssProjectDetail` (Task 12), after generating a draft, click "Abrir ESS generada" and confirm: the modal opens pre-filled with the generated header/drawers/rods; edits to any field persist (auto-save, same as the existing manual ESS modal); "Reportar error" prompts for a note and writes it under `ess_corrections/{so}` in the Firebase Console; "Imprimir/Guardar PDF" opens the print dialog with a document titled `ESS_AUTO_<project>`; closing and reopening (or navigating back to My Projects and confirming) that `essData/{so}` is unaffected — "Completar ESS" in My Projects still shows whatever was there before this whole feature existed.
+From `EssProjectDetail` (Task 12), after generating a draft, click "Abrir ESS generada" and confirm: the modal opens pre-filled with the generated header/drawers/rods; edits to any field persist (auto-save, same as the existing manual ESS modal); "Reportar error" prompts for a note and writes it under `ess_corrections/{so}` in the Firebase Console; "Imprimir/Guardar PDF" opens the print dialog with a document titled `ESS_AUTO_<project>`; navigating back to My Projects and confirming `essData/{so}` is unaffected — "Completar ESS" still shows whatever was there before this whole feature existed.
 
 - [ ] **Step 3: Commit**
 
@@ -1816,4 +2117,4 @@ npm test
 npm run build
 ```
 
-Then manually walk the full path end-to-end once (Task 12's and Task 13's manual verification steps, back to back, on a real project) before considering this feature done.
+Then manually walk the full path end-to-end once (Task 12's, Task 13's, and Task 14's manual verification steps, back to back, on a real project) before considering this feature done.

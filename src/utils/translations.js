@@ -28,7 +28,8 @@ export const translations = {
       materials: "Materials",
       admin: "Admin",
       teamStats: "Team Stats",
-      designerPerf: "Designer Perf."
+      designerPerf: "Designer Perf.",
+      ess: "ESS"
     },
     // Etapas del proceso. Vivian hardcodeadas en stageUtils.js, con
     // "Ingeniería" en español fijo — se veia en español incluso con la app
@@ -482,7 +483,8 @@ export const translations = {
       materials: "Materiales",
       admin: "Admin",
       teamStats: "Estadísticas del Equipo",
-      designerPerf: "Rend. Diseñador"
+      designerPerf: "Rend. Diseñador",
+      ess: "ESS"
     },
     stages: {
       ingenieria: "Ingeniería",

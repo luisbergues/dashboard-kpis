@@ -22,10 +22,15 @@ const ITEM_INTRODUCED_AT: Partial<Record<ChecklistKey, number>> = {
 // todavia sin marcar se mide con la regla base contra hoy — no hubo subida, asi
 // que no corresponde el recargo (si no, el puntaje de un proyecto pendiente
 // cambiaria solo por mirarlo un domingo).
-const daysLate = (createdAt: number, checkedAt: number | false, introducedAt?: number): number => {
+const daysLate = (
+  createdAt: number,
+  checkedAt: number | false,
+  now: number,
+  introducedAt?: number,
+): number => {
   const from = Math.max(createdAt, introducedAt ?? 0);
   return checkedAt === false
-    ? businessDaysBetween(from, Date.now())
+    ? businessDaysBetween(from, now)
     : deliveryDaysLate(from, checkedAt);
 };
 
@@ -82,7 +87,18 @@ const effectiveBaseline = (
   return stamps.length ? Math.min(createdAt, ...stamps) : createdAt;
 };
 
-export const calculatePhase1ScoreAndStatus = (checklist: Project['checklist'], createdAt: number) => {
+/**
+ * @param now  Momento contra el que se mide un item TODAVIA sin entregar. Por
+ *   defecto ahora, que es lo correcto mientras el proyecto sigue vivo. Un
+ *   proyecto ya cerrado en Fase 2 pasa su `closedAt`: nada mas va a llegar, asi
+ *   que su reloj tiene que detenerse ahi en vez de seguir corriendo para
+ *   siempre. Los items ya entregados no dependen de este valor.
+ */
+export const calculatePhase1ScoreAndStatus = (
+  checklist: Project['checklist'],
+  createdAt: number,
+  now: number = Date.now(),
+) => {
   const { kcdFile, jlContract, quoteComplete, quoteBreakdown, creditCardForm, drawingsSigned, finalMeasurementsApplies, finalMeasurementsDelivered } = checklist;
 
   // If final measurements applies, it MUST be delivered.
@@ -96,7 +112,7 @@ export const calculatePhase1ScoreAndStatus = (checklist: Project['checklist'], c
   const baseline = effectiveBaseline(createdAt, checklist, requiredKeys);
 
   const penalty = requiredKeys.reduce(
-    (acc, key) => acc + latePenalty(daysLate(baseline, checklist[key], ITEM_INTRODUCED_AT[key]), rateFor(key)),
+    (acc, key) => acc + latePenalty(daysLate(baseline, checklist[key], now, ITEM_INTRODUCED_AT[key]), rateFor(key)),
     0,
   );
   // Redondeo a 1 decimal: las tasas fraccionarias de finals arrastran error de
@@ -127,7 +143,14 @@ export const calculateDesignerStats = (designerName: string, projects: Project[]
   const completedProjects = designerProjects.filter(p => p.status === 'Completed');
   const phase1Projects = designerProjects.filter(p => p.phase1Score !== null);
 
-  let avgPhase1 = 0;
+  // `null` = todavia no hay con que promediar. Distinto de 0, que es un
+  // promedio real y pesimo. Antes las tres metricas eran `number` con 0 de
+  // relleno y `globalKpi` usaba `> 0` para preguntar "hay datos?": un
+  // diseñador con Fase 2 en cero salia con el KPI global de su Fase 1 sola
+  // (el cero desaparecia), y uno con Fase 1 en cero salia con globalKpi 0
+  // aunque su Fase 2 fuera 90. Ahora la pregunta es cuantos proyectos hay,
+  // que es lo que realmente se queria saber.
+  let avgPhase1: number | null = null;
   if (phase1Projects.length > 0) {
     // Se usa el puntaje efectivo y no el guardado: un Deficient/Deferred que se
     // pasa del plazo sigue descontando aunque nadie vuelva a abrir el
@@ -136,26 +159,30 @@ export const calculateDesignerStats = (designerName: string, projects: Project[]
     avgPhase1 = sum / phase1Projects.length;
   }
 
-  let avgPhase2 = 0;
-  if (completedProjects.length > 0) {
-    const sum = completedProjects.reduce((acc, p) => acc + (p.phase2Score || 0), 0);
-    avgPhase2 = sum / completedProjects.length;
+  // Solo los cerrados en Fase 2 tienen puntaje; el filtro por `!== null` es la
+  // red por si alguna vez se marca Completed por otra via.
+  const phase2Projects = completedProjects.filter(p => p.phase2Score !== null && p.phase2Score !== undefined);
+  let avgPhase2: number | null = null;
+  if (phase2Projects.length > 0) {
+    const sum = phase2Projects.reduce((acc, p) => acc + (p.phase2Score as number), 0);
+    avgPhase2 = sum / phase2Projects.length;
   }
 
-  let globalKpi = 0;
-  if (avgPhase1 > 0 && avgPhase2 > 0) {
+  let globalKpi: number | null = null;
+  if (avgPhase1 !== null && avgPhase2 !== null) {
     globalKpi = (avgPhase1 + avgPhase2) / 2;
-  } else if (avgPhase1 > 0) {
-    globalKpi = avgPhase1;
+  } else {
+    globalKpi = avgPhase1 ?? avgPhase2;
   }
 
   const evaluatedProjects = designerProjects.filter(p => p.status !== 'Pending');
+  const round1 = (v: number | null) => (v === null ? null : Math.round(v * 10) / 10);
 
   return {
     name: designerName,
     totalProjects: evaluatedProjects.length,
-    avgPhase1Score: Math.round(avgPhase1 * 10) / 10,
-    avgPhase2Score: Math.round(avgPhase2 * 10) / 10,
-    globalKpi: Math.round(globalKpi * 10) / 10,
+    avgPhase1Score: round1(avgPhase1),
+    avgPhase2Score: round1(avgPhase2),
+    globalKpi: round1(globalKpi),
   };
 };

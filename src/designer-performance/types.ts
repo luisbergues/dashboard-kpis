@@ -103,9 +103,11 @@ export interface Project {
 export interface Designer {
   name: string;
   totalProjects: number;
-  avgPhase1Score: number;
-  avgPhase2Score: number;
-  globalKpi: number;
+  // `null` = sin proyectos con los que promediar. NO es lo mismo que 0, que es
+  // un promedio real y muy malo. Ver calculateDesignerStats.
+  avgPhase1Score: number | null;
+  avgPhase2Score: number | null;
+  globalKpi: number | null;
 }
 
 export type Urgency = 'green' | 'yellow' | 'red';

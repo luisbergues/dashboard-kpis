@@ -53,6 +53,11 @@ import { normalizeNotesBySo } from './utils/projectNotes'
 import { recordStatusTransitions } from './utils/statusTransitions'
 import { normalizeWeeklyHistory } from './utils/weeklyHistory'
 
+// Lazy: the ESS tab pulls in pdfjs-dist (~1MB+) via essPdfExtract.js, and only
+// super-admins can ever open it. A static import would put that in the main
+// bundle every user downloads on first load.
+const EssView = lazy(() => import('./views/EssView'));
+
 function App() {
   const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState(() => {
@@ -632,6 +637,12 @@ function App() {
         return <DesignerPerformanceApp data={mergedData} projectDesigners={projectDesigners} userProfile={userProfile} currentUser={currentUser} masterProjects={masterProjects} />;
       case 'admin':
         return isSuperAdminRole(userProfile?.role) ? <AdminUsersView userProfile={userProfile} data={mergedData} masterProjects={masterProjects} /> : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
+      case 'ess':
+        return isSuperAdminRole(userProfile?.role) ? (
+          <Suspense fallback={<div className="loading-state"><Loader2 size={20} className="animate-spin" /> Loading...</div>}>
+            <EssView data={mergedData} />
+          </Suspense>
+        ) : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
       default: return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
     }
   };

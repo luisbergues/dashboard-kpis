@@ -1,33 +1,25 @@
-import { useRef } from 'react';
-import { X, Printer } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { X, Printer, Flag } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import PDFPrintLayout from './PDFPrintLayout';
 import EssFormFields from './EssFormFields';
-import { saveESSData, loadESSData } from '../utils/essData';
+import { saveEssAutoData, loadEssAutoData, saveEssCorrection } from '../utils/essAutoData';
 import { usePagedModal } from '../utils/usePagedModal';
 import { useLanguage } from '../utils/LanguageContext';
 import { shortProjectName } from '../utils/projectName';
 import { essOptionsFromMaterials } from '../utils/essRules';
 import './PDFGeneratorModal.css';
 
-const DEFAULT_DRAWERS = [
-  { front: '6 1/8" x 23 5/8"', qty: 2, open: '23 1/8"', box: '22 1/8" W x 15 3/4" D x 4" H', room: 'Her Master', handles: '' },
-  { front: '7 3/8" x 23 5/8"', qty: 6, open: '23 1/8"', box: '22 1/8" W x 15 3/4" D x 6" H', room: 'Her Master', handles: '' },
-  { front: '9 7/8" x 23 5/8"', qty: 2, open: '23 1/8"', box: '22 1/8" W x 15 3/4" D x 8" H', room: 'Her Master', handles: '' },
-];
-
-const DEFAULT_RODS = [
-  { room: 'Her Master', type: 'Oval Chrome rod', qty: 5, size: '29 3/8"' },
-  { room: 'Her Master', type: 'Oval Chrome rod', qty: 1, size: '24"' }
-];
-
+// A page added by hand inside the generated draft has to agree with the
+// generated ones about box/front type, so it reads the same materials matrix
+// buildEssPages did rather than assuming PRFV/SLAB.
 const createDefaultPage = (project, materials) => ({
   headerData: {
     jobName: project ? `${project.so} - ${shortProjectName(project.name)}` : '',
-    color: 'White Classic 300',
-    rooms: 'Her Master',
-    designer: project ? (project.designer || 'Russell') : '',
-    engineer: project ? (project.eng || 'JS') : ''
+    color: '',
+    rooms: '',
+    designer: project ? (project.designer || '') : '',
+    engineer: project ? (project.eng || '') : ''
   },
   drawerOptions: {
     fronts: essOptionsFromMaterials(materials).fronts,
@@ -35,14 +27,15 @@ const createDefaultPage = (project, materials) => ({
     slides: 'SOFT CLOSE',
     handles: 'STD. CHROME'
   },
-  drawers: [...DEFAULT_DRAWERS],
-  rods: [...DEFAULT_RODS],
-  miscCol1: 'HER MASTER\n• Edge-band exposed top edges Right panel #4 + filler #5',
+  drawers: [],
+  rods: [],
+  miscCol1: '',
   miscCol2: ''
 });
 
-export default function PDFGeneratorModal({ project, materials, onClose }) {
-  const { t } = useLanguage();
+export default function EssAutoGeneratorModal({ project, materials, onClose }) {
+  const { t, language } = useLanguage();
+  const [isReporting, setIsReporting] = useState(false);
 
   const {
     pages,
@@ -55,18 +48,8 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
   } = usePagedModal({
     so: project.so,
     createDefaultPage: () => createDefaultPage(project, materials),
-    loadData: loadESSData,
-    saveData: saveESSData,
-    // The matrix only forces a value when it says Yes; a saved page that was
-    // edited by hand otherwise keeps whatever it was set to.
-    transformLoaded: (sanitized) => sanitized.map(page => ({
-      ...page,
-      drawerOptions: {
-        ...page.drawerOptions,
-        fronts: essOptionsFromMaterials(materials).fronts === 'THERMOFOIL' ? 'THERMOFOIL' : (page.drawerOptions?.fronts || 'SLAB'),
-        box: essOptionsFromMaterials(materials).boxType === 'DOVETAIL' ? 'DOVETAIL' : (page.drawerOptions?.box || 'PRFV')
-      }
-    })),
+    loadData: loadEssAutoData,
+    saveData: saveEssAutoData,
   });
 
   const setHeaderData = (newData) => updateCurrentPage(p => ({ ...p, headerData: typeof newData === 'function' ? newData(p.headerData) : newData }));
@@ -76,11 +59,9 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
   const setMiscCol1 = (val) => updateCurrentPage(p => ({ ...p, miscCol1: val }));
   const setMiscCol2 = (val) => updateCurrentPage(p => ({ ...p, miscCol2: val }));
 
-  // Extraction of current page data for render
   const currentPage = pages[currentPageIndex] || pages[0];
   const { headerData, drawerOptions, drawers, rods, miscCol1, miscCol2 } = currentPage;
 
-  // --- Mutators ---
   const addDrawer = () => setDrawers([...drawers, { front: '', qty: 1, open: '', box: '', room: '', handles: '' }]);
   const removeDrawer = (index) => setDrawers(drawers.filter((_, i) => i !== index));
   const updateDrawer = (index, field, value) => {
@@ -97,20 +78,17 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
     setRods(newRods);
   };
 
-  const handleHeaderChange = (e) => {
-    setHeaderData({ ...headerData, [e.target.name]: e.target.value });
-  };
+  const handleHeaderChange = (e) => setHeaderData({ ...headerData, [e.target.name]: e.target.value });
+  const handleOptionsChange = (e) => setDrawerOptions({ ...drawerOptions, [e.target.name]: e.target.value });
 
-  const handleOptionsChange = (e) => {
-    setDrawerOptions({ ...drawerOptions, [e.target.name]: e.target.value });
-  };
-
-  // --- Print Logic ---
   const printRef = useRef(null);
-  
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: () => `ESS_${shortProjectName(project.name)}`,
+    documentTitle: () => {
+      const baseName = shortProjectName(project.name);
+      const cleanName = baseName.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim();
+      return `ESS_AUTO_${cleanName}`;
+    },
     pageStyle: `
       @page {
         size: A4 portrait;
@@ -118,6 +96,26 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
       }
     `
   });
+
+  const handleReportError = async () => {
+    const note = window.prompt(
+      language === 'es'
+        ? 'Describí qué está mal en esta ESS generada:'
+        : "Describe what's wrong with this generated ESS:"
+    );
+    if (!note) return;
+    setIsReporting(true);
+    try {
+      const saved = await saveEssCorrection(project.so, note);
+      window.alert(
+        saved
+          ? (language === 'es' ? 'Reporte guardado.' : 'Report saved.')
+          : (language === 'es' ? 'No se pudo guardar el reporte. Intentá de nuevo.' : 'Could not save the report. Please try again.')
+      );
+    } finally {
+      setIsReporting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -133,9 +131,12 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
     <div className="pdf-modal-overlay animate-fade-in">
       <div className="pdf-modal-content">
         <div className="pdf-modal-header">
-          <h2>{t('myProjects.completarESSTitle')} {project.so}</h2>
+          <h2>{language === 'es' ? 'ESS Auto-generada' : 'Auto-generated ESS'} — {project.so}</h2>
           <div className="pdf-modal-actions">
             <span className="save-status text-muted" style={{ fontSize: '0.8rem', marginRight: '10px' }}>{t('myProjects.autoSaveActive')}</span>
+            <button className="btn-secondary btn-sm" onClick={handleReportError} disabled={isReporting}>
+              <Flag size={16} /> {language === 'es' ? 'Reportar error' : 'Report error'}
+            </button>
             <button className="btn-primary btn-sm" onClick={handlePrint}>
               <Printer size={16} /> {t('myProjects.printSavePDF')}
             </button>
@@ -176,7 +177,7 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
         <div ref={printRef}>
           {pages.map((pData, idx) => (
             <div key={idx} className="print-page-wrapper">
-              <PDFPrintLayout 
+              <PDFPrintLayout
                 headerData={pData.headerData}
                 drawerOptions={pData.drawerOptions}
                 drawers={pData.drawers}

@@ -138,8 +138,11 @@ export const DashboardView: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {designers
-                .sort((a, b) => b.globalKpi - a.globalKpi)
+              {/* Copia antes de ordenar: .sort() muta, y `designers` viene del
+                  contexto. Los que todavia no tienen KPI van al fondo, no
+                  arriba: `null` en una resta da NaN y el orden se rompia. */}
+              {[...designers]
+                .sort((a, b) => (b.globalKpi ?? -1) - (a.globalKpi ?? -1))
                 .map((designer, idx) => (
                   <tr
                     key={designer.name}
@@ -153,14 +156,18 @@ export const DashboardView: React.FC = () => {
                     <td style={{ padding: '12px 20px', color: C.name, fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                       {designer.name}
                     </td>
+                    {/* `?? '—'` y no `|| '—'`: un promedio real de 0 es un dato,
+                        y con `||` se mostraba igual que "sin datos". Un
+                        diseñador que cerro proyectos sacando cero era
+                        indistinguible de uno que nunca cerro ninguno. */}
                     <td style={{ padding: '12px 20px', color: C.body, fontSize: '0.85rem' }}>{designer.totalProjects || '—'}</td>
-                    <td style={{ padding: '12px 20px', color: C.body, fontSize: '0.85rem' }}>{designer.avgPhase1Score || '—'}</td>
-                    <td style={{ padding: '12px 20px', color: C.body, fontSize: '0.85rem' }}>{designer.avgPhase2Score || '—'}</td>
+                    <td style={{ padding: '12px 20px', color: C.body, fontSize: '0.85rem' }}>{designer.avgPhase1Score ?? '—'}</td>
+                    <td style={{ padding: '12px 20px', color: C.body, fontSize: '0.85rem' }}>{designer.avgPhase2Score ?? '—'}</td>
                     <td style={{ padding: '12px 20px', color: C.value, fontSize: '0.95rem', fontWeight: 700 }}>
-                      {designer.globalKpi || '—'}
+                      {designer.globalKpi ?? '—'}
                     </td>
                     <td style={{ padding: '12px 20px' }}>
-                      {designer.totalProjects > 0 ? (
+                      {designer.globalKpi !== null ? (
                         <Badge score={designer.globalKpi} />
                       ) : (
                         <span style={{ color: C.faint, fontSize: '0.78rem', fontStyle: 'italic' }}>{t('designerPerf.dashboard.noData')}</span>

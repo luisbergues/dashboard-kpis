@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { Project, Designer, DesignerNote, Actor, Phase1HistoryEntry } from '../types';
-import { calculateDesignerStats } from '../utils/scoreCalculator';
+import { calculateDesignerStats, calculatePhase1ScoreAndStatus } from '../utils/scoreCalculator';
 import { db, ref, set, get, push, onValue } from '../../utils/firebase';
 import { actorFrom } from '../../utils/actorIdentity';
 import { reviewChanged, buildHistoryEntry } from '../utils/reviewHistory';
@@ -166,28 +166,51 @@ export const KpiProvider: React.FC<{
         sessionCreatedAt.current[so] = Date.now();
       }
 
+      const createdAt = perfData.createdAt ?? sessionCreatedAt.current[so];
+      const checklist = {
+        kcdFile:                      false,
+        jlContract:                   false,
+        quoteComplete:                false,
+        quoteBreakdown:               false,
+        creditCardForm:               false,
+        drawingsSigned:               false,
+        finalMeasurementsApplies:     false,
+        finalMeasurementsDelivered:   false,
+        ...(perfData.checklist || {}),
+      };
+
+      /* El puntaje de Fase 1 se DERIVA del checklist en cada lectura, igual que
+         `complexity` mas arriba. Antes se leia el valor congelado en Firebase
+         al momento de guardar, asi que cualquier correccion a las reglas de
+         puntaje quedaba sin efecto en todo lo ya evaluado hasta que alguien
+         reabriera el formulario proyecto por proyecto. Es la mitad que le
+         faltaba a `effectivePhase1Score`, que ya deriva la parte de plazo
+         vencido por exactamente el mismo motivo.
+
+         `null` se respeta: un proyecto sin evaluar (Pending) o guardado para
+         revisar despues no tiene puntaje, y no hay que inventarle uno.
+
+         `asOf` frena el reloj de los items todavia sin entregar cuando el
+         proyecto ya se cerro en Fase 2: nada mas va a llegar, asi que un
+         documento faltante no puede seguir descontando despues del cierre. */
+      const storedScore = perfData.phase1Score ?? null;
+      const asOf = perfData.phase2Data?.closedAt ?? Date.now();
+      const phase1Score = storedScore === null
+        ? null
+        : calculatePhase1ScoreAndStatus(checklist, createdAt, asOf).score;
+
       return {
         id: so,
-        createdAt:    perfData.createdAt    ?? sessionCreatedAt.current[so],
+        createdAt,
         approvedAt:   perfData.approvedAt   ?? null,
         projectName:  shortProjectName(p.name) || `SO #${so}`,
         designerName: perfData.designerName || baseDesignerName,
         status:       perfData.status       ?? 'Pending',
         totalRooms:   perfData.totalRooms   ?? 1,
         icp:          perfData.icp          ?? 1,
-        phase1Score:  perfData.phase1Score  ?? null,
+        phase1Score,
         phase2Score:  perfData.phase2Score  ?? null,
-        checklist: {
-          kcdFile:                      false,
-          jlContract:                   false,
-          quoteComplete:                false,
-          quoteBreakdown:               false,
-          creditCardForm:               false,
-          drawingsSigned:               false,
-          finalMeasurementsApplies:     false,
-          finalMeasurementsDelivered:   false,
-          ...(perfData.checklist || {}),
-        },
+        checklist,
         complexity: autoComplexity,
         // Que campos de complexity se corrigieron a mano: se reescribe tal
         // cual en cada guardado, la planilla no lo toca (ver deriveComplexity).
