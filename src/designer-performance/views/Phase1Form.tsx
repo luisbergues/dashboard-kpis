@@ -842,7 +842,7 @@ export const Phase1Form: React.FC = () => {
           <SectionTitle
             icon={<CheckSquare size={15} color={T.blue} />}
             title="Strict Go / No-Go Checklist"
-            subtitle="Check each item when the documentation is received. Date is recorded automatically — click it to correct the date if it was logged late. Business days only: -1 pt/day late per item (first 4 days), -2 pts/day after, max -20. Final Measurements depends on scheduling, so it only costs -0.1/day the first 4 days and -0.4/day after."
+            subtitle="Check each item when the documentation is received. Date is recorded automatically — click it to correct the date if it was logged late. The clock starts on the project intake date, or on the oldest document if the project was logged in later. Business days only: -1 pt/day late per item (first 4 days), -2 pts/day after, max -20. Exception — a document uploaded on a non-working day still counts: Saturday costs 1 day, Sunday 2 (the Saturday went by too). Final Measurements depends on scheduling, so it only costs -0.1/day the first 4 days and -0.4/day after."
             badge={livePreview ? (
               <span style={{
                 fontSize: '0.72rem', fontWeight: 700,

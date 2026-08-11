@@ -128,6 +128,38 @@ describe('acumulacion entre items', () => {
   });
 });
 
+describe('excepcion: subir un documento en dia inhabil si penaliza', () => {
+  // LUN_3 = lunes 3-ago-2026. El fin de semana anterior es sab 1 / dom 2, y
+  // VIE_7 es el viernes de esa misma semana.
+  const VIE_31 = at(2026, 7, 31);
+  const SAB_1  = at(2026, 8, 1);
+  const DOM_2  = at(2026, 8, 2);
+
+  it('un documento subido el sabado cuesta 1 punto', () => {
+    expect(score({ drawingsSigned: SAB_1 }, VIE_31)).toBe(99);
+  });
+
+  it('subido el domingo cuesta 2: tambien paso el sabado', () => {
+    expect(score({ drawingsSigned: DOM_2 }, VIE_31)).toBe(98);
+  });
+
+  it('subido el lunes sigue costando 1: la regla base no cambio', () => {
+    expect(score({ drawingsSigned: LUN_3 }, VIE_31)).toBe(99);
+  });
+
+  it('un item sin marcar no paga recargo de fin de semana', () => {
+    // Se mide contra hoy con la regla base. Con createdAt = ahora son 0 dias,
+    // asi que el resultado no depende de que hoy sea sabado o domingo.
+    const ahora = Date.now();
+    const r = calculatePhase1ScoreAndStatus(
+      { ...checklist({}, ahora), drawingsSigned: false },
+      ahora,
+    );
+    expect(r.score).toBe(100);
+    expect(r.status).toBe('Rejected');
+  });
+});
+
 describe('items nuevos no penalizan retroactivamente', () => {
   it('quoteBreakdown arranca su reloj el dia que se lanzo, no en createdAt', () => {
     // Proyecto viejo (marzo 2026); el item se lanzo el 28-jul-2026.
@@ -138,6 +170,70 @@ describe('items nuevos no penalizan retroactivamente', () => {
     );
     // quoteBreakdown entregado el mismo dia del lanzamiento: sin penalizacion.
     // Los demas items estan al dia respecto de createdAt.
+    expect(r.score).toBe(100);
+  });
+});
+
+describe('alta retroactiva: el reloj no puede arrancar despues del primer papel', () => {
+  // Un proyecto cargado en el modulo despues de haber arrancado tenia
+  // createdAt = "hoy". Como businessDaysBetween devuelve 0 cuando el fin es
+  // anterior al inicio, TODO documento con fecha previa daba 0 dias de atraso
+  // y el puntaje quedaba clavado en 100 por mas dispersas que fueran las
+  // fechas. El baseline es ahora min(createdAt, primer item tildado).
+
+  it('penaliza la dispersion entre documentos aunque el alta sea posterior a todos', () => {
+    // Caso real reportado: alta el 11-ago, papeles entre el 31-jul y el 11-ago.
+    const alta = at(2026, 8, 11);
+    const r = calculatePhase1ScoreAndStatus(
+      {
+        kcdFile: at(2026, 8, 1),
+        jlContract: at(2026, 7, 31),
+        quoteComplete: at(2026, 8, 11),
+        quoteBreakdown: at(2026, 8, 11),
+        creditCardForm: at(2026, 7, 31),
+        drawingsSigned: at(2026, 7, 31),
+        finalMeasurementsApplies: at(2026, 8, 11),
+        finalMeasurementsDelivered: at(2026, 8, 11),
+      },
+      alta,
+    );
+    // Baseline = 31-jul (viernes).
+    //   kcdFile      sab 01-ago  -> 1 dia por la excepcion de fin de semana  -1
+    //   quoteComplete    11-ago  -> 7 dias habiles                          -10
+    //   quoteBreakdown   11-ago  -> 7 dias habiles                          -10
+    //   finalMeasurements 11-ago -> 7 dias habiles a tasa suave              -1.6
+    // El resto llego el mismo 31-jul: dia 0, sin costo.
+    expect(r.score).toBe(77.4);
+    expect(r.status).toBe('Approved');
+  });
+
+  it('un alta anterior al primer papel manda: no se le regalan esos dias', () => {
+    // createdAt lunes 3, todos los papeles el lunes 10 -> el baseline sigue
+    // siendo el 3: 5 dias habiles por item (-4 los primeros 4, -2 el quinto),
+    // 6 items obligatorios = -36.
+    const r = calculatePhase1ScoreAndStatus(checklist({}, LUN_10), LUN_3);
+    expect(r.score).toBe(64);
+  });
+
+  it('sin ningun item tildado el baseline sigue siendo createdAt', () => {
+    const vacio = {
+      kcdFile: false, jlContract: false, quoteComplete: false,
+      quoteBreakdown: false, creditCardForm: false, drawingsSigned: false,
+      finalMeasurementsApplies: false, finalMeasurementsDelivered: false,
+    } as const;
+    // Todos sin marcar cuentan contra hoy; con createdAt = hoy son 0 dias.
+    const r = calculatePhase1ScoreAndStatus(vacio, Date.now());
+    expect(r.score).toBe(100);
+    expect(r.status).toBe('Rejected');
+  });
+
+  it('ignora los valores booleanos de registros viejos al buscar el minimo', () => {
+    // Antes las marcas se guardaban como `true`, no como timestamp. Un `true`
+    // colado en el Math.min daria baseline = 1ms de 1970 y hundiria el puntaje.
+    const r = calculatePhase1ScoreAndStatus(
+      { ...checklist({}, LUN_10), kcdFile: true as unknown as number },
+      LUN_10,
+    );
     expect(r.score).toBe(100);
   });
 });

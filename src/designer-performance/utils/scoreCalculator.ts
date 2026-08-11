@@ -1,5 +1,5 @@
 import type { Project, Designer } from '../types';
-import { businessDaysBetween } from './businessDays';
+import { businessDaysBetween, deliveryDaysLate } from './businessDays';
 import { effectivePhase1Score } from './phase1Outcome';
 
 type ChecklistKey = keyof Project['checklist'];
@@ -16,11 +16,18 @@ const ITEM_INTRODUCED_AT: Partial<Record<ChecklistKey, number>> = {
 // Business days between the item's baseline (project intake, or the item's own
 // introduction date if it shipped later) and when it was checked — or today if
 // it's still unchecked. Same-day completion (day 0) costs nothing.
-const daysLate = (createdAt: number, checkedAt: number | false, introducedAt?: number): number =>
-  businessDaysBetween(
-    Math.max(createdAt, introducedAt ?? 0),
-    checkedAt === false ? Date.now() : checkedAt,
-  );
+//
+// Un item ya entregado usa `deliveryDaysLate`, que aplica la excepcion de fin
+// de semana: subir el archivo un sabado cuenta 1 dia y un domingo 2. Un item
+// todavia sin marcar se mide con la regla base contra hoy — no hubo subida, asi
+// que no corresponde el recargo (si no, el puntaje de un proyecto pendiente
+// cambiaria solo por mirarlo un domingo).
+const daysLate = (createdAt: number, checkedAt: number | false, introducedAt?: number): number => {
+  const from = Math.max(createdAt, introducedAt ?? 0);
+  return checkedAt === false
+    ? businessDaysBetween(from, Date.now())
+    : deliveryDaysLate(from, checkedAt);
+};
 
 // Cap per item so one very-late document can't sink the whole score on its own.
 const MAX_PENALTY_PER_ITEM = 20;
@@ -49,6 +56,32 @@ const latePenalty = (days: number, rate: LateRate): number => {
   return Math.min(MAX_PENALTY_PER_ITEM, first + rest);
 };
 
+// El reloj de atraso no puede arrancar despues del primer papel recibido.
+// `createdAt` es la fecha en que el proyecto se dio de alta EN ESTE MODULO, no
+// la de venta: al cargar un proyecto retroactivamente quedaba en "hoy", y como
+// businessDaysBetween devuelve 0 cuando el fin es anterior al inicio, todos los
+// documentos previos daban 0 dias de atraso y el puntaje quedaba clavado en 100
+// por mas dispersas que fueran las fechas.
+//
+// Se toma el minimo contra los items ya tildados, no un promedio ni la fecha
+// mas tardia: la evidencia mas vieja de que el proyecto ya estaba en marcha es
+// el primer documento que entro. Un alta ANTERIOR al primer papel gana igual
+// (el min la conserva), asi que un proyecto cargado a tiempo no se vuelve mas
+// indulgente.
+//
+// Solo se miran timestamps: los registros viejos guardaban las marcas como
+// `true`, y un booleano colado en el Math.min daria un baseline de 1970.
+const effectiveBaseline = (
+  createdAt: number,
+  checklist: Project['checklist'],
+  keys: ChecklistKey[],
+): number => {
+  const stamps = keys
+    .map(key => checklist[key])
+    .filter((v): v is number => typeof v === 'number' && v > 0);
+  return stamps.length ? Math.min(createdAt, ...stamps) : createdAt;
+};
+
 export const calculatePhase1ScoreAndStatus = (checklist: Project['checklist'], createdAt: number) => {
   const { kcdFile, jlContract, quoteComplete, quoteBreakdown, creditCardForm, drawingsSigned, finalMeasurementsApplies, finalMeasurementsDelivered } = checklist;
 
@@ -60,8 +93,10 @@ export const calculatePhase1ScoreAndStatus = (checklist: Project['checklist'], c
   const requiredKeys: ChecklistKey[] = ['kcdFile', 'jlContract', 'quoteComplete', 'quoteBreakdown', 'creditCardForm', 'drawingsSigned'];
   if (finalMeasurementsApplies) requiredKeys.push('finalMeasurementsDelivered');
 
+  const baseline = effectiveBaseline(createdAt, checklist, requiredKeys);
+
   const penalty = requiredKeys.reduce(
-    (acc, key) => acc + latePenalty(daysLate(createdAt, checklist[key], ITEM_INTRODUCED_AT[key]), rateFor(key)),
+    (acc, key) => acc + latePenalty(daysLate(baseline, checklist[key], ITEM_INTRODUCED_AT[key]), rateFor(key)),
     0,
   );
   // Redondeo a 1 decimal: las tasas fraccionarias de finals arrastran error de
