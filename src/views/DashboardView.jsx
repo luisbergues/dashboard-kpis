@@ -432,7 +432,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
       </header>
 
       {/* New KPIs Row */}
-      <section className="kpi-metrics-row mb-xl" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+      <section className="kpi-metrics-row mb-xl" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '12px' }}>
         <div className="glass-card kpi-card">
           <span className="kpi-label">Conversion Rate</span>
           <span className="kpi-value">{conversionRate}%</span>
@@ -523,7 +523,7 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
           right of the chart empty whenever there was no Financial Impact data
           (the chart, as the grid's only item, fell into the first/narrow
           track instead of the row staying balanced). */}
-      <div className="chart-and-fi-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '24px', alignItems: 'stretch' }}>
+      <div className="chart-and-fi-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '12px', alignItems: 'stretch' }}>
         <SectionErrorBoundary title="Historical Data Error">
           <section className="glass-card chart-section-full">
             <div className="chart-section-header">
