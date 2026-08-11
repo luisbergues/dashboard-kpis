@@ -918,7 +918,7 @@
 }
 
 .kanban-project-name {
-  font-size: 0.95rem;
+  font-size: 1.09rem; /* 0.95rem + 15% */
   color: var(--text-primary);
   margin: 0;
   line-height: 1.2;
