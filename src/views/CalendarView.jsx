@@ -13,6 +13,7 @@ import {
 import './CalendarView.css';
 import { db, ref, set, remove, onValue } from '../utils/firebase';
 import { sendCalendarNoteEvent } from '../utils/sheetSync';
+import TerminatedEasterEgg from '../components/TerminatedEasterEgg';
 
 export default function CalendarView({ data, currentUser, userProfile }) {
   const { t, language } = useLanguage();
@@ -41,6 +42,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
   const [selectedNote, setSelectedNote] = useState(null);
   const [noteText, setNoteText] = useState('');
   const [linkedSo, setLinkedSo] = useState('');
+  const [showTerminatedEgg, setShowTerminatedEgg] = useState(false);
   
   // Filtering state
   const isDesigner = userProfile?.role === 'designer';
@@ -328,6 +330,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
       setDayModalView('list');
     }
     setSelectedNote(null);
+    setShowTerminatedEgg(true);
   };
 
   const renderHeader = () => (
@@ -435,6 +438,7 @@ export default function CalendarView({ data, currentUser, userProfile }) {
 
   return (
     <div className="calendar-view animate-fade-in">
+      {showTerminatedEgg && <TerminatedEasterEgg onClose={() => setShowTerminatedEgg(false)} />}
       <header className="view-header">
         <div className="view-header-title">
           <h1 className="page-title">{t('calendar.title')}</h1>

@@ -17,6 +17,7 @@ import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { canManageDesignerNotes } from '../utils/notePermissions';
 import { ownedArchivedProjects, visibleArchivedProjects } from '../utils/archivedVisibility';
 import { noteDaysOpen, notePenalty } from '../designer-performance/utils/redFlags';
+import TerminatedEasterEgg from '../components/TerminatedEasterEgg';
 import { Chart as ChartJS, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { calculateWeeklyCompletions, getUpcomingDeadlines } from '../services/kpiCalculator';
@@ -75,6 +76,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
   const { priorityAnalysis, onHoldNotes } = data;
 
   const DEFAULT_DESIGNERS = ['Joaquin', 'Jose', 'Luis', 'Santiago', 'Julieta', 'Andres', 'Delfina', 'Josema'];
+  const [showTerminatedEgg, setShowTerminatedEgg] = useState(false);
   const [allowedDesigners, setAllowedDesigners] = useState(DEFAULT_DESIGNERS);
   const [designersList, setDesignersList] = useState([]);
 
@@ -881,6 +883,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       localStorage.setItem(`project_notes_${so}`, JSON.stringify(currentNotes));
       setProjectNotes(prev => ({ ...prev, [so]: currentNotes }));
     }
+    setShowTerminatedEgg(true);
   };
 
   // Permite corregir el tipo de una nota ya creada (ej. se puso Priority por
@@ -1352,6 +1355,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
 
   return (
     <div className="my-projects-view animate-fade-in">
+      {showTerminatedEgg && <TerminatedEasterEgg onClose={() => setShowTerminatedEgg(false)} />}
       <header className="view-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div className="view-header-title">
           <h1 className="page-title">{t('myProjects.title')}</h1>

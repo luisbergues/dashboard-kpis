@@ -5,6 +5,7 @@ import { useLanguage } from '../utils/LanguageContext';
 import { askLLM, buildLLMContext, buildManualAnswer } from '../utils/llmChat';
 import { useDesignerContacts } from '../utils/useDesignerContacts';
 import { appendCapped, nextMessageId, MAX_MESSAGES } from '../utils/chatHistory';
+import TerminatedEasterEgg from './TerminatedEasterEgg';
 import {
   findLocalEntityMatches,
   resolveProjectForNote,
@@ -197,6 +198,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
   // locally and never enters Gemini's history, so a follow-up like "¿y su
   // teléfono?" needs this to anchor who "su" is — see buildAnchoredContactSection.
   const [lastMentionedContact, setLastMentionedContact] = useState(null);
+  const [showTerminatedEgg, setShowTerminatedEgg] = useState(false);
 
   const messagesEndRef = useRef(null);
 
@@ -479,6 +481,11 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
   const handleSendMessage = async (textToSend) => {
     const text = textToSend || inputValue;
     if (!text.trim()) return;
+    if (text.trim().toUpperCase() === 'K800') {
+      setInputValue('');
+      setShowTerminatedEgg(true);
+      return;
+    }
     // Guard against a second send while one is still in flight (a slow Gemini
     // call, a note write) — otherwise messages can interleave and the "add
     // note" state machine can be driven mid-step. The input/send button are
@@ -573,6 +580,8 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
 
   return (
     <div className="project-chatbot-widget">
+      {showTerminatedEgg && <TerminatedEasterEgg onClose={() => setShowTerminatedEgg(false)} />}
+
       {/* Floating Toggle Button */}
       {!isOpen && (
         <button className="chatbot-toggle-btn animate-bounce-slow" onClick={() => setIsOpen(true)} aria-label={language === 'es' ? 'Abrir chat de asistente' : 'Open assistant chat'}>

@@ -4,6 +4,7 @@ import { db, ref, onValue, update } from '../utils/firebase';
 import { useLanguage } from '../utils/LanguageContext';
 import { isSuperAdminRole } from '../utils/adminConfig';
 import OrphanedProjectsPanel from '../components/OrphanedProjectsPanel';
+import TerminatedEasterEgg from '../components/TerminatedEasterEgg';
 
 const ROLES = ['engineer', 'engineer_nester', 'administrative', 'designer'];
 
@@ -11,6 +12,7 @@ export default function AdminUsersView({ userProfile, data, masterProjects }) {
   const { t } = useLanguage();
   const [users, setUsers] = useState({});
   const [pendingRoleChoice, setPendingRoleChoice] = useState({});
+  const [showTerminatedEgg, setShowTerminatedEgg] = useState(false);
 
   useEffect(() => {
     if (!db || !isSuperAdminRole(userProfile?.role)) return;
@@ -56,6 +58,7 @@ export default function AdminUsersView({ userProfile, data, masterProjects }) {
     if (!window.confirm(t('admin.revokeConfirm'))) return;
     try {
       await update(ref(db, `users/${uid}`), { status: 'rejected' });
+      setShowTerminatedEgg(true);
     } catch (err) {
       console.error('Failed to revoke user:', err);
       window.alert(t('admin.revokeError'));
@@ -82,6 +85,7 @@ export default function AdminUsersView({ userProfile, data, masterProjects }) {
 
   return (
     <div className="admin-users-view animate-fade-in">
+      {showTerminatedEgg && <TerminatedEasterEgg onClose={() => setShowTerminatedEgg(false)} />}
       <header className="view-header">
         <h1 className="page-title">{t('admin.title')}</h1>
         <p className="text-muted">{t('admin.subtitle')}</p>

@@ -3,6 +3,7 @@ import { LayoutDashboard, ListTodo, CircleDollarSign, Hammer, CalendarDays, LogO
 import { auth, db, ref, set, signOut } from '../utils/firebase';
 import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
+import TerminatedEasterEgg from './TerminatedEasterEgg';
 import './Navbar.css';
 
 export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAdmin, pendingUsersCount = 0 }) {
@@ -11,6 +12,7 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
+  const [showTerminatedEgg, setShowTerminatedEgg] = useState(false);
 
   // Mirrors ThemeContext's approach: toggle a class on the root element so
   // index.css's .main-content can react to the sidebar width without prop
@@ -60,7 +62,15 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
     }
   };
 
-  const handleSignOut = async () => {
+  // Shows the easter egg first, then actually signs out once it closes —
+  // signing out immediately would swap the whole tree to LoginView before
+  // the overlay ever had a chance to render.
+  const handleSignOut = () => {
+    setShowTerminatedEgg(true);
+  };
+
+  const performSignOut = async () => {
+    setShowTerminatedEgg(false);
     if (auth) {
       try {
         await signOut(auth);
@@ -85,6 +95,14 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
 
   return (
     <>
+      {showTerminatedEgg && (
+        <TerminatedEasterEgg
+          src="/k800-session-terminated.png"
+          alt="Session terminated - K800"
+          onClose={performSignOut}
+        />
+      )}
+
       {/* Top Mobile Header */}
       {userProfile && (
         <div className="mobile-header">
