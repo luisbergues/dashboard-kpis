@@ -50,6 +50,10 @@ export default function EssAutoGeneratorModal({ project, materials, onClose }) {
     createDefaultPage: () => createDefaultPage(project, materials),
     loadData: loadEssAutoData,
     saveData: saveEssAutoData,
+    // Firebase borra la clave al guardar un array vacio; sin esto una pagina
+    // sin cajones ni barrales vuelve sin `drawers`/`rods` y revienta al
+    // renderizar. Ver restoreEmptyArrays.
+    arrayFields: ['drawers', 'rods'],
   });
 
   const setHeaderData = (newData) => updateCurrentPage(p => ({ ...p, headerData: typeof newData === 'function' ? newData(p.headerData) : newData }));
@@ -60,7 +64,9 @@ export default function EssAutoGeneratorModal({ project, materials, onClose }) {
   const setMiscCol2 = (val) => updateCurrentPage(p => ({ ...p, miscCol2: val }));
 
   const currentPage = pages[currentPageIndex] || pages[0];
-  const { headerData, drawerOptions, drawers, rods, miscCol1, miscCol2 } = currentPage;
+  // Defaults aca tambien: addDrawer/removeDrawer hacen [...drawers], que
+  // revienta igual que el .map si la clave no vino. Ver restoreEmptyArrays.
+  const { headerData, drawerOptions, drawers = [], rods = [], miscCol1, miscCol2 } = currentPage;
 
   const addDrawer = () => setDrawers([...drawers, { front: '', qty: 1, open: '', box: '', room: '', handles: '' }]);
   const removeDrawer = (index) => setDrawers(drawers.filter((_, i) => i !== index));

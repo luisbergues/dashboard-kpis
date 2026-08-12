@@ -1,0 +1,34 @@
+Zoho Sign Document ID: [REDACTED DOCUMENT ID]
+Bill To:
+John Roe
+Contact Address:
+[REDACTED ADDRESS]
+[REDACTED CITY] [REDACTED ZIP]
+Florida
+Palm Beach
+[REDACTED PHONE]
+[REDACTED EMAIL]
+Bill From:
+JL Closets
+160 NW 16th Street
+Boca Raton Florida 33432
+U.S.A
+5619129881
+leads@jlclosets.com
+www.jlclosets.com
+Prepared By:
+Ann Prep
+23-Jun-2026
+Area:
+Garage
+Area Description:
+Garage
+Accessories
+Quantity / Sq. FT. Product Description Product Code Amt. Selection Total
+10.00 Garage Feet(4"/Black) 4501090 35.00 Included 350
+Area Price
+Description color 2nd color where Fronts Selection Amt.
+Uppers, Lowers, 1 set of drawers, 5 Tall Cabinets with Doors, 2 Open Tall Cabinets. White Silver Drift (Ctop) Flat Included 10900.00
+Sub Total $11250.00
+Discount 5.00%
+Grand Total $10688

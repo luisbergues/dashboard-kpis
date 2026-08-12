@@ -1,7 +1,14 @@
 import React from 'react';
 import './PDFPrintLayout.css';
 
-export default function PDFPrintLayout({ headerData, drawerOptions, drawers, rods, miscCol1, miscCol2 }) {
+/* `drawers` y `rods` por defecto en []: una hoja impresa no puede tumbar la
+   aplicacion entera porque le falte una lista. Firebase borra la clave al
+   guardar un array vacio (ver restoreEmptyArrays en usePagedModal), asi que una
+   pagina sin cajones volvia sin `drawers` y el `.map` de abajo tiraba
+   "Cannot read properties of undefined (reading 'map')" — el ErrorBoundary de
+   App.jsx envuelve todo renderView(), asi que se caia la vista completa, no
+   solo el modal. El arreglo de raiz esta en el hook; esto es la red debajo. */
+export default function PDFPrintLayout({ headerData, drawerOptions, drawers = [], rods = [], miscCol1, miscCol2 }) {
   // Helper to render circled text if selected
   const OptionItem = ({ label, selected }) => (
     <span className={`option-item ${selected ? 'selected' : ''}`}>{label}</span>

@@ -57,6 +57,11 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
     createDefaultPage: () => createDefaultPage(project, materials),
     loadData: loadESSData,
     saveData: saveESSData,
+    // Firebase borra la clave al guardar un array vacio. Aca la plantilla
+    // arranca con filas de ejemplo, asi que solo se rompe si el usuario borra
+    // todos los cajones Y todos los barrales de una pagina — pero se rompe
+    // igual. Ver restoreEmptyArrays.
+    arrayFields: ['drawers', 'rods'],
     // The matrix only forces a value when it says Yes; a saved page that was
     // edited by hand otherwise keeps whatever it was set to.
     transformLoaded: (sanitized) => sanitized.map(page => ({
@@ -78,7 +83,9 @@ export default function PDFGeneratorModal({ project, materials, onClose }) {
 
   // Extraction of current page data for render
   const currentPage = pages[currentPageIndex] || pages[0];
-  const { headerData, drawerOptions, drawers, rods, miscCol1, miscCol2 } = currentPage;
+  // Defaults aca tambien: addDrawer/removeDrawer hacen [...drawers], que
+  // revienta igual que el .map si la clave no vino. Ver restoreEmptyArrays.
+  const { headerData, drawerOptions, drawers = [], rods = [], miscCol1, miscCol2 } = currentPage;
 
   // --- Mutators ---
   const addDrawer = () => setDrawers([...drawers, { front: '', qty: 1, open: '', box: '', room: '', handles: '' }]);
