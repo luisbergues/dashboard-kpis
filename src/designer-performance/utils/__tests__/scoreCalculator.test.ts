@@ -160,6 +160,39 @@ describe('excepcion: subir un documento en dia inhabil si penaliza', () => {
   });
 });
 
+describe('items sin entregar: el parametro `now` frena el reloj', () => {
+  // El puntaje ahora se deriva en cada lectura (ver KpiContext), asi que un
+  // item sin tildar seguiria descontando para siempre contra "hoy". Un
+  // proyecto ya cerrado en Fase 2 pasa su closedAt: nada mas va a llegar.
+  const sinDrawings = checklist({ drawingsSigned: false }, LUN_3);
+
+  it('sin `now` mide contra hoy y el faltante sigue corriendo', () => {
+    // LUN_3 es 2026, muy en el pasado respecto de cualquier corrida real, asi
+    // que el item faltante ya toco el tope por item.
+    const r = calculatePhase1ScoreAndStatus(sinDrawings, LUN_3);
+    expect(r.score).toBeLessThan(100);
+    expect(r.status).toBe('Rejected');
+  });
+
+  it('con `now` = fecha de cierre, el faltante deja de acumular ahi', () => {
+    // Cerrado el viernes 7: 4 dias habiles de atraso -> -4.
+    const r = calculatePhase1ScoreAndStatus(sinDrawings, LUN_3, VIE_7);
+    expect(r.score).toBe(96);
+  });
+
+  it('cerrado el mismo dia del alta, un faltante no descuenta nada', () => {
+    const r = calculatePhase1ScoreAndStatus(sinDrawings, LUN_3, LUN_3);
+    expect(r.score).toBe(100);
+    expect(r.status).toBe('Rejected'); // falta el documento, pero sin demora
+  });
+
+  it('`now` no afecta a los items ya entregados', () => {
+    const entregados = checklist({}, LUN_3);
+    expect(calculatePhase1ScoreAndStatus(entregados, LUN_3, VIE_7).score).toBe(100);
+    expect(calculatePhase1ScoreAndStatus(entregados, LUN_3, LUN_31).score).toBe(100);
+  });
+});
+
 describe('items nuevos no penalizan retroactivamente', () => {
   it('quoteBreakdown arranca su reloj el dia que se lanzo, no en createdAt', () => {
     // Proyecto viejo (marzo 2026); el item se lanzo el 28-jul-2026.
