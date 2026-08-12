@@ -82,3 +82,12 @@ export function planRetention({ projects, fileIndex, now, graceMs = DEFAULT_GRAC
 
   return { toMark, toUnmark, toPurge, orphans };
 }
+
+// Rounds up so the label never says "0 days left" for a file that is still
+// there — 0 is reserved for "the next sweep will take it".
+export function daysUntilPurge(entry, now, graceMs = DEFAULT_GRACE_MS) {
+  const markedAt = parseTime(entry?.purgeMarkedAt);
+  if (markedAt === null) return null;
+  const remaining = markedAt + graceMs - now;
+  return remaining <= 0 ? 0 : Math.ceil(remaining / (24 * 60 * 60 * 1000));
+}

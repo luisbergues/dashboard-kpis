@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hasReachedNesting, planRetention, DEFAULT_GRACE_MS } from '../essRetention';
+import { hasReachedNesting, planRetention, DEFAULT_GRACE_MS, daysUntilPurge } from '../essRetention';
 
 describe('hasReachedNesting', () => {
   it('is true at NESTING, the moment the PDFs stop being needed', () => {
@@ -186,5 +186,32 @@ describe('planRetention', () => {
     expect(() => planRetention({ projects: null, fileIndex: null, now: NOW })).not.toThrow();
     const plan = planRetention({ projects: null, fileIndex: null, now: NOW });
     expect(plan).toEqual({ toMark: [], toUnmark: [], toPurge: [], orphans: [] });
+  });
+});
+
+describe('daysUntilPurge', () => {
+  it('is null when the entry has no mark', () => {
+    expect(daysUntilPurge({ contract: file() }, NOW)).toBeNull();
+  });
+
+  it('is null when the mark is unparseable', () => {
+    expect(daysUntilPurge({ purgeMarkedAt: 'nope' }, NOW)).toBeNull();
+  });
+
+  it('counts the full window down from a fresh mark', () => {
+    expect(daysUntilPurge({ purgeMarkedAt: iso(NOW) }, NOW)).toBe(7);
+  });
+
+  it('rounds up, so a partial day still reads as a day left', () => {
+    expect(daysUntilPurge({ purgeMarkedAt: iso(NOW - 6.5 * DAY) }, NOW)).toBe(1);
+  });
+
+  it('is 0 once the window has elapsed', () => {
+    expect(daysUntilPurge({ purgeMarkedAt: iso(NOW - 7 * DAY) }, NOW)).toBe(0);
+    expect(daysUntilPurge({ purgeMarkedAt: iso(NOW - 30 * DAY) }, NOW)).toBe(0);
+  });
+
+  it('honours a custom grace window', () => {
+    expect(daysUntilPurge({ purgeMarkedAt: iso(NOW) }, NOW, DAY)).toBe(1);
   });
 });
