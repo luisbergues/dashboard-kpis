@@ -84,7 +84,13 @@ export const translations = {
       immediateAttention: "Immediate Attention Required",
       noPriority: "No high priority projects requiring action.",
       keyTakeaways: "Key Takeaways & Strategic Actions",
-      meetingPoints: "Meeting Talking Points"
+      meetingPoints: "Meeting Talking Points",
+      conversionRate: "Conversion Rate",
+      avgValidationTime: "Avg. Validation Time (Check → Nesting)",
+      validationSample: "projects measured",
+      validationNoData: "No recorded stage transitions yet",
+      bottleneckAlerts: "Bottleneck Alerts",
+      bottleneckActive: "Active"
     },
     calendar: {
       title: "Installation Calendar",
@@ -536,7 +542,13 @@ export const translations = {
       immediateAttention: "Requiere Atención Inmediata",
       noPriority: "No hay proyectos de alta prioridad que requieran acción.",
       keyTakeaways: "Puntos Clave y Acciones Estratégicas",
-      meetingPoints: "Temas de Discusión de la Reunión"
+      meetingPoints: "Temas de Discusión de la Reunión",
+      conversionRate: "Tasa de Conversión",
+      avgValidationTime: "Tiempo Prom. de Validación (Check → Nesting)",
+      validationSample: "proyectos medidos",
+      validationNoData: "Todavía no hay transiciones de etapa registradas",
+      bottleneckAlerts: "Alertas de Cuello de Botella",
+      bottleneckActive: "Activas"
     },
     calendar: {
       title: "Calendario de Instalación",

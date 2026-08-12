@@ -88,6 +88,7 @@ function App() {
   const [weeklyHistory, setWeeklyHistory] = useState([]);
   const [focusedProjectSo, setFocusedProjectSo] = useState(null);
   const [projectDesigners, setProjectDesigners] = useState({});
+  const [projectHistory, setProjectHistory] = useState({});
   const pendingUsersCount = usePendingUsersCount(userProfile?.role);
 
   const { data, isLoading: loading, error } = useQuery({
@@ -285,11 +286,22 @@ function App() {
       setProjectDesigners(snapshot.val() || {});
     });
 
+    // Transiciones de etapa realmente observadas por la app (ver
+    // statusTransitions.js). El sheet solo trae UNA fecha por proyecto, la del
+    // estado actual, asi que sin esto cualquier medicion entre dos etapas se
+    // arma con fechas fabricadas. MyProjectsView ya lo leia para su timeline;
+    // el Dashboard lo necesita para el promedio de CHECK -> NESTING.
+    const historyRef = ref(db, 'project_history');
+    const unsubscribeHistory = onValue(historyRef, (snapshot) => {
+      setProjectHistory(snapshot.val() || {});
+    });
+
     return () => {
       unsubscribeOverrides();
       unsubscribeNotes();
       unsubscribeMatOverrides();
       unsubscribeDesigners();
+      unsubscribeHistory();
     };
   }, []);
 
@@ -621,7 +633,7 @@ function App() {
 
     switch (activeTab) {
       case 'dashboard':
-        return isDesigner ? null : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
+        return isDesigner ? null : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} projectHistory={projectHistory} />;
       case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
       case 'my-projects':
         return isDesigner ? null : <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} setActiveTab={setActiveTab} setFocusedProjectSo={setFocusedProjectSo} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} />;
@@ -630,20 +642,20 @@ function App() {
         return isDesigner ? null : <MaterialsView data={mergedData} />;
       case 'quality': 
         if (userProfile?.role === 'administrative') {
-          return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
+          return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} projectHistory={projectHistory} />;
         }
         return isDesigner ? null : <DesignQualityView data={mergedData} />;
       case 'designer-performance':
         return <DesignerPerformanceApp data={mergedData} projectDesigners={projectDesigners} userProfile={userProfile} currentUser={currentUser} masterProjects={masterProjects} />;
       case 'admin':
-        return isSuperAdminRole(userProfile?.role) ? <AdminUsersView userProfile={userProfile} data={mergedData} masterProjects={masterProjects} /> : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
+        return isSuperAdminRole(userProfile?.role) ? <AdminUsersView userProfile={userProfile} data={mergedData} masterProjects={masterProjects} /> : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} projectHistory={projectHistory} />;
       case 'ess':
         return isSuperAdminRole(userProfile?.role) ? (
           <Suspense fallback={<div className="loading-state"><Loader2 size={20} className="animate-spin" /> Loading...</div>}>
             <EssView data={mergedData} />
           </Suspense>
-        ) : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
-      default: return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} />;
+        ) : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} projectHistory={projectHistory} />;
+      default: return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} projectHistory={projectHistory} />;
     }
   };
 

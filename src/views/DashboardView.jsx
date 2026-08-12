@@ -24,11 +24,9 @@ import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { calculateAutomaticStages } from '../utils/stageUtils';
 import { exportToCSV } from '../utils/csvExport';
-import { 
-  calculateConversionRate, 
-  calculateBudgetDeviation, 
-  calculateAverageValidationTime, 
-  predictBottlenecks, 
+import {
+  calculateConversionRate,
+  predictBottlenecks,
   getProjectLocation,
   calculateGlobalValidationTime
 } from '../services/kpiCalculator';
@@ -62,7 +60,7 @@ const METRIC_COLORS = {
 
 const STACKED_METRICS = Object.keys(METRIC_COLORS);
 
-export default function DashboardView({ data, weeklyHistory = [] }) {
+export default function DashboardView({ data, weeklyHistory = [], projectHistory = {} }) {
   const { t, language } = useLanguage();
   const { theme } = useTheme();
 
@@ -110,20 +108,20 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
   const completedCount = weekOverWeek.find(m => m.metric === 'Completed Projects')?.current || 0;
   
   const conversionRate = calculateConversionRate(completedCount, activeCount);
-  const totalValueStr = financialImpact?.rows?.find(r => r.status === 'Total')?.value || '$0';
-  const holdValueStr = financialImpact?.rows?.find(r => r.status === 'ON HOLD')?.value || '$0';
-  const budgetDeviation = calculateBudgetDeviation(holdValueStr, totalValueStr);
-  
-  // Calculate Avg Validation Time (Check 2 to Nesting) using real stage progress from Firebase
+
+  // Promedio de CHECK -> NESTING. `projectHistory` trae las transiciones que la
+  // app observo de verdad; sin pasarlo, calculateAutomaticStages fabrica la
+  // fecha de toda etapa anterior a la actual (el sheet solo trae una) y el
+  // promedio se armaba con la hora en que se abrio el dashboard.
   const derivedProjectStages = React.useMemo(() => {
     const obj = {};
     filteredProjects.forEach(p => {
-      obj[p.so] = calculateAutomaticStages(p);
+      obj[p.so] = calculateAutomaticStages(p, projectHistory[p.so]);
     });
     return obj;
-  }, [filteredProjects]);
+  }, [filteredProjects, projectHistory]);
 
-  const avgValidationTime = calculateGlobalValidationTime(derivedProjectStages, filteredProjects);
+  const validationTime = calculateGlobalValidationTime(derivedProjectStages, filteredProjects);
   
   const bottleneckAlerts = predictBottlenecks(filteredProjects, new Date().toISOString());
 
@@ -434,21 +432,31 @@ export default function DashboardView({ data, weeklyHistory = [] }) {
       {/* New KPIs Row */}
       <section className="kpi-metrics-row mb-xl" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '12px' }}>
         <div className="glass-card kpi-card">
-          <span className="kpi-label">Conversion Rate</span>
+          <span className="kpi-label">{t('dashboard.conversionRate')}</span>
           <span className="kpi-value">{conversionRate}%</span>
         </div>
         <div className="glass-card kpi-card">
-          <span className="kpi-label">Budget Deviation (Hold/Total)</span>
-          <span className="kpi-value">{budgetDeviation}%</span>
-        </div>
-        <div className="glass-card kpi-card">
-          <span className="kpi-label">Avg. Validation Time</span>
-          <span className="kpi-value">{avgValidationTime} hrs</span>
+          <span className="kpi-label">{t('dashboard.avgValidationTime')}</span>
+          {/* Sin transiciones registradas no hay promedio. Antes se mostraba
+              "0 hrs", que se lee como "tarda cero" en vez de "no hay datos". */}
+          {validationTime === null ? (
+            <>
+              <span className="kpi-value">—</span>
+              <span className="kpi-note text-muted">{t('dashboard.validationNoData')}</span>
+            </>
+          ) : (
+            <>
+              <span className="kpi-value">{validationTime.hours} hrs</span>
+              <span className="kpi-note text-muted">
+                {validationTime.sampleSize} {t('dashboard.validationSample')}
+              </span>
+            </>
+          )}
         </div>
         {bottleneckAlerts.length > 0 && (
           <div className="glass-card kpi-card is-alert">
-            <span className="kpi-label text-danger">Bottleneck Alerts</span>
-            <span className="kpi-value">{bottleneckAlerts.length} Active</span>
+            <span className="kpi-label text-danger">{t('dashboard.bottleneckAlerts')}</span>
+            <span className="kpi-value">{bottleneckAlerts.length} {t('dashboard.bottleneckActive')}</span>
           </div>
         )}
       </section>

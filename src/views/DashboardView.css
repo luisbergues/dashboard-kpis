@@ -143,6 +143,14 @@
   font-weight: 700;
 }
 
+/* Renglon chico bajo el numero: sobre cuantos proyectos se calculo, o el aviso
+   de que todavia no hay datos. Sin esto la tarjeta muestra un promedio sin
+   decir de cuantas mediciones sale. */
+.kpi-note {
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
+
 .chart-section-wrapper {
   padding: var(--spacing-lg);
   display: flex;

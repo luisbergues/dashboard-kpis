@@ -735,9 +735,38 @@ export function calculateOnHoldTimeByDesigner(projectHistory, projects = [], onH
  * @param {Array} projects - array of all active/recent projects
  * @returns {number} Average time in hours, rounded to 1 decimal place
  */
+/**
+ * Horas promedio que tarda un proyecto en pasar de CHECK a NESTING.
+ *
+ * Mide el par de etapas 3 -> 4 (CHECK -> NESTING). Antes medía 2 -> 3
+ * (Paperwork -> CHECK), que no es la validación que se quiere seguir.
+ *
+ * Solo cuenta etapas con timestamp REAL. `calculateAutomaticStages` marca con
+ * `estimated: true` las fechas que fabrica: el sheet trae una sola fecha por
+ * proyecto (la del estado actual), así que todas las etapas anteriores salían
+ * con la hora de "ahora". Promediar eso daba dos cosas, las dos inútiles: o una
+ * diferencia de 0 (dos etapas fabricadas con el mismo instante) o una negativa
+ * (una fabricada hoy contra una real de la semana pasada), y ambas quedaban
+ * fuera de los filtros — de ahí el "0 hrs" permanente de la tarjeta.
+ *
+ * Las fechas reales vienen de `project_history/{so}`, que registra las
+ * transiciones observadas por la app (ver statusTransitions.js). Un proyecto
+ * sin esas transiciones registradas simplemente no entra en el promedio.
+ *
+ * @returns {{ hours: number, sampleSize: number } | null} null cuando ningún
+ *   proyecto tiene las dos transiciones registradas. Deliberadamente NO es 0:
+ *   "todavía no hay datos" y "el promedio es cero" son cosas distintas, y
+ *   devolver 0 para las dos es lo que hacía que la tarjeta mintiera.
+ */
 export function calculateGlobalValidationTime(projectStages, projects = []) {
-  if (!projectStages || Object.keys(projectStages).length === 0) return 0.0;
-  
+  if (!projectStages || Object.keys(projectStages).length === 0) return null;
+
+  const CHECK_INDEX = 3;
+  const NESTING_INDEX = 4;
+  // Tope de cordura: más de 90 días entre CHECK y NESTING es un dato sucio
+  // (un proyecto reabierto, una fecha mal cargada), no un tiempo de validación.
+  const MAX_REASONABLE_HOURS = 90 * 24;
+
   let totalHours = 0;
   let count = 0;
 
@@ -745,26 +774,29 @@ export function calculateGlobalValidationTime(projectStages, projects = []) {
     const stages = projectStages[p.so];
     if (!stages) return;
 
-    // Stage 2 is Paperwork (when completed, it enters Check 2)
-    // Stage 3 is Check 2 (when completed, it enters Nesting)
-    const paperwork = stages[2];
-    const check2 = stages[3];
+    const check = stages[CHECK_INDEX];
+    const nesting = stages[NESTING_INDEX];
 
-    if (paperwork?.completed && paperwork?.timestamp && check2?.completed && check2?.timestamp) {
-      const start = new Date(paperwork.timestamp);
-      const end = new Date(check2.timestamp);
+    // `estimated` descarta las fechas fabricadas: sin este filtro el promedio
+    // se arma con la hora en que se abrió el dashboard.
+    const usable = (s) => s && s.completed && s.timestamp && !s.estimated;
+    if (!usable(check) || !usable(nesting)) return;
 
-      if (!isNaN(start) && !isNaN(end) && end >= start) {
-        const diffHours = (end - start) / (1000 * 60 * 60);
-        if (diffHours > 0 && diffHours < 1000) { // arbitrary sanity check to avoid negative/massive values
-          totalHours += diffHours;
-          count++;
-        }
-      }
-    }
+    const start = new Date(check.timestamp).getTime();
+    const end = new Date(nesting.timestamp).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end)) return;
+
+    const diffHours = (end - start) / (1000 * 60 * 60);
+    if (diffHours < 0 || diffHours > MAX_REASONABLE_HOURS) return;
+
+    totalHours += diffHours;
+    count++;
   });
 
-  if (count === 0) return 0.0;
-  return parseFloat((totalHours / count).toFixed(1));
+  if (count === 0) return null;
+  return {
+    hours: parseFloat((totalHours / count).toFixed(1)),
+    sampleSize: count,
+  };
 }
 
