@@ -1,0 +1,4 @@
+# Los PDFs de muestra son documentos comerciales reales de clientes — quedan
+# en la máquina de cada uno, no en el repo. El README y este archivo sí se
+# versionan.
+*.pdf
