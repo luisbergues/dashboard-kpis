@@ -4,21 +4,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // real logic against a controllable stub.
 const get = vi.fn();
 const update = vi.fn();
+const remove = vi.fn();
 vi.mock('../firebase', () => ({
   db: {},                       // truthy → module proceeds
   isConfigured: true,
   ref: (_db, path) => ({ path: path ?? null }),
   get: (...a) => get(...a),
   update: (...a) => update(...a),
+  remove: (...a) => remove(...a),
 }));
 
-import { fileToBase64, base64ToArrayBuffer, validateFileSize, saveEssFile, loadEssFileIndexEntry, MAX_ESS_PDF_BYTES } from '../essFiles';
+import { fileToBase64, base64ToArrayBuffer, validateFileSize, saveEssFile, loadEssFileIndexEntry, MAX_ESS_PDF_BYTES, markForPurge, clearPurgeMark, purgeEssFiles } from '../essFiles';
 
 const snap = (exists, val) => ({ exists: () => exists, val: () => val });
 
 beforeEach(() => {
   get.mockReset();
   update.mockReset();
+  remove.mockReset();
 });
 
 describe('fileToBase64 / base64ToArrayBuffer', () => {
@@ -99,5 +102,48 @@ describe('loadEssFileIndexEntry', () => {
   it('returns null when nothing was uploaded for that slot', async () => {
     get.mockResolvedValue(snap(false, null));
     await expect(loadEssFileIndexEntry('12485', 'drawings')).resolves.toBeNull();
+  });
+});
+
+describe('markForPurge', () => {
+  it('writes the mark inside the existing index node, creating no new node', async () => {
+    update.mockResolvedValue(undefined);
+    await markForPurge('12485', '2026-08-11T12:00:00.000Z');
+
+    expect(update).toHaveBeenCalledTimes(1);
+    const [refArg, payload] = update.mock.calls[0];
+    expect(refArg).toEqual({ path: 'ess_file_index/12485' });
+    expect(payload).toEqual({ purgeMarkedAt: '2026-08-11T12:00:00.000Z' });
+  });
+});
+
+describe('clearPurgeMark', () => {
+  it('removes only the mark field, leaving the file metadata intact', async () => {
+    remove.mockResolvedValue(undefined);
+    await clearPurgeMark('12485');
+
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(remove).toHaveBeenCalledWith({ path: 'ess_file_index/12485/purgeMarkedAt' });
+  });
+});
+
+describe('purgeEssFiles', () => {
+  it('deletes the heavy node before the index, so a mid-failure stays retryable', async () => {
+    remove.mockResolvedValue(undefined);
+    await purgeEssFiles('12485');
+
+    expect(remove.mock.calls.map(([r]) => r.path)).toEqual([
+      'ess_files/12485',
+      'ess_file_index/12485',
+    ]);
+  });
+
+  it('leaves the index in place when deleting the files node fails', async () => {
+    // The index is what makes the project visible to the next sweep. Losing it
+    // first would strand megabytes of Base64 that nothing references.
+    remove.mockRejectedValueOnce(new Error('permission denied'));
+    await expect(purgeEssFiles('12485')).rejects.toThrow('permission denied');
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(remove.mock.calls[0][0]).toEqual({ path: 'ess_files/12485' });
   });
 });

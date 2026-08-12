@@ -1,4 +1,4 @@
-import { db, ref, get, update, isConfigured } from './firebase';
+import { db, ref, get, update, remove, isConfigured } from './firebase';
 
 // PDFs in this flow are text-based Contracts/Quotes/Drawings, not scans, so
 // they shouldn't come close to this. It exists to fail loudly instead of
@@ -68,4 +68,28 @@ export async function loadEssFileIndexEntry(so, docType) {
   if (!isConfigured || !db) return null;
   const snapshot = await get(ref(db, `ess_file_index/${so}/${docType}`));
   return snapshot.exists() ? snapshot.val() : null;
+}
+
+// The purge mark lives inside the index node rather than in a node of its own,
+// so this feature needs no new RTDB rule block. Consumers read named docType
+// keys (loadEssFileIndexEntry, EssView's statusFor), so the extra sibling key
+// is inert to them.
+export async function markForPurge(so, markedAt) {
+  if (!isConfigured || !db) throw new Error('FIREBASE_NOT_CONFIGURED');
+  await update(ref(db, `ess_file_index/${so}`), { purgeMarkedAt: markedAt });
+}
+
+export async function clearPurgeMark(so) {
+  if (!isConfigured || !db) throw new Error('FIREBASE_NOT_CONFIGURED');
+  await remove(ref(db, `ess_file_index/${so}/purgeMarkedAt`));
+}
+
+// Order is load-bearing: the heavy node first, the index (carrying the mark)
+// second. A failure in between leaves the index and its mark intact, so the
+// next sweep retries. The reverse would leave megabytes of Base64 with nothing
+// referencing them — invisible to the UI and to this sweep, so unreachable.
+export async function purgeEssFiles(so) {
+  if (!isConfigured || !db) throw new Error('FIREBASE_NOT_CONFIGURED');
+  await remove(ref(db, `ess_files/${so}`));
+  await remove(ref(db, `ess_file_index/${so}`));
 }
