@@ -276,6 +276,7 @@
   background: var(--card-bg);
   border-top: 1px solid var(--card-border);
   align-items: center;
+  position: relative; /* anchors the typeahead dropdown */
 }
 
 .chatbot-footer input {
@@ -353,5 +354,138 @@
 .chatbot-option-btn:hover {
   background: rgba(9, 209, 199, 0.1);
   border-color: var(--primary);
+}
+
+/* Starter suggestions (empty-chat discovery chips) */
+.chatbot-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.chatbot-suggestions-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding-left: 2px;
+}
+
+.chatbot-suggestions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.chatbot-suggestion-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--color-navy);
+  border: 1px solid var(--card-border);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  min-width: 0; /* let text truncate inside the grid cell */
+}
+
+.chatbot-suggestion-chip:hover {
+  background: rgba(0, 122, 255, 0.1);
+  border-color: var(--color-neon-green);
+  transform: translateY(-1px);
+}
+
+.chatbot-suggestion-chip:active {
+  transform: scale(0.97);
+}
+
+.sugg-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.sugg-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sugg-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sugg-sub {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Typeahead dropdown (matches while typing) */
+.chatbot-typeahead {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(100% - 6px);
+  background: rgba(28, 28, 34, 0.98);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 5;
+}
+
+.chatbot-typeahead-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--card-border);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.chatbot-typeahead-item:last-child {
+  border-bottom: none;
+}
+
+.chatbot-typeahead-item:hover {
+  background: rgba(0, 122, 255, 0.12);
+}
+
+.ta-icon {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+}
+
+.ta-label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.ta-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 

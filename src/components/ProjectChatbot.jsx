@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { MessageSquare, Send, X, Bot, User, StickyNote, HelpCircle } from 'lucide-react';
 import { addProjectNote } from '../utils/notesHelper';
 import { useLanguage } from '../utils/LanguageContext';
@@ -13,6 +13,8 @@ import {
   isInstallQuery,
   findOnHoldProjects,
   findUpcomingInstalls,
+  buildRandomSuggestions,
+  buildTypeaheadSuggestions,
 } from '../utils/chatbotLocalMatch';
 import './ProjectChatbot.css';
 
@@ -173,6 +175,22 @@ function buildInstallAnswer(installs, isES) {
     : `📅 **Upcoming Installations (${installs.length}):**\n\n${lines}${more}`;
 }
 
+// Deterministic PRNG (mulberry32) seeded per chat-open. Feeding this to
+// buildRandomSuggestions keeps the starter chips stable across re-renders
+// within one open — a fresh Math.random each render would reshuffle them on
+// every keystroke — while still changing the set each time the chat is opened.
+function seededRng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const SUGGESTION_ICON = { project: '📁', contact: '📇', person: '👤' };
+
 export default function ProjectChatbot({ projects = [], materialsMatrix = [], currentUser, userProfile }) {
   const { language } = useLanguage();
   const { contacts: designerContacts } = useDesignerContacts();
@@ -199,8 +217,27 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
   // teléfono?" needs this to anchor who "su" is — see buildAnchoredContactSection.
   const [lastMentionedContact, setLastMentionedContact] = useState(null);
   const [showTerminatedEgg, setShowTerminatedEgg] = useState(false);
+  // Reseeds the starter suggestions each time the chat opens, so a fresh random
+  // set surfaces per open (see openChat / openSuggestions).
+  const [suggestionSeed, setSuggestionSeed] = useState(() => Math.floor(Math.random() * 1e9));
 
   const messagesEndRef = useRef(null);
+
+  // Starter suggestion chips shown on an empty chat. Memoised on the seed +
+  // data: a seeded RNG makes the pick stable across re-renders (no reshuffle
+  // per keystroke) yet fresh per open, and it recomputes deterministically if
+  // projects arrive after the chat was opened.
+  const openSuggestions = useMemo(
+    () => buildRandomSuggestions({ projects, designerContacts, rng: seededRng(suggestionSeed || 1) }),
+    [suggestionSeed, projects, designerContacts]
+  );
+
+  // Typeahead matches for what's being typed. Only in IDLE (during the add-note
+  // flow the input means a project name / note body, not a lookup) — returns []
+  // for <2 chars, so it naturally hides when the field is empty or just sent.
+  const typeahead = chatState === 'IDLE' && !isLoading
+    ? buildTypeaheadSuggestions(inputValue, { projects, designerContacts })
+    : [];
 
   // The welcome bubble is shown, not stored: deriving it here means a language
   // switch re-renders it in the new language, while real conversation turns
@@ -565,6 +602,19 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     ));
   };
 
+  // Opening reseeds the starter suggestions so a different random set shows up
+  // each time the chat is opened.
+  const openChat = () => {
+    setSuggestionSeed(Math.floor(Math.random() * 1e9));
+    setIsOpen(true);
+  };
+
+  // Both starter chips and typeahead items just send their query through the
+  // normal path — a suggestion is a pre-filled question, nothing more.
+  const handleSuggestionClick = (query) => {
+    handleSendMessage(query);
+  };
+
   const handleChipClick = (action) => {
     const isES = language === 'es';
     if (action === 'hold') {
@@ -584,7 +634,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
 
       {/* Floating Toggle Button */}
       {!isOpen && (
-        <button className="chatbot-toggle-btn animate-bounce-slow" onClick={() => setIsOpen(true)} aria-label={language === 'es' ? 'Abrir chat de asistente' : 'Open assistant chat'}>
+        <button className="chatbot-toggle-btn animate-bounce-slow" onClick={openChat} aria-label={language === 'es' ? 'Abrir chat de asistente' : 'Open assistant chat'}>
           <MessageSquare size={26} />
         </button>
       )}
@@ -635,6 +685,32 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
                 </div>
               </div>
             ))}
+
+            {/* Starter suggestions — only on a fresh chat, random real
+                projects/people so the user discovers what they can ask. */}
+            {messages.length === 0 && openSuggestions.length > 0 && (
+              <div className="chatbot-suggestions">
+                <div className="chatbot-suggestions-label">
+                  {language === 'es' ? 'Probá preguntando por:' : 'Try asking about:'}
+                </div>
+                <div className="chatbot-suggestions-grid">
+                  {openSuggestions.map((s, i) => (
+                    <button
+                      key={`${s.type}_${s.query}_${i}`}
+                      className="chatbot-suggestion-chip"
+                      onClick={() => handleSuggestionClick(s.query)}
+                    >
+                      <span className="sugg-icon">{SUGGESTION_ICON[s.type] || '🔎'}</span>
+                      <span className="sugg-text">
+                        <span className="sugg-label">{s.label}</span>
+                        {s.sub && <span className="sugg-sub">{s.sub}</span>}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
@@ -658,6 +734,25 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
 
           {/* Input Footer */}
           <div className="chatbot-footer">
+            {/* Typeahead dropdown — real projects/people matching what's typed.
+                onMouseDown (not onClick) fires before the input blurs. */}
+            {typeahead.length > 0 && (
+              <div className="chatbot-typeahead" role="listbox">
+                {typeahead.map((s, i) => (
+                  <button
+                    key={`${s.type}_${s.query}_${i}`}
+                    className="chatbot-typeahead-item"
+                    role="option"
+                    aria-selected="false"
+                    onMouseDown={(e) => { e.preventDefault(); handleSuggestionClick(s.query); }}
+                  >
+                    <span className="ta-icon">{SUGGESTION_ICON[s.type] || '🔎'}</span>
+                    <span className="ta-label">{s.label}</span>
+                    {s.sub && <span className="ta-sub">{s.sub}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
             <input
               type="text"
               placeholder={

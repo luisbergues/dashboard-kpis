@@ -10,6 +10,8 @@ import {
   isInstallQuery,
   findOnHoldProjects,
   findUpcomingInstalls,
+  buildRandomSuggestions,
+  buildTypeaheadSuggestions,
 } from './chatbotLocalMatch';
 import { DESIGNER_CONTACTS } from './designerContacts';
 
@@ -407,5 +409,92 @@ describe('chatbotLocalMatch — ON HOLD & Installations intents (now resolved lo
     it('returns empty when no upcoming installs', () => {
       expect(findUpcomingInstalls([{ so: '1', name: 'Old', install: '2020-01-01', status: 'Engineering' }], REF)).toHaveLength(0);
     });
+  });
+});
+
+describe('chatbotLocalMatch — starter suggestions (buildRandomSuggestions)', () => {
+  const PROJ = [
+    { so: 'K800', name: 'Smith Residence', designer: 'Russell Reiner', eng: 'Julieta', status: 'Eng' },
+    { so: 'K801', name: 'Kane Job', designer: 'Natalie Ball', eng: 'Luis', status: 'Eng' },
+    { so: '11801', name: 'Hale Residence', designer: 'Russell Reiner', eng: 'Julieta', status: 'Eng' },
+  ];
+  // Deterministic rng: always picks index 0, so output is predictable.
+  const rngZero = () => 0;
+
+  it('mixes projects and people, each carrying a query to send on click', () => {
+    const s = buildRandomSuggestions({ projects: PROJ, designerContacts: DESIGNER_CONTACTS, rng: rngZero });
+    expect(s.length).toBeGreaterThan(0);
+    expect(s.every(x => typeof x.query === 'string' && x.query.length > 0)).toBe(true);
+    expect(s.some(x => x.type === 'project')).toBe(true);
+  });
+
+  it('a project suggestion sends its SO and shows the name', () => {
+    const s = buildRandomSuggestions({ projects: PROJ, designerContacts: [], rng: rngZero });
+    const proj = s.find(x => x.type === 'project');
+    expect(proj.query).toBe('K800');
+    expect(proj.label).toBe('Smith Residence');
+    expect(proj.sub).toBe('SO #K800');
+  });
+
+  it('caps at count', () => {
+    expect(buildRandomSuggestions({ projects: PROJ, designerContacts: DESIGNER_CONTACTS, count: 2, rng: rngZero })).toHaveLength(2);
+  });
+
+  it('returns nothing when there is no data', () => {
+    expect(buildRandomSuggestions({ projects: [], designerContacts: [] })).toEqual([]);
+  });
+
+  it('backfills from projects when people/contacts are empty', () => {
+    const s = buildRandomSuggestions({ projects: PROJ, designerContacts: [], count: 4, rng: () => 0 });
+    // 2 projects + 1 person (from projects) + backfill 1 project = 4, no dupes by SO.
+    const projectSos = s.filter(x => x.type === 'project').map(x => x.query);
+    expect(new Set(projectSos).size).toBe(projectSos.length);
+  });
+});
+
+describe('chatbotLocalMatch — typeahead (buildTypeaheadSuggestions)', () => {
+  const PROJ = [
+    { so: 'K800', name: 'Smith Residence', designer: 'Russell Reiner', eng: 'Julieta', status: 'Eng' },
+    { so: 'K802', name: 'Kane Annex', designer: 'Natalie Ball', eng: 'Luis', status: 'Eng' },
+    { so: '11801', name: 'Hale Residence', designer: 'Russell Reiner', eng: 'Julieta', status: 'Eng' },
+  ];
+  const ctx = { projects: PROJ, designerContacts: DESIGNER_CONTACTS };
+
+  it('returns nothing for input shorter than 2 chars', () => {
+    expect(buildTypeaheadSuggestions('k', ctx)).toEqual([]);
+    expect(buildTypeaheadSuggestions('', ctx)).toEqual([]);
+  });
+
+  it('surfaces "K800" from a half-typed "k8" (prefix, no 4-char floor)', () => {
+    const s = buildTypeaheadSuggestions('k8', ctx);
+    expect(s.map(x => x.query)).toContain('K800');
+    expect(s.map(x => x.query)).toContain('K802');
+  });
+
+  it('matches a project by name substring', () => {
+    const s = buildTypeaheadSuggestions('resid', ctx);
+    expect(s.map(x => x.label)).toEqual(expect.arrayContaining(['Smith Residence', 'Hale Residence']));
+  });
+
+  it('matches people by name', () => {
+    const s = buildTypeaheadSuggestions('russ', ctx);
+    expect(s.some(x => x.type === 'person' && x.query === 'Russell Reiner')).toBe(true);
+  });
+
+  it('ranks a prefix hit above a mid-string hit', () => {
+    // "kane" prefixes "Kane Annex"; ensure exact-prefix project ranks well.
+    const s = buildTypeaheadSuggestions('kane', ctx);
+    expect(s[0].label).toBe('Kane Annex');
+  });
+
+  it('respects the limit', () => {
+    const many = Array.from({ length: 20 }, (_, i) => ({ so: `${i}`, name: `Kane ${i}` }));
+    expect(buildTypeaheadSuggestions('kane', { projects: many, designerContacts: [], limit: 6 })).toHaveLength(6);
+  });
+
+  it('does not duplicate a project that matches on both SO and name', () => {
+    const p = [{ so: 'kane1', name: 'Kane Job' }];
+    const s = buildTypeaheadSuggestions('kane', { projects: p, designerContacts: [] });
+    expect(s).toHaveLength(1);
   });
 });
