@@ -2,7 +2,9 @@ import { STATUS_INDEX_MAP } from './stageUtils';
 
 // The PDFs exist to produce the ESS. Once the project is checked and nesting
 // starts, the sheet has been generated, reviewed and taken to the floor, so the
-// source documents are dead weight — see the design doc for the full rationale.
+// source documents are dead weight — see
+// docs/superpowers/specs/2026-08-11-ess-file-retention-design.md for the full
+// rationale, including why deletion is two-phase.
 const NESTING_INDEX = STATUS_INDEX_MAP.NESTING;
 
 export function hasReachedNesting(project) {
