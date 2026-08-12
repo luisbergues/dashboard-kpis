@@ -7,7 +7,26 @@ Evidencia: cuatro Quotes reales de JL Closets, texto extraído y redactado, en
 `src/utils/essParsers/__tests__/fixtures/quotes/`. Confirmado por el usuario
 como **el formato correcto** en que llegan los Quotes.
 
-## Medición del parser actual contra los cuatro
+## Causa raíz anterior a todo lo demás: la extracción borra los renglones
+
+`pagesToPlainText` (`src/utils/essPdfExtract.js:42`) hace
+`page.items.map(i => i.text).join(' ')` — **una página entera queda como un
+único renglón**. Los saltos de línea sólo separan páginas.
+
+Todos los regex de `parseQuote.js` están anclados con `^...$`
+(`AREA_HEADER_RE`, `ITEM_LINE_RE`, `COLOR_LABEL_RE`). Contra un renglón de
+cientos de caracteres en mayúsculas y minúsculas mezcladas, ninguno puede
+matchear jamás. El parser de Quote está muerto antes de mirar el formato.
+
+`parseDrawings.js` se salva porque consume `pages[].items` con coordenadas, no
+el texto plano. `parseContract.js` se salva a medias: sus regex no están
+anclados, por eso `TEAROUT_RE` sí matchea.
+
+**Corrección a la medición previa de este documento.** Los fixtures `.txt` los
+generó `dump-pdf.mjs`, que reagrupa los fragmentos por coordenada `y` antes de
+imprimirlos (líneas 47-57). O sea que los fixtures tienen la estructura de
+renglones que la app descarta. La tabla de abajo mide una entrada que la app
+nunca produce; es optimista. La corrida real da cero áreas en todos los casos.
 
 | Fixture | `looksLikeQuote` | Áreas | Ítems | Color |
 |---|---|---|---|---|
@@ -18,6 +37,9 @@ como **el formato correcto** en que llegan los Quotes.
 
 Cero ítems en los cuatro, y `looksLikeQuote` falso en todos — la app rechaza
 como "esto no parece un Quote" a un Quote legítimo.
+
+El primer arreglo, previo a cualquier recalibración, es reconstruir renglones
+por `y` en la extracción. `dump-pdf.mjs` ya tiene el algoritmo probado.
 
 ## Los supuestos equivocados
 
@@ -122,9 +144,48 @@ de la página de esa área en la ESS. Sin interpretar, sin extraer conteos.
 *Consecuencia:* nada que adivinar acá, y `5 Drawers` no genera filas
 automáticas. El ingeniero lee la nota y completa.
 
+## Corrida real end-to-end (SO #12116, 2026-08-12)
+
+Primera corrida del generador con los tres documentos reales cargados:
+Contract `1_1_2026 JL Closets Contract - HO.pdf`, Quote `Room 2.pdf` (el área
+MWIC), Drawings `KDC_Drawings_James Aiello.pdf`. Warnings obtenidos:
+
+```
+DEPOSIT_NOT_FOUND
+BASEBOARDS_NOT_FOUND
+NO_AREAS_FOUND
+COLOR_NOT_FOUND
+UNCLASSIFIED_NUMBERS_MWIC: 412, 561, 14, 27, 14, 27, ... (≈55 números)
+UNCLASSIFIED_NUMBERS_TOP SHELF IS REMOVABLE TO: 42, 44 5/8, 2 1/2, ... (≈60)
+Drawing areas with no matching quote item:
+  MWIC (1 openings) · TOP SHELF IS REMOVABLE TO (0) · MWIC (0)
+```
+
+**El Contract sí existe como documento aparte, y sí trae el tearout.** Cierra
+la pregunta abierta: `TEAROUT_NOT_FOUND` **no** aparece en la lista, o sea que
+`TEAROUT_RE` matcheó dentro del Contract. Los tres roles de documento siguen
+en pie; lo que cambia es que el Quote *también* trae alcance, no que el
+Contract sea prescindible.
+
+**`DEPOSIT_RE` falla por una palabra.** Busca `Deposit: 50%`; el texto real
+dice `Deposit of 50% required`. El `of` rompe el `[:\s]+`.
+
+**El parser de planos tiene un problema propio, distinto del de Quote.**
+Sobrevive al bug de renglones (usa coordenadas), pero:
+
+- `findAreaName` toma el ítem en mayúsculas más alto de la página, y en un
+  plano eso suele ser una nota: `TOP SHELF IS REMOVABLE TO` quedó como nombre
+  de área. Hacen falta anclas más confiables que "está arriba y en mayúsculas".
+- 1 opening en tres páginas contra ~115 números sin clasificar. La heurística
+  de etiqueta `OPENING`/`HEIGHT`/`DEPTH` a menos de 60pt no describe cómo acota
+  KDC: los planos usan líneas de cota, no la palabra escrita al lado.
+- Lo bueno: el parseo de fracciones funciona. `23 1/4`, `5 5/8`, `21 5/8`,
+  `44 5/8`, `85 3/16` salieron todos correctos. El arreglo de `parseInchValue`
+  quedó confirmado contra un plano real.
+
 ## Lo que queda abierto
 
 - Qué valores puede tomar la columna `Fronts` además de `Flat` y `n/a`, y a qué
   corresponde cada uno en el vocabulario del ESS.
-- Si el "Contract" sigue existiendo como documento aparte, dado que el depósito
-  está en el Summary y el tearout/backing en la descripción del área del Quote.
+- Falta el volcado de texto del Contract y de los Drawings (`dump-pdf.mjs`).
+  Sin eso no se puede calibrar `BASEBOARDS_RE` ni el reconocimiento de cotas.

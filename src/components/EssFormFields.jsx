@@ -11,11 +11,14 @@ export default function EssFormFields({
   handleHeaderChange,
   drawerOptions,
   handleOptionsChange,
-  drawers,
+  // Mismo default que PDFPrintLayout: Firebase borra la clave al guardar un
+  // array vacio, y este formulario tambien hace .map sobre las dos listas.
+  // Ver restoreEmptyArrays en usePagedModal.
+  drawers = [],
   updateDrawer,
   removeDrawer,
   addDrawer,
-  rods,
+  rods = [],
   updateRod,
   removeRod,
   addRod,
