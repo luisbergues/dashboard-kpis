@@ -6,7 +6,7 @@ import './TerminatedEasterEgg.css';
 // so nobody has to remember to dismiss it, click-anywhere also closes it early.
 const AUTO_CLOSE_MS = 3000;
 
-export default function TerminatedEasterEgg({ onClose, src = '/k800-terminated.png', alt = "You've been terminated - K-800" }) {
+export default function TerminatedEasterEgg({ onClose, src = '/k800-terminated.webp', alt = "You've been terminated - K-800" }) {
   useEffect(() => {
     const timer = setTimeout(onClose, AUTO_CLOSE_MS);
     return () => clearTimeout(timer);
