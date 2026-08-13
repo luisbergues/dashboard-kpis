@@ -183,6 +183,19 @@ Sobrevive al bug de renglones (usa coordenadas), pero:
   `44 5/8`, `85 3/16` salieron todos correctos. El arreglo de `parseInchValue`
   quedó confirmado contra un plano real.
 
+## Corrida posterior al arreglo de renglones (mismo SO, 2026-08-13)
+
+Confirmado contra el PDF real, no contra fixtures sintéticos:
+
+- **`NO_AREAS_FOUND` desapareció.** El parser de Quote encuentra el área MWIC.
+  La reconstrucción de renglones por `y` era, efectivamente, lo que faltaba.
+- **Las dos áreas MWIC salieron de "sin ítem en el Quote".** La lista pasó de
+  tres entradas a una: quedó sólo el área fantasma
+  `TOP SHELF IS REMOVABLE TO`, que es el bug de `findAreaName` en los planos.
+  O sea que el matcher ya está cruzando plano contra Quote.
+- Siguen, como estaba previsto: `DEPOSIT_NOT_FOUND`, `BASEBOARDS_NOT_FOUND`,
+  `COLOR_NOT_FOUND`, cero ítems, y los ~115 números sin clasificar.
+
 ## Lo que queda abierto
 
 - Qué valores puede tomar la columna `Fronts` además de `Flat` y `n/a`, y a qué
