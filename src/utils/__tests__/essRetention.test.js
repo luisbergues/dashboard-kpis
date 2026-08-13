@@ -232,7 +232,6 @@ describe('planRetention', () => {
       projects: [nesting],
       fileIndex: {
         100: {
-          contract: file(),
           quotes: { q_1: file(iso(NOW - 30 * DAY)) },
           purgeMarkedAt: iso(NOW - 8 * DAY),
         },
