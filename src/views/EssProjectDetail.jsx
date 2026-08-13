@@ -111,15 +111,11 @@ export default function EssProjectDetail({ project, materials, onBack }) {
 
   const allUploaded = DOC_TYPES.every(docType => uploadedNames[docType]);
 
+  // Regenerating just overwrites the previous draft, no confirmation. While the
+  // parsers are being calibrated this button gets pressed over and over, and a
+  // prompt on every press is noise. The cost is real though: anything typed by
+  // hand into the generated draft is replaced along with it.
   const handleGenerate = async () => {
-    if (essExists) {
-      const confirmed = window.confirm(t(
-        'Ya existe un borrador de ESS generado para este proyecto. Generar uno nuevo lo va a reemplazar. ¿Continuar?',
-        'This project already has a generated ESS draft. Generating a new one will replace it. Continue?'
-      ));
-      if (!confirmed) return;
-    }
-
     setIsGenerating(true);
     setGenerationError(null);
     setSummary(null);
