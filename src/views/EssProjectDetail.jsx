@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, Upload, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
-import { saveEssFile, loadEssFile, loadEssFileIndexEntry, validateFileSize, base64ToArrayBuffer } from '../utils/essFiles';
+import { saveEssFile, loadEssFile, loadEssFileIndexEntry, validateFileSize, base64ToArrayBuffer, addEssQuote, removeEssQuote, loadEssQuoteIndex } from '../utils/essFiles';
 import { extractPdfPages, pagesToPlainText } from '../utils/essPdfExtract';
 import { parseContractText, looksLikeContract } from '../utils/essParsers/parseContract';
-import { parseQuoteText, looksLikeQuote } from '../utils/essParsers/parseQuote';
+import { parseQuoteText, detectQuoteArea } from '../utils/essParsers/parseQuote';
 import { parseDrawingPages, looksLikeDrawing } from '../utils/essParsers/parseDrawings';
 import { buildEssPages } from '../utils/essMatcher';
 import { essOptionsFromMaterials } from '../utils/essRules';
@@ -12,7 +12,7 @@ import { saveEssAutoData, hasEssAutoData } from '../utils/essAutoData';
 import { shortProjectName } from '../utils/projectName';
 import EssAutoGeneratorModal from '../components/EssAutoGeneratorModal';
 
-const DOC_TYPES = ['contract', 'quote', 'drawings'];
+const DOC_TYPES = ['contract', 'summary', 'drawings'];
 
 export default function EssProjectDetail({ project, materials, onBack }) {
   const { language } = useLanguage();
@@ -27,6 +27,18 @@ export default function EssProjectDetail({ project, materials, onBack }) {
   const [summary, setSummary] = useState(null);
   const [essExists, setEssExists] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [quotes, setQuotes] = useState({});
+  const [isAddingQuote, setIsAddingQuote] = useState(false);
+
+  const refreshQuotes = useCallback(async () => {
+    try {
+      setQuotes(await loadEssQuoteIndex(project.so));
+    } catch (error) {
+      console.error('Failed to load quotes:', error);
+    }
+  }, [project.so]);
+
+  useEffect(() => { (async () => { await refreshQuotes(); })(); }, [refreshQuotes]);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,13 +101,17 @@ export default function EssProjectDetail({ project, materials, onBack }) {
       const arrayBuffer = await file.arrayBuffer();
       const pages = await extractPdfPages(arrayBuffer);
       const text = pagesToPlainText(pages);
+      // No dedicated detector exists for the Summary sheet, so it skips this
+      // check rather than being run through a heuristic built for a
+      // different document (Drawings/Contract) and flagged incorrectly.
       const looksRight = docType === 'contract' ? looksLikeContract(text)
-        : docType === 'quote' ? looksLikeQuote(text)
-        : looksLikeDrawing(pages);
+        : docType === 'drawings' ? looksLikeDrawing(pages)
+        : true;
       if (!looksRight) {
+        const docLabel = docType === 'contract' ? 'Contract' : 'Drawings';
         setSlotWarnings(prev => ({
           ...prev,
-          [docType]: t(`Esto no parece un ${docType === 'contract' ? 'Contract' : docType === 'quote' ? 'Quote' : 'Drawings'} — ¿seguro que es el correcto?`, `This doesn't look like a ${docType === 'contract' ? 'Contract' : docType === 'quote' ? 'Quote' : 'Drawings'} file — are you sure it's the right one?`),
+          [docType]: t(`Esto no parece un ${docLabel} — ¿seguro que es el correcto?`, `This doesn't look like a ${docLabel} file — are you sure it's the right one?`),
         }));
       }
     } catch (error) {
@@ -109,7 +125,53 @@ export default function EssProjectDetail({ project, materials, onBack }) {
     }
   };
 
-  const allUploaded = DOC_TYPES.every(docType => uploadedNames[docType]);
+  const handleQuoteSelect = async (file) => {
+    if (!file) return;
+    const sizeCheck = validateFileSize(file);
+    if (!sizeCheck.valid) {
+      setUploadErrors(prev => ({ ...prev, quotes: t('Este archivo es demasiado grande (máx 7MB).', 'This file is too large (max 7MB).') }));
+      return;
+    }
+    setUploadErrors(prev => ({ ...prev, quotes: null }));
+    setIsAddingQuote(true);
+    try {
+      // El ambiente se detecta antes de guardar para que la fila lo muestre sin
+      // volver a abrir el PDF. Si la lectura falla, el archivo se sube igual con
+      // area null: preferimos un hueco visible a una adivinanza.
+      let area = null;
+      try {
+        const pages = await extractPdfPages(await file.arrayBuffer());
+        area = detectQuoteArea(pagesToPlainText(pages));
+      } catch (error) {
+        console.error('Could not read the area from this quote:', error);
+      }
+      await addEssQuote(project.so, file, area);
+      await refreshQuotes();
+    } catch (error) {
+      console.error('Failed to add quote:', error);
+      setUploadErrors(prev => ({ ...prev, quotes: t('No se pudo subir este Quote.', 'Failed to upload this quote.') }));
+    } finally {
+      setIsAddingQuote(false);
+    }
+  };
+
+  const handleQuoteRemove = async (quoteId) => {
+    try {
+      await removeEssQuote(project.so, quoteId);
+      await refreshQuotes();
+    } catch (error) {
+      console.error('Failed to remove quote:', error);
+    }
+  };
+
+  const quoteList = Object.entries(quotes).map(([quoteId, entry]) => ({ quoteId, ...entry }));
+  const areaCounts = quoteList.reduce((counts, quote) => {
+    const key = (quote.area || '').trim().toUpperCase();
+    if (key) counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }, {});
+  const isDuplicate = (area) => Boolean(area) && areaCounts[area.trim().toUpperCase()] > 1;
+  const allUploaded = DOC_TYPES.every(docType => uploadedNames[docType]) && quoteList.length > 0;
 
   // Regenerating just overwrites the previous draft, no confirmation. While the
   // parsers are being calibrated this button gets pressed over and over, and a
@@ -166,7 +228,7 @@ export default function EssProjectDetail({ project, materials, onBack }) {
     }
   };
 
-  const slotLabel = (docType) => ({ contract: 'Contract', quote: 'Quote', drawings: 'Drawings' }[docType]);
+  const slotLabel = (docType) => ({ contract: 'Contract', summary: 'Summary', quote: 'Quote', drawings: 'Drawings' }[docType]);
 
   return (
     <div className="glass-card" style={{ padding: '20px' }}>
@@ -175,22 +237,24 @@ export default function EssProjectDetail({ project, materials, onBack }) {
       </button>
       <h2>SO #{project.so} — {shortProjectName(project.name)}</h2>
 
-      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', margin: '16px 0' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', alignItems: 'stretch', margin: '16px 0' }}>
         {DOC_TYPES.map(docType => (
           <div key={docType} className="glass-card" style={{ padding: '12px', minWidth: '220px' }}>
             <strong>{slotLabel(docType)}</strong>
             <div style={{ margin: '8px 0' }}>
-              <label className="btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <label className="btn-secondary btn-sm" htmlFor={`ess-file-${docType}`} style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 {isUploading[docType] ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
                 {uploadedNames[docType] ? t('Reemplazar', 'Replace') : t('Elegir PDF...', 'Choose PDF...')}
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  style={{ display: 'none' }}
-                  onChange={e => handleFileSelect(docType, e.target.files?.[0])}
-                  disabled={isUploading[docType]}
-                />
               </label>
+              <input
+                id={`ess-file-${docType}`}
+                type="file"
+                accept="application/pdf"
+                aria-label={`${slotLabel(docType)} PDF`}
+                className="visually-hidden"
+                onChange={e => handleFileSelect(docType, e.target.files?.[0])}
+                disabled={isUploading[docType]}
+              />
             </div>
             {uploadedNames[docType] && (
               <div style={{ fontSize: '0.85em', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -211,6 +275,53 @@ export default function EssProjectDetail({ project, materials, onBack }) {
         ))}
       </div>
 
+      <div className="glass-card" style={{ padding: '12px', margin: '16px 0' }}>
+        <strong>
+          {quoteList.length === 0
+            ? t('Todavía no hay ambientes', 'No rooms yet')
+            : t(`${quoteList.length} ambiente${quoteList.length === 1 ? '' : 's'}`, `${quoteList.length} room${quoteList.length === 1 ? '' : 's'}`)}
+        </strong>
+
+        <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0' }}>
+          {quoteList.map(quote => (
+            <li key={quote.quoteId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
+              <strong>{quote.area || t('Ambiente sin detectar', 'Room not detected')}</strong>
+              <span className="text-muted" style={{ fontSize: '0.85em' }}>{quote.name}</span>
+              {isDuplicate(quote.area) && (
+                <span style={{ color: 'var(--color-warning, orange)', fontSize: '0.85em' }}>
+                  {t('duplicado', 'duplicate')}
+                </span>
+              )}
+              <button
+                className="btn-secondary btn-sm"
+                type="button"
+                onClick={() => handleQuoteRemove(quote.quoteId)}
+                aria-label={t(`Quitar ${quote.area || quote.name}`, `Remove ${quote.area || quote.name}`)}
+              >
+                {t('Quitar', 'Remove')}
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <label className="btn-secondary btn-sm" htmlFor="ess-file-quote" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          {isAddingQuote ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+          {t('Agregar Quote', 'Add quote')}
+        </label>
+        <input
+          id="ess-file-quote"
+          type="file"
+          accept="application/pdf"
+          aria-label={t('Quote de un ambiente', 'Room quote PDF')}
+          className="visually-hidden"
+          onChange={e => { handleQuoteSelect(e.target.files?.[0]); e.target.value = ''; }}
+          disabled={isAddingQuote}
+        />
+        {uploadErrors.quotes && (
+          <div style={{ fontSize: '0.85em', color: 'var(--color-danger, red)', marginTop: '4px' }}>{uploadErrors.quotes}</div>
+        )}
+      </div>
+
       <button className="btn-primary" disabled={!allUploaded || isGenerating} onClick={handleGenerate}>
         {isGenerating ? <Loader2 size={16} className="animate-spin" /> : null}
         {' '}{t('Generar ESS', 'Generate ESS')}
@@ -218,7 +329,7 @@ export default function EssProjectDetail({ project, materials, onBack }) {
 
       {!allUploaded && (
         <div className="text-muted" style={{ fontSize: '0.85em', marginTop: '8px' }}>
-          {t('Subí los 3 PDFs para poder generar.', 'Upload all 3 PDFs to generate.')}
+          {t('Subí Contract, Summary, Drawings y al menos un Quote para poder generar.', 'Upload Contract, Summary, Drawings and at least one quote to generate.')}
         </div>
       )}
 
