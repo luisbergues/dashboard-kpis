@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Printer, Flag } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import PDFPrintLayout from './PDFPrintLayout';
@@ -123,17 +124,24 @@ export default function EssAutoGeneratorModal({ project, materials, onClose }) {
     }
   };
 
+  // Portalled to <body> on purpose. The overlay is position:fixed, which only
+  // resolves against the viewport while no ancestor has a transform, filter or
+  // backdrop-filter. This modal is opened from inside a .glass-card, and
+  // .glass-card:hover sets transform: translateY(-2px) — enough to turn the
+  // overlay into a box positioned inside the card, which put the modal
+  // half off-screen. Mounting outside the view makes that impossible.
   if (isLoading) {
-    return (
+    return createPortal(
       <div className="pdf-modal-overlay animate-fade-in">
         <div className="pdf-modal-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
           <p style={{ color: 'var(--color-cyan)' }}>{t('myProjects.loadingSavedData')}</p>
         </div>
-      </div>
+      </div>,
+      document.body,
     );
   }
 
-  return (
+  return createPortal(
     <div className="pdf-modal-overlay animate-fade-in">
       <div className="pdf-modal-content">
         <div className="pdf-modal-header">
@@ -195,6 +203,7 @@ export default function EssAutoGeneratorModal({ project, materials, onClose }) {
           ))}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
