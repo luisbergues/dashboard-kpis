@@ -9,6 +9,7 @@ import { parseDrawingPages, looksLikeDrawing } from '../utils/essParsers/parseDr
 import { buildEssPages } from '../utils/essMatcher';
 import { essOptionsFromMaterials } from '../utils/essRules';
 import { saveEssAutoData, hasEssAutoData } from '../utils/essAutoData';
+import { shortProjectName } from '../utils/projectName';
 import EssAutoGeneratorModal from '../components/EssAutoGeneratorModal';
 
 const DOC_TYPES = ['contract', 'quote', 'drawings'];
@@ -176,7 +177,7 @@ export default function EssProjectDetail({ project, materials, onBack }) {
       <button className="btn-secondary btn-sm" onClick={onBack} style={{ marginBottom: '16px' }}>
         <ArrowLeft size={14} /> {t('Volver', 'Back')}
       </button>
-      <h2>SO #{project.so} — {project.name}</h2>
+      <h2>SO #{project.so} — {shortProjectName(project.name)}</h2>
 
       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', margin: '16px 0' }}>
         {DOC_TYPES.map(docType => (
@@ -218,6 +219,12 @@ export default function EssProjectDetail({ project, materials, onBack }) {
         {isGenerating ? <Loader2 size={16} className="animate-spin" /> : null}
         {' '}{t('Generar ESS', 'Generate ESS')}
       </button>
+
+      {!allUploaded && (
+        <div className="text-muted" style={{ fontSize: '0.85em', marginTop: '8px' }}>
+          {t('Subí los 3 PDFs para poder generar.', 'Upload all 3 PDFs to generate.')}
+        </div>
+      )}
 
       {generationError && (
         <div style={{ color: 'var(--color-danger, red)', marginTop: '12px' }}>{generationError}</div>

@@ -5,6 +5,7 @@ import { useLanguage } from '../utils/LanguageContext';
 import EssProjectDetail from './EssProjectDetail';
 import { planRetention, daysUntilPurge } from '../utils/essRetention';
 import { markForPurge, clearPurgeMark, purgeEssFiles } from '../utils/essFiles';
+import { shortProjectName } from '../utils/projectName';
 
 function statusFor(so, filesBySo, autoDataBySo) {
   const files = filesBySo?.[so];
@@ -126,46 +127,75 @@ export default function EssView({ data }) {
     return language === 'es' ? 'Sin PDFs' : 'No PDFs';
   };
 
+  const searchPlaceholder = language === 'es' ? 'Buscar por SO o nombre...' : 'Search by SO or name...';
+
+  const openProject = (so) => setSelectedSo(so);
+  const openOnKey = (event, so) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    // Space would otherwise scroll the page out from under the row.
+    event.preventDefault();
+    openProject(so);
+  };
+
   return (
     <div className="glass-card" style={{ padding: '20px' }}>
       <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <FileStack size={20} /> {language === 'es' ? 'Generador de ESS' : 'ESS Generator'}
       </h2>
-      <div style={{ position: 'relative', margin: '16px 0', maxWidth: '360px' }}>
-        <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', opacity: 0.6 }} />
+      {/* Same structure Pipeline uses: the app only styles inputs by class or
+          under .light-theme, so a bare input falls through to the browser's own
+          white-on-black default and takes the icon down with it. */}
+      <div className="search-bar glass-card" style={{ margin: '16px 0', maxWidth: '360px' }}>
+        <Search size={16} className="text-muted" />
         <input
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder={language === 'es' ? 'Buscar por SO o nombre...' : 'Search by SO or name...'}
-          style={{ width: '100%', padding: '8px 8px 8px 32px' }}
+          aria-label={searchPlaceholder}
+          placeholder={searchPlaceholder}
         />
       </div>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th style={{ textAlign: 'left', padding: '8px' }}>SO</th>
-            <th style={{ textAlign: 'left', padding: '8px' }}>{language === 'es' ? 'Proyecto' : 'Project'}</th>
-            <th style={{ textAlign: 'left', padding: '8px' }}>{language === 'es' ? 'Estado' : 'Status'}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {projects.map(project => {
-            const status = statusFor(project.so, filesBySo, autoDataBySo);
-            return (
-              <tr
-                key={project.so}
-                onClick={() => setSelectedSo(project.so)}
-                style={{ cursor: 'pointer', borderTop: '1px solid var(--card-border, #333)' }}
-              >
-                <td style={{ padding: '8px' }}>{project.so}</td>
-                <td style={{ padding: '8px' }}>{project.name}</td>
-                <td style={{ padding: '8px' }}>{statusLabel(status, project.so)}</td>
+      {/* Project names run long ("Leslie Fenton - Garage - Wall Storage"); the
+          table scrolls inside this box rather than pushing the page sideways. */}
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', minWidth: '420px', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left', padding: '8px' }}>SO</th>
+              <th style={{ textAlign: 'left', padding: '8px' }}>{language === 'es' ? 'Proyecto' : 'Project'}</th>
+              <th style={{ textAlign: 'left', padding: '8px' }}>{language === 'es' ? 'Estado' : 'Status'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {projects.map(project => {
+              const status = statusFor(project.so, filesBySo, autoDataBySo);
+              return (
+                <tr
+                  key={project.so}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openProject(project.so)}
+                  onKeyDown={e => openOnKey(e, project.so)}
+                  style={{ cursor: 'pointer', borderTop: '1px solid var(--card-border, #333)' }}
+                >
+                  <td style={{ padding: '8px' }}>{project.so}</td>
+                  <td style={{ padding: '8px' }}>{shortProjectName(project.name)}</td>
+                  <td style={{ padding: '8px' }}>{statusLabel(status, project.so)}</td>
+                </tr>
+              );
+            })}
+            {projects.length === 0 && (
+              <tr>
+                <td colSpan={3} style={{ padding: '16px', textAlign: 'center' }} className="text-muted">
+                  {search.trim()
+                    ? (language === 'es' ? `Ningún proyecto coincide con "${search.trim()}"` : `No projects match "${search.trim()}"`)
+                    : (language === 'es' ? 'Todavía no hay proyectos para mostrar' : 'No projects to show yet')}
+                </td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {sweepSummary && (
         <div className="glass-card" style={{ padding: '12px', marginTop: '16px' }}>

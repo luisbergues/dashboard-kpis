@@ -514,6 +514,21 @@
   filter: brightness(1.1);
 }
 
+/* Without these a disabled primary button is pixel-identical to a live one —
+   full gradient, pointer cursor, lift on hover — so it reads as broken rather
+   than as unavailable. Both rules are needed: :hover alone still fires. */
+.btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-primary:disabled:hover {
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+
 .btn-secondary {
   background: var(--overlay-05);
   color: var(--text-primary);

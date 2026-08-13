@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 
 const markForPurge = vi.fn();
 const clearPurgeMark = vi.fn();
@@ -100,5 +100,44 @@ describe('EssView retention sweep', () => {
     expect(markForPurge).not.toHaveBeenCalled();
     expect(clearPurgeMark).not.toHaveBeenCalled();
     expect(purgeEssFiles).not.toHaveBeenCalled();
+  });
+});
+
+describe('EssView project list', () => {
+  const searchBox = () => screen.getByPlaceholderText(/Search by SO/);
+
+  // Sheet Name cells arrive as "Cliente:[SO#] Nombre", which reads as the name
+  // printed twice. Every other view runs them through shortProjectName.
+  it('shows the client name once, not the raw sheet cell', () => {
+    renderView([{ so: '100', name: 'Jane Doe:[100] Jane Doe', status: 'ENGINEERING' }]);
+    expect(screen.getByText('Jane Doe')).toBeTruthy();
+    expect(screen.queryByText(/\[100\]/)).toBeNull();
+  });
+
+  // Headers over nothing read as a failed load rather than as a filter that
+  // matched nothing.
+  it('explains an empty result instead of showing bare headers', () => {
+    renderView([{ so: '100', name: 'Jane Doe', status: 'ENGINEERING' }]);
+    fireEvent.change(searchBox(), { target: { value: 'zzzz' } });
+    expect(screen.getByText(/No projects match/i)).toBeTruthy();
+  });
+
+  it('keeps the empty message out of the way when there are results', () => {
+    renderView([{ so: '100', name: 'Jane Doe', status: 'ENGINEERING' }]);
+    expect(screen.queryByText(/No projects match/i)).toBeNull();
+  });
+
+  it('opens a project from the keyboard, not only by mouse', () => {
+    renderView([{ so: '100', name: 'Jane Doe', status: 'ENGINEERING' }]);
+    const row = screen.getByRole('button', { name: /Jane Doe/ });
+    expect(row.tabIndex).toBe(0);
+    fireEvent.keyDown(row, { key: 'Enter' });
+    // EssProjectDetail is mocked to null, so opening it empties the view.
+    expect(screen.queryByText('Jane Doe')).toBeNull();
+  });
+
+  it('labels the search box for screen readers', () => {
+    renderView([]);
+    expect(screen.getByLabelText(/Search by SO/)).toBeTruthy();
   });
 });
