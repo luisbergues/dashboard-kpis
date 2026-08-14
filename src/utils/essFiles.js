@@ -93,3 +93,54 @@ export async function purgeEssFiles(so) {
   await remove(ref(db, `ess_files/${so}`));
   await remove(ref(db, `ess_file_index/${so}`));
 }
+
+// El id no puede salir del nombre del archivo: se repiten entre proyectos
+// ('Room 2.pdf') y el ambiente no se conoce hasta parsear el PDF, así que no
+// hay identidad natural en el momento de escribir.
+function newQuoteId() {
+  return `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// Mismo contrato atómico que saveEssFile: el nodo pesado y el índice salen en
+// un solo update, así el índice nunca describe un archivo que no está.
+// De paso borra el Quote singular del modelo viejo — una línea en vez de
+// código de migración, sin la cual quedan megabytes de Base64 huérfanos.
+export async function addEssQuote(so, file, area) {
+  const sizeCheck = validateFileSize(file);
+  if (!sizeCheck.valid) {
+    throw new Error(sizeCheck.reason);
+  }
+  const data = await fileToBase64(file);
+  if (!isConfigured || !db) throw new Error('FIREBASE_NOT_CONFIGURED');
+  const quoteId = newQuoteId();
+  const name = file.name;
+  const uploadedAt = new Date().toISOString();
+  const areaValue = area ?? null;
+  await update(ref(db), {
+    [`ess_files/${so}/quotes/${quoteId}`]: { name, mimeType: file.type, data, uploadedAt, area: areaValue },
+    [`ess_file_index/${so}/quotes/${quoteId}`]: { name, uploadedAt, area: areaValue },
+    [`ess_files/${so}/quote`]: null,
+    [`ess_file_index/${so}/quote`]: null,
+  });
+  return quoteId;
+}
+
+// Orden load-bearing, igual que purgeEssFiles: el nodo pesado primero.
+export async function removeEssQuote(so, quoteId) {
+  if (!isConfigured || !db) throw new Error('FIREBASE_NOT_CONFIGURED');
+  await remove(ref(db, `ess_files/${so}/quotes/${quoteId}`));
+  await remove(ref(db, `ess_file_index/${so}/quotes/${quoteId}`));
+}
+
+export async function loadEssQuoteIndex(so) {
+  if (!isConfigured || !db) return {};
+  const snapshot = await get(ref(db, `ess_file_index/${so}/quotes`));
+  return snapshot.exists() ? snapshot.val() : {};
+}
+
+export async function loadEssQuotes(so) {
+  if (!isConfigured || !db) return [];
+  const snapshot = await get(ref(db, `ess_files/${so}/quotes`));
+  if (!snapshot.exists()) return [];
+  return Object.entries(snapshot.val()).map(([quoteId, value]) => ({ quoteId, ...value }));
+}

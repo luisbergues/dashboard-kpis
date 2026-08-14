@@ -15,10 +15,17 @@ export function hasReachedNesting(project) {
 
 export const DEFAULT_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
-const DOC_TYPES = ['contract', 'quote', 'drawings'];
+const DOC_TYPES = ['contract', 'summary', 'drawings'];
+
+// Los Quotes son una colección, no una clave fija: un proyecto puede tener uno
+// por ambiente. Recorrer sólo DOC_TYPES dejaba un SO con únicamente Quotes
+// fuera de la retención entera, o sea con sus PDFs guardados para siempre.
+function quoteEntries(entry) {
+  return Object.values(entry?.quotes || {});
+}
 
 function hasAnyFile(entry) {
-  return DOC_TYPES.some(docType => entry?.[docType]);
+  return DOC_TYPES.some(docType => entry?.[docType]) || quoteEntries(entry).length > 0;
 }
 
 function parseTime(value) {
@@ -28,8 +35,11 @@ function parseTime(value) {
 }
 
 function latestUploadAt(entry) {
-  const times = DOC_TYPES
-    .map(docType => parseTime(entry?.[docType]?.uploadedAt))
+  const times = [
+    ...DOC_TYPES.map(docType => entry?.[docType]?.uploadedAt),
+    ...quoteEntries(entry).map(quote => quote?.uploadedAt),
+  ]
+    .map(parseTime)
     .filter(ms => ms !== null);
   return times.length > 0 ? Math.max(...times) : null;
 }

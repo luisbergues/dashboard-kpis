@@ -14,7 +14,7 @@ vi.mock('../firebase', () => ({
   remove: (...a) => remove(...a),
 }));
 
-import { fileToBase64, base64ToArrayBuffer, validateFileSize, saveEssFile, loadEssFileIndexEntry, MAX_ESS_PDF_BYTES, markForPurge, clearPurgeMark, purgeEssFiles } from '../essFiles';
+import { fileToBase64, base64ToArrayBuffer, validateFileSize, saveEssFile, loadEssFileIndexEntry, MAX_ESS_PDF_BYTES, markForPurge, clearPurgeMark, purgeEssFiles, addEssQuote, removeEssQuote, loadEssQuoteIndex, loadEssQuotes } from '../essFiles';
 
 const snap = (exists, val) => ({ exists: () => exists, val: () => val });
 
@@ -145,5 +145,105 @@ describe('purgeEssFiles', () => {
     await expect(purgeEssFiles('12485')).rejects.toThrow('permission denied');
     expect(remove).toHaveBeenCalledTimes(1);
     expect(remove.mock.calls[0][0]).toEqual({ path: 'ess_files/12485' });
+  });
+});
+
+const pdf = (name = 'Room 2.pdf') => new File([new Uint8Array([1, 2, 3])], name, { type: 'application/pdf' });
+
+describe('addEssQuote', () => {
+  it('writes the heavy node and the index in one atomic update', async () => {
+    update.mockResolvedValue();
+    const quoteId = await addEssQuote('12116', pdf(), 'Garage');
+
+    expect(update).toHaveBeenCalledTimes(1);
+    const payload = update.mock.calls[0][1];
+    expect(payload[`ess_files/12116/quotes/${quoteId}`]).toMatchObject({
+      name: 'Room 2.pdf', mimeType: 'application/pdf', area: 'Garage',
+    });
+    expect(payload[`ess_file_index/12116/quotes/${quoteId}`]).toMatchObject({
+      name: 'Room 2.pdf', area: 'Garage',
+    });
+  });
+
+  it('keeps the Base64 out of the index entry', async () => {
+    update.mockResolvedValue();
+    const quoteId = await addEssQuote('12116', pdf(), 'Garage');
+    const payload = update.mock.calls[0][1];
+    expect(payload[`ess_files/12116/quotes/${quoteId}`].data).toBeTruthy();
+    expect(payload[`ess_file_index/12116/quotes/${quoteId}`].data).toBeUndefined();
+  });
+
+  // Sin esto quedan megabytes de Base64 huérfanos del modelo de ranura única
+  // hasta que se dispare la retención.
+  it('clears the legacy single-quote keys in the same write', async () => {
+    update.mockResolvedValue();
+    await addEssQuote('12116', pdf(), 'Garage');
+    const payload = update.mock.calls[0][1];
+    expect(payload['ess_files/12116/quote']).toBeNull();
+    expect(payload['ess_file_index/12116/quote']).toBeNull();
+  });
+
+  it('gives two quotes different ids', async () => {
+    update.mockResolvedValue();
+    const first = await addEssQuote('12116', pdf(), 'Garage');
+    const second = await addEssQuote('12116', pdf(), 'MWIC');
+    expect(first).not.toBe(second);
+  });
+
+  it('stores a null area when detection failed', async () => {
+    update.mockResolvedValue();
+    const quoteId = await addEssQuote('12116', pdf(), null);
+    const payload = update.mock.calls[0][1];
+    expect(payload[`ess_file_index/12116/quotes/${quoteId}`].area).toBeNull();
+  });
+
+  it('rejects an oversized file before touching the database', async () => {
+    const huge = { size: MAX_ESS_PDF_BYTES + 1, name: 'big.pdf', type: 'application/pdf' };
+    await expect(addEssQuote('12116', huge, 'Garage')).rejects.toThrow('FILE_TOO_LARGE');
+    expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe('removeEssQuote', () => {
+  // Mismo orden que purgeEssFiles: primero el nodo pesado. Si falla en el
+  // medio queda el índice apuntando a algo que no está — visible y
+  // reintentable — y no Base64 sin nada que lo referencie.
+  it('removes the heavy node before the index entry', async () => {
+    remove.mockResolvedValue();
+    await removeEssQuote('12116', 'q_1');
+    expect(remove.mock.calls.map(c => c[0].path)).toEqual([
+      'ess_files/12116/quotes/q_1',
+      'ess_file_index/12116/quotes/q_1',
+    ]);
+  });
+});
+
+describe('loadEssQuoteIndex', () => {
+  it('returns the stored entries', async () => {
+    get.mockResolvedValue(snap(true, { q_1: { name: 'a.pdf', area: 'Garage' } }));
+    await expect(loadEssQuoteIndex('12116')).resolves.toEqual({ q_1: { name: 'a.pdf', area: 'Garage' } });
+  });
+
+  it('returns an empty object when the project has no quotes', async () => {
+    get.mockResolvedValue(snap(false, null));
+    await expect(loadEssQuoteIndex('12116')).resolves.toEqual({});
+  });
+});
+
+describe('loadEssQuotes', () => {
+  it('returns an array carrying each quote id', async () => {
+    get.mockResolvedValue(snap(true, {
+      q_1: { name: 'a.pdf', data: 'AAA', area: 'Garage' },
+      q_2: { name: 'b.pdf', data: 'BBB', area: 'MWIC' },
+    }));
+    const quotes = await loadEssQuotes('12116');
+    expect(quotes).toHaveLength(2);
+    expect(quotes.map(q => q.quoteId)).toEqual(['q_1', 'q_2']);
+    expect(quotes[0].data).toBe('AAA');
+  });
+
+  it('returns an empty array when the project has no quotes', async () => {
+    get.mockResolvedValue(snap(false, null));
+    await expect(loadEssQuotes('12116')).resolves.toEqual([]);
   });
 });

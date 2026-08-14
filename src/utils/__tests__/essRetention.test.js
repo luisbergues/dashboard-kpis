@@ -187,6 +187,59 @@ describe('planRetention', () => {
     const plan = planRetention({ projects: null, fileIndex: null, now: NOW });
     expect(plan).toEqual({ toMark: [], toUnmark: [], toPurge: [], orphans: [] });
   });
+
+  // Un SO cuyos únicos archivos son Quotes tiene que entrar a la retención
+  // igual. Con la lista fija de docTypes daba 'sin archivos' y sus PDFs no se
+  // borraban nunca.
+  it('marks a project whose only files are quotes', () => {
+    const plan = planRetention({
+      projects: [nesting],
+      fileIndex: { 100: { quotes: { q_1: file() } } },
+      now: NOW,
+    });
+    expect(plan.toMark).toEqual(['100']);
+  });
+
+  it('still ignores a project with no files at all', () => {
+    const plan = planRetention({
+      projects: [nesting],
+      fileIndex: { 100: { quotes: {} } },
+      now: NOW,
+    });
+    expect(plan.toMark).toEqual([]);
+  });
+
+  // Subir un Quote después de la marca significa que los archivos volvieron a
+  // hacer falta; el borrado programado se cancela.
+  it('unmarks when a quote was uploaded after the purge mark', () => {
+    const plan = planRetention({
+      projects: [nesting],
+      fileIndex: {
+        100: {
+          contract: file(),
+          quotes: { q_1: file(iso(NOW - 1 * DAY)) },
+          purgeMarkedAt: iso(NOW - 8 * DAY),
+        },
+      },
+      now: NOW,
+    });
+    expect(plan.toUnmark).toEqual(['100']);
+    expect(plan.toPurge).toEqual([]);
+  });
+
+  it('purges when every quote predates the mark', () => {
+    const plan = planRetention({
+      projects: [nesting],
+      fileIndex: {
+        100: {
+          quotes: { q_1: file(iso(NOW - 30 * DAY)) },
+          purgeMarkedAt: iso(NOW - 8 * DAY),
+        },
+      },
+      now: NOW,
+    });
+    expect(plan.toPurge).toEqual(['100']);
+  });
 });
 
 describe('daysUntilPurge', () => {
