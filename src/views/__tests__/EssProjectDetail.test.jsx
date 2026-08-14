@@ -84,6 +84,20 @@ describe('EssProjectDetail quote collection', () => {
     await waitFor(() => expect(removeEssQuote).toHaveBeenCalledWith('12116', 'q_1'));
   });
 
+  // Every other mutating path in this screen surfaces failures through
+  // uploadErrors (handleFileSelect, handleQuoteSelect). A delete that only
+  // console.error's leaves the row on screen with no explanation.
+  it('reports it when removing a quote fails', async () => {
+    loadEssQuoteIndex.mockResolvedValue({ q_1: { name: 'a.pdf', area: 'Garage' } });
+    removeEssQuote.mockRejectedValue(new Error('boom'));
+    renderView();
+    await waitFor(() => expect(screen.getByText('Garage')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /remove Garage/i }));
+    await waitFor(() => expect(screen.getByText(/failed to remove this quote/i)).toBeTruthy());
+    // The failed removal must not have quietly dropped the row.
+    expect(screen.getByText('Garage')).toBeTruthy();
+  });
+
   // El input de archivo tiene que ser enfocable: con display:none no hay forma
   // de subir un PDF con teclado.
   it('gives every file input a reachable, distinguishable label', async () => {

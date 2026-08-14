@@ -156,11 +156,13 @@ export default function EssProjectDetail({ project, materials, onBack }) {
   };
 
   const handleQuoteRemove = async (quoteId) => {
+    setUploadErrors(prev => ({ ...prev, quotes: null }));
     try {
       await removeEssQuote(project.so, quoteId);
       await refreshQuotes();
     } catch (error) {
       console.error('Failed to remove quote:', error);
+      setUploadErrors(prev => ({ ...prev, quotes: t('No se pudo quitar este Quote.', 'Failed to remove this quote.') }));
     }
   };
 
@@ -250,7 +252,7 @@ export default function EssProjectDetail({ project, materials, onBack }) {
                 id={`ess-file-${docType}`}
                 type="file"
                 accept="application/pdf"
-                aria-label={`${slotLabel(docType)} PDF`}
+                aria-label={t(`PDF de ${slotLabel(docType)}`, `${slotLabel(docType)} PDF`)}
                 className="visually-hidden"
                 onChange={e => handleFileSelect(docType, e.target.files?.[0])}
                 disabled={isUploading[docType]}
