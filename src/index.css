@@ -632,3 +632,18 @@ h1, h2, h3, h4, h5, h6 {
   background-attachment: local, scroll;
 }
 
+/* Oculta visualmente sin sacar del orden de foco. display:none y
+   visibility:hidden hacen el elemento inalcanzable por teclado, que es
+   exactamente lo que rompía la carga de PDFs. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
