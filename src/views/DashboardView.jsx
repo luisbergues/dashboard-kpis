@@ -524,14 +524,15 @@ export default function DashboardView({ data, weeklyHistory = [], projectHistory
         </SectionErrorBoundary>
       )}
 
-      {/* Week over Week Comparison (2/3 width, left) alongside a side column
-          (1/3 width, right) stacking the compact Financial Impact pill (when
-          there's data) and the Executive/Weekly Summary — previously that
+      {/* Week over Week Comparison (left) alongside a side column (right)
+          stacking the compact Financial Impact pill (when there's data) and
+          the Executive/Weekly Summary — equal-width columns so this row's
+          split lines up with the KPI/alert rows above it. Previously that
           summary card sat in its own full-width row below, leaving the space
           right of the chart empty whenever there was no Financial Impact data
           (the chart, as the grid's only item, fell into the first/narrow
           track instead of the row staying balanced). */}
-      <div className="chart-and-fi-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '12px', alignItems: 'stretch' }}>
+      <div className="chart-and-fi-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '12px', alignItems: 'stretch' }}>
         <SectionErrorBoundary title="Historical Data Error">
           <section className="glass-card chart-section-full">
             <div className="chart-section-header">
