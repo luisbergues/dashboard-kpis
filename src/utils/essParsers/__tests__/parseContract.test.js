@@ -23,6 +23,26 @@ describe('parseContractText', () => {
     expect(parseContractText(sampleContract).baseboardsIncluded).toBe(false);
   });
 
+  // Redacciones reales: el Summary de un Quote real dice 'Deposit of 50%
+  // required to Secure price', y los Contracts suelen separar la etiqueta del
+  // número con puntos de relleno. La regex vieja exigía que el número viniera
+  // pegado a la palabra, así que ninguna de las dos matcheaba.
+  it.each([
+    ['Deposit of 50% required to Secure price and set installation date.', 50],
+    ['Deposit Required ......... 50%', 50],
+    ['DEPOSIT: 30 %', 30],
+  ])('lee el depósito de %j', (line, expected) => {
+    expect(parseContractText(line).depositPercent).toBe(expected);
+  });
+
+  // El relleno se corta en el salto de renglón para no saltar de una cláusula a
+  // otra y tomar un porcentaje que no es el del depósito.
+  it('no cruza de renglón para agarrar un porcentaje ajeno', () => {
+    const result = parseContractText('Deposit due at signing.\nDiscount 5.00%');
+    expect(result.depositPercent).toBeNull();
+    expect(result.warnings).toContain('DEPOSIT_NOT_FOUND');
+  });
+
   it('returns EMPTY_TEXT for blank input instead of guessing', () => {
     const result = parseContractText('');
     expect(result.warnings).toContain('EMPTY_TEXT');

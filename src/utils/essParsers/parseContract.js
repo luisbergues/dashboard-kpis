@@ -1,7 +1,12 @@
 // First-pass heuristics based on the field descriptions given for this
 // project's Contracts. Expect to recalibrate these regexes against real
 // Contract PDFs — see the design doc's "Corrección de errores" section.
-const DEPOSIT_RE = /DEPOSIT[:\s]+(\d{1,3})\s*%/i;
+// El depósito no viene pegado a la palabra: el Summary real dice 'Deposit of
+// 50% required to Secure price', y los Contracts suelen usar puntos de relleno
+// ('Deposit Required ..... 50%'). Se permite cualquier relleno corto entre la
+// palabra y el porcentaje, pero no un salto de renglón, para no cruzar de una
+// cláusula a otra y tomar un porcentaje ajeno.
+const DEPOSIT_RE = /DEPOSIT[^\n%]{0,40}?(\d{1,3})\s*%/i;
 const TEAROUT_RE = /TEAROUT[^\n]{0,40}?(INCLUDED|YES|NOT INCLUDED|NO)/i;
 const BASEBOARDS_RE = /BASEBOARDS?[^\n]{0,40}?(INCLUDED|YES|NOT INCLUDED|NO)/i;
 

@@ -127,3 +127,41 @@ describe('detectQuoteArea', () => {
     expect(detectQuoteArea('Bill To:\nArea:')).toBeNull();
   });
 });
+
+// La etiqueta 'Area:' es la única señal de ambiente verificada contra Quotes
+// reales, pero hasta ahora sólo la usaba detectQuoteArea: parseQuoteText seguía
+// con el renglón-en-mayúsculas, así que los tres Quotes reales devolvían
+// NO_AREAS_FOUND aunque el ambiente estuviera ahí a la vista.
+describe('parseQuoteText sobre Quotes reales', () => {
+  it('nombra el área con la etiqueta Area:, no con un renglón en mayúsculas', () => {
+    expect(parseQuoteText(fixture('area-mwic.txt')).areas.map(a => a.name)).toEqual(['MWIC']);
+    expect(parseQuoteText(fixture('area-ric.txt')).areas.map(a => a.name)).toEqual(['RIC']);
+  });
+
+  // 'Garage' es minúscula: el regex viejo no podía verlo de ninguna manera.
+  it('encuentra un área que no está en mayúsculas', () => {
+    expect(parseQuoteText(fixture('area-garage.txt')).areas.map(a => a.name)).toEqual(['Garage']);
+  });
+
+  it('no reporta NO_AREAS_FOUND en un Quote real', () => {
+    for (const name of ['area-mwic.txt', 'area-ric.txt', 'area-garage.txt']) {
+      expect(parseQuoteText(fixture(name)).warnings).not.toContain('NO_AREAS_FOUND');
+    }
+  });
+
+  // El Summary trae 'Area' como encabezado de tabla, sin dos puntos, así que
+  // cae al respaldo de mayúsculas. Ninguna de las áreas que encuentra tiene un
+  // solo ítem: es una hoja de totales, no un Quote de ambiente. Lo que importa
+  // es que no aporte ítems fantasma al ESS.
+  it('no saca ningún ítem del Summary, que es una hoja de totales', () => {
+    const result = parseQuoteText(fixture('summary.txt'));
+    expect(result.areas.flatMap(a => a.items)).toEqual([]);
+  });
+
+  // Con la etiqueta presente, un renglón suelto en mayúsculas ya no puede
+  // abrir un área falsa: 'Accessories' y 'Area Price' no son ambientes.
+  it('no abre áreas falsas con los encabezados en mayúsculas del documento', () => {
+    const result = parseQuoteText(fixture('area-mwic.txt'));
+    expect(result.areas).toHaveLength(1);
+  });
+});

@@ -48,6 +48,17 @@ export function parseQuoteText(text) {
   let currentArea = null;
   const { color, line: colorLine } = findColorLine(lines);
 
+  // La etiqueta 'Area:' es la única señal de ambiente verificada contra Quotes
+  // reales, así que cuando está manda: nombra el área y desactiva la regla de
+  // mayúsculas, que sobre un Quote real abre un área por cada encabezado de
+  // tabla ('Accessories', 'Area Price') y ninguna por 'Garage'. Sin etiqueta se
+  // vuelve a la regla vieja, que es lo que sostiene a los Quotes sintéticos.
+  const labelledArea = detectQuoteArea(text);
+  if (labelledArea) {
+    currentArea = { name: labelledArea, items: [] };
+    areas.push(currentArea);
+  }
+
   for (const line of lines) {
     // A bare color line ('BLEACHED LINEN') is shaped exactly like an area
     // header, and would otherwise open an area that never gets any items.
@@ -65,7 +76,7 @@ export function parseQuoteText(text) {
       });
       continue;
     }
-    if (AREA_HEADER_RE.test(line)) {
+    if (!labelledArea && AREA_HEADER_RE.test(line)) {
       currentArea = { name: line, items: [] };
       areas.push(currentArea);
     }

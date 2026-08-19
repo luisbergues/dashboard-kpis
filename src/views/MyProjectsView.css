@@ -849,6 +849,15 @@
   gap: 24px;
 }
 
+/* Grid items default to min-width: auto, which stops them from shrinking
+   below their content's intrinsic width — the chart canvas (sized by
+   Chart.js's ResizeObserver) was forcing the 1fr track wider than available
+   space instead of the other way around, blowing out the grid and clipping
+   against html/body's overflow-x: hidden. min-width: 0 lets the track win. */
+.analytics-card {
+  min-width: 0;
+}
+
 @media (max-width: 767px) {
   .projects-analytics-grid {
     grid-template-columns: 1fr;
