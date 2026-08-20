@@ -55,6 +55,66 @@ function shortWeekLabel(weekKey) {
   return `W${week}`;
 }
 
+// Semantica de la "Workload Distribution Guide" de mas abajo: amarillo por
+// debajo del 10%, naranja por encima del 30%. Vivia en las barras de % que
+// esta vista tenia; ahora colorea la tabla de "% of Total", que es la que
+// muestra ese mismo numero.
+function workloadAlert(percent) {
+  if (percent < 10) return { color: '#FFE600', badgeBg: 'rgba(255,230,0,0.1)', badge: '< 10% Low' };
+  if (percent > 30) return { color: '#FF9500', badgeBg: 'rgba(255,149,0,0.1)', badge: '> 30% High' };
+  return { color: '#09D1C7', badgeBg: null, badge: null };
+}
+
+// Una de las tablas por periodo de la hoja (Last 30 Days / 31-60 Days) con las
+// cuatro columnas de puntos. El titulo sale de la propia hoja, asi que el rango
+// de fechas se mantiene solo cuando la hoja rota de mes.
+function PeriodTable({ table, colors, emptyLabel }) {
+  if (!table || table.rows.length === 0) {
+    return <p style={{ color: colors.body, fontSize: '0.9rem', margin: 0 }}>{emptyLabel}</p>;
+  }
+
+  const th = { padding: '10px 12px', color: colors.accent, fontWeight: 600, whiteSpace: 'nowrap' };
+  const td = { padding: '10px 12px', color: colors.body, whiteSpace: 'nowrap' };
+
+  return (
+    <div>
+      <h5 style={{ color: colors.title, fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
+        {table.title}
+      </h5>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: colors.title, fontSize: '0.88rem' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+              <th style={th}>Engineer</th>
+              <th style={th}>Own Points</th>
+              <th style={th}>Revision Points</th>
+              <th style={th}>Nesting Points</th>
+              <th style={th}>Total KPI</th>
+            </tr>
+          </thead>
+          <tbody>
+            {table.rows.map((row, index) => (
+              <tr
+                key={index}
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                // Los SOs que sumaron en el periodo (columna F de la hoja) no
+                // entran como columna propia, pero sirven para auditar una fila.
+                title={row.projects ? `SO: ${row.projects}` : undefined}
+              >
+                <td style={{ ...td, color: colors.title }}>{row.engineer}</td>
+                <td style={td}>{formatCurrency(row.ownPoints)}</td>
+                <td style={td}>{formatCurrency(row.revisionPoints)}</td>
+                <td style={td}>{formatCurrency(row.nestingPoints)}</td>
+                <td style={{ ...td, fontWeight: 'bold', color: '#09D1C7' }}>{formatCurrency(row.totalKPI)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function DesignQualityView() {
   const { language } = useLanguage();
   const { theme } = useTheme();
@@ -68,7 +128,7 @@ export default function DesignQualityView() {
     muted: isLight ? '#64748b' : '#64748B',
     accent: isLight ? '#0f766e' : '#80EE98',
   };
-  const [data, setData] = useState({ kpiData: [], analysisText: '' });
+  const [data, setData] = useState({ kpiData: [], last30Days: null, days31to60: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showGuide, setShowGuide] = useState(false);
@@ -195,7 +255,7 @@ export default function DesignQualityView() {
     return <div className="error-state text-danger" style={{ padding: '24px', color: '#FF2E93' }}>{error}</div>;
   }
 
-  const { kpiData } = data;
+  const { kpiData, last30Days, days31to60 } = data;
 
   return (
     <div className="design-quality-view animate-fade-in" style={{ padding: '24px' }}>
@@ -215,24 +275,28 @@ export default function DesignQualityView() {
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
                   <th style={{ padding: '16px', color: C.accent, fontWeight: 600 }}>Engineer</th>
-                  <th style={{ padding: '16px', color: C.accent, fontWeight: 600 }}>Own Points</th>
-                  <th style={{ padding: '16px', color: C.accent, fontWeight: 600 }}>Revision Points</th>
-                  <th style={{ padding: '16px', color: C.accent, fontWeight: 600 }}>Nesting Points</th>
-                  <th style={{ padding: '16px', color: C.accent, fontWeight: 600 }}>Total KPI</th>
+                  <th style={{ padding: '16px', color: C.accent, fontWeight: 600 }}>% of Total</th>
                 </tr>
               </thead>
               <tbody>
-                {kpiData.map((row, index) => (
-                  <tr key={index} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }} 
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                    <td style={{ padding: '16px' }}>{row.engineer}</td>
-                    <td style={{ padding: '16px', color: C.body }}>{formatCurrency(row.ownPoints)}</td>
-                    <td style={{ padding: '16px', color: C.body }}>{formatCurrency(row.revisionPoints)}</td>
-                    <td style={{ padding: '16px', color: C.body }}>{formatCurrency(row.nestingPoints)}</td>
-                    <td style={{ padding: '16px', fontWeight: 'bold', color: '#09D1C7' }}>{formatCurrency(row.totalKPI)}</td>
-                  </tr>
-                ))}
+                {kpiData.map((row, index) => {
+                  const alert = workloadAlert(row.percent);
+                  return (
+                    <tr key={index} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                      <td style={{ padding: '16px' }}>
+                        {row.engineer}
+                        {alert.badge && (
+                          <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: alert.badgeBg, color: alert.color, marginLeft: '8px' }}>
+                            {alert.badge}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '16px', fontWeight: 'bold', color: alert.color }}>{row.percent.toFixed(1)}%</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -241,37 +305,26 @@ export default function DesignQualityView() {
             <h3 style={{ color: C.title, marginBottom: '20px', fontSize: '1.25rem', fontWeight: 600 }}>KPI Distribution Analysis</h3>
             
             <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-              <div style={{ width: '100%', maxWidth: '380px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {kpiData.map((row, index) => {
-                  let barColor = 'linear-gradient(90deg, #09D1C7, #80EE98)'; // Default Mint/Cyan gradient
-                  let labelColor = '#09D1C7';
-                  let warningBadge = null;
-
-                  if (row.percent < 10) {
-                    barColor = 'linear-gradient(90deg, #FFE600, #FFAA00)'; // Yellow
-                    labelColor = '#FFE600';
-                    warningBadge = <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(255,230,0,0.1)', color: '#FFE600', marginLeft: '8px' }}>&lt; 10% Low</span>;
-                  } else if (row.percent > 30) {
-                    barColor = 'linear-gradient(90deg, #FF9500, #FF5E00)'; // Orange
-                    labelColor = '#FF9500';
-                    warningBadge = <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(255,149,0,0.1)', color: '#FF9500', marginLeft: '8px' }}>&gt; 30% High</span>;
-                  }
-
-                  return (
-                    <div key={index} style={{ color: C.title }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.9rem', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 500 }}>{row.engineer}{warningBadge}</span>
-                        <span style={{ fontWeight: 'bold', color: labelColor }}>{row.percent.toFixed(1)}%</span>
-                      </div>
-                      <div style={{ height: '8px', width: '100%', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${row.percent}%`, background: barColor, borderRadius: '4px', transition: 'width 0.5s ease-out' }}></div>
-                      </div>
-                    </div>
-                  );
-                })}
+              {/* minWidth: 0 para que el overflow-x de cada tabla actue dentro
+                  de la columna en vez de estirar el flex container. */}
+              <div style={{ flex: '2 1 460px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                <PeriodTable
+                  table={last30Days}
+                  colors={C}
+                  emptyLabel={language === 'es'
+                    ? 'La hoja no tiene la seccion "KPI Last 30 Days".'
+                    : 'The sheet has no "KPI Last 30 Days" section.'}
+                />
+                <PeriodTable
+                  table={days31to60}
+                  colors={C}
+                  emptyLabel={language === 'es'
+                    ? 'La hoja no tiene la seccion "KPI 31-60 Days".'
+                    : 'The sheet has no "KPI 31-60 Days" section.'}
+                />
               </div>
 
-              <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ flex: '1 1 280px', minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {weeklyChartData ? (
                   <div>
                     <h5 style={{ color: C.title, fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>

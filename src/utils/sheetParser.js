@@ -384,139 +384,115 @@ export async function fetchAndParseData() {
   }
 }
 
+// --- Pestaña "Personal KPI" (gid 1762634268) -------------------------------
+//
+// El tab no es una tabla: es una hoja con bloques apilados. De arriba a abajo
+// hay una tabla de totales acumulados, la tabla de proyectos (~29 columnas),
+// la tabla "% of Total", una guia de uso, cuatro tablas por periodo (30 /
+// 31-60 / 61-90 / 91-120 dias) y tres tablas "... Performance".
+//
+// Varios de esos bloques arrancan con un encabezado que dice "Engineer", y el
+// de proyectos ademas trae las columnas "Eng. Engineering" y "Own Points". Por
+// eso cada bloque se busca por su ancla propia y se corta en la primera fila
+// vacia, en vez de barrer la hoja preguntando si la fila "parece" un
+// encabezado: asi ninguna seccion puede reabrir la tabla de otra.
+
+const normalize = (value) => String(value ?? '').trim().toLowerCase();
+
+// "$41,817.63" -> 41817.63, "23.5%" -> 23.5, "" -> 0.
+const parseNumericCell = (value) => {
+  const parsed = parseFloat(String(value ?? '').replace(/[^0-9.-]+/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const isBlankRow = (row) => !row || row.every(cell => normalize(cell) === '');
+
+// Tabla "Engineer | % of Total" (A139:B146 al momento de escribir esto). Es la
+// unica fuente de porcentajes: la tabla de totales de arriba no tiene columna
+// de %, y leerla por posicion daba la lista de SOs de "Projects that Added"
+// interpretada como numero (porcentajes de 1.2e+49).
+function parsePercentTable(data) {
+  const headerIndex = data.findIndex(row =>
+    normalize(row?.[0]) === 'engineer' && normalize(row?.[1]).includes('% of total')
+  );
+  if (headerIndex === -1) return [];
+
+  const rows = [];
+  for (let i = headerIndex + 1; i < data.length; i++) {
+    const row = data[i];
+    if (isBlankRow(row)) break;
+
+    const engineer = String(row[0] ?? '').trim();
+    if (!engineer) break;
+    if (['total', 'so.team', 'team'].some(kw => normalize(engineer).includes(kw))) break;
+
+    rows.push({ engineer, percent: parseNumericCell(row[1]) });
+  }
+  return rows;
+}
+
+// Tablas por periodo: una fila-titulo ("KPI Last 30 Days (07/20 - 08/19)"),
+// una fila de encabezado y las filas de ingenieros hasta la primera vacia.
+// `titlePattern` tiene que excluir las variantes "... Performance", que se
+// llaman igual pero traen Working Days / Labor Hours en las columnas B y C.
+function parsePeriodTable(data, titlePattern) {
+  const titleIndex = data.findIndex(row => {
+    const title = String(row?.[0] ?? '').trim();
+    return titlePattern.test(title) && !/performance\s*$/i.test(title);
+  });
+  if (titleIndex === -1) return null;
+
+  const title = String(data[titleIndex][0]).trim();
+
+  // La fila siguiente deberia ser el encabezado de columnas; si la hoja lo
+  // pierde, se arranca igual desde ahi antes que devolver una tabla vacia.
+  let cursor = titleIndex + 1;
+  if (normalize(data[cursor]?.[0]) === 'engineer') cursor++;
+
+  const rows = [];
+  for (let i = cursor; i < data.length; i++) {
+    const row = data[i];
+    if (isBlankRow(row)) break;
+
+    const engineer = String(row[0] ?? '').trim();
+    if (!engineer) break;
+    if (/^kpi\b/i.test(engineer)) break;
+    if (['total', 'so.team', 'team'].some(kw => normalize(engineer).includes(kw))) break;
+
+    rows.push({
+      engineer,
+      ownPoints: parseNumericCell(row[1]),
+      revisionPoints: parseNumericCell(row[2]),
+      nestingPoints: parseNumericCell(row[3]),
+      // Columna E de la hoja, no la suma de B+C+D: la hoja calcula con
+      // precision completa y redondea al final, asi que en varias filas la
+      // suma de lo que se muestra da un centavo mas. Se muestra lo que dice
+      // la hoja.
+      totalKPI: parseNumericCell(row[4]),
+      projects: String(row[5] ?? '').trim(),
+      explanation: String(row[6] ?? '').trim(),
+    });
+  }
+
+  return { title, rows };
+}
+
+export function parseQualityCsv(csvText) {
+  const { data } = Papa.parse(csvText, { skipEmptyLines: false });
+
+  return {
+    kpiData: parsePercentTable(data),
+    last30Days: parsePeriodTable(data, /^kpi\s+last\s+30\s+days/i),
+    days31to60: parsePeriodTable(data, /^kpi\s+31\s*-\s*60\s+days/i),
+  };
+}
+
 export async function fetchAndParseQualityData() {
   try {
     const cacheBuster = `&t=${new Date().getTime()}`;
     const response = await fetch(`${QUALITY_CSV_URL}${cacheBuster}`);
     if (!response.ok) throw new Error('Failed to fetch Quality CSV data');
-    const csvText = await response.text();
-
-    const { data } = Papa.parse(csvText, { skipEmptyLines: false });
-
-    const result = {
-      kpiData: [],
-      analysisText: ''
-    };
-
-    let readingTable = false;
-    let readingAnalysis = false;
-
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      const rowString = row.join('').trim();
-      if (!rowString) continue;
-
-      // Detect start of Engineer Table
-      if (rowString.toLowerCase().includes('engineer') && rowString.toLowerCase().includes('own points')) {
-        readingTable = true;
-        readingAnalysis = false;
-        continue;
-      }
-
-      // Detect the analysis section. The sheet originally had a "KPI
-      // Distribution Analysis" section (one team-wide paragraph); it has
-      // since been replaced with "PROJECT DEEP DIVE ANALYSIS" (a per-project
-      // paragraph driven by a dropdown in the sheet). Support both headers
-      // so this keeps working whichever one is present.
-      if (
-        rowString.toLowerCase().includes('kpi distribution analysis') ||
-        rowString.toLowerCase().includes('project deep dive analysis')
-      ) {
-        readingTable = false;
-        readingAnalysis = true;
-        continue;
-      }
-
-      if (readingTable) {
-        // If we hit the total row (SO.TEAM or similar), or empty rows, or another header
-        if (row[0].toLowerCase().includes('team') || row[0].toLowerCase().includes('total') || row[0] === '') {
-          readingTable = false;
-          continue;
-        }
-
-        const engineer = row[0]?.trim();
-        // Round each component to 2 decimals BEFORE summing (matching how
-        // DesignQualityView displays each one via Intl.NumberFormat), then
-        // derive totalKPI from those rounded values instead of trusting the
-        // sheet's own total column (E). Column E is computed upstream from
-        // full-precision values and rounded independently, so it could differ
-        // from the displayed sum of the three components by a cent or two —
-        // this way what's shown always adds up exactly.
-        const round2 = (n) => Math.round(n * 100) / 100;
-        const ownPoints = round2(parseFloat(row[1]?.replace(/[^0-9.-]+/g, "")) || 0);
-        const revisionPoints = round2(parseFloat(row[2]?.replace(/[^0-9.-]+/g, "")) || 0);
-        const nestingPoints = round2(parseFloat(row[3]?.replace(/[^0-9.-]+/g, "")) || 0);
-        const totalKPI = round2(ownPoints + revisionPoints + nestingPoints);
-        // Parse % of total which is likely in column index 5 (6th col) or we look at the second table.
-        // We can get it from the secondary table or directly if it's there
-        const percent = parseFloat(row[5]?.replace(/[^0-9.-]+/g, "")) || 0;
-
-        // Validate that engineer is a real name (only letters and spaces, not a number, and not empty)
-        const isNumeric = /^\d+$/.test(engineer.replace(/[\s,$.%]+/g, ''));
-        const isHeaderOrTotal = [
-          'engineer', 'so.team', 'team', 'total', 'grand total', 
-          'reviewer', 'multiplier', 'column', '•'
-        ].some(kw => engineer.toLowerCase().includes(kw));
-        
-        // Also reject names that start with a numbering like "3. " or "4. "
-        const isNumbering = /^\d+\.\s*/.test(engineer);
-
-        if (engineer && !isNumeric && !isHeaderOrTotal && !isNumbering && engineer.length > 1) {
-          result.kpiData.push({
-            engineer,
-            ownPoints,
-            revisionPoints,
-            nestingPoints,
-            totalKPI,
-            percent: percent || 0
-          });
-        }
-      } else if (readingAnalysis) {
-        // Find the paragraph text. Older sheets phrased it "analysis
-        // corresponding to..."; the current "PROJECT DEEP DIVE ANALYSIS"
-        // section phrases it "Analysis for Project ...".
-        const fullRowText = row.join(' ').trim();
-        const lowerText = fullRowText.toLowerCase();
-        if (
-          lowerText.includes('analysis corresponding to') ||
-          lowerText.includes('analysis for project')
-        ) {
-          result.analysisText = fullRowText;
-          readingAnalysis = false; // We got the main text, stop reading analysis text
-        }
-      }
-    }
-
-    // Secondary table lookup for percentages if they were not in the first table
-    // Sometimes in the sheet they are placed elsewhere. Let's make sure each engineer has a percentage.
-    if (result.kpiData.length > 0) {
-      let readingPercentTable = false;
-      for (let i = 0; i < data.length; i++) {
-        const row = data[i];
-        const rowString = row.join('').trim();
-        
-        if (rowString.toLowerCase().includes('engineer') && rowString.toLowerCase().includes('% of total')) {
-          readingPercentTable = true;
-          continue;
-        }
-
-        if (readingPercentTable) {
-          if (!row[0] || row[0].toLowerCase().includes('total') || row[0] === '') {
-            readingPercentTable = false;
-            continue;
-          }
-          const engName = row[0].trim();
-          const pct = parseFloat(row[1]?.replace(/[^0-9.-]+/g, "")) || 0;
-
-          const existing = result.kpiData.find(e => e.engineer.toLowerCase() === engName.toLowerCase());
-          if (existing) {
-            existing.percent = pct;
-          }
-        }
-      }
-    }
-
-    return result;
+    return parseQualityCsv(await response.text());
   } catch (error) {
     console.error('Error parsing Quality sheet:', error);
     throw error;
