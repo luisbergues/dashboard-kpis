@@ -191,6 +191,54 @@ describe('parseQualityCsv — periodos 61-90 y 91-120', () => {
   });
 });
 
+// La hoja no trae columna de % en las tablas por periodo: se deriva del Total
+// KPI de cada tabla, no del acumulado, para que cada periodo cierre en 100%.
+describe('parseQualityCsv — % del total por periodo', () => {
+  const { last30Days, days31to60, days61to90, days91to120 } = parseQualityCsv(CSV);
+
+  it('reparte el 100% del periodo entre sus ingenieros', () => {
+    // 33,942.99 y 94,546.32 sobre un total de 128,489.31.
+    expect(last30Days.rows[0].percentOfTotal).toBeCloseTo(26.42, 2);
+    expect(last30Days.rows[1].percentOfTotal).toBeCloseTo(73.58, 2);
+    expect(last30Days.periodTotal).toBeCloseTo(128489.31, 2);
+  });
+
+  it('cada tabla suma 100% por su cuenta', () => {
+    for (const table of [last30Days, days31to60, days61to90, days91to120]) {
+      const sum = table.rows.reduce((acc, row) => acc + row.percentOfTotal, 0);
+      expect(sum).toBeCloseTo(100, 6);
+    }
+  });
+
+  it('el periodTotal es la suma de los Total KPI de la tabla', () => {
+    for (const table of [last30Days, days31to60, days61to90, days91to120]) {
+      const sum = table.rows.reduce((acc, row) => acc + row.totalKPI, 0);
+      expect(table.periodTotal).toBeCloseTo(sum, 2);
+    }
+  });
+
+  it('una fila en cero da 0% sin romper el reparto', () => {
+    const jose = days91to120.rows.find(r => r.engineer === 'Jose');
+    expect(jose.percentOfTotal).toBe(0);
+    expect(days91to120.rows.find(r => r.engineer === 'Joaquín').percentOfTotal).toBeCloseTo(100, 6);
+  });
+
+  // Si un periodo entero queda en cero (todos ON HOLD) no puede haber
+  // division por cero ni NaN cayendo al toFixed() de la vista.
+  it('un periodo entero en cero no divide por cero', () => {
+    const zeroed = [
+      'KPI Last 30 Days (07/20 - 08/19)',
+      'Engineer,Own Points,Revision Points,Nesting Points,Total KPI,Projects that Added,Dynamic Explanation',
+      'Joaquín,$0.00,$0.00,$0.00,$0.00,,',
+      'Santiago,$0.00,$0.00,$0.00,$0.00,,',
+    ].join('\n');
+
+    const { last30Days: table } = parseQualityCsv(zeroed);
+    expect(table.periodTotal).toBe(0);
+    expect(table.rows.map(r => r.percentOfTotal)).toEqual([0, 0]);
+  });
+});
+
 describe('parseQualityCsv — hoja sin las secciones esperadas', () => {
   it('devuelve estructura vacia en vez de explotar', () => {
     const result = parseQualityCsv('foo,bar\n1,2');

@@ -474,7 +474,21 @@ function parsePeriodTable(data, titlePattern) {
     });
   }
 
-  return { title, rows };
+  // La hoja no trae columna de % en estas tablas (solo la tiene el bloque
+  // acumulado "% of Total"), asi que se deriva aca: cuanto del Total KPI del
+  // periodo puso cada uno. Se calcula sobre las filas de esta tabla, no sobre
+  // el acumulado, para que cada periodo cierre en 100% por su cuenta.
+  //
+  // Ojo con leerlo como "% del monto facturado": son puntos KPI. El nesting
+  // suma un 30% aparte del valor del proyecto y los multiplicadores (No Holes
+  // 1.25x, Strip Lights, Multicolor) lo inflan mas, asi que la base de cada
+  // periodo es mayor que la suma de los contratos.
+  const periodTotal = rows.reduce((sum, row) => sum + row.totalKPI, 0);
+  rows.forEach(row => {
+    row.percentOfTotal = periodTotal > 0 ? (row.totalKPI / periodTotal) * 100 : 0;
+  });
+
+  return { title, rows, periodTotal };
 }
 
 export function parseQualityCsv(csvText) {

@@ -55,16 +55,6 @@ function shortWeekLabel(weekKey) {
   return `W${week}`;
 }
 
-// Semantica de la "Workload Distribution Guide" de mas abajo: amarillo por
-// debajo del 10%, naranja por encima del 30%. Vivia en las barras de % que
-// esta vista tenia; ahora colorea la tabla de "% of Total", que es la que
-// muestra ese mismo numero.
-function workloadAlert(percent) {
-  if (percent < 10) return { color: '#FFE600', badgeBg: 'rgba(255,230,0,0.1)', badge: '< 10% Low' };
-  if (percent > 30) return { color: '#FF9500', badgeBg: 'rgba(255,149,0,0.1)', badge: '> 30% High' };
-  return { color: '#09D1C7', badgeBg: null, badge: null };
-}
-
 // Una de las tablas por periodo de la hoja (Last 30 Days / 31-60 Days) con las
 // cuatro columnas de puntos. El titulo sale de la propia hoja, asi que el rango
 // de fechas se mantiene solo cuando la hoja rota de mes.
@@ -90,6 +80,7 @@ function PeriodTable({ table, colors, emptyLabel }) {
               <th style={th}>Revision Points</th>
               <th style={th}>Nesting Points</th>
               <th style={th}>Total KPI</th>
+              <th style={th}>% of Total</th>
             </tr>
           </thead>
           <tbody>
@@ -106,9 +97,26 @@ function PeriodTable({ table, colors, emptyLabel }) {
                 <td style={td}>{formatCurrency(row.revisionPoints)}</td>
                 <td style={td}>{formatCurrency(row.nestingPoints)}</td>
                 <td style={{ ...td, fontWeight: 'bold', color: '#09D1C7' }}>{formatCurrency(row.totalKPI)}</td>
+                {/* Sin los colores de alerta de la tabla de arriba a proposito:
+                    los umbrales 10/30% de la guia estan calibrados sobre el
+                    acumulado, y en una ventana de 30 dias medio equipo los
+                    cruzaria sin que eso signifique nada. */}
+                <td style={{ ...td, fontWeight: 600, color: colors.title }}>{row.percentOfTotal.toFixed(1)}%</td>
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+              <td style={{ ...td, color: colors.muted, fontWeight: 600 }}>Total</td>
+              <td style={td} colSpan={3}></td>
+              <td style={{ ...td, color: colors.muted, fontWeight: 600 }}>{formatCurrency(table.periodTotal)}</td>
+              {/* Un periodo entero en cero (todos ON HOLD, por ejemplo) deja
+                  los porcentajes en 0: el pie no puede afirmar 100%. */}
+              <td style={{ ...td, color: colors.muted, fontWeight: 600 }}>
+                {table.periodTotal > 0 ? '100.0%' : '0.0%'}
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
@@ -261,8 +269,6 @@ export default function DesignQualityView() {
     return <div className="error-state text-danger" style={{ padding: '24px', color: '#FF2E93' }}>{error}</div>;
   }
 
-  const { kpiData } = data;
-
   // Los cuatro bloques por periodo de la hoja, en el mismo orden en que
   // aparecen ahi. `sheetSection` es el titulo que se busca en el tab, y solo
   // se muestra si esa seccion no aparecio.
@@ -273,6 +279,13 @@ export default function DesignQualityView() {
     { key: 'days91to120', sheetSection: 'KPI 91-120 Days' },
   ];
 
+  // `kpiData` (el bloque acumulado "% of Total") ya no se muestra, pero sigue
+  // alimentando el snapshot semanal de RTDB y con eso el grafico de evolucion,
+  // asi que cuenta como contenido: la vista solo esta vacia si tampoco hay
+  // ninguna tabla por periodo.
+  const hasPeriodData = periodTables.some(({ key }) => data[key]?.rows.length > 0);
+  const isEmpty = !hasPeriodData && data.kpiData.length === 0;
+
   return (
     <div className="design-quality-view animate-fade-in" style={{ padding: '24px' }}>
       <header className="dashboard-header" style={{ marginBottom: '24px' }}>
@@ -280,43 +293,12 @@ export default function DesignQualityView() {
         <p className="page-subtitle text-muted" style={{ color: C.body }}>KPI Distribution Analysis</p>
       </header>
 
-      {kpiData.length === 0 ? (
+      {isEmpty ? (
         <div className="glass-card text-muted" style={{ padding: '24px', color: C.body }}>
           No data found in the spreadsheet tab.
         </div>
       ) : (
         <>
-          <div className="glass-card" style={{ marginBottom: '24px', overflowX: 'auto', padding: '0 0 16px 0' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: C.title }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                  <th style={{ padding: '16px', color: C.accent, fontWeight: 600 }}>Engineer</th>
-                  <th style={{ padding: '16px', color: C.accent, fontWeight: 600 }}>% of Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {kpiData.map((row, index) => {
-                  const alert = workloadAlert(row.percent);
-                  return (
-                    <tr key={index} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                      <td style={{ padding: '16px' }}>
-                        {row.engineer}
-                        {alert.badge && (
-                          <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: alert.badgeBg, color: alert.color, marginLeft: '8px' }}>
-                            {alert.badge}
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ padding: '16px', fontWeight: 'bold', color: alert.color }}>{row.percent.toFixed(1)}%</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
           <div className="glass-card" style={{ marginBottom: '24px' }}>
             <h3 style={{ color: C.title, marginBottom: '20px', fontSize: '1.25rem', fontWeight: 600 }}>KPI Distribution Analysis</h3>
             
