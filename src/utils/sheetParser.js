@@ -484,6 +484,8 @@ export function parseQualityCsv(csvText) {
     kpiData: parsePercentTable(data),
     last30Days: parsePeriodTable(data, /^kpi\s+last\s+30\s+days/i),
     days31to60: parsePeriodTable(data, /^kpi\s+31\s*-\s*60\s+days/i),
+    days61to90: parsePeriodTable(data, /^kpi\s+61\s*-\s*90\s+days/i),
+    days91to120: parsePeriodTable(data, /^kpi\s+91\s*-\s*120\s+days/i),
   };
 }
 

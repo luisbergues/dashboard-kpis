@@ -128,7 +128,13 @@ export default function DesignQualityView() {
     muted: isLight ? '#64748b' : '#64748B',
     accent: isLight ? '#0f766e' : '#80EE98',
   };
-  const [data, setData] = useState({ kpiData: [], last30Days: null, days31to60: null });
+  const [data, setData] = useState({
+    kpiData: [],
+    last30Days: null,
+    days31to60: null,
+    days61to90: null,
+    days91to120: null,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showGuide, setShowGuide] = useState(false);
@@ -255,7 +261,17 @@ export default function DesignQualityView() {
     return <div className="error-state text-danger" style={{ padding: '24px', color: '#FF2E93' }}>{error}</div>;
   }
 
-  const { kpiData, last30Days, days31to60 } = data;
+  const { kpiData } = data;
+
+  // Los cuatro bloques por periodo de la hoja, en el mismo orden en que
+  // aparecen ahi. `sheetSection` es el titulo que se busca en el tab, y solo
+  // se muestra si esa seccion no aparecio.
+  const periodTables = [
+    { key: 'last30Days', sheetSection: 'KPI Last 30 Days' },
+    { key: 'days31to60', sheetSection: 'KPI 31-60 Days' },
+    { key: 'days61to90', sheetSection: 'KPI 61-90 Days' },
+    { key: 'days91to120', sheetSection: 'KPI 91-120 Days' },
+  ];
 
   return (
     <div className="design-quality-view animate-fade-in" style={{ padding: '24px' }}>
@@ -308,20 +324,16 @@ export default function DesignQualityView() {
               {/* minWidth: 0 para que el overflow-x de cada tabla actue dentro
                   de la columna en vez de estirar el flex container. */}
               <div style={{ flex: '2 1 460px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '28px' }}>
-                <PeriodTable
-                  table={last30Days}
-                  colors={C}
-                  emptyLabel={language === 'es'
-                    ? 'La hoja no tiene la seccion "KPI Last 30 Days".'
-                    : 'The sheet has no "KPI Last 30 Days" section.'}
-                />
-                <PeriodTable
-                  table={days31to60}
-                  colors={C}
-                  emptyLabel={language === 'es'
-                    ? 'La hoja no tiene la seccion "KPI 31-60 Days".'
-                    : 'The sheet has no "KPI 31-60 Days" section.'}
-                />
+                {periodTables.map(({ key, sheetSection }) => (
+                  <PeriodTable
+                    key={key}
+                    table={data[key]}
+                    colors={C}
+                    emptyLabel={language === 'es'
+                      ? `La hoja no tiene la seccion "${sheetSection}".`
+                      : `The sheet has no "${sheetSection}" section.`}
+                  />
+                ))}
               </div>
 
               <div style={{ flex: '1 1 280px', minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '16px' }}>

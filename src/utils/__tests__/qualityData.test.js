@@ -41,6 +41,12 @@ const CSV = [
   'KPI 61-90 Days (05/21 - 06/19)',
   'Engineer,Own Points,Revision Points,Nesting Points,Total KPI,Projects that Added,Dynamic Explanation',
   'Joaquín,"$9,771.24",$0.00,"$167,312.10","$177,083.34","12313, 12119","In the 61-90 days period."',
+  'Santiago,"$95,862.47","$6,843.53","$56,717.25","$159,423.24","12485, 12308","In the 61-90 days period."',
+  ',,,,',
+  'KPI 91-120 Days (04/21 - 05/20)',
+  'Engineer,Own Points,Revision Points,Nesting Points,Total KPI,Projects that Added,Dynamic Explanation',
+  'Joaquín,"$9,771.24",$0.00,"$146,270.57","$156,041.81","12265, 11393","In the 91-120 days period."',
+  'Jose,$0.00,$0.00,$0.00,$0.00,,"In the 91-120 days period, Jose accumulated a total of 0.00 points."',
   ',,,,',
   'KPI Last 30 Days (07/20 - 08/19) Performance',
   'Engineer,Working Days,Labor Hours,Value Produced,$/Hour,$/Hr Score (50),Mistakes,Final Score',
@@ -139,11 +145,59 @@ describe('parseQualityCsv — tablas por periodo', () => {
   });
 });
 
+describe('parseQualityCsv — periodos 61-90 y 91-120', () => {
+  const { days61to90, days91to120 } = parseQualityCsv(CSV);
+
+  it('toma el titulo tal cual figura en la hoja', () => {
+    expect(days61to90.title).toBe('KPI 61-90 Days (05/21 - 06/19)');
+    expect(days91to120.title).toBe('KPI 91-120 Days (04/21 - 05/20)');
+  });
+
+  it('lee las cuatro columnas de puntos de 61-90 Days', () => {
+    expect(days61to90.rows.map(r => r.engineer)).toEqual(['Joaquín', 'Santiago']);
+    expect(days61to90.rows[1]).toMatchObject({
+      ownPoints: 95862.47,
+      revisionPoints: 6843.53,
+      nestingPoints: 56717.25,
+      totalKPI: 159423.24,
+    });
+  });
+
+  it('lee las cuatro columnas de puntos de 91-120 Days', () => {
+    expect(days91to120.rows[0]).toMatchObject({
+      engineer: 'Joaquín',
+      ownPoints: 9771.24,
+      revisionPoints: 0,
+      nestingPoints: 146270.57,
+      totalKPI: 156041.81,
+    });
+  });
+
+  // En 91-120 la hoja trae ingenieros en cero con "Projects that Added" vacio.
+  // Son filas validas: tienen que aparecer, no filtrarse por sumar cero.
+  it('conserva las filas en cero con lista de proyectos vacia', () => {
+    const jose = days91to120.rows.find(r => r.engineer === 'Jose');
+    expect(jose).toBeDefined();
+    expect(jose.totalKPI).toBe(0);
+    expect(jose.projects).toBe('');
+  });
+
+  // "KPI 61-90 Days (05/21 - 06/19) Performance" existe en el tab real; el
+  // bloque de 91-120 no tiene homonimo, pero el corte tiene que valer igual.
+  it('no se come la seccion "... Performance" que viene despues', () => {
+    expect(days61to90.rows).toHaveLength(2);
+    expect(days91to120.rows).toHaveLength(2);
+    expect(days61to90.rows.some(r => r.revisionPoints === 184)).toBe(false);
+  });
+});
+
 describe('parseQualityCsv — hoja sin las secciones esperadas', () => {
   it('devuelve estructura vacia en vez de explotar', () => {
     const result = parseQualityCsv('foo,bar\n1,2');
     expect(result.kpiData).toEqual([]);
     expect(result.last30Days).toBeNull();
     expect(result.days31to60).toBeNull();
+    expect(result.days61to90).toBeNull();
+    expect(result.days91to120).toBeNull();
   });
 });
