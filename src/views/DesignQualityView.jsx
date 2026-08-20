@@ -55,10 +55,54 @@ function shortWeekLabel(weekKey) {
   return `W${week}`;
 }
 
+// Los cuatro bloques por periodo de la hoja, del mas reciente al mas viejo (el
+// mismo orden en que aparecen en el tab). `sheetSection` es el titulo que se
+// busca ahi; `shortLabel` es el que va en la leyenda del grafico.
+const PERIOD_TABLES = [
+  { key: 'last30Days', sheetSection: 'KPI Last 30 Days', shortLabel: '0-30d' },
+  { key: 'days31to60', sheetSection: 'KPI 31-60 Days', shortLabel: '31-60d' },
+  { key: 'days61to90', sheetSection: 'KPI 61-90 Days', shortLabel: '61-90d' },
+  { key: 'days91to120', sheetSection: 'KPI 91-120 Days', shortLabel: '91-120d' },
+];
+
+// Los periodos son una escala ordenada, no categorias sueltas, asi que van con
+// una rampa de un solo tono (el cyan de la app) en vez de cuatro colores
+// distintos: el periodo mas reciente es el mas prominente contra su fondo y se
+// va apagando hacia el mas viejo. Cada modo tiene sus propios pasos — no es el
+// mismo array invertido — y ambos pasan el validador de rampa ordinal
+// (monotonia de luminosidad, salto >= 0.06 entre pasos, y el extremo palido
+// por encima de 2:1 contra su superficie: #1C1C22 en dark, #FFFFFF en light).
+const PERIOD_RAMP = {
+  dark: ['#09D1C7', '#16A6A0', '#197F7C', '#1B5A59'],
+  light: ['#0A5F5C', '#0D827D', '#12A39C', '#45C4BD'],
+};
+
+// Semantica de la "Workload Distribution Guide": amarillo por debajo del 10%,
+// naranja por encima del 30%. El color nunca va solo — siempre lo acompania el
+// badge con el texto — y en tema claro usa pasos oscurecidos, porque el
+// #FFE600 de la guia sobre fondo blanco es practicamente invisible (1.1:1).
+function workloadAlert(percent, isLight) {
+  if (percent < 10) {
+    return {
+      color: isLight ? '#A16207' : '#FFE600',
+      badgeBg: isLight ? 'rgba(161,98,7,0.12)' : 'rgba(255,230,0,0.1)',
+      badge: '< 10% Low',
+    };
+  }
+  if (percent > 30) {
+    return {
+      color: isLight ? '#C2410C' : '#FF9500',
+      badgeBg: isLight ? 'rgba(194,65,12,0.12)' : 'rgba(255,149,0,0.1)',
+      badge: '> 30% High',
+    };
+  }
+  return { color: null, badgeBg: null, badge: null };
+}
+
 // Una de las tablas por periodo de la hoja (Last 30 Days / 31-60 Days) con las
 // cuatro columnas de puntos. El titulo sale de la propia hoja, asi que el rango
 // de fechas se mantiene solo cuando la hoja rota de mes.
-function PeriodTable({ table, colors, emptyLabel }) {
+function PeriodTable({ table, colors, isLight, emptyLabel }) {
   if (!table || table.rows.length === 0) {
     return <p style={{ color: colors.body, fontSize: '0.9rem', margin: 0 }}>{emptyLabel}</p>;
   }
@@ -84,26 +128,35 @@ function PeriodTable({ table, colors, emptyLabel }) {
             </tr>
           </thead>
           <tbody>
-            {table.rows.map((row, index) => (
-              <tr
-                key={index}
-                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-                // Los SOs que sumaron en el periodo (columna F de la hoja) no
-                // entran como columna propia, pero sirven para auditar una fila.
-                title={row.projects ? `SO: ${row.projects}` : undefined}
-              >
-                <td style={{ ...td, color: colors.title }}>{row.engineer}</td>
-                <td style={td}>{formatCurrency(row.ownPoints)}</td>
-                <td style={td}>{formatCurrency(row.revisionPoints)}</td>
-                <td style={td}>{formatCurrency(row.nestingPoints)}</td>
-                <td style={{ ...td, fontWeight: 'bold', color: '#09D1C7' }}>{formatCurrency(row.totalKPI)}</td>
-                {/* Sin los colores de alerta de la tabla de arriba a proposito:
-                    los umbrales 10/30% de la guia estan calibrados sobre el
-                    acumulado, y en una ventana de 30 dias medio equipo los
-                    cruzaria sin que eso signifique nada. */}
-                <td style={{ ...td, fontWeight: 600, color: colors.title }}>{row.percentOfTotal.toFixed(1)}%</td>
-              </tr>
-            ))}
+            {table.rows.map((row, index) => {
+              const alert = workloadAlert(row.percentOfTotal, isLight);
+              return (
+                <tr
+                  key={index}
+                  style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                  // Los SOs que sumaron en el periodo (columna F de la hoja) no
+                  // entran como columna propia, pero sirven para auditar una fila.
+                  title={row.projects ? `SO: ${row.projects}` : undefined}
+                >
+                  <td style={{ ...td, color: colors.title }}>{row.engineer}</td>
+                  <td style={td}>{formatCurrency(row.ownPoints)}</td>
+                  <td style={td}>{formatCurrency(row.revisionPoints)}</td>
+                  <td style={td}>{formatCurrency(row.nestingPoints)}</td>
+                  <td style={{ ...td, fontWeight: 'bold', color: '#09D1C7' }}>{formatCurrency(row.totalKPI)}</td>
+                  {/* Umbrales de la Workload Distribution Guide. El color no va
+                      solo: cuando hay alerta la acompania el badge con el
+                      texto, para que no dependa de distinguir tonos. */}
+                  <td style={{ ...td, fontWeight: 600, color: alert.color || colors.title }}>
+                    {row.percentOfTotal.toFixed(1)}%
+                    {alert.badge && (
+                      <span style={{ fontSize: '0.72rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: alert.badgeBg, color: alert.color, marginLeft: '8px', fontWeight: 500 }}>
+                        {alert.badge}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
             <tr style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
@@ -261,6 +314,73 @@ export default function DesignQualityView() {
     // isLight drives the chart's text/grid colors, so recompute on theme change.
   }), [isLight]);
 
+  // Un ingeniero por grupo, una barra por periodo: es la misma matriz que las
+  // cuatro tablas de abajo, leida de corrido. Los ingenieros salen de la union
+  // de las tablas presentes (alguien puede no figurar en un periodo viejo) y en
+  // ese caso su barra va en 0, no se saltea la posicion.
+  const periodShareChartData = useMemo(() => {
+    const present = PERIOD_TABLES
+      .map(period => ({ ...period, table: data[period.key] }))
+      .filter(period => period.table?.rows.length > 0);
+    if (present.length === 0) return null;
+
+    const engineers = [...new Set(present.flatMap(p => p.table.rows.map(r => r.engineer)))];
+    const ramp = PERIOD_RAMP[isLight ? 'light' : 'dark'];
+
+    return {
+      labels: engineers,
+      datasets: present.map((period, index) => ({
+        label: period.shortLabel,
+        data: engineers.map(name => {
+          const row = period.table.rows.find(r => r.engineer === name);
+          return row ? row.percentOfTotal : 0;
+        }),
+        // El color sigue al periodo, no a su posicion entre los presentes: si
+        // la hoja pierde un bloque, los que quedan no se repintan.
+        backgroundColor: ramp[PERIOD_TABLES.findIndex(p => p.key === period.key)] ?? ramp[index],
+        borderRadius: 4,
+        // Deja ~2px de superficie entre barras vecinas y aire entre grupos.
+        categoryPercentage: 0.7,
+        barPercentage: 0.86,
+      })),
+    };
+  }, [data, isLight]);
+
+  const periodShareChartOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { color: C.body, font: { family: 'Inter', size: 11 }, boxWidth: 10, padding: 12 },
+      },
+      tooltip: {
+        backgroundColor: isLight ? 'rgba(255, 255, 255, 0.98)' : 'rgba(11, 21, 32, 0.95)',
+        titleColor: C.accent,
+        bodyColor: isLight ? '#0f172a' : '#fff',
+        borderColor: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        padding: 10,
+        callbacks: {
+          label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: { display: false, drawBorder: false },
+        ticks: { color: C.body, font: { size: 11 } },
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+        ticks: { color: C.muted, callback: (v) => `${v}%` },
+      },
+    },
+    // Los C.* son strings derivados de isLight, asi que listarlos no dispara
+    // recalculos de mas y deja el hook honesto frente a exhaustive-deps.
+  }), [isLight, C.accent, C.body, C.muted]);
+
   if (loading) {
     return <div className="loading-state text-muted" style={{ padding: '24px', color: C.body }}>Loading Team Stats...</div>;
   }
@@ -269,21 +389,11 @@ export default function DesignQualityView() {
     return <div className="error-state text-danger" style={{ padding: '24px', color: '#FF2E93' }}>{error}</div>;
   }
 
-  // Los cuatro bloques por periodo de la hoja, en el mismo orden en que
-  // aparecen ahi. `sheetSection` es el titulo que se busca en el tab, y solo
-  // se muestra si esa seccion no aparecio.
-  const periodTables = [
-    { key: 'last30Days', sheetSection: 'KPI Last 30 Days' },
-    { key: 'days31to60', sheetSection: 'KPI 31-60 Days' },
-    { key: 'days61to90', sheetSection: 'KPI 61-90 Days' },
-    { key: 'days91to120', sheetSection: 'KPI 91-120 Days' },
-  ];
-
   // `kpiData` (el bloque acumulado "% of Total") ya no se muestra, pero sigue
   // alimentando el snapshot semanal de RTDB y con eso el grafico de evolucion,
   // asi que cuenta como contenido: la vista solo esta vacia si tampoco hay
   // ninguna tabla por periodo.
-  const hasPeriodData = periodTables.some(({ key }) => data[key]?.rows.length > 0);
+  const hasPeriodData = PERIOD_TABLES.some(({ key }) => data[key]?.rows.length > 0);
   const isEmpty = !hasPeriodData && data.kpiData.length === 0;
 
   return (
@@ -301,16 +411,36 @@ export default function DesignQualityView() {
         <>
           <div className="glass-card" style={{ marginBottom: '24px' }}>
             <h3 style={{ color: C.title, marginBottom: '20px', fontSize: '1.25rem', fontWeight: 600 }}>KPI Distribution Analysis</h3>
-            
+
+            {/* A todo el ancho de la tarjeta, arriba de las tablas: es el
+                resumen y ellas son el detalle (y el "table view" accesible de
+                los mismos numeros). */}
+            {periodShareChartData && (
+              <div style={{ marginBottom: '32px' }}>
+                <h5 style={{ color: C.title, fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                  {language === 'es' ? '% del Total por Período' : '% of Total by Period'}
+                </h5>
+                <p style={{ color: C.muted, fontSize: '0.78rem', margin: '0 0 12px 0' }}>
+                  {language === 'es'
+                    ? 'Participación de cada ingeniero en el Total KPI de cada ventana. Cada período suma 100% por separado.'
+                    : "Each engineer's share of the period's Total KPI. Every period adds up to 100% on its own."}
+                </p>
+                <div style={{ height: '300px' }}>
+                  <Bar data={periodShareChartData} options={periodShareChartOptions} />
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
               {/* minWidth: 0 para que el overflow-x de cada tabla actue dentro
                   de la columna en vez de estirar el flex container. */}
               <div style={{ flex: '2 1 460px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '28px' }}>
-                {periodTables.map(({ key, sheetSection }) => (
+                {PERIOD_TABLES.map(({ key, sheetSection }) => (
                   <PeriodTable
                     key={key}
                     table={data[key]}
                     colors={C}
+                    isLight={isLight}
                     emptyLabel={language === 'es'
                       ? `La hoja no tiene la seccion "${sheetSection}".`
                       : `The sheet has no "${sheetSection}" section.`}
