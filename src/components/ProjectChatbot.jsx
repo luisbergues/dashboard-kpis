@@ -809,6 +809,15 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
 
           {/* Quick action chips */}
           <div className="chatbot-chips">
+            <button className="chatbot-chip" onClick={() => handleChipClick('contacts')}>
+              📇 {language === 'es' ? 'Contactos' : 'Contacts'}
+            </button>
+            <button className="chatbot-chip" onClick={() => handleChipClick('reveals')}>
+              📏 {language === 'es' ? 'Reveals' : 'Reveals'}
+            </button>
+            <button className="chatbot-chip" onClick={() => handleChipClick('drawers')}>
+              📐 {language === 'es' ? 'Cajones' : 'Drawers'}
+            </button>
             <button className="chatbot-chip" onClick={() => handleChipClick('note')}>
               <StickyNote size={12} />
               {language === 'es' ? 'Agregar Nota' : 'Add Note'}
@@ -818,15 +827,6 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
             </button>
             <button className="chatbot-chip" onClick={() => handleChipClick('install')}>
               📅 {language === 'es' ? 'Instalaciones' : 'Installs'}
-            </button>
-            <button className="chatbot-chip" onClick={() => handleChipClick('drawers')}>
-              📐 {language === 'es' ? 'Cajones' : 'Drawers'}
-            </button>
-            <button className="chatbot-chip" onClick={() => handleChipClick('reveals')}>
-              📏 {language === 'es' ? 'Reveals' : 'Reveals'}
-            </button>
-            <button className="chatbot-chip" onClick={() => handleChipClick('contacts')}>
-              📇 {language === 'es' ? 'Contactos' : 'Contacts'}
             </button>
           </div>
 
