@@ -423,8 +423,9 @@
   border-bottom: none;
 }
 
-.drawer-chart-table tbody tr:nth-child(even) td,
-.reveals-chart-table tbody tr:nth-child(even) td {
+/* Zebra striping only on the drawer chart. The transposed reveals table has a
+   group sub-header row mid-table, where nth-child striping lands unevenly. */
+.drawer-chart-table tbody tr:nth-child(even) td {
   background: var(--overlay-02);
 }
 
@@ -443,17 +444,27 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Reveals-specific: overlay name column, the grouped "Shared panel" header
-   cell, and the footnotes under the table. */
-.reveals-chart-table .rc-overlay {
-  font-weight: 700;
-  color: var(--color-neon-green);
+/* Reveals-specific (transposed layout): the overlay column headers are
+   centered over their value columns; the metric labels run down the left; the
+   "Shared panel" group row is a dim full-width sub-header. */
+.reveals-chart-table .rc-col {
+  text-align: center;
+}
+
+.reveals-chart-table .rc-label {
+  font-weight: 600;
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
-.reveals-chart-table .rc-group {
-  text-align: center;
-  border-bottom: 1px solid var(--color-neon-green);
+.reveals-chart-table .rc-grouprow td {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--overlay-04);
+  padding: 4px 8px;
 }
 
 .reveals-chart-notes {

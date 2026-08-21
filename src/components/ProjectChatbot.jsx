@@ -231,37 +231,51 @@ function buildRevealsChartIntro(isES) {
     : '📏 **Reveals / Overlay**\nReveal gap by overlay type and whether doors share a panel:';
 }
 
-// Renders the reveal specs as a compact table styled like the drawer chart. A
-// two-row header groups the two "shared panel" columns under one label. Data
-// values come from REVEAL_CHART_ROWS; headers and the footnotes below follow
-// the current language.
+// Renders the reveal specs as a compact table styled like the drawer chart.
+// Transposed (vertical) layout: the overlay types run across the top and each
+// reveal metric stacks down the side — it reads better in the narrow chat
+// window than a wide 4-column table. Same data (REVEAL_CHART_ROWS), just a
+// different orientation. Headers, the "shared panel" group label, and the
+// footnotes below follow the current language.
 function RevealsChartTable({ isES }) {
   const notes = isES
     ? ['Puerta máx: 24" × 84" (evita deformaciones).', 'Evitar 1/4" de reveal, salvo excepciones.']
     : ['Max door: 24" × 84" (avoids warping).', 'Avoid a 1/4" reveal, except in exceptional cases.'];
+  // Each metric is one body row; `group` rows are a sub-header spanning all
+  // columns (the two "shared panel" measurements sit under it).
+  const metrics = [
+    { label: isES ? 'Reveal estándar' : 'Standard reveal', key: 'standard' },
+    { group: isES ? 'Comparten panel' : 'Shared panel' },
+    { label: isES ? 'Unidad c/ panel' : 'Panel side', key: 'panelSide' },
+    { label: isES ? 'Otra unidad' : 'Other side', key: 'otherSide' },
+  ];
+  const colCount = REVEAL_CHART_ROWS.length + 1;
   return (
     <div className="reveals-chart-wrap">
       <table className="reveals-chart-table">
         <thead>
           <tr>
-            <th rowSpan={2}>Overlay</th>
-            <th rowSpan={2}>{isES ? 'Reveal estándar' : 'Standard reveal'}</th>
-            <th colSpan={2} className="rc-group">{isES ? 'Comparten panel' : 'Shared panel'}</th>
-          </tr>
-          <tr>
-            <th>{isES ? 'Unidad c/ panel' : 'Panel side'}</th>
-            <th>{isES ? 'Otra unidad' : 'Other side'}</th>
+            <th aria-hidden="true"></th>
+            {REVEAL_CHART_ROWS.map((r) => (
+              <th key={r.overlay} className="rc-col">{r.overlay}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {REVEAL_CHART_ROWS.map((row) => (
-            <tr key={row.overlay}>
-              <td className="rc-overlay">{row.overlay}</td>
-              <td className="rc-num">{row.standard}</td>
-              <td className="rc-num">{row.panelSide}</td>
-              <td className="rc-num">{row.otherSide}</td>
-            </tr>
-          ))}
+          {metrics.map((m, i) =>
+            m.group ? (
+              <tr key={i} className="rc-grouprow">
+                <td colSpan={colCount}>{m.group}</td>
+              </tr>
+            ) : (
+              <tr key={i}>
+                <td className="rc-label">{m.label}</td>
+                {REVEAL_CHART_ROWS.map((r) => (
+                  <td key={r.overlay} className="rc-num">{r[m.key]}</td>
+                ))}
+              </tr>
+            )
+          )}
         </tbody>
       </table>
       <ul className="reveals-chart-notes">
