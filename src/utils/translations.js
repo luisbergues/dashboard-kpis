@@ -19,6 +19,16 @@ export const translations = {
       pendingApprovalBody: "An administrator needs to approve your account before you can access the dashboard. Please check back later.",
       revoked: "Revoked"
     },
+    assignDesigner: {
+      title: "Assign a designer before continuing",
+      body: "This project came in from the schedule without a designer on record. Pick who designed it — the rest of the app stays locked until then.",
+      label: "Designer in charge",
+      placeholder: "Select designer...",
+      save: "Save and continue",
+      saving: "Saving...",
+      remainingPrefix: "There are",
+      remainingSuffix: "projects waiting."
+    },
     navbar: {
       dashboard: "Dashboard",
       calendar: "Calendar",
@@ -479,6 +489,16 @@ export const translations = {
       pendingApprovalTitle: "Tu cuenta está pendiente de aprobación",
       pendingApprovalBody: "Un administrador debe aprobar tu cuenta antes de que puedas acceder al dashboard. Por favor, volvé a intentarlo más tarde.",
       revoked: "Revocado"
+    },
+    assignDesigner: {
+      title: "Asigná un diseñador antes de continuar",
+      body: "Este proyecto llegó de la planilla sin diseñador registrado. Elegí quién lo diseñó — el resto de la app queda bloqueado hasta entonces.",
+      label: "Diseñador a cargo",
+      placeholder: "Seleccionar diseñador...",
+      save: "Guardar y continuar",
+      saving: "Guardando...",
+      remainingPrefix: "Quedan",
+      remainingSuffix: "proyectos pendientes."
     },
     navbar: {
       dashboard: "Dashboard",

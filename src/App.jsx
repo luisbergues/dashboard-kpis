@@ -11,6 +11,7 @@ import { withArchiveLease } from './utils/archiveCoordinator'
 import Navbar from './components/Navbar'
 import ErrorBoundary from './components/ErrorBoundary'
 import ViewSkeleton from './components/ViewSkeleton'
+import AssignDesignerGate from './components/AssignDesignerGate'
 import IntroSplash from './components/IntroSplash'
 
 /* Estaticas a proposito. Las tres primeras: son las unicas pantallas que
@@ -52,6 +53,7 @@ import { shortProjectName } from './utils/projectName'
 import { normalizeNotesBySo } from './utils/projectNotes'
 import { recordStatusTransitions } from './utils/statusTransitions'
 import { normalizeWeeklyHistory } from './utils/weeklyHistory'
+import { pendingDesignerAssignments } from './utils/pendingDesignerAssignments'
 
 // Lazy: the ESS tab pulls in pdfjs-dist (~1MB+) via essPdfExtract.js, and only
 // super-admins can ever open it. A static import would put that in the main
@@ -659,6 +661,42 @@ function App() {
     }
   };
 
+  /* Proyectos propios que llegaron del sheet sin disenador registrado. Toda la
+     decision de a quien bloquear vive en pendingDesignerAssignments; aca solo
+     se pregunta si la cola tiene algo. Alcanza con `data` en vez de
+     `mergedData`: lo unico que hace falta es la columna ENG del sheet. */
+  const designerAssignmentQueue = useMemo(
+    () => pendingDesignerAssignments({
+      userProfile,
+      projects: data?.priorityAnalysis,
+      projectDesigners,
+    }),
+    [userProfile, data?.priorityAnalysis, projectDesigners],
+  );
+
+  /* Re-lee antes de escribir, igual que el modal "Disenador a Cargo" de
+     MyProjectsView: project_designers/{so} tambien se escribe desde Designer
+     Perf., y dos personas asignando a la vez se pisarian en silencio. Si otro
+     ya lo asigno mientras este gate estaba abierto se respeta ese valor y el
+     proyecto sale de la cola igual: no hay nada que corregir. */
+  const assignDesigner = async (so, designerName) => {
+    if (!db) return { error: 'No database connection.' };
+    try {
+      const designerRef = ref(db, `project_designers/${so}`);
+      const snapshot = await get(designerRef);
+      if (snapshot.exists() && String(snapshot.val()).trim()) return {};
+      await set(designerRef, designerName);
+      return {};
+    } catch (err) {
+      console.error('No se pudo asignar el disenador:', err);
+      return {
+        error: language === 'es'
+          ? 'No se pudo guardar. Revisá tu conexión e intentá de nuevo.'
+          : 'Could not save. Check your connection and try again.',
+      };
+    }
+  };
+
   const isApproved = userProfile?.status === 'approved';
   const isSuperAdmin = isSuperAdminRole(userProfile?.role);
 
@@ -711,6 +749,16 @@ function App() {
           setActiveTab(alert.type === 'designer_review' ? 'my-projects' : 'pipeline');
         }}
       />
+      {/* Ultimo hijo a proposito: gate bloqueante por encima de todo, incluidos
+          el FAB del chat y la campana. Solo se monta con la sesion ya resuelta
+          y aprobada, para no pisar al gate de aprobacion de cuenta. */}
+      {!loading && !authLoading && currentUser && isApproved && designerAssignmentQueue.length > 0 && (
+        <AssignDesignerGate
+          pending={designerAssignmentQueue}
+          onAssign={assignDesigner}
+          onSignOut={() => signOut(auth)}
+        />
+      )}
     </div>
   )
 }

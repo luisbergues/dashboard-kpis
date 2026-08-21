@@ -4,6 +4,7 @@ import { saveEngineeringCheck } from '../utils/engineeringCheck';
 import { sendOnHoldEvent, sendReleaseHoldEvent, sendQAChecklistEvent, sendNoteEvent, sendStageStatusOnlyEvent } from '../utils/sheetSync';
 import { saveMaterialOverride } from '../utils/materialOverrides';
 import { shortProjectName } from '../utils/projectName';
+import { DESIGNERS } from '../utils/designers';
 import { formatDisplayDate } from '../utils/dateFormat';
 import { jsPDF } from 'jspdf';
 import { useLanguage } from '../utils/LanguageContext';
@@ -2084,13 +2085,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                   style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'var(--overlay-05)', color: textOnSurface, fontSize: '0.9rem' }}
                 >
                   <option value="" disabled>{language === 'es' ? 'Seleccionar diseñador...' : 'Select designer...'}</option>
-                  {[
-                    "Monica Gabriel", "Natalie Ball", "Marsha Diquez", "Iris Lopes", 
-                    "Kat Baumgartner", "Melissa Barker", "Nicole Dugan", "Tricia Hatton", 
-                    "Blerta Veseli", "Lana Kravtchenko", "Krisztina Vizi", "Luana Tamagnone", 
-                    "Russell Reiner", "Mauricio Dasso", "Sarah Manev", "Caryn Henslovitz", 
-                    "Michael Kaboskey", "Malanie Dalfrey"
-                  ].sort().map(name => (
+                  {DESIGNERS.map(name => (
                     <option key={name} value={name} style={{ color: '#000' }}>{name}</option>
                   ))}
                 </select>
