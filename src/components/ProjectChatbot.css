@@ -336,6 +336,10 @@
   flex-direction: column;
   gap: 6px;
   margin-top: 10px;
+  /* Long pickers (e.g. the full designer directory) scroll inside the bubble
+     instead of pushing everything else off-screen. */
+  max-height: 240px;
+  overflow-y: auto;
 }
 
 .chatbot-option-btn {
@@ -368,24 +372,25 @@
   padding: 10px 12px;
 }
 
-.drawer-chart-wrap {
+.drawer-chart-wrap,
+.reveals-chart-wrap {
   margin-top: 10px;
-  overflow-x: auto; /* wide "recommended items" column never breaks the bubble */
+  overflow-x: auto; /* wide columns never break the narrow bubble */
   border: 1px solid var(--card-border);
   border-radius: 10px;
   -webkit-overflow-scrolling: touch;
 }
 
-.drawer-chart-table {
+.drawer-chart-table,
+.reveals-chart-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.7rem;
   line-height: 1.3;
 }
 
-.drawer-chart-table th {
-  position: sticky;
-  top: 0;
+.drawer-chart-table th,
+.reveals-chart-table th {
   background: var(--card-hover);
   color: var(--color-neon-green);
   text-transform: uppercase;
@@ -398,18 +403,28 @@
   white-space: nowrap;
 }
 
-.drawer-chart-table td {
+/* Drawer header is a single row, so it can stick; the reveals header spans two
+   rows (grouped column) where sticky would fight the rowSpan/colSpan layout. */
+.drawer-chart-table th {
+  position: sticky;
+  top: 0;
+}
+
+.drawer-chart-table td,
+.reveals-chart-table td {
   padding: 6px 8px;
   border-bottom: 1px solid var(--card-border);
   color: var(--text-primary);
   vertical-align: top;
 }
 
-.drawer-chart-table tbody tr:last-child td {
+.drawer-chart-table tbody tr:last-child td,
+.reveals-chart-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.drawer-chart-table tbody tr:nth-child(even) td {
+.drawer-chart-table tbody tr:nth-child(even) td,
+.reveals-chart-table tbody tr:nth-child(even) td {
   background: var(--overlay-02);
 }
 
@@ -420,11 +435,38 @@
   white-space: nowrap;
 }
 
-.drawer-chart-table .dc-num {
+.drawer-chart-table .dc-num,
+.reveals-chart-table .rc-num {
   text-align: center;
   white-space: nowrap;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
+}
+
+/* Reveals-specific: overlay name column, the grouped "Shared panel" header
+   cell, and the footnotes under the table. */
+.reveals-chart-table .rc-overlay {
+  font-weight: 700;
+  color: var(--color-neon-green);
+  white-space: nowrap;
+}
+
+.reveals-chart-table .rc-group {
+  text-align: center;
+  border-bottom: 1px solid var(--color-neon-green);
+}
+
+.reveals-chart-notes {
+  margin: 8px 0 2px;
+  padding-left: 16px;
+  list-style: disc;
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  line-height: 1.4;
+}
+
+.reveals-chart-notes li {
+  margin-bottom: 2px;
 }
 
 .drawer-chart-table .dc-items {

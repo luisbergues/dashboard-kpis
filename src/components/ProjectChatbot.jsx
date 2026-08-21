@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Send, X, Bot, User, StickyNote, HelpCircle } from 'lucide-react';
+import { MessageSquare, Send, X, Bot, User, StickyNote } from 'lucide-react';
 import { addProjectNote } from '../utils/notesHelper';
 import { useLanguage } from '../utils/LanguageContext';
 import { askLLM, buildLLMContext, buildManualAnswer } from '../utils/llmChat';
@@ -12,9 +12,12 @@ import {
   isOnHoldQuery,
   isInstallQuery,
   isDrawerChartQuery,
+  isRevealsQuery,
+  isContactsListQuery,
   findOnHoldProjects,
   findUpcomingInstalls,
   DRAWER_CHART_ROWS,
+  REVEAL_CHART_ROWS,
 } from '../utils/chatbotLocalMatch';
 import './ProjectChatbot.css';
 
@@ -221,6 +224,55 @@ function DrawerChartTable({ isES }) {
   );
 }
 
+// Intro line shown above the reveals table.
+function buildRevealsChartIntro(isES) {
+  return isES
+    ? '📏 **Reveals / Overlay**\nHolgura (reveal) según overlay y si las puertas comparten panel:'
+    : '📏 **Reveals / Overlay**\nReveal gap by overlay type and whether doors share a panel:';
+}
+
+// Renders the reveal specs as a compact table styled like the drawer chart. A
+// two-row header groups the two "shared panel" columns under one label. Data
+// values come from REVEAL_CHART_ROWS; headers and the footnotes below follow
+// the current language.
+function RevealsChartTable({ isES }) {
+  const notes = isES
+    ? ['Puerta máx: 24" × 84" (evita deformaciones).', 'Evitar 1/4" de reveal, salvo excepciones.']
+    : ['Max door: 24" × 84" (avoids warping).', 'Avoid a 1/4" reveal, except in exceptional cases.'];
+  return (
+    <div className="reveals-chart-wrap">
+      <table className="reveals-chart-table">
+        <thead>
+          <tr>
+            <th rowSpan={2}>Overlay</th>
+            <th rowSpan={2}>{isES ? 'Reveal estándar' : 'Standard reveal'}</th>
+            <th colSpan={2} className="rc-group">{isES ? 'Comparten panel' : 'Shared panel'}</th>
+          </tr>
+          <tr>
+            <th>{isES ? 'Unidad c/ panel' : 'Panel side'}</th>
+            <th>{isES ? 'Otra unidad' : 'Other side'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {REVEAL_CHART_ROWS.map((row) => (
+            <tr key={row.overlay}>
+              <td className="rc-overlay">{row.overlay}</td>
+              <td className="rc-num">{row.standard}</td>
+              <td className="rc-num">{row.panelSide}</td>
+              <td className="rc-num">{row.otherSide}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <ul className="reveals-chart-notes">
+        {notes.map((n, i) => (
+          <li key={i}>{n}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // Rare chatbot easter egg: roughly once every ~69 bot replies, a clickable
 // "K800" option is attached to the reply; clicking it triggers the Terminator
 // overlay (the same one typing "K800" summons). Returns the option array to
@@ -408,6 +460,14 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       return { text: buildDrawerChartIntro(isES), drawerChart: true };
     }
 
+    // Reveals / overlay chart — same idea as the drawer chart: a static
+    // reference answered locally and rendered as a table (see RevealsChartTable).
+    // The detector is narrow, so specific manual questions ("half overlay
+    // reveal?") still fall through to the manual's targeted answer below.
+    if (isRevealsQuery(text)) {
+      return { text: buildRevealsChartIntro(isES), revealsChart: true };
+    }
+
     // Entity search (designer / engineer / project / designer contact). The
     // matching itself lives in findLocalEntityMatches — shared with its test
     // suite — and returns options already ranked best-first; here we only turn
@@ -456,6 +516,29 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
     }
     if (isInstallQuery(text)) {
       return { text: buildInstallAnswer(findUpcomingInstalls(projects), isES) };
+    }
+
+    // Contacts directory shortcut (the "Contacts" chip) — lists every designer
+    // as a clickable option; tapping one shows that contact's card via the
+    // existing handleOptionClick('contact') path. Checked AFTER the entity
+    // search so a named lookup ("natalie contact") still wins. Buttons are
+    // labelled with just name + city (not labelForOption's verbose phrasing)
+    // since the intro already frames them as designer choices.
+    if (isContactsListQuery(text)) {
+      if (designerContacts.length === 0) {
+        return { text: isES ? 'No hay contactos de diseñadores cargados.' : 'No designer contacts are loaded.' };
+      }
+      const sorted = [...designerContacts].sort((a, b) => String(a.name).localeCompare(String(b.name)));
+      const contactOptions = sorted.map((c, i) => ({
+        id: i + 1,
+        type: 'contact',
+        data: c,
+        label: c.city ? `${c.name} — ${c.city}` : c.name,
+      }));
+      return {
+        text: isES ? '📇 Elegí un diseñador para ver su contacto:' : '📇 Pick a designer to see their contact:',
+        options: contactOptions,
+      };
     }
 
     // Engineering-manual questions — answered locally straight from the matched
@@ -601,6 +684,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       text: reply.text,
       options,
       drawerChart: !!reply.drawerChart,
+      revealsChart: !!reply.revealsChart,
       viaLLM: !!reply.viaLLM,
       isError: !!reply.isError,
       timestamp: new Date()
@@ -643,14 +727,21 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
 
   const handleChipClick = (action) => {
     const isES = language === 'es';
+    // Every chip routes through handleSendMessage with a localized trigger
+    // phrase that the local matcher recognizes — so the chip and typing the
+    // same thing behave identically, and each resolves without the LLM.
     if (action === 'hold') {
       handleSendMessage(isES ? '¿Qué proyectos están ON HOLD?' : 'Which projects are ON HOLD?');
     } else if (action === 'install') {
       handleSendMessage(isES ? 'Instalaciones programadas' : 'Installation dates');
     } else if (action === 'note') {
       handleSendMessage(isES ? 'Agregar nota' : 'Add note');
-    } else if (action === 'help') {
-      handleSendMessage(isES ? 'Ayuda' : 'Help');
+    } else if (action === 'drawers') {
+      handleSendMessage(isES ? 'Tabla de cajones' : 'Drawer chart');
+    } else if (action === 'reveals') {
+      handleSendMessage(isES ? 'Cuadro de reveals' : 'Reveals chart');
+    } else if (action === 'contacts') {
+      handleSendMessage(isES ? 'Contactos' : 'Contacts');
     }
   };
 
@@ -689,13 +780,14 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
           {/* Messages body */}
           <div className="chatbot-body">
             {displayMessages.map((m) => (
-              <div key={m.id} className={`chat-message ${m.sender}${m.drawerChart ? ' has-table' : ''}`}>
+              <div key={m.id} className={`chat-message ${m.sender}${(m.drawerChart || m.revealsChart) ? ' has-table' : ''}`}>
                 <div className="message-avatar">
                   {m.sender === 'bot' ? <Bot size={14} /> : <User size={14} />}
                 </div>
                 <div className="message-content">
                   <div className="message-pre"><FormattedMessage text={m.text} /></div>
                   {m.drawerChart && <DrawerChartTable isES={language === 'es'} />}
+                  {m.revealsChart && <RevealsChartTable isES={language === 'es'} />}
                   {m.options && m.options.length > 0 && (
                     <div className="message-options">
                       {m.options.map((opt) => (
@@ -727,9 +819,14 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
             <button className="chatbot-chip" onClick={() => handleChipClick('install')}>
               📅 {language === 'es' ? 'Instalaciones' : 'Installs'}
             </button>
-            <button className="chatbot-chip" onClick={() => handleChipClick('help')}>
-              <HelpCircle size={12} />
-              {language === 'es' ? 'Ayuda' : 'Help'}
+            <button className="chatbot-chip" onClick={() => handleChipClick('drawers')}>
+              📐 {language === 'es' ? 'Cajones' : 'Drawers'}
+            </button>
+            <button className="chatbot-chip" onClick={() => handleChipClick('reveals')}>
+              📏 {language === 'es' ? 'Reveals' : 'Reveals'}
+            </button>
+            <button className="chatbot-chip" onClick={() => handleChipClick('contacts')}>
+              📇 {language === 'es' ? 'Contactos' : 'Contacts'}
             </button>
           </div>
 

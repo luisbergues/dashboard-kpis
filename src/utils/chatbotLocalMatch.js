@@ -21,10 +21,11 @@ export const ENTITY_QUERY_TRIGGERS = [
 // "Contact Center" — and can crowd out the real name match. Strip them so
 // only actual name fragments drive matching.
 export const INTENT_STOPWORDS = new Set([
-  'contact', 'contacto', 'telefono', 'phone', 'email', 'correo', 'mail',
-  'info', 'informacion', 'information', 'numero', 'number', 'ciudad', 'city',
-  'proyecto', 'project', 'proyectos', 'projects', 'diseñador', 'disenador',
-  'designer', 'ingeniero', 'engineer', 'the', 'los', 'las', 'del',
+  'contact', 'contacto', 'contacts', 'contactos', 'telefono', 'phone', 'email',
+  'correo', 'mail', 'info', 'informacion', 'information', 'numero', 'number',
+  'ciudad', 'city', 'proyecto', 'project', 'proyectos', 'projects', 'diseñador',
+  'disenador', 'diseñadores', 'disenadores', 'designer', 'designers', 'ingeniero',
+  'engineer', 'the', 'los', 'las', 'del',
 ]);
 
 // Extracts the entity name a user is asking about by stripping known
@@ -158,11 +159,15 @@ export function resolvesLocallyInIdleState(text, { projects = [], designerContac
   if (cleanText === 'cancelar' || cleanText === 'cancel') return true;
   if (cleanText === 'ayuda' || cleanText === 'help' || cleanText === '?') return true;
   if (cleanText.includes('nota') || cleanText.includes('note') || cleanText.includes('bitacora')) return true;
-  if (isDrawerChartQuery(text)) return true;
+  if (isDrawerChartQuery(text) || isRevealsQuery(text)) return true;
   if (isOnHoldQuery(text) || isInstallQuery(text)) return true;
 
   const { options } = findLocalEntityMatches(text, { projects, designerContacts });
   if (options.length > 0) return true;
+
+  // The full contacts directory shortcut (checked after entity search, matching
+  // processInput's order).
+  if (isContactsListQuery(text)) return true;
 
   // Engineering-manual questions resolve locally when the manual search finds
   // a hit (checked after entity search, matching processInput's order).
@@ -306,6 +311,45 @@ export function isDrawerChartQuery(text) {
   // "cajones" plus a chart/measurement word, in any order.
   if (t.includes('cajon') && (t.includes('tabla') || t.includes('chart') || t.includes('medidas') || t.includes('tamano'))) return true;
   return false;
+}
+
+// --- Reveals / overlay chart (static reference) ---
+// The overlay reveal specs, structured for the same kind of graphical table the
+// drawer chart uses. `standard` is a single door's reveal; `panelSide` /
+// `otherSide` are the two units when doors share a center panel (the unit WITH
+// the panel vs the other one). Values come straight from the Engineering
+// Manual (sections "Doors — size and reveal" + "Overlay and Reveal").
+export const REVEAL_CHART_ROWS = [
+  { overlay: 'Half Overlay', standard: '1/2"', panelSide: '1/8"',  otherSide: '-1/4"'  },
+  { overlay: 'Full Overlay', standard: '1/8"', panelSide: '7/16"', otherSide: '-5/16"' },
+];
+
+// True when the query asks for the reveals table as a whole (the chip trigger
+// and generic "reveals chart" phrasings). Deliberately narrow: a specific
+// question like "what is the half overlay reveal?" still routes to the manual's
+// targeted answer instead of the whole-table shortcut.
+export function isRevealsQuery(text) {
+  const t = normalizeText(text).trim(); // lowercase, accent-stripped
+  if (t === 'reveals' || t === 'reveal' || t === 'reveales') return true;
+  if (t.includes('reveal chart') || t.includes('reveals chart') || t.includes('reveal table') || t.includes('reveals table')) return true;
+  if (t.includes('tabla de reveal') || t.includes('cuadro de reveal')) return true;
+  return false;
+}
+
+// True when the query asks for the whole designer directory (the "Contacts"
+// chip and generic list requests) rather than one named person. Matched by
+// exact phrase, normalized: a named lookup ("natalie contact") or a project
+// name that merely contains "contact" ("Contact Center") must NOT open the
+// full list — those are handled by the entity search that runs first.
+const CONTACTS_LIST_PHRASES = [
+  'contacts', 'contactos', 'contact list', 'lista de contactos', 'lista de contacto',
+  'lista de disenadores', 'designers', 'disenadores', 'designer contacts',
+  'contactos de disenadores', 'ver contactos', 'ver disenadores', 'todos los contactos',
+  'directorio de disenadores',
+].map(normalizeText);
+export function isContactsListQuery(text) {
+  const t = normalizeText(text).trim();
+  return CONTACTS_LIST_PHRASES.includes(t);
 }
 
 // All projects currently ON HOLD. Uses the same tolerant test the dashboard

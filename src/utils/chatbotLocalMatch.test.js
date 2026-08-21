@@ -9,9 +9,12 @@ import {
   isOnHoldQuery,
   isInstallQuery,
   isDrawerChartQuery,
+  isRevealsQuery,
+  isContactsListQuery,
   findOnHoldProjects,
   findUpcomingInstalls,
   DRAWER_CHART_ROWS,
+  REVEAL_CHART_ROWS,
 } from './chatbotLocalMatch';
 import { DESIGNER_CONTACTS } from './designerContacts';
 
@@ -87,6 +90,14 @@ describe('chatbotLocalMatch — queries that must resolve locally (never call Ge
       const { options } = findLocalEntityMatches('contact', { projects: PROJECTS, designerContacts: DESIGNER_CONTACTS });
       expect(options).toHaveLength(0);
     });
+
+    it('the plural "contacts"/"contactos" chip trigger does not match the "Contact Center" project', () => {
+      // The Contacts chip sends the plural, which must fall through the entity
+      // search (empty) to the contacts-directory shortcut — not surface a
+      // project that merely contains the word "Contact".
+      expect(findLocalEntityMatches('contacts', { projects: PROJECTS, designerContacts: DESIGNER_CONTACTS }).options).toHaveLength(0);
+      expect(findLocalEntityMatches('contactos', { projects: PROJECTS, designerContacts: DESIGNER_CONTACTS }).options).toHaveLength(0);
+    });
   });
 
   describe('ambiguous queries that produce a picker (still local, no Gemini call)', () => {
@@ -145,6 +156,16 @@ describe('chatbotLocalMatch — quick-action chip payloads (handleChipClick in P
   it('Installations chip now resolves locally (aggregate-intent handler)', () => {
     expect(resolvesLocally('Instalaciones programadas')).toBe(true);
     expect(resolvesLocally('Installation dates')).toBe(true);
+  });
+
+  it('Drawers / Reveals / Contacts chip triggers all resolve locally (no LLM)', () => {
+    // The exact phrases handleChipClick sends for each topical chip.
+    expect(resolvesLocally('Tabla de cajones')).toBe(true);
+    expect(resolvesLocally('Drawer chart')).toBe(true);
+    expect(resolvesLocally('Cuadro de reveals')).toBe(true);
+    expect(resolvesLocally('Reveals chart')).toBe(true);
+    expect(resolvesLocally('Contactos')).toBe(true);
+    expect(resolvesLocally('Contacts')).toBe(true);
   });
 });
 
@@ -390,6 +411,42 @@ describe('chatbotLocalMatch — ON HOLD & Installations intents (now resolved lo
     it.each([
       'how is russell', 'proyectos de russell', 'what is on hold', 'add note', 'add a chart to the project',
     ])('isDrawerChartQuery(%j) is false', (t) => expect(isDrawerChartQuery(t)).toBe(false));
+
+    it.each([
+      'reveals chart', 'reveal chart', 'reveal table', 'reveals', 'cuadro de reveals', 'tabla de reveals',
+    ])('isRevealsQuery(%j) is true', (t) => expect(isRevealsQuery(t)).toBe(true));
+
+    it.each([
+      // A specific manual question keeps going to the manual's targeted answer,
+      // not the whole-table shortcut.
+      'what is the half overlay reveal?', 'cual es el reveal de half overlay?', 'how is russell', 'add note',
+    ])('isRevealsQuery(%j) is false', (t) => expect(isRevealsQuery(t)).toBe(false));
+
+    it.each([
+      'contacts', 'Contactos', 'lista de contactos', 'diseñadores', 'designer contacts', 'ver contactos',
+    ])('isContactsListQuery(%j) is true', (t) => expect(isContactsListQuery(t)).toBe(true));
+
+    it.each([
+      // A named lookup or a project literally named "Contact Center" must not
+      // trigger the full-directory shortcut.
+      'natalie contact', 'bob contactos', 'contact center', 'how is russell',
+    ])('isContactsListQuery(%j) is false', (t) => expect(isContactsListQuery(t)).toBe(false));
+  });
+
+  describe('REVEAL_CHART_ROWS', () => {
+    it('carries the half/full overlay reveal specs for the graphical table', () => {
+      expect(REVEAL_CHART_ROWS).toHaveLength(2);
+      expect(REVEAL_CHART_ROWS.map(r => r.overlay)).toEqual(['Half Overlay', 'Full Overlay']);
+      expect(REVEAL_CHART_ROWS.map(r => r.standard)).toEqual(['1/2"', '1/8"']);
+      expect(REVEAL_CHART_ROWS.map(r => r.panelSide)).toEqual(['1/8"', '7/16"']);
+      expect(REVEAL_CHART_ROWS.map(r => r.otherSide)).toEqual(['-1/4"', '-5/16"']);
+      REVEAL_CHART_ROWS.forEach(r => {
+        expect(r).toEqual(expect.objectContaining({
+          overlay: expect.any(String), standard: expect.any(String),
+          panelSide: expect.any(String), otherSide: expect.any(String),
+        }));
+      });
+    });
   });
 
   describe('DRAWER_CHART_ROWS', () => {
