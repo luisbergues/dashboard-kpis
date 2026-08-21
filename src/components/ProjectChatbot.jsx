@@ -11,8 +11,10 @@ import {
   resolveProjectForNote,
   isOnHoldQuery,
   isInstallQuery,
+  isDrawerChartQuery,
   findOnHoldProjects,
   findUpcomingInstalls,
+  DRAWER_CHART_ROWS,
 } from '../utils/chatbotLocalMatch';
 import './ProjectChatbot.css';
 
@@ -171,6 +173,52 @@ function buildInstallAnswer(installs, isES) {
   return isES
     ? `📅 **Próximas Instalaciones (${installs.length}):**\n\n${lines}${more}`
     : `📅 **Upcoming Installations (${installs.length}):**\n\n${lines}${more}`;
+}
+
+// Intro line shown above the drawer sizing table. The table itself carries the
+// data (see DrawerChartTable) — this just frames it.
+function buildDrawerChartIntro(isES) {
+  return isES
+    ? '📏 **Tabla de Medidas de Cajones**\nAlto de frente, alto de caja y qué guardar en cada uno:'
+    : '📏 **Drawer Sizing Chart**\nFace height, box height, and what fits in each:';
+}
+
+// Renders the drawer sizing chart as a compact table styled with the app's
+// design tokens. Headers/labels follow the current language; the data values
+// come straight from DRAWER_CHART_ROWS. Spacer rows (no named size) render
+// dimmed so the intermediate face heights still show without reading as real
+// drawer options. Wrapped in a horizontal-scroll container so the wide
+// "recommended items" column never breaks the narrow chat bubble layout.
+function DrawerChartTable({ isES }) {
+  const headers = isES
+    ? ['Tamaño', 'Alto Frente', 'Alto Caja', 'Artículos recomendados']
+    : ['Size', 'Face Height', 'Box Height', 'Recommended items to be stored'];
+  return (
+    <div className="drawer-chart-wrap">
+      <table className="drawer-chart-table">
+        <thead>
+          <tr>
+            {headers.map((h) => (
+              <th key={h}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {DRAWER_CHART_ROWS.map((row, i) => {
+            const isSpacer = row.size === '—';
+            return (
+              <tr key={i} className={isSpacer ? 'is-spacer' : ''}>
+                <td className="dc-size">{row.size}</td>
+                <td className="dc-num">{row.faceHeight}</td>
+                <td className="dc-num">{row.boxHeight}</td>
+                <td className="dc-items">{row.items}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 // Rare chatbot easter egg: roughly once every ~69 bot replies, a clickable
@@ -350,6 +398,14 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
           ? 'Perfecto. ¿A qué proyecto (escribe el nombre o el número de SO) deseas agregarle la nota?'
           : 'Perfect. Which project (type the name or SO number) do you want to add the note to?'
       };
+    }
+
+    // Drawer sizing chart — a static reference table answered locally and
+    // rendered as a real table (see DrawerChartTable). Checked before the
+    // entity search so the specific "drawer chart" phrase is never mistaken for
+    // a project/designer name, and before Gemini so it always works offline.
+    if (isDrawerChartQuery(text)) {
+      return { text: buildDrawerChartIntro(isES), drawerChart: true };
     }
 
     // Entity search (designer / engineer / project / designer contact). The
@@ -544,6 +600,7 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
       sender: 'bot',
       text: reply.text,
       options,
+      drawerChart: !!reply.drawerChart,
       viaLLM: !!reply.viaLLM,
       isError: !!reply.isError,
       timestamp: new Date()
@@ -632,12 +689,13 @@ export default function ProjectChatbot({ projects = [], materialsMatrix = [], cu
           {/* Messages body */}
           <div className="chatbot-body">
             {displayMessages.map((m) => (
-              <div key={m.id} className={`chat-message ${m.sender}`}>
+              <div key={m.id} className={`chat-message ${m.sender}${m.drawerChart ? ' has-table' : ''}`}>
                 <div className="message-avatar">
                   {m.sender === 'bot' ? <Bot size={14} /> : <User size={14} />}
                 </div>
                 <div className="message-content">
                   <div className="message-pre"><FormattedMessage text={m.text} /></div>
+                  {m.drawerChart && <DrawerChartTable isES={language === 'es'} />}
                   {m.options && m.options.length > 0 && (
                     <div className="message-options">
                       {m.options.map((opt) => (

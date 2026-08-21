@@ -44,6 +44,22 @@ describe('noteDaysOpen', () => {
     expect(noteDaysOpen(n, ts(2026, 8, 30))).toBe(4);
   });
 
+  // Misma excepción que el checklist de Fase 1: el fin de semana no se cobra,
+  // salvo que el diseñador RESPONDA en un día inhábil.
+  it('resolver un sábado suma ese día', () => {
+    // Del sábado 1 al sábado 8 hay 5 hábiles; el sábado de la respuesta suma 1.
+    expect(noteDaysOpen(note({ resolvedAt: iso(2026, 8, 8) }), ts(2026, 8, 30))).toBe(6);
+  });
+
+  it('resolver un domingo suma dos días: pasó también el sábado', () => {
+    expect(noteDaysOpen(note({ resolvedAt: iso(2026, 8, 9) }), ts(2026, 8, 30))).toBe(7);
+  });
+
+  it('una nota abierta un sábado NO suma el recargo: nadie respondió', () => {
+    expect(noteDaysOpen(note(), ts(2026, 8, 8))).toBe(5);
+    expect(noteDaysOpen(note(), ts(2026, 8, 9))).toBe(5);
+  });
+
   it('arranca en RED_FLAG_SCORING_SINCE si la nota es anterior al release', () => {
     // Creada en marzo, pero el reloj arranca el martes 28-jul. Hasta el 4-ago
     // son 5 hábiles, no los ~100 que habría desde createdAt.

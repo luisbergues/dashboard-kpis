@@ -1,20 +1,23 @@
-import { SUPER_ADMIN_ROLE } from './adminConfig';
+import { isSuperAdminRole } from './adminConfig';
 
 /**
  * Roles que NUNCA quedan bloqueados por el gate de asignación de diseñador.
  *
  * Los tres primeros ven TODOS los proyectos de la empresa en My Projects (ver
  * `myProjectsRaw` en MyProjectsView), no solo los suyos: bloquearlos los
- * dejaría trabados por proyectos ajenos, potencialmente decenas. El super admin
- * queda afuera por la misma razón y además para que siempre exista una cuenta
- * capaz de entrar a destrabar. Un `designer` directamente no tiene My Projects.
+ * dejaría trabados por proyectos ajenos, potencialmente decenas. Un `designer`
+ * directamente no tiene My Projects.
+ *
+ * El super admin NO va acá: `myProjectsRaw` no le hace bypass, así que su My
+ * Projects sale filtrado por la columna ENG igual que el de cualquier
+ * ingeniero. Exentarlo dejaba sin pedido justo a la cuenta que más proyectos
+ * propios tiene.
  */
 const EXEMPT_ROLES = new Set([
   'admin',
   'administrative',
   'engineer_nester',
   'designer',
-  SUPER_ADMIN_ROLE,
 ]);
 
 const norm = (value) => String(value ?? '').trim().toLowerCase();
@@ -46,8 +49,13 @@ export function pendingDesignerAssignments({
 } = {}) {
   if (!userProfile) return [];
   // Una cuenta sin aprobar ya la frena el gate de aprobación de App.jsx; no
-  // tiene sentido pedirle nada antes de eso.
-  if (userProfile.status !== 'approved') return [];
+  // tiene sentido pedirle nada antes de eso. El super admin se saltea ese gate
+  // (App.jsx lo deja entrar con cualquier status, porque su rol se asigna a
+  // mano desde la Console y puede no traer `status`), así que exigirle
+  // 'approved' acá lo dejaba afuera por la puerta de atrás.
+  const puedeOperar = userProfile.status === 'approved'
+    || isSuperAdminRole(userProfile.role);
+  if (!puedeOperar) return [];
   if (EXEMPT_ROLES.has(userProfile.role)) return [];
 
   const myName = norm(userProfile.designerName);

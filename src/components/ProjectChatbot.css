@@ -355,3 +355,92 @@
   border-color: var(--primary);
 }
 
+/* Drawer sizing chart — a table rendered inside a bot bubble. Its message gets
+   the .has-table modifier so the bubble can grow wide enough to hold the grid
+   instead of the usual 85% chat-message cap. */
+.chat-message.has-table {
+  max-width: 100%;
+  align-self: flex-start;
+}
+
+.chat-message.has-table .message-content {
+  width: 100%;
+  padding: 10px 12px;
+}
+
+.drawer-chart-wrap {
+  margin-top: 10px;
+  overflow-x: auto; /* wide "recommended items" column never breaks the bubble */
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.drawer-chart-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+  line-height: 1.3;
+}
+
+.drawer-chart-table th {
+  position: sticky;
+  top: 0;
+  background: var(--card-hover);
+  color: var(--color-neon-green);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-align: left;
+  padding: 7px 8px;
+  border-bottom: 2px solid var(--color-neon-green);
+  white-space: nowrap;
+}
+
+.drawer-chart-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--card-border);
+  color: var(--text-primary);
+  vertical-align: top;
+}
+
+.drawer-chart-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.drawer-chart-table tbody tr:nth-child(even) td {
+  background: var(--overlay-02);
+}
+
+.drawer-chart-table .dc-size {
+  text-align: center;
+  font-weight: 700;
+  color: var(--color-neon-green);
+  white-space: nowrap;
+}
+
+.drawer-chart-table .dc-num {
+  text-align: center;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.drawer-chart-table .dc-items {
+  min-width: 130px;
+  color: var(--text-primary);
+}
+
+/* Spacer rows (intermediate face heights with no named size/box) read as
+   dimmed so they don't look like selectable drawer options. */
+.drawer-chart-table tr.is-spacer td {
+  color: var(--text-muted);
+  background: var(--overlay-02);
+}
+
+.drawer-chart-table tr.is-spacer .dc-size {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+

@@ -87,6 +87,25 @@ describe('dias habiles vencidos', () => {
     expect(overdueBusinessDays(r, day(30))).toBe(2);
   });
 
+  // Misma excepcion que el checklist de Fase 1: el fin de semana no se cobra,
+  // salvo que el disenador RESPONDA en un dia inhabil. Ahi el dia habil se
+  // perdio igual. day(5) es sabado 8 y day(6) domingo 9 de agosto de 2026.
+  it('subsanar un sabado suma ese dia', () => {
+    // Del lunes 3 al viernes 7 hay 4 habiles; el sabado suma 1.
+    expect(overdueBusinessDays(record({ resolvedAt: day(5) }), day(30))).toBe(5);
+  });
+
+  it('subsanar un domingo suma dos dias: paso tambien el sabado', () => {
+    expect(overdueBusinessDays(record({ resolvedAt: day(6) }), day(30))).toBe(6);
+  });
+
+  it('un plazo abierto un sabado NO suma el recargo: nadie respondio', () => {
+    // El recargo es por responder en dia inhabil. Si sigue vencido y hoy es
+    // sabado, no hubo entrega que cobrar.
+    expect(overdueBusinessDays(record(), day(5))).toBe(4);
+    expect(overdueBusinessDays(record(), day(6))).toBe(4);
+  });
+
   it('un Complete que nunca tuvo plazo no acumula nada', () => {
     expect(overdueBusinessDays(record({ result: 'Complete', deadline: 0 }), day(30))).toBe(0);
   });

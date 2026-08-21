@@ -751,8 +751,11 @@ function App() {
       />
       {/* Ultimo hijo a proposito: gate bloqueante por encima de todo, incluidos
           el FAB del chat y la campana. Solo se monta con la sesion ya resuelta
-          y aprobada, para no pisar al gate de aprobacion de cuenta. */}
-      {!loading && !authLoading && currentUser && isApproved && designerAssignmentQueue.length > 0 && (
+          y con permiso para operar, para no pisar al gate de aprobacion de
+          cuenta. Mismo criterio que el Navbar: (isApproved || isSuperAdmin),
+          porque el super admin entra sin pasar por la aprobacion, y con solo
+          isApproved este gate no se le mostraba nunca. */}
+      {!loading && !authLoading && currentUser && (isApproved || isSuperAdmin) && designerAssignmentQueue.length > 0 && (
         <AssignDesignerGate
           pending={designerAssignmentQueue}
           onAssign={assignDesigner}

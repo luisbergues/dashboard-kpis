@@ -8,8 +8,10 @@ import {
   buildNameMatcher,
   isOnHoldQuery,
   isInstallQuery,
+  isDrawerChartQuery,
   findOnHoldProjects,
   findUpcomingInstalls,
+  DRAWER_CHART_ROWS,
 } from './chatbotLocalMatch';
 import { DESIGNER_CONTACTS } from './designerContacts';
 
@@ -377,6 +379,35 @@ describe('chatbotLocalMatch — ON HOLD & Installations intents (now resolved lo
     it('a plain name query triggers neither aggregate intent', () => {
       expect(isOnHoldQuery('how is russell')).toBe(false);
       expect(isInstallQuery('how is russell')).toBe(false);
+    });
+
+    it.each([
+      'drawer chart', 'the drawer chart', 'show me the drawer chart', 'drawer sizes',
+      'drawer size chart', 'tabla de cajones', 'medidas de cajones', 'tabla de cajón',
+      'que tamaños de cajones hay', 'chart de cajones',
+    ])('isDrawerChartQuery(%j) is true', (t) => expect(isDrawerChartQuery(t)).toBe(true));
+
+    it.each([
+      'how is russell', 'proyectos de russell', 'what is on hold', 'add note', 'add a chart to the project',
+    ])('isDrawerChartQuery(%j) is false', (t) => expect(isDrawerChartQuery(t)).toBe(false));
+  });
+
+  describe('DRAWER_CHART_ROWS', () => {
+    it('carries every row of the source chart, blank rows included', () => {
+      // 8 rows total: 6 named sizes (XS,S,M,L,XL,TOH) + 2 unnamed spacers.
+      expect(DRAWER_CHART_ROWS).toHaveLength(8);
+      expect(DRAWER_CHART_ROWS.map(r => r.size)).toEqual(['XS', 'S', 'M', '—', 'L', '—', 'XL', 'TOH']);
+      expect(DRAWER_CHART_ROWS.map(r => r.faceHeight)).toEqual([
+        '4 7/8', '6 1/8', '7 3/8', '8 5/8', '9 7/8', '11 1/8', '12 3/8', '26 1/4',
+      ]);
+      // Every row exposes all four columns (no missing cells).
+      DRAWER_CHART_ROWS.forEach(r => {
+        expect(r).toEqual(expect.objectContaining({
+          size: expect.any(String), faceHeight: expect.any(String),
+          boxHeight: expect.any(String), items: expect.any(String),
+        }));
+      });
+      expect(DRAWER_CHART_ROWS[7].boxHeight).toBe('NO BOX');
     });
   });
 

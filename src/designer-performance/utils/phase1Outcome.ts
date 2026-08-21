@@ -1,5 +1,5 @@
 import type { Phase1Outcome, Phase1OutcomeRecord, Project, ProjectStatus } from '../types';
-import { businessDaysBetween } from './businessDays';
+import { businessDaysBetween, deliveryDaysLate } from './businessDays';
 
 /* Resultado de la revision manual de Fase 1. Reemplaza al Approved/Rejected que
    antes se deducia solo de los tildes del checklist: el checklist sigue midiendo
@@ -93,7 +93,12 @@ export const overdueBusinessDays = (
   now: number = Date.now(),
 ): number => {
   if (!record?.deadline) return 0;
-  return businessDaysBetween(record.deadline, record.resolvedAt ?? now);
+  // El recargo de fin de semana es por SUBSANAR en dia inhabil: solo aplica
+  // cuando hubo respuesta. Un plazo todavia vencido un sabado no suma nada
+  // extra, porque no hubo entrega que cobrar. Ver deliveryDaysLate.
+  return record.resolvedAt
+    ? deliveryDaysLate(record.deadline, record.resolvedAt)
+    : businessDaysBetween(record.deadline, now);
 };
 
 export const overduePenalty = (

@@ -65,13 +65,31 @@ describe('pendingDesignerAssignments — a quien y por que se bloquea', () => {
 describe('pendingDesignerAssignments — roles exentos', () => {
   // Estos tres ven TODOS los proyectos de la empresa en My Projects (ver
   // myProjectsRaw). Bloquearlos los dejaria trabados por proyectos ajenos.
-  it.each(['admin', 'administrative', 'engineer_nester', 'engineer-admin', 'designer'])(
+  it.each(['admin', 'administrative', 'engineer_nester', 'designer'])(
     'el rol %s nunca se bloquea',
     (role) => {
       const cola = call({ role, designerName: 'JS', status: 'approved' });
       expect(cola).toEqual([]);
     },
   );
+
+  // El super admin NO es un rol exento: My Projects se lo filtra por columna
+  // ENG igual que a cualquier ingeniero (myProjectsRaw solo hace bypass para
+  // admin/administrative/engineer_nester), asi que sus proyectos son suyos y
+  // hay que pedirle disenador como a todos. Exentarlo dejaba justo al
+  // ingeniero principal sin el pedido.
+  it('el super admin SI se bloquea por sus propios proyectos', () => {
+    const cola = call({ role: 'engineer-admin', designerName: 'JS', status: 'approved' });
+    expect(cola.map(p => p.so)).toEqual(['111', '222']);
+  });
+
+  // El super admin se salta el gate de aprobacion de cuenta (App.jsx lo deja
+  // entrar con cualquier status), asi que exigirle 'approved' aca lo dejaba
+  // fuera por la puerta de atras.
+  it('el super admin se bloquea aunque su perfil no tenga status approved', () => {
+    const cola = call({ role: 'engineer-admin', designerName: 'JS' });
+    expect(cola.map(p => p.so)).toEqual(['111', '222']);
+  });
 
   it('sin perfil todavia cargado no bloquea', () => {
     expect(call(null)).toEqual([]);

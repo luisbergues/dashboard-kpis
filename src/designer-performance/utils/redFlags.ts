@@ -1,5 +1,5 @@
 import type { DesignerNote, Urgency, RedFlagLine, Phase2Result } from '../types';
-import { businessDaysBetween } from './businessDays';
+import { businessDaysBetween, deliveryDaysLate } from './businessDays';
 
 // Fecha en que la feature sale a producción. Las notas creadas antes empiezan
 // a contar desde acá: nadie arrastra antigüedad que no pudo resolver porque el
@@ -31,8 +31,14 @@ const parseDate = (value: string | null | undefined, fallback: number): number =
 export const noteDaysOpen = (note: DesignerNote, until: number): number => {
   const created = parseDate(note.createdAt, RED_FLAG_SCORING_SINCE);
   const start = Math.max(created, RED_FLAG_SCORING_SINCE);
-  const end = note.resolvedAt ? parseDate(note.resolvedAt, until) : until;
-  return businessDaysBetween(start, end);
+  // El recargo de fin de semana es por RESPONDER en dia inhabil: solo aplica
+  // cuando la nota fue efectivamente resuelta. Una nota que sigue abierta un
+  // sabado no le suma nada a nadie. Un resolvedAt corrupto cae en la rama
+  // abierta, igual que antes. Ver deliveryDaysLate.
+  const resolved = note.resolvedAt ? parseDate(note.resolvedAt, NaN) : NaN;
+  return Number.isNaN(resolved)
+    ? businessDaysBetween(start, until)
+    : deliveryDaysLate(start, resolved);
 };
 
 export const notePenalty = (note: DesignerNote, until: number): number => {

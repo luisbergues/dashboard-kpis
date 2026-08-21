@@ -158,6 +158,7 @@ export function resolvesLocallyInIdleState(text, { projects = [], designerContac
   if (cleanText === 'cancelar' || cleanText === 'cancel') return true;
   if (cleanText === 'ayuda' || cleanText === 'help' || cleanText === '?') return true;
   if (cleanText.includes('nota') || cleanText.includes('note') || cleanText.includes('bitacora')) return true;
+  if (isDrawerChartQuery(text)) return true;
   if (isOnHoldQuery(text) || isInstallQuery(text)) return true;
 
   const { options } = findLocalEntityMatches(text, { projects, designerContacts });
@@ -273,6 +274,38 @@ export function isInstallQuery(text) {
   if (!isShortEnoughForIntent(text)) return false;
   const t = normalizeText(text);
   return t.includes('instalacion') || t.includes('instalaciones') || t.includes('install') || t.includes('installation');
+}
+
+// --- Drawer sizing chart (static reference) ---
+// The manufacturer's drawer sizing reference: for each face height, the box
+// height it takes and what it's meant to store. The blank rows (face heights
+// 8 5/8 and 11 1/8) have no named size / box / items in the source chart — kept
+// here as '—' so the rendered table shows every row exactly as the chart does.
+// Item descriptions stay in the source English (this is a manufacturing
+// reference); only the headers/intro are localized in the component.
+export const DRAWER_CHART_ROWS = [
+  { size: 'XS',  faceHeight: '4 7/8',  boxHeight: '3',      items: 'Pencil drawer or flat jewelry' },
+  { size: 'S',   faceHeight: '6 1/8',  boxHeight: '4',      items: 'Jewelry, underwear, bras, bathing suits, nylons, lingerie' },
+  { size: 'M',   faceHeight: '7 3/8',  boxHeight: '6',      items: 'Jewelry insert, folded nightgowns, workout clothes, socks' },
+  { size: '—',   faceHeight: '8 5/8',  boxHeight: '—',      items: '—' },
+  { size: 'L',   faceHeight: '9 7/8',  boxHeight: '8',      items: 'Folded clothes' },
+  { size: '—',   faceHeight: '11 1/8', boxHeight: '—',      items: '—' },
+  { size: 'XL',  faceHeight: '12 3/8', boxHeight: '10',     items: 'Bulky clothing, file drawer' },
+  { size: 'TOH', faceHeight: '26 1/4', boxHeight: 'NO BOX', items: 'Tilt-out hamper, laundry' },
+];
+
+// True when the query is asking for the drawer sizing chart. The phrase is
+// specific enough that a length guard isn't needed — "drawer chart" (and the
+// Spanish "tabla/medidas de cajones") is an unambiguous request for the table.
+export function isDrawerChartQuery(text) {
+  const t = normalizeText(text); // lowercase, accent-stripped
+  if (t.includes('drawer chart') || t.includes('drawer size') || t.includes('drawer sizing')) return true;
+  if (t.includes('tabla de cajones') || t.includes('tabla de cajon')) return true;
+  if (t.includes('medidas de cajones') || t.includes('medidas de cajon')) return true;
+  if (t.includes('tabla de drawers')) return true;
+  // "cajones" plus a chart/measurement word, in any order.
+  if (t.includes('cajon') && (t.includes('tabla') || t.includes('chart') || t.includes('medidas') || t.includes('tamano'))) return true;
+  return false;
 }
 
 // All projects currently ON HOLD. Uses the same tolerant test the dashboard
