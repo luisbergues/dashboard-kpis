@@ -8,6 +8,7 @@ import { getCachedData, setCachedData, isCacheFresh } from './utils/dbCache'
 import { checkDbSizeAndArchive } from './utils/archiveHelpers'
 import { archiveMissingCompletedProjects, archiveCurrentlyCompletedProjects, fetchArchivedCompletedProjects, purgeExpiredArchives } from './utils/completedProjectsArchive'
 import { withArchiveLease } from './utils/archiveCoordinator'
+import { invalidateArchiveCache } from './utils/archiveStore'
 import Navbar from './components/Navbar'
 import ErrorBoundary from './components/ErrorBoundary'
 import ViewSkeleton from './components/ViewSkeleton'
@@ -113,6 +114,13 @@ function App() {
         dataToReturn.archivedProjects = await fetchArchivedCompletedProjects();
       } else {
         try {
+          // Unico punto donde el archivo se vuelve a leer de la red. El resto
+          // del ciclo (y todos los ticks que pegan en el cache fresco) reusan
+          // la copia en memoria de archiveStore, que se mantiene al dia sola
+          // porque writeArchiveMap escribe de forma pasante. Ver el comentario
+          // largo en archiveStore.js.
+          invalidateArchiveCache();
+
           const [parsedData, projectMaterialsData] = await Promise.all([
             fetchAndParseData(),
             fetchAndParseProjectMaterials()

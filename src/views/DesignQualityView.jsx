@@ -107,8 +107,13 @@ function PeriodTable({ table, colors, isLight, emptyLabel }) {
     return <p style={{ color: colors.body, fontSize: '0.9rem', margin: 0 }}>{emptyLabel}</p>;
   }
 
-  const th = { padding: '10px 12px', color: colors.accent, fontWeight: 600, whiteSpace: 'nowrap' };
-  const td = { padding: '10px 12px', color: colors.body, whiteSpace: 'nowrap' };
+  // Sin nowrap y con table-layout: fixed + anchos por columna, la tabla
+  // respeta el 100% del contenedor sin importar el contenido — los headers
+  // largos ("Revision Points") envuelven a dos lineas en vez de forzar un
+  // ancho de columna mayor y disparar el scroll horizontal del wrapper.
+  const th = { padding: '8px 8px', color: colors.accent, fontWeight: 600, wordBreak: 'break-word' };
+  const td = { padding: '8px 8px', color: colors.body, wordBreak: 'break-word' };
+  const colWidths = ['19%', '15%', '15%', '15%', '16%', '20%'];
 
   return (
     <div>
@@ -116,7 +121,10 @@ function PeriodTable({ table, colors, isLight, emptyLabel }) {
         {table.title}
       </h5>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: colors.title, fontSize: '0.88rem' }}>
+        <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', textAlign: 'left', color: colors.title, fontSize: '0.88rem' }}>
+          <colgroup>
+            {colWidths.map((w, i) => <col key={i} style={{ width: w }} />)}
+          </colgroup>
           <thead>
             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
               <th style={th}>Engineer</th>
@@ -147,9 +155,9 @@ function PeriodTable({ table, colors, isLight, emptyLabel }) {
                       solo: cuando hay alerta la acompania el badge con el
                       texto, para que no dependa de distinguir tonos. */}
                   <td style={{ ...td, fontWeight: 600, color: alert.color || colors.title }}>
-                    {row.percentOfTotal.toFixed(1)}%
+                    <div>{row.percentOfTotal.toFixed(1)}%</div>
                     {alert.badge && (
-                      <span style={{ fontSize: '0.72rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: alert.badgeBg, color: alert.color, marginLeft: '8px', fontWeight: 500 }}>
+                      <span style={{ display: 'inline-block', fontSize: '0.72rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: alert.badgeBg, color: alert.color, marginTop: '4px', fontWeight: 500 }}>
                         {alert.badge}
                       </span>
                     )}
@@ -200,6 +208,17 @@ export default function DesignQualityView() {
   const [error, setError] = useState(null);
   const [showGuide, setShowGuide] = useState(false);
   const [weeklyEngineerHistory, setWeeklyEngineerHistory] = useState([]);
+
+  // Sin esto, la pagina de fondo seguia siendo scrolleable con el modal
+  // abierto: su propia scrollbar nativa (del viewport, no la del modal) se
+  // dibujaba encima del overlay fixed, sobresaliendo por fuera de las
+  // esquinas redondeadas del cuadro — eso es lo que se veia "por fuera".
+  useEffect(() => {
+    if (!showGuide) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prevOverflow; };
+  }, [showGuide]);
 
   useEffect(() => {
     async function loadData() {

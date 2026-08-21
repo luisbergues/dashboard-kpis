@@ -207,7 +207,11 @@ export async function archiveMissingCompletedProjects(previousData, newData, pro
 // that's no longer in the live sheet nor already archived — see OrphanedProjectsPanel.
 export async function manuallyArchiveProject(project) {
   if (!db || !project?.so) return;
-  const map = await readArchiveMap(ARCHIVE_PATHS.completed);
+  // `fresh` a proposito: este es el unico read-modify-write del archivo que
+  // corre FUERA de withArchiveLease (lo dispara el admin a mano desde el panel
+  // de huerfanos), asi que no tiene la garantia de escritor unico que hace
+  // seguro reusar la copia en memoria de archiveStore.
+  const map = await readArchiveMap(ARCHIVE_PATHS.completed, { fresh: true });
   const key = project.so.toString();
   map[key] = {
     ...map[key],

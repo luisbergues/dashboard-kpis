@@ -5,6 +5,25 @@ import { readArchiveMap, writeArchiveMap, ARCHIVE_PATHS } from './archiveStore';
 // 1 GB limit
 const DB_SIZE_LIMIT_BYTES = 1073741824;
 
+// Tope de ejecuciones por sesion del navegador.
+//
+// Este chequeo descarga weekly_history y deleted_projects ENTEROS para
+// serializarlos y medirlos. Corria dentro del ciclo de archivado de App.jsx, o
+// sea cada ~5 minutos mientras hubiera una pestaña abierta: ~288 descargas de
+// los dos nodos por dia, para calcular un numero que en la practica siempre da
+// "por debajo del limite" (en Spark la base entera corta en 1 GB, asi que estos
+// dos nodos solos no pueden alcanzarlo).
+//
+// Tres corridas por sesion conservan la red de seguridad — sigue disparando si
+// alguna vez la base crece de verdad — a una fraccion del costo.
+const MAX_RUNS_PER_SESSION = 3;
+let runsThisSession = 0;
+
+// Sólo para tests: devuelve el contador a cero entre casos.
+export function resetDbSizeCheckCountForTests() {
+  runsThisSession = 0;
+}
+
 let hasWarnedNotInitialized = false;
 
 export async function checkDbSizeAndArchive() {
@@ -15,6 +34,12 @@ export async function checkDbSizeAndArchive() {
     }
     return;
   }
+
+  // Se cuenta ANTES de correr, no despues: una corrida que falla igual gastó su
+  // descarga, y contarla sólo al terminar bien dejaría reintentando cada 5
+  // minutos justo en el caso en que el chequeo esta roto.
+  if (runsThisSession >= MAX_RUNS_PER_SESSION) return;
+  runsThisSession += 1;
 
   try {
     // Note: In a pure client-side setup, getting the exact whole DB size is an approximation.

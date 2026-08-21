@@ -38,7 +38,7 @@ vi.mock('firebase/database', () => ({
   remove: vi.fn(async (r) => { removedNodes.push(r.path); delete rtdb[r.path]; }),
 }));
 
-import { checkDbSizeAndArchive } from '../archiveHelpers';
+import { checkDbSizeAndArchive, resetDbSizeCheckCountForTests } from '../archiveHelpers';
 
 // The function decides to archive based on `new Blob([...]).size`. Rather than
 // allocating a real >1 GB payload, stub Blob to report a chosen size.
@@ -53,6 +53,9 @@ beforeEach(() => {
   removedNodes.length = 0;
   readArchiveMap.mockClear();
   writeArchiveMap.mockClear();
+  // El tope de corridas por sesion es estado de modulo: sin esto, a partir del
+  // cuarto caso la funcion saldria por el early-return y no probaria nada.
+  resetDbSizeCheckCountForTests();
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -119,5 +122,36 @@ describe('checkDbSizeAndArchive', () => {
 
     expect(removedNodes).toEqual([]);
     expect(rtdb['weekly_history']).toBeDefined();
+  });
+});
+
+// El chequeo descarga weekly_history y deleted_projects ENTEROS cada vez. Corria
+// en cada ciclo de archivado (~cada 5 min), o sea ~288 descargas de los dos
+// nodos por dia para calcular un numero que siempre da "por debajo del limite".
+describe('checkDbSizeAndArchive — tope de corridas por sesion', () => {
+  it('corre 3 veces y despues no vuelve a tocar la red', async () => {
+    const { get } = await import('firebase/database');
+    stubBlobSize(1000);
+    rtdb['weekly_history'] = { w1: { label: 'W1' } };
+    rtdb['deleted_projects'] = {};
+    get.mockClear();
+
+    for (let i = 0; i < 10; i++) await checkDbSizeAndArchive();
+
+    // 2 nodos por corrida x 3 corridas permitidas.
+    expect(get).toHaveBeenCalledTimes(6);
+  });
+
+  it('una corrida que falla igual consume su cupo (no reintenta en loop)', async () => {
+    const { get } = await import('firebase/database');
+    stubBlobSize(1000);
+    rtdb['weekly_history'] = { w1: { label: 'W1' } };
+    rtdb['deleted_projects'] = {};
+    get.mockClear();
+    get.mockRejectedValueOnce(new Error('network down'));
+
+    for (let i = 0; i < 10; i++) await checkDbSizeAndArchive();
+
+    expect(get).toHaveBeenCalledTimes(6);
   });
 });
