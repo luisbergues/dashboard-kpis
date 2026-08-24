@@ -332,7 +332,6 @@ function App() {
   // Fuente unica del estado de tags: un solo onValue montado aca, sus
   // proyecciones bajan por props a las vistas (ver useProjectTags.js).
   const {
-    tags,
     unreadByProject,
     unreadForMe,
     tagsByNote,
@@ -684,8 +683,8 @@ function App() {
         return isDesigner ? null : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} projectHistory={projectHistory} />;
       case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} unreadByProject={unreadByProject} />;
       case 'my-projects':
-        return isDesigner ? null : <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} setActiveTab={setActiveTab} setFocusedProjectSo={setFocusedProjectSo} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} focusedNoteId={focusedNoteId} clearFocusedNoteId={() => setFocusedNoteId(null)} engineerDirectory={engineerDirectory} tags={tags} unreadByProject={unreadByProject} unreadForMe={unreadForMe} tagsByNote={tagsByNote} markTagRead={markTagRead} />;
-      case 'pipeline': return <PipelineView data={mergedData} currentUser={currentUser} userProfile={userProfile} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} focusedNoteId={focusedNoteId} clearFocusedNoteId={() => setFocusedNoteId(null)} engineerDirectory={engineerDirectory} tags={tags} unreadByProject={unreadByProject} tagsByNote={tagsByNote} markTagRead={markTagRead} />;
+        return isDesigner ? null : <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} setActiveTab={setActiveTab} setFocusedProjectSo={setFocusedProjectSo} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} focusedNoteId={focusedNoteId} clearFocusedNoteId={() => setFocusedNoteId(null)} engineerDirectory={engineerDirectory} unreadByProject={unreadByProject} unreadForMe={unreadForMe} tagsByNote={tagsByNote} markTagRead={markTagRead} />;
+      case 'pipeline': return <PipelineView data={mergedData} currentUser={currentUser} userProfile={userProfile} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} focusedNoteId={focusedNoteId} clearFocusedNoteId={() => setFocusedNoteId(null)} engineerDirectory={engineerDirectory} unreadByProject={unreadByProject} tagsByNote={tagsByNote} />;
       case 'materials':
         return isDesigner ? null : <MaterialsView data={mergedData} />;
       case 'quality': 

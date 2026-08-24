@@ -73,7 +73,7 @@ export default function MyProjectsView({
   data, currentUser, userProfile, setActiveTab,
   setFocusedProjectSo, focusedProjectSo, clearFocusedProjectSo,
   focusedNoteId, clearFocusedNoteId,
-  engineerDirectory = {}, tags = [], unreadForMe = [], tagsByNote = {}, markTagRead,
+  engineerDirectory = {}, unreadForMe = [], tagsByNote = {}, markTagRead,
 }) {
   const { t, language } = useLanguage();
   const { theme } = useTheme();

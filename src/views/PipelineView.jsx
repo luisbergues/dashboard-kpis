@@ -47,7 +47,7 @@ const getStageLabel = (stageId, language) => {
 export default function PipelineView({
   data, currentUser, userProfile, focusedProjectSo, clearFocusedProjectSo,
   focusedNoteId, clearFocusedNoteId,
-  engineerDirectory = {}, tags = [], unreadByProject = {}, tagsByNote = {}, markTagRead,
+  engineerDirectory = {}, unreadByProject = {}, tagsByNote = {},
 }) {
   const { t, language } = useLanguage();
   if (!data) return null;
