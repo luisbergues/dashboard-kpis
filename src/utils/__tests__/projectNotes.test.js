@@ -4,6 +4,7 @@ import {
   normalizeNotesBySo,
   noteStorageKey,
   stripInternalFields,
+  compareByCreatedAtDesc,
 } from '../projectNotes';
 
 // project_notes paso de "array completo reescrito con set()" a "una nota por
@@ -62,6 +63,52 @@ describe('normalizeNotes', () => {
     const result = normalizeNotes(raw);
     expect(result[0].text).toBe('con fecha');
     expect(result[1].text).toBe('sin fecha');
+  });
+});
+
+describe('compareByCreatedAtDesc', () => {
+  it('ordena del mas nuevo al mas viejo', () => {
+    const items = [
+      { createdAt: '2026-08-01T00:00:00.000Z' },
+      { createdAt: '2026-08-20T00:00:00.000Z' },
+    ];
+    items.sort(compareByCreatedAtDesc);
+    expect(items).toEqual([
+      { createdAt: '2026-08-20T00:00:00.000Z' },
+      { createdAt: '2026-08-01T00:00:00.000Z' },
+    ]);
+  });
+
+  it('trata ambas fechas invalidas como iguales (no reordena)', () => {
+    const items = [
+      { createdAt: 'no-es-fecha' },
+      { createdAt: 'otro-que-falla' },
+    ];
+    items.sort(compareByCreatedAtDesc);
+    expect(items).toEqual([
+      { createdAt: 'no-es-fecha' },
+      { createdAt: 'otro-que-falla' },
+    ]);
+  });
+
+  it('pone invalidos al final (mas viejo) cuando uno es valido', () => {
+    const items = [
+      { createdAt: 'no-es-fecha' },
+      { createdAt: '2026-08-20T00:00:00.000Z' },
+    ];
+    items.sort(compareByCreatedAtDesc);
+    expect(items[0].createdAt).toBe('2026-08-20T00:00:00.000Z');
+    expect(items[1].createdAt).toBe('no-es-fecha');
+  });
+
+  it('pone invalidos al final desde el otro lado', () => {
+    const items = [
+      { createdAt: '2026-08-20T00:00:00.000Z' },
+      { createdAt: 'no-es-fecha' },
+    ];
+    items.sort(compareByCreatedAtDesc);
+    expect(items[0].createdAt).toBe('2026-08-20T00:00:00.000Z');
+    expect(items[1].createdAt).toBe('no-es-fecha');
   });
 });
 

@@ -6,7 +6,7 @@
 // derivara por su cuenta, las cuatro se irian separando con el tiempo — que es
 // exactamente lo que este feature tiene que evitar.
 
-import { noteStorageKey } from './projectNotes';
+import { noteStorageKey, compareByCreatedAtDesc } from './projectNotes';
 
 /**
  * Clave compuesta proyecto+nota.
@@ -80,16 +80,7 @@ export function unreadForMe(liveTagList, uid) {
   if (!uid) return [];
   return liveTagList
     .filter(t => isUnread(t) && t.taggedUid === uid)
-    .sort((a, b) => {
-      const ta = Date.parse(a.createdAt);
-      const tb = Date.parse(b.createdAt);
-      // Un createdAt sin parsear no debe reordenar el resto: se lo trata como
-      // el mas viejo. Mismo criterio que normalizeNotes en projectNotes.js.
-      if (isNaN(ta) && isNaN(tb)) return 0;
-      if (isNaN(ta)) return 1;
-      if (isNaN(tb)) return -1;
-      return tb - ta;
-    });
+    .sort(compareByCreatedAtDesc);
 }
 
 /** { [noteTagKey]: Tag[] } — incluye leidos y no leidos, para el timeline. */

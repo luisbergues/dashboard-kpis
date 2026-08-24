@@ -19,6 +19,25 @@
 // Campo interno que solo existe en memoria: nunca debe llegar a la base.
 const INTERNAL_KEY_FIELD = '_key';
 
+/**
+ * Comparador por createdAt, del mas nuevo al mas viejo.
+ *
+ * Trata un createdAt sin parsear como la fecha mas vieja, para que no
+ * reordene el resto. Es compartido entre el timeline de notas y la lista de
+ * tags sin leer: si la regla de manejo de fechas invalidas cambia, tiene que
+ * cambiar en los dos lugares a la vez, no copiar por separado.
+ */
+export function compareByCreatedAtDesc(a, b) {
+  const ta = Date.parse(a.createdAt);
+  const tb = Date.parse(b.createdAt);
+  // Una nota sin createdAt parseable no debe reordenar el resto: se la
+  // trata como la mas vieja en vez de producir NaN en la comparacion.
+  if (isNaN(ta) && isNaN(tb)) return 0;
+  if (isNaN(ta)) return 1;
+  if (isNaN(tb)) return -1;
+  return tb - ta;
+}
+
 // Convierte lo que devuelve RTDB (mapa por id, objeto indexado legacy, array,
 // o null) en un array de notas ordenado de mas nueva a mas vieja.
 export function normalizeNotes(raw) {
@@ -26,16 +45,7 @@ export function normalizeNotes(raw) {
   return Object.entries(raw)
     .filter(([, note]) => note && typeof note === 'object')
     .map(([key, note]) => ({ ...note, [INTERNAL_KEY_FIELD]: key }))
-    .sort((a, b) => {
-      const ta = Date.parse(a.createdAt);
-      const tb = Date.parse(b.createdAt);
-      // Una nota sin createdAt parseable no debe reordenar el resto: se la
-      // trata como la mas vieja en vez de producir NaN en la comparacion.
-      if (isNaN(ta) && isNaN(tb)) return 0;
-      if (isNaN(ta)) return 1;
-      if (isNaN(tb)) return -1;
-      return tb - ta;
-    });
+    .sort(compareByCreatedAtDesc);
 }
 
 // Aplica normalizeNotes a todo el nodo project_notes (mapa SO -> notas).
@@ -57,6 +67,7 @@ export function noteStorageKey(note) {
 // Quita el campo interno antes de escribir. Sin esto, `_key` terminaria
 // persistido dentro de la nota en cada edicion.
 export function stripInternalFields(note) {
+  // eslint-disable-next-line no-unused-vars
   const { [INTERNAL_KEY_FIELD]: _ignored, ...rest } = note;
   return rest;
 }
