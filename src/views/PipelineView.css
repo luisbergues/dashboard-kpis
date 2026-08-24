@@ -215,6 +215,11 @@
   font-weight: 500;
 }
 
+.tag-unread-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  color: var(--accent, #80EE98); font-weight: 600;
+}
+
 .status-badge {
   padding: 4px 12px;
   border-radius: 100px;

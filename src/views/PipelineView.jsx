@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { Search, AlertCircle, Calendar, StickyNote, Flag, Clock, CheckCircle2, Users, Plus, Circle, Image as ImageIcon, Loader2, X, FileText, Paperclip, MessageSquare } from 'lucide-react';
+import { Search, AlertCircle, Calendar, StickyNote, Flag, Clock, CheckCircle2, Users, Plus, Circle, Image as ImageIcon, Loader2, X, FileText, Paperclip, MessageSquare, AtSign } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import { db, ref, onValue, set } from '../utils/firebase';
 import { saveEngineeringCheck } from '../utils/engineeringCheck';
@@ -860,6 +860,17 @@ export default function PipelineView({
                       {projectDesigners[project.so] && (
                         <span className="meta-item eng-badge">
                           DES: {projectDesigners[project.so]}
+                        </span>
+                      )}
+                      {unreadByProject[String(project.so)] > 0 && (
+                        <span
+                          className="meta-item tag-unread-badge"
+                          title={language === 'es'
+                            ? `${unreadByProject[String(project.so)]} tag(s) sin leer`
+                            : `${unreadByProject[String(project.so)]} unread tag(s)`}
+                        >
+                          <AtSign size={12} />
+                          {unreadByProject[String(project.so)]}
                         </span>
                       )}
                       {projectCollaborators[project.so] && projectCollaborators[project.so].length > 0 && (

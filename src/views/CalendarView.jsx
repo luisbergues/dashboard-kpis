@@ -8,14 +8,14 @@ import { useLanguage } from '../utils/LanguageContext';
 import { shortProjectName } from '../utils/projectName';
 import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon,
-  Plus, Trash2, X, FileText, ClipboardList, FlagTriangleRight, CheckCircle2
+  Plus, Trash2, X, FileText, ClipboardList, FlagTriangleRight, CheckCircle2, AtSign
 } from 'lucide-react';
 import './CalendarView.css';
 import { db, ref, set, remove, onValue } from '../utils/firebase';
 import { sendCalendarNoteEvent } from '../utils/sheetSync';
 import TerminatedEasterEgg from '../components/TerminatedEasterEgg';
 
-export default function CalendarView({ data, currentUser, userProfile }) {
+export default function CalendarView({ data, currentUser, userProfile, unreadByProject = {} }) {
   const { t, language } = useLanguage();
   if (!data) return null;
 
@@ -390,6 +390,9 @@ export default function CalendarView({ data, currentUser, userProfile }) {
                 <div key={idx} className={`cal-event ${getStatusColor(p.status)}`} title={`${p.name} - ${p.status}`}>
                   <span className="cal-event-tag">INST</span>
                   <span className="cal-event-title">#{p.so}</span>
+                  {unreadByProject[String(p.so)] > 0 && (
+                    <AtSign size={9} className="cal-tag-icon" aria-label={language === 'es' ? 'Tags sin leer' : 'Unread tags'} />
+                  )}
                 </div>
               ))}
               {dayFinals.map((p, idx) => (

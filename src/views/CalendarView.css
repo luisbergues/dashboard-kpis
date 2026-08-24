@@ -257,6 +257,8 @@
   flex-shrink: 0;
 }
 
+.cal-tag-icon { margin-left: auto; color: var(--accent, #80EE98); flex-shrink: 0; }
+
 /* Sidebar List */
 .sidebar-title {
   font-size: 1.1rem;
