@@ -149,7 +149,6 @@ export default function MyProjectsView({
   // (linea ~84), asi que react-hooks/rules-of-hooks marca TODOS los useState de
   // aca abajo como condicionales, no solo este. Arreglar ese patron es un
   // refactor fuera del alcance de esta tarea.
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [noteTagUids, setNoteTagUids] = useState({}); // { [so]: string[] }
   const [noteImages, setNoteImages] = useState({}); // { [so]: File }
   const [isUploadingImage, setIsUploadingImage] = useState({}); // { [so]: boolean }
