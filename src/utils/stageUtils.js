@@ -51,6 +51,46 @@ function statusesForIndex(index) {
  *   etapa, se usa hoy para no romper las barras de progreso). Quien mida
  *   tendencias en el tiempo debe descartarlas — ver calculateWeeklyCompletions.
  */
+// RTDB devuelve los arrays como objetos indexados ({0:..., 1:...}) cuando las
+// claves no son contiguas, asi que lo que sale del snapshot no siempre es un
+// array de verdad.
+const asArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object') return Object.values(value);
+  return [];
+};
+
+/**
+ * Etapas de un proyecto que puede estar vivo o archivado.
+ *
+ * Al archivar, completedProjectsArchive.js copia `project_history/{so}` y el
+ * statusHistory del sheet dentro de `project.snapshot` y despues BORRA los
+ * nodos vivos. Sin leer ese snapshot, un proyecto archivado vuelve con todas
+ * sus etapas `estimated` y desaparece de cualquier metrica temporal: las
+ * semanas que ya habia sumado al grafico Projects Completed (Weekly) se
+ * borraban solas en cuanto el proyecto salia del sheet.
+ *
+ * El nodo vivo siempre gana: un proyecto activo se comporta exactamente igual
+ * que antes.
+ *
+ * @param {Object} project - fila del sheet o entrada del archivo (con .snapshot)
+ * @param {Array}  liveHistory - project_history/{so} actual, si todavia existe
+ */
+export function stagesFromProjectOrArchive(project, liveHistory) {
+  const snapshot = project?.snapshot;
+  if (!snapshot) return calculateAutomaticStages(project, liveHistory);
+
+  const live = asArray(liveHistory);
+  const recorded = live.length > 0 ? live : asArray(snapshot.history);
+
+  const ownStatusHistory = asArray(project.statusHistory);
+  if (ownStatusHistory.length > 0) return calculateAutomaticStages(project, recorded);
+
+  const fromSnapshot = asArray(snapshot.statusHistory);
+  if (fromSnapshot.length === 0) return calculateAutomaticStages(project, recorded);
+  return calculateAutomaticStages({ ...project, statusHistory: fromSnapshot }, recorded);
+}
+
 export function calculateAutomaticStages(project, recordedHistory = []) {
   const progress = Array(STAGES.length).fill(false);
   const statusHistory = project.statusHistory || [];

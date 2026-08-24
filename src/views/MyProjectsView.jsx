@@ -31,7 +31,7 @@ import { cleanupESSData } from '../utils/essData';
 import { cleanupIPData } from '../utils/ipData';
 import { cleanupLogbookData } from '../utils/logbookData';
 import { cleanupChecklistData } from '../utils/checklistData';
-import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
+import { calculateAutomaticStages, stagesFromProjectOrArchive, STAGES } from '../utils/stageUtils';
 import { useTheme } from '../utils/ThemeContext';
 import { noteStorageKey, stripInternalFields, normalizeNotesBySo } from '../utils/projectNotes';
 import './MyProjectsView.css';
@@ -308,15 +308,22 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       // projectHistory trae las transiciones de etapa realmente observadas
       // (ver statusTransitions.js). Sin eso, calculateAutomaticStages solo
       // puede fechar la etapa actual y estima el resto con "hoy".
-      obj[p.so] = calculateAutomaticStages(p, projectHistory[p.so]);
+      // Para los archivados ese nodo ya no existe: stagesFromProjectOrArchive
+      // cae al snapshot que dejo el archivador, si no las semanas que el
+      // proyecto ya habia sumado al grafico se borraban al archivarse.
+      obj[p.so] = stagesFromProjectOrArchive(p, projectHistory[p.so]);
     });
     return obj;
   }, [myProjectsRaw, myArchivedProjects, projectHistory]);
 
+  // 6 semanas: es la ventana que se pidio para el grafico. Las semanas sin
+  // actividad intermedias se rellenan con 0 (ver calculateWeeklyCompletions),
+  // pero no se inventan semanas ANTERIORES a la primera con datos: el eje
+  // arranca corto y se estira hasta 6 a medida que se acumula historial.
   const weeklyDataRaw = calculateWeeklyCompletions(
     derivedProjectStages,
     [...myProjectsRaw, ...myArchivedProjects],
-    8,
+    6,
     language
   );
   // Los labels de las series salen del diccionario estatico (antes estaban

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateAutomaticStages, STAGES } from '../stageUtils';
+import { calculateAutomaticStages, stagesFromProjectOrArchive, STAGES } from '../stageUtils';
 import { STAGE_EVENT_TYPE } from '../statusTransitions';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -111,5 +111,60 @@ describe('calculateAutomaticStages', () => {
       statusHistory: [{ so: '800', status: 'Nesting', statusDate: 'N/A' }],
     };
     expect(() => calculateAutomaticStages(project)).not.toThrow();
+  });
+});
+
+describe('stagesFromProjectOrArchive — un proyecto archivado no pierde su historia', () => {
+  // Al archivar se BORRA project_history/{so} de la base y su contenido queda
+  // copiado dentro de `snapshot` (ver completedProjectsArchive.js). Sin leer
+  // ese snapshot, el proyecto vuelve con todas las etapas `estimated` y
+  // desaparece de las metricas temporales: las semanas que ya habia sumado al
+  // grafico Projects Completed se borraban solas al archivarse.
+  const archivado = (snapshot) => ({
+    so: '999',
+    status: 'Completed',
+    snapshot,
+  });
+
+  const historia = [
+    { status: 'ENGINEERING', timestamp: '2026-07-06T10:00:00.000Z' },
+    { status: 'NESTING', timestamp: '2026-07-20T10:00:00.000Z' },
+  ];
+
+  it('usa el project_history guardado en el snapshot cuando el nodo vivo ya no esta', () => {
+    const stages = stagesFromProjectOrArchive(archivado({ history: historia }), undefined);
+    expect(stages[0].estimated).toBe(false);
+    expect(stages[0].timestamp).toBe('2026-07-06T10:00:00.000Z');
+    expect(stages[4].estimated).toBe(false);
+    expect(stages[4].timestamp).toBe('2026-07-20T10:00:00.000Z');
+  });
+
+  it('tolera que el snapshot vuelva como objeto indexado', () => {
+    // RTDB devuelve los arrays como objetos {0:…, 1:…} cuando las claves no
+    // son contiguas. Sin normalizar, el .forEach de calculateAutomaticStages
+    // revienta.
+    const comoObjeto = { 0: historia[0], 1: historia[1] };
+    const stages = stagesFromProjectOrArchive(archivado({ history: comoObjeto }), undefined);
+    expect(stages[0].estimated).toBe(false);
+    expect(stages[4].timestamp).toBe('2026-07-20T10:00:00.000Z');
+  });
+
+  it('usa el statusHistory del snapshot cuando el proyecto ya no lo trae', () => {
+    const stages = stagesFromProjectOrArchive(
+      archivado({ statusHistory: [{ so: '999', status: 'ENGINEERING', statusDate: '2026-07-06' }] }),
+      undefined,
+    );
+    expect(stages[0].estimated).toBe(false);
+  });
+
+  it('el nodo vivo le gana al snapshot: un proyecto activo no cambia de comportamiento', () => {
+    const vivo = [{ status: 'ENGINEERING', timestamp: '2026-08-03T10:00:00.000Z' }];
+    const stages = stagesFromProjectOrArchive(archivado({ history: historia }), vivo);
+    expect(stages[0].timestamp).toBe('2026-08-03T10:00:00.000Z');
+  });
+
+  it('sin snapshot se comporta igual que calculateAutomaticStages', () => {
+    const p = { so: '111', status: 'Engineering', statusHistory: [] };
+    expect(stagesFromProjectOrArchive(p, [])).toEqual(calculateAutomaticStages(p, []));
   });
 });
