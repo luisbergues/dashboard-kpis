@@ -9,6 +9,7 @@ import { sendStageEvent, sendNoteEvent, sendEngineerAssignEvent } from '../utils
 import { shortProjectName } from '../utils/projectName';
 import { formatDisplayDate } from '../utils/dateFormat';
 import { noteStorageKey, stripInternalFields, normalizeNotesBySo } from '../utils/projectNotes';
+import { ENGINEERS } from '../utils/engineers';
 import './PipelineView.css';
 
 const getNoteEffectiveType = (note) => note.noteType || (note.priority ? 'priority' : 'normal');
@@ -788,7 +789,7 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                           value=""
                         >
                           <option value="" disabled>{language === 'es' ? 'Asignar ING' : 'Assign ENG'}</option>
-                          {['Joaquin', 'Jose', 'Luis', 'Santiago', 'Julieta', 'Andres', 'Delfina', 'Josema'].map(d => (
+                          {ENGINEERS.map(d => (
                             <option key={d} value={d} style={{ color: '#000' }}>{d}</option>
                           ))}
                         </select>
