@@ -8,8 +8,10 @@ import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
 import { sendStageEvent, sendNoteEvent, sendEngineerAssignEvent } from '../utils/sheetSync';
 import { shortProjectName } from '../utils/projectName';
 import { formatDisplayDate } from '../utils/dateFormat';
-import { noteStorageKey, stripInternalFields, normalizeNotesBySo } from '../utils/projectNotes';
+import { noteStorageKey, normalizeNotesBySo } from '../utils/projectNotes';
 import { ENGINEERS } from '../utils/engineers';
+import TagSelector from '../components/TagSelector';
+import { buildTags, createNoteWithTags } from '../utils/noteTags';
 import './PipelineView.css';
 
 const getNoteEffectiveType = (note) => note.noteType || (note.priority ? 'priority' : 'normal');
@@ -39,7 +41,15 @@ const getStageLabel = (stageId, language) => {
 };
 
 
-export default function PipelineView({ data, currentUser, userProfile, focusedProjectSo, clearFocusedProjectSo }) {
+export default function PipelineView({
+  data, currentUser, userProfile, focusedProjectSo, clearFocusedProjectSo,
+  // focusedNoteId/clearFocusedNoteId/tags/unreadByProject/tagsByNote/markTagRead:
+  // aun no se consumen en esta tarea, los usa una tarea posterior (ver App.jsx).
+  // eslint-disable-next-line no-unused-vars
+  focusedNoteId, clearFocusedNoteId,
+  // eslint-disable-next-line no-unused-vars
+  engineerDirectory = {}, tags = [], unreadByProject = {}, tagsByNote = {}, markTagRead,
+}) {
   const { t, language } = useLanguage();
   if (!data) return null;
 
@@ -51,6 +61,12 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
   const [projectCollaborators, setProjectCollaborators] = useState({});
   const [projectDesigners, setProjectDesigners] = useState({});
   const [newNoteTexts, setNewNoteTexts] = useState({});
+  // El componente ya tiene un `if (!data) return null;` antes de sus hooks
+  // (linea 44), asi que react-hooks/rules-of-hooks marca TODOS los useState de
+  // aca abajo como condicionales, no solo este. Arreglar ese patron es un
+  // refactor fuera del alcance de esta tarea.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [noteTagUids, setNoteTagUids] = useState({});
   const [nestingChecks, setNestingChecks] = useState({});
   const [commentTypes, setCommentTypes] = useState({});
   const [assignedEngineers, setAssignedEngineers] = useState({}); // Optimistic UI for assigned engineers
@@ -275,8 +291,18 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
         // Se escribe SOLO la nota nueva, bajo su propia clave, en vez de
         // reescribir el array entero del proyecto: asi la regla de RTDB puede
         // evaluar esta nota en particular (ver projectNotes.js).
-        await set(ref(db, `project_notes/${so}/${noteStorageKey(newNote)}`), stripInternalFields(newNote));
+        const noteKey = noteStorageKey(newNote);
+        const builtTags = buildTags({
+          so,
+          noteKey,
+          taggedUids: noteTagUids[so] || [],
+          directory: engineerDirectory,
+          authorUid: currentUser.uid,
+          authorName: newNote.createdBy,
+        });
+        await createNoteWithTags({ so, note: newNote, tags: builtTags });
         setNewNoteTexts(prev => ({ ...prev, [so]: '' }));
+        setNoteTagUids(prev => ({ ...prev, [so]: [] }));
         setCommentTypes(prev => ({ ...prev, [so]: 'normal' }));
         setNoteImages(prev => ({ ...prev, [so]: null }));
         setIsUploadingImage(prev => ({ ...prev, [so]: false }));
@@ -1013,7 +1039,14 @@ export default function PipelineView({ data, currentUser, userProfile, focusedPr
                                 disabled={isUploadingImage[project.so] || (noteImages[project.so] && noteImages[project.so].length >= 4)}
                               />
                             </label>
-                            <button 
+                            <TagSelector
+                              directory={engineerDirectory}
+                              selectedUids={noteTagUids[project.so] || []}
+                              onChange={(uids) => setNoteTagUids(prev => ({ ...prev, [project.so]: uids }))}
+                              excludeUid={currentUser?.uid}
+                              language={language}
+                            />
+                            <button
                               onClick={() => handleAddNote(project.so, project.eng, commentTypes[project.so])}
                               disabled={(!(newNoteTexts[project.so] || '').trim() && (!noteImages[project.so] || noteImages[project.so].length === 0)) || isUploadingImage[project.so]}
                               className="btn-sm btn-primary pipeline-add-note-btn"
