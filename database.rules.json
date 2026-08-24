@@ -89,7 +89,7 @@
       "$so": {
         "$tagId": {
           ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && (!data.exists() || (!newData.exists() && auth.uid === data.child('taggedByUid').val()))",
-          ".validate": "newData.child('taggedByUid').val() === auth.uid",
+          ".validate": "data.exists() || newData.child('taggedByUid').val() === auth.uid",
           "readAt": {
             ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && auth.uid === root.child('project_tags').child($so).child($tagId).child('taggedUid').val()"
           }

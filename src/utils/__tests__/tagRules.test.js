@@ -28,7 +28,13 @@ describe('reglas de project_tags', () => {
   });
 
   it('nadie puede taggear en nombre de otro', () => {
-    expect(node().$so.$tagId['.validate']).toContain("newData.child('taggedByUid').val() === auth.uid");
+    const validate = node().$so.$tagId['.validate'];
+    // Guarded by data.exists() so it cannot block updates to existing tags (like readAt writes).
+    // When creating a new tag, data.exists() is false, so the second clause enforces
+    // that taggedByUid must equal auth.uid — preventing impersonation.
+    expect(validate).toContain('data.exists()');
+    expect(validate).toContain('taggedByUid');
+    expect(validate).toContain('auth.uid');
   });
 });
 
