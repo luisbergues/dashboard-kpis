@@ -84,6 +84,20 @@ describe('createNoteWithTags', () => {
     expect(lastUpdate['project_notes/100/n1']._key).toBeUndefined();
   });
 
+  it('una nota con _key distinto de id se escribe bajo el _key', async () => {
+    const tags = buildTags({ so: '100', noteKey: '999', taggedUids: ['u-santi'], directory, authorUid: 'u-luis', authorName: 'Luis' });
+    const noteWithKey = { ...note, id: 'n1', _key: '999' };
+    await createNoteWithTags({ so: '100', note: noteWithKey, tags });
+
+    expect(Object.keys(lastUpdate).sort()).toEqual([
+      'project_notes/100/999',
+      `project_tags/100/${tags[0].id}`,
+    ]);
+    expect(lastUpdate['project_notes/100/999']).toBeDefined();
+    expect(lastUpdate['project_notes/100/n1']).toBeUndefined();
+    expect(tags[0].noteId).toBe('999');
+  });
+
   it('si el update falla, propaga: el llamador no debe creer que guardo', async () => {
     update.mockRejectedValue(new Error('permission_denied'));
     await expect(createNoteWithTags({ so: '100', note, tags: [] })).rejects.toThrow('permission_denied');

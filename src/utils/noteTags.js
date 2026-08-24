@@ -1,5 +1,5 @@
 import { db, ref, update, set } from './firebase';
-import { stripInternalFields } from './projectNotes';
+import { stripInternalFields, noteStorageKey } from './projectNotes';
 import { nameForUid } from './engineerDirectory';
 
 // El id no puede salir del noteId ni del uid: una misma nota puede taggear a
@@ -54,7 +54,11 @@ export function buildTags({ so, noteKey, taggedUids, directory, authorUid, autho
  */
 export async function createNoteWithTags({ so, note, tags }) {
   if (!db) throw new Error('FIREBASE_NOT_CONFIGURED');
-  const noteKey = String(note.id);
+  // Usa noteStorageKey porque una nota de formato viejo puede tener un _key
+  // diferente de su id, y buildNoteIndex también usa noteStorageKey para su
+  // chequeo de orfandad: si usaramos note.id aqui, los tags quedarian marcados
+  // como orfanos inmediatamente.
+  const noteKey = noteStorageKey(note);
   const patch = {
     [`project_notes/${so}/${noteKey}`]: stripInternalFields(note),
   };
