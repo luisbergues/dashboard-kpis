@@ -55,6 +55,8 @@ import { normalizeNotesBySo } from './utils/projectNotes'
 import { recordStatusTransitions } from './utils/statusTransitions'
 import { normalizeWeeklyHistory } from './utils/weeklyHistory'
 import { pendingDesignerAssignments } from './utils/pendingDesignerAssignments'
+import { useProjectTags } from './utils/useProjectTags'
+import { subscribeToDirectory, registerSelf } from './utils/engineerDirectory'
 
 // Lazy: the ESS tab pulls in pdfjs-dist (~1MB+) via essPdfExtract.js, and only
 // super-admins can ever open it. A static import would put that in the main
@@ -90,8 +92,10 @@ function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [weeklyHistory, setWeeklyHistory] = useState([]);
   const [focusedProjectSo, setFocusedProjectSo] = useState(null);
+  const [focusedNoteId, setFocusedNoteId] = useState(null);
   const [projectDesigners, setProjectDesigners] = useState({});
   const [projectHistory, setProjectHistory] = useState({});
+  const [engineerDirectory, setEngineerDirectory] = useState({});
   const pendingUsersCount = usePendingUsersCount(userProfile?.role);
 
   const { data, isLoading: loading, error } = useQuery({
@@ -256,7 +260,12 @@ function App() {
         const userRef = ref(db, `users/${user.uid}`);
         onValue(userRef, (snapshot) => {
           if (snapshot.exists()) {
-            setUserProfile(snapshot.val());
+            const profile = snapshot.val();
+            setUserProfile(profile);
+            // Auto-registro en el directorio: es la unica forma de que otro usuario
+            // pueda resolver este nombre a un uid, porque las reglas no le dejan leer
+            // el nodo `users`. registerSelf nunca lanza.
+            registerSelf(user.uid, profile.designerName);
           } else {
             setUserProfile(null);
           }
@@ -314,6 +323,20 @@ function App() {
       unsubscribeHistory();
     };
   }, []);
+
+  // Directorio nombre -> uid para poder tagear a otro ingeniero (ver
+  // engineerDirectory.js). Un solo listener sobre el nodo entero.
+  useEffect(() => subscribeToDirectory(setEngineerDirectory), []);
+
+  // Fuente unica del estado de tags: un solo onValue montado aca, sus
+  // proyecciones bajan por props a las vistas (ver useProjectTags.js).
+  const {
+    tags,
+    unreadByProject,
+    unreadForMe,
+    tagsByNote,
+    markRead: markTagRead,
+  } = useProjectTags(currentUser, projectNotes);
 
   useEffect(() => {
     localStorage.setItem('active_tab', activeTab);
@@ -644,10 +667,10 @@ function App() {
     switch (activeTab) {
       case 'dashboard':
         return isDesigner ? null : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} projectHistory={projectHistory} />;
-      case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} />;
+      case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} unreadByProject={unreadByProject} />;
       case 'my-projects':
-        return isDesigner ? null : <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} setActiveTab={setActiveTab} setFocusedProjectSo={setFocusedProjectSo} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} />;
-      case 'pipeline': return <PipelineView data={mergedData} currentUser={currentUser} userProfile={userProfile} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} />;
+        return isDesigner ? null : <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} setActiveTab={setActiveTab} setFocusedProjectSo={setFocusedProjectSo} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} focusedNoteId={focusedNoteId} clearFocusedNoteId={() => setFocusedNoteId(null)} engineerDirectory={engineerDirectory} tags={tags} unreadByProject={unreadByProject} unreadForMe={unreadForMe} tagsByNote={tagsByNote} markTagRead={markTagRead} />;
+      case 'pipeline': return <PipelineView data={mergedData} currentUser={currentUser} userProfile={userProfile} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} focusedNoteId={focusedNoteId} clearFocusedNoteId={() => setFocusedNoteId(null)} engineerDirectory={engineerDirectory} tags={tags} unreadByProject={unreadByProject} tagsByNote={tagsByNote} markTagRead={markTagRead} />;
       case 'materials':
         return isDesigner ? null : <MaterialsView data={mergedData} />;
       case 'quality': 
