@@ -25,3 +25,6 @@ dist-ssr
 
 .vercel
 .env*
+
+# Scratch de superpowers (ledger, briefs, review packages)
+.superpowers
