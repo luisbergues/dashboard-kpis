@@ -20,6 +20,73 @@
   gap: var(--spacing-lg);
 }
 
+/* Panel "Tags para mi": cruza TODOS los proyectos activos del usuario, no
+   solo la lista filtrada de esta vista (ver comentario en el JSX). */
+.my-tags-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.my-tags-panel h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.my-tags-count {
+  font-size: 0.7rem;
+  background: rgba(9, 209, 199, 0.15);
+  color: var(--color-cyan);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.my-tags-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.my-tags-panel li button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  background: var(--overlay-04);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.my-tags-panel li button:hover {
+  background: var(--overlay-08, rgba(255,255,255,0.08));
+}
+
+.my-tags-panel li button strong {
+  font-size: 0.85rem;
+  color: var(--color-cyan);
+}
+
+.my-tags-panel li button span {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
 .project-card {
   padding: var(--spacing-lg);
   display: flex;
@@ -619,6 +686,12 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+.note-reply-ref {
+  background: none; border: none; padding: 0;
+  font-size: 0.72rem; color: var(--text-muted); cursor: pointer;
+}
+.note-reply-ref:hover { text-decoration: underline; }
 
 /* Notes list */
 .notes-list {

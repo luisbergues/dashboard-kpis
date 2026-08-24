@@ -12,6 +12,7 @@ import { noteStorageKey, normalizeNotesBySo } from '../utils/projectNotes';
 import { ENGINEERS } from '../utils/engineers';
 import TagSelector from '../components/TagSelector';
 import NoteReplyModal from '../components/NoteReplyModal';
+import NoteTagChips from '../components/NoteTagChips';
 import { buildTags, createNoteWithTags } from '../utils/noteTags';
 import { noteTagKey } from '../utils/projectTags';
 import './PipelineView.css';
@@ -1146,7 +1147,20 @@ export default function PipelineView({
                                 </div>
                               </div>
                               <div className="pipeline-note-card-text">
+                                {note.parentNoteId && (
+                                  <button
+                                    type="button"
+                                    className="note-reply-ref"
+                                    onClick={() => {
+                                      const el = document.getElementById(`note-${note.parentNoteId}`);
+                                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }}
+                                  >
+                                    ↩ {language === 'es' ? 'En respuesta a una nota anterior' : 'In reply to an earlier note'}
+                                  </button>
+                                )}
                                 <div className="pipeline-note-text">{note.text}</div>
+                                <NoteTagChips tags={tagsByNote[noteTagKey(project.so, noteStorageKey(note))] || []} language={language} />
                                 {(() => {
                                   const atts = note.attachments ? [...note.attachments] : [];
                                   if (note.imageUrl) {

@@ -634,6 +634,7 @@ function App() {
           projectNotes={projectNotes}
           projectDesigners={projectDesigners}
           overrides={overrides}
+          tagsByNote={tagsByNote}
         />
       );
     }

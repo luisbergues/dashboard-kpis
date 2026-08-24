@@ -12,7 +12,7 @@ import {
   Briefcase, Calendar, Check, Clock,
   AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag, Users, User,
   ChevronDown, ChevronUp, ArrowUpDown, TrendingUp, CheckCircle2, Image as ImageIcon, Loader2, FileText, Paperclip,
-  LayoutGrid, NotebookPen, ListChecks, Pencil
+  LayoutGrid, NotebookPen, ListChecks, Pencil, AtSign
 } from 'lucide-react';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { canManageDesignerNotes } from '../utils/notePermissions';
@@ -37,6 +37,7 @@ import { useTheme } from '../utils/ThemeContext';
 import { noteStorageKey, stripInternalFields, normalizeNotesBySo } from '../utils/projectNotes';
 import TagSelector from '../components/TagSelector';
 import NoteReplyModal from '../components/NoteReplyModal';
+import NoteTagChips from '../components/NoteTagChips';
 import { buildTags, createNoteWithTags, deleteNoteWithTags } from '../utils/noteTags';
 import { noteTagKey } from '../utils/projectTags';
 import './MyProjectsView.css';
@@ -1530,6 +1531,32 @@ export default function MyProjectsView({
         </section>
       )}
 
+      {/* Tags para mi: cruza TODOS los proyectos activos del usuario, no solo
+          los que quedan visibles despues de los filtros de esta vista, porque
+          unreadForMe sale del nodo completo de tags. */}
+      {unreadForMe.length > 0 && (
+        <div className="my-tags-panel">
+          <h3>
+            <AtSign size={16} />
+            {language === 'es' ? 'Tags para mí' : 'Tags for me'}
+            <span className="my-tags-count">{unreadForMe.length}</span>
+          </h3>
+          <ul>
+            {unreadForMe.map(tag => (
+              <li key={tag.id}>
+                <button type="button" onClick={() => {
+                  markTagRead(tag.so, tag.id);
+                  setFocusedProjectSo(tag.so);
+                }}>
+                  <strong>SO #{tag.so}</strong>
+                  <span>{language === 'es' ? `${tag.taggedByName} te taggeó` : `${tag.taggedByName} tagged you`}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="projects-list-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <h2 className="section-title" style={{ margin: 0 }}>Active Projects</h2>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -2048,7 +2075,20 @@ export default function MyProjectsView({
                                   )}
                                 </div>
                               </div>
+                              {note.parentNoteId && (
+                                <button
+                                  type="button"
+                                  className="note-reply-ref"
+                                  onClick={() => {
+                                    const el = document.getElementById(`note-${note.parentNoteId}`);
+                                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  }}
+                                >
+                                  ↩ {language === 'es' ? 'En respuesta a una nota anterior' : 'In reply to an earlier note'}
+                                </button>
+                              )}
                               <div className="note-item-text">{note.text}</div>
+                              <NoteTagChips tags={tagsByNote[noteTagKey(project.so, noteStorageKey(note))] || []} language={language} />
                               {(note.noteType || (note.priority ? 'priority' : 'normal')) === 'designer' && (() => {
                                 const dias = noteDaysOpen(note, Date.now());
                                 const pts  = notePenalty(note, Date.now());

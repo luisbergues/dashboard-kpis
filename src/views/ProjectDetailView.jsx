@@ -4,7 +4,9 @@ import { useLanguage } from '../utils/LanguageContext';
 import { calculateAutomaticStages, STAGES } from '../utils/stageUtils';
 import { useDesignerContacts } from '../utils/useDesignerContacts';
 import { shortProjectName } from '../utils/projectName';
-import { normalizeNotes } from '../utils/projectNotes';
+import { normalizeNotes, noteStorageKey } from '../utils/projectNotes';
+import { noteTagKey } from '../utils/projectTags';
+import NoteTagChips from '../components/NoteTagChips';
 
 // Resolves what this view should show for notes/stages/materials/checks,
 // preferring the archive's `snapshot` (captured before the live nodes were
@@ -68,7 +70,7 @@ function getStatusColor(status) {
   }
 }
 
-export default function ProjectDetailView({ data, projectNotes = {}, projectDesigners = {}, overrides = {} }) {
+export default function ProjectDetailView({ data, projectNotes = {}, projectDesigners = {}, overrides = {}, tagsByNote = {} }) {
   const { language, t } = useLanguage();
   const { phoneLookup } = useDesignerContacts();
   const [copied, setCopied] = useState(false);
@@ -234,7 +236,13 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
                     {note.createdAt ? new Date(note.createdAt).toLocaleString() : ''}
                   </span>
                 </div>
+                {note.parentNoteId && (
+                  <p style={{ color: '#64748b', fontSize: '0.72rem', margin: '0 0 4px 0' }}>
+                    ↩ {language === 'es' ? 'En respuesta a una nota anterior' : 'In reply to an earlier note'}
+                  </p>
+                )}
                 <p style={styles.noteText}>{note.text}</p>
+                <NoteTagChips tags={tagsByNote[noteTagKey(so, noteStorageKey(note))] || []} language={language} />
                 {note.attachments && note.attachments.map((att, ai) => (
                   att.type === 'image' ? (
                     <img key={ai} src={att.url} alt="attachment" style={styles.noteImg} />
