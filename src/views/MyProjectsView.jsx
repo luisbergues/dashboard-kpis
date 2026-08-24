@@ -17,6 +17,7 @@ import {
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { canManageDesignerNotes } from '../utils/notePermissions';
 import { ownedArchivedProjects, visibleArchivedProjects } from '../utils/archivedVisibility';
+import { ownsProject } from '../utils/projectOwnership';
 import { noteDaysOpen, notePenalty } from '../designer-performance/utils/redFlags';
 import TerminatedEasterEgg from '../components/TerminatedEasterEgg';
 import { Chart as ChartJS, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
@@ -185,13 +186,10 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
   // calls return a new array reference on every render, which meant that
   // useMemo never hit and calculateAutomaticStages's "no date found, fall
   // back to today" branch kept regenerating timestamps continuously.
-  const myProjectsRaw = React.useMemo(() => priorityAnalysis.filter(p => {
-    if (!userProfile) return false;
-    if (userProfile.role === 'administrative' || userProfile.role === 'admin' || userProfile.role === 'engineer_nester') {
-      return true;
-    }
-    return p.eng && p.eng.trim().toLowerCase() === userProfile.designerName.trim().toLowerCase();
-  }), [priorityAnalysis, userProfile]);
+  const myProjectsRaw = React.useMemo(
+    () => priorityAnalysis.filter(p => ownsProject(userProfile, p)),
+    [priorityAnalysis, userProfile]
+  );
 
   // Alimenta las metricas personales: solo lo que es de uno. Ver
   // archivedVisibility.js para por que esto y la lista de Completados difieren.
