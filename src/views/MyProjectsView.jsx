@@ -35,6 +35,9 @@ import { cleanupChecklistData } from '../utils/checklistData';
 import { calculateAutomaticStages, stagesFromProjectOrArchive, STAGES } from '../utils/stageUtils';
 import { useTheme } from '../utils/ThemeContext';
 import { noteStorageKey, stripInternalFields, normalizeNotesBySo } from '../utils/projectNotes';
+import TagSelector from '../components/TagSelector';
+import { buildTags, createNoteWithTags, deleteNoteWithTags } from '../utils/noteTags';
+import { noteTagKey } from '../utils/projectTags';
 import './MyProjectsView.css';
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Title, ChartTooltip, Legend, Filler);
@@ -64,7 +67,16 @@ const getStageLabel = (stageId, language) => {
 };
 
 
-export default function MyProjectsView({ data, currentUser, userProfile, setActiveTab, setFocusedProjectSo, focusedProjectSo, clearFocusedProjectSo }) {
+export default function MyProjectsView({
+  data, currentUser, userProfile, setActiveTab,
+  setFocusedProjectSo, focusedProjectSo, clearFocusedProjectSo,
+  // focusedNoteId/clearFocusedNoteId/tags/unreadForMe/markTagRead: aun no se
+  // consumen en esta tarea, los usa una tarea posterior (ver App.jsx).
+  // eslint-disable-next-line no-unused-vars
+  focusedNoteId, clearFocusedNoteId,
+  // eslint-disable-next-line no-unused-vars
+  engineerDirectory = {}, tags = [], unreadForMe = [], tagsByNote = {}, markTagRead,
+}) {
   const { t, language } = useLanguage();
   const { theme } = useTheme();
   const isLight = theme === 'light';
@@ -133,6 +145,12 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
   // Project Notes State
   const [projectNotes, setProjectNotes] = useState({});
   const [noteInputs, setNoteInputs] = useState({}); // { [so]: { text: '', noteType: 'normal' } }
+  // El componente ya tiene un `if (!data) return null;` antes de sus hooks
+  // (linea ~84), asi que react-hooks/rules-of-hooks marca TODOS los useState de
+  // aca abajo como condicionales, no solo este. Arreglar ese patron es un
+  // refactor fuera del alcance de esta tarea.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [noteTagUids, setNoteTagUids] = useState({}); // { [so]: string[] }
   const [noteImages, setNoteImages] = useState({}); // { [so]: File }
   const [isUploadingImage, setIsUploadingImage] = useState({}); // { [so]: boolean }
 
@@ -846,11 +864,25 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
 
     if (db && currentUser) {
       try {
-        // Una nota por clave: se escribe solo la nueva, no el array entero
-        // (ver projectNotes.js — habilita reglas de RTDB por nota).
-        await set(ref(db, `project_notes/${so}/${noteStorageKey(newNote)}`), stripInternalFields(newNote));
+        const noteKey = noteStorageKey(newNote);
+        const builtTags = buildTags({
+          so,
+          noteKey,
+          taggedUids: noteTagUids[so] || [],
+          directory: engineerDirectory,
+          authorUid: currentUser.uid,
+          authorName: userName,
+        });
+        // Nota y tags salen en una sola escritura atomica (ver noteTags.js): un
+        // tag no puede quedar apuntando a una nota que no se guardo.
+        await createNoteWithTags({ so, note: newNote, tags: builtTags });
       } catch (err) {
         console.error('Failed to save note to Firebase:', err);
+        alert(language === 'es'
+          ? 'No se pudo guardar la nota. Intentá de nuevo.'
+          : 'The note could not be saved. Please try again.');
+        setIsUploadingImage(prev => ({ ...prev, [so]: false }));
+        return;
       }
     } else {
       const currentNotes = [newNote, ...(projectNotes[so] || [])];
@@ -865,6 +897,7 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
     }
 
     setNoteInputs(prev => ({ ...prev, [so]: { text: '', noteType: 'normal', urgency: undefined } }));
+    setNoteTagUids(prev => ({ ...prev, [so]: [] }));
     setNoteImages(prev => ({ ...prev, [so]: null }));
     setIsUploadingImage(prev => ({ ...prev, [so]: false }));
   };
@@ -880,7 +913,11 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
       try {
         // Borrar = poner en null solo esa clave, sin tocar el resto de las
         // notas del proyecto (ver projectNotes.js).
-        await set(ref(db, `project_notes/${so}/${noteStorageKey(target)}`), null);
+        const noteKey = noteStorageKey(target);
+        const tagIds = (tagsByNote[noteTagKey(so, noteKey)] || []).map(t => t.id);
+        // Los tags se van con la nota: si no, quedan contando como "sin leer" para
+        // siempre, sin forma de llegar a ellos desde la UI.
+        await deleteNoteWithTags({ so, noteKey, tagIds });
       } catch (err) {
         console.error('Failed to delete note from Firebase:', err);
       }
@@ -1794,6 +1831,13 @@ export default function MyProjectsView({ data, currentUser, userProfile, setActi
                           />
                           <div className="note-actions-row">
                             <div style={{ display: 'flex', gap: '8px' }}>
+                              <TagSelector
+                                directory={engineerDirectory}
+                                selectedUids={noteTagUids[project.so] || []}
+                                onChange={(uids) => setNoteTagUids(prev => ({ ...prev, [project.so]: uids }))}
+                                excludeUid={currentUser?.uid}
+                                language={language}
+                              />
                               <button
                                 type="button"
                                 className={`priority-toggle ${noteInputs[project.so]?.noteType === 'priority' ? 'is-priority' : noteInputs[project.so]?.noteType === 'obs' ? 'is-obs' : noteInputs[project.so]?.noteType === 'designer' ? 'is-designer' : 'not-priority'}`}
