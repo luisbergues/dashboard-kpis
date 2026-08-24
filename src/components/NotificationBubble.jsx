@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, X, AlertCircle, Clock, MessageSquare, Flag } from 'lucide-react';
+import { Bell, X, AlertCircle, Clock, MessageSquare, Flag, AtSign } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import './NotificationBubble.css';
 
@@ -71,7 +71,8 @@ export default function NotificationBubble({ alerts = [], onAlertClick }) {
                 }}
               >
                 <div className="notification-icon">
-                  {alert.type === 'note' ? <MessageSquare size={18} />
+                  {alert.type === 'tag' ? <AtSign size={18} />
+                    : alert.type === 'note' ? <MessageSquare size={18} />
                     : alert.type === 'designer_review' ? <Flag size={18} />
                     : alert.type === 'error' ? <AlertCircle size={18} />
                     : <Clock size={18} />}

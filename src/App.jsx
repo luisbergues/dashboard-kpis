@@ -51,12 +51,13 @@ import { canManageDesignerNotes } from './utils/notePermissions'
 import { noteDaysOpen } from './designer-performance/utils/redFlags'
 import { auth, db, onAuthStateChanged, ref, onValue, set, get, child, signOut } from './utils/firebase'
 import { shortProjectName } from './utils/projectName'
-import { normalizeNotesBySo } from './utils/projectNotes'
+import { normalizeNotesBySo, noteStorageKey } from './utils/projectNotes'
 import { recordStatusTransitions } from './utils/statusTransitions'
 import { normalizeWeeklyHistory } from './utils/weeklyHistory'
 import { pendingDesignerAssignments } from './utils/pendingDesignerAssignments'
 import { useProjectTags } from './utils/useProjectTags'
 import { subscribeToDirectory, registerSelf } from './utils/engineerDirectory'
+import { buildTagAlerts, tagAlertDestination } from './utils/tagAlerts'
 
 // Lazy: the ESS tab pulls in pdfjs-dist (~1MB+) via essPdfExtract.js, and only
 // super-admins can ever open it. A static import would put that in the main
@@ -532,12 +533,16 @@ function App() {
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
         notes.forEach(note => {
-          const noteDate = new Date(note.timestamp);
-          
+          // createdAt/createdBy, no timestamp/author: esos dos campos no los escribe
+          // ningun camino de creacion de notas, asi que `new Date(undefined)` daba
+          // Invalid Date y unreadCount era SIEMPRE 0 — esta alerta nunca se disparo.
+          const noteDate = new Date(note.createdAt);
+          if (isNaN(noteDate)) return;
+
           // Ignore notes from the current user
-          const isMyNote = note.author && (
-            note.author.trim().toLowerCase() === myDesignerName || 
-            note.author.trim().toLowerCase() === userProfile.email.toLowerCase()
+          const isMyNote = note.createdBy && (
+            note.createdBy.trim().toLowerCase() === myDesignerName ||
+            note.createdBy.trim().toLowerCase() === userProfile.email.toLowerCase()
           );
 
           if (!isMyNote) {
@@ -604,8 +609,17 @@ function App() {
       }, 100);
     }
 
+    // buildTagAlerts necesita el texto de la nota, que no vive en el tag
+    // (el tag solo guarda metadata). Se cruza aca con projectNotes.
+    const unreadForMeWithPreview = unreadForMe.map(tag => {
+      const note = (projectNotes[tag.so] || [])
+        .find(n => noteStorageKey(n) === tag.noteId);
+      return { ...tag, notePreview: note?.text || '' };
+    });
+    alerts.push(...buildTagAlerts(unreadForMeWithPreview, projects, language));
+
     return alerts;
-  }, [mergedData, userProfile, projectNotes, currentUser, pendingUsersCount, language]);
+  }, [mergedData, userProfile, projectNotes, currentUser, pendingUsersCount, language, unreadForMe]);
 
   const renderView = () => {
     // Standalone shareable project detail page (intentionally public/read-only —
@@ -772,6 +786,13 @@ function App() {
             // Update read timestamp to dismiss the notification
             const refPath = `users/${currentUser.uid}/readNotes/${alert.so}`;
             set(ref(db, refPath), new Date().toISOString());
+          }
+          if (alert.type === 'tag') {
+            markTagRead(alert.so, alert.tagId);
+            setFocusedProjectSo(alert.so);
+            setFocusedNoteId(alert.noteId);
+            setActiveTab(tagAlertDestination(alert, mergedData?.priorityAnalysis || [], userProfile));
+            return;
           }
           setFocusedProjectSo(alert.so);
           // Las notas Designer se resuelven desde My Projects (ahi estan los
