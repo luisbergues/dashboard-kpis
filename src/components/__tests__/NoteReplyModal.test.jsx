@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // src/components/__tests__/NoteReplyModal.test.jsx
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor, within } from '@testing-library/react';
 import NoteReplyModal from '../NoteReplyModal';
 
 const note = {
@@ -60,7 +60,9 @@ describe('NoteReplyModal', () => {
     const { onReply } = setup();
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'preguntale a Luis' } });
     fireEvent.click(screen.getByRole('button', { name: /taggear/i }));
-    fireEvent.click(screen.getByText('Luis'));
+    // "Luis" también es el autor de la nota original, así que la búsqueda sin scope encuentra dos nodos.
+    // Limitar a la lista del selector para obtener el option correcto.
+    fireEvent.click(within(screen.getByRole('listbox')).getByText('Luis'));
     fireEvent.click(screen.getByRole('button', { name: /responder/i }));
     await waitFor(() => expect(onReply).toHaveBeenCalledWith({ text: 'preguntale a Luis', taggedUids: ['u-luis'] }));
   });
