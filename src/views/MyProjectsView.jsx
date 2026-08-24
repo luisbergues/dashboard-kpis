@@ -36,6 +36,7 @@ import { calculateAutomaticStages, stagesFromProjectOrArchive, STAGES } from '..
 import { useTheme } from '../utils/ThemeContext';
 import { noteStorageKey, stripInternalFields, normalizeNotesBySo } from '../utils/projectNotes';
 import TagSelector from '../components/TagSelector';
+import NoteReplyModal from '../components/NoteReplyModal';
 import { buildTags, createNoteWithTags, deleteNoteWithTags } from '../utils/noteTags';
 import { noteTagKey } from '../utils/projectTags';
 import './MyProjectsView.css';
@@ -70,11 +71,7 @@ const getStageLabel = (stageId, language) => {
 export default function MyProjectsView({
   data, currentUser, userProfile, setActiveTab,
   setFocusedProjectSo, focusedProjectSo, clearFocusedProjectSo,
-  // focusedNoteId/clearFocusedNoteId/tags/unreadForMe/markTagRead: aun no se
-  // consumen en esta tarea, los usa una tarea posterior (ver App.jsx).
-  // eslint-disable-next-line no-unused-vars
   focusedNoteId, clearFocusedNoteId,
-  // eslint-disable-next-line no-unused-vars
   engineerDirectory = {}, tags = [], unreadForMe = [], tagsByNote = {}, markTagRead,
 }) {
   const { t, language } = useLanguage();
@@ -398,6 +395,48 @@ export default function MyProjectsView({
 
     return () => clearTimeout(timer);
   }, [focusedProjectSo, clearFocusedProjectSo]);
+
+  // Nota sobre la que se abre el modal de respuesta al llegar desde una
+  // notificacion de tag (ver App.jsx: focusedNoteId).
+  const focusedNote = React.useMemo(() => {
+    if (!focusedNoteId || !focusedProjectSo) return null;
+    return (projectNotes[focusedProjectSo] || [])
+      .find(n => noteStorageKey(n) === focusedNoteId) || null;
+  }, [focusedNoteId, focusedProjectSo, projectNotes]);
+
+  // Guarda la respuesta que se escribe en el modal como una nota nueva,
+  // enlazada a la original via parentNoteId para que el timeline la muestre
+  // en linea con una referencia, no anidada.
+  const handleReply = async ({ text, taggedUids }) => {
+    const userName = userProfile?.designerName || currentUser?.displayName || currentUser?.email || 'Unknown User';
+    const reply = {
+      id: Date.now().toString(),
+      text,
+      noteType: 'normal',
+      priority: false,
+      createdAt: new Date().toISOString(),
+      createdBy: userName,
+      parentNoteId: focusedNoteId,
+    };
+    const builtTags = buildTags({
+      so: focusedProjectSo,
+      noteKey: noteStorageKey(reply),
+      taggedUids,
+      directory: engineerDirectory,
+      authorUid: currentUser.uid,
+      authorName: userName,
+    });
+    await createNoteWithTags({ so: focusedProjectSo, note: reply, tags: builtTags });
+  };
+
+  // Hace scroll hasta la nota tageada al llegar desde la notificacion, una
+  // vez que el modal ya la abrio (el modal no requiere que la nota este a la
+  // vista, pero dejarla a la vista ayuda a entender el contexto).
+  useEffect(() => {
+    if (!focusedNoteId) return;
+    const el = document.getElementById(`note-${focusedNoteId}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [focusedNoteId]);
 
   // Cleanup ESS & IP data for completed projects
   useEffect(() => {
@@ -1933,7 +1972,7 @@ export default function MyProjectsView({
                       ) : (
                         <div className="notes-list">
                           {(projectNotes[project.so] || []).map(note => (
-                            <div key={note.id} className={`note-item ${note.resolvedAt ? 'note-resolved' : ''}`}>
+                            <div key={note.id} id={`note-${noteStorageKey(note)}`} className={`note-item ${note.resolvedAt ? 'note-resolved' : ''}`}>
                               <div className="note-item-header">
                                 <div className="note-item-header-left">
                                   {(() => {
@@ -2350,6 +2389,19 @@ export default function MyProjectsView({
             />
           </div>
         </div>
+      )}
+
+      {/* Modal de respuesta al llegar desde una notificacion de tag */}
+      {focusedNote && (
+        <NoteReplyModal
+          note={focusedNote}
+          tags={tagsByNote[noteTagKey(focusedProjectSo, focusedNoteId)] || []}
+          directory={engineerDirectory}
+          currentUserUid={currentUser?.uid}
+          language={language}
+          onReply={handleReply}
+          onClose={clearFocusedNoteId}
+        />
       )}
     </div>
   );
