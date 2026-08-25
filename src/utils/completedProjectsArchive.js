@@ -18,6 +18,12 @@ const AUX_NODE_PATHS = {
   engineeringChecks: 'engineering_checks',
   nestingChecks: 'nesting_checks',
   collaborators: 'project_collaborators',
+  // Los tags de las notas se archivan y se limpian con el resto. Sin esto
+  // project_tags crece sin techo: todos los clientes bajan ese nodo entero en
+  // cada sesion (ver useProjectTags.js), asi que dejar ahi los tags de
+  // proyectos ya archivados es exactamente la clase de fuga que causo los
+  // incidentes de consumo de agosto de 2026.
+  tags: 'project_tags',
 };
 
 // Reads every working-data node for a project before it's archived, so none

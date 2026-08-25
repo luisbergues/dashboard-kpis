@@ -101,4 +101,24 @@ describe('NoteReplyModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /taggear/i }));
     expect(screen.queryByText('Santiago')).not.toBeInTheDocument();
   });
+
+  it('el click en el fondo NO descarta una respuesta a medio escribir', () => {
+    const { onClose } = setup();
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'estoy escribiendo' } });
+    fireEvent.click(document.querySelector('.note-reply-overlay'));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('textbox')).toHaveValue('estoy escribiendo');
+  });
+
+  it('el click en el fondo cierra si no hay nada escrito', () => {
+    const { onClose } = setup();
+    fireEvent.click(document.querySelector('.note-reply-overlay'));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('Escape cierra el modal', () => {
+    const { onClose } = setup();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalled();
+  });
 });

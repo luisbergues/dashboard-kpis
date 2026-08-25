@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import TagSelector from './TagSelector';
 import NoteTagChips from './NoteTagChips';
@@ -23,7 +23,28 @@ export default function NoteReplyModal({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
 
+  // Escape cierra el modal: es un gesto explicito, a diferencia del click en el
+  // fondo. No cierra mientras se esta enviando, igual que el boton Cerrar.
+  // Declarado ANTES del early return de abajo para no llamar el hook
+  // condicionalmente.
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape' && !sending) onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose, sending]);
+
   if (!note) return null;
+
+  // El click en el fondo NO descarta una respuesta a medio escribir: un click
+  // al costado del modal es facil de hacer sin querer y perder el texto ahi es
+  // irrecuperable. Con el textarea vacio no hay nada que perder y cerrar es el
+  // atajo esperado.
+  const onOverlayClick = () => {
+    if (sending || text.trim()) return;
+    onClose();
+  };
 
   const send = async () => {
     const clean = text.trim();
@@ -44,7 +65,7 @@ export default function NoteReplyModal({
   };
 
   return (
-    <div className="note-reply-overlay" onClick={onClose}>
+    <div className="note-reply-overlay" onClick={onOverlayClick}>
       <div className="note-reply-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="note-reply-header">
           <h3>{isES ? 'Te taggearon en una nota' : 'You were tagged in a note'}</h3>

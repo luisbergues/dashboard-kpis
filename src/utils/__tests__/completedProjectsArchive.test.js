@@ -236,8 +236,9 @@ describe('archiveMissingCompletedProjects', () => {
   // and the live nodes just sat orphaned in the RTDB. The archiver now
   // snapshots all of a project's working-data nodes into the archive record
   // before clearing the live ones.
-  it('snapshots notes, materials, checks, history, and collaborators into the archive record', async () => {
+  it('snapshots notes, materials, checks, history, collaborators, and note tags into the archive record', async () => {
     rtdb['project_notes/900'] = [{ id: 'n1', text: 'Client wants extra shelf', createdBy: 'Ana' }];
+    rtdb['project_tags/900'] = { tg_1: { noteId: 'n1', taggedName: 'Santiago', readAt: null } };
     rtdb['project_materials/900'] = { thermofoil: true };
     rtdb['engineering_checks/900'] = { started: '2026-01-01', finished: '2026-01-02', user: 'Bob' };
     rtdb['nesting_checks/900'] = { started: '2026-01-03', finished: '2026-01-04', user: 'Cal' };
@@ -263,6 +264,7 @@ describe('archiveMissingCompletedProjects', () => {
     expect(entry.snapshot.nestingChecks.user).toBe('Cal');
     expect(entry.snapshot.history).toEqual([{ type: 'status_change', status: 'ON HOLD', timestamp: '2026-01-01' }]);
     expect(entry.snapshot.collaborators).toEqual(['Dee', 'Eve']);
+    expect(entry.snapshot.tags).toEqual({ tg_1: { noteId: 'n1', taggedName: 'Santiago', readAt: null } });
     expect(entry.snapshot.statusHistory).toEqual([
       { so: '900', status: 'ENGINEERING', statusDate: '2025-12-01' },
       { so: '900', status: 'INSTALL', statusDate: '2026-01-05' },
@@ -272,6 +274,7 @@ describe('archiveMissingCompletedProjects', () => {
   it('clears the live working-data nodes only after the archive write succeeds', async () => {
     rtdb['project_notes/910'] = [{ id: 'n1', text: 'note' }];
     rtdb['project_materials/910'] = { thermofoil: true };
+    rtdb['project_tags/910'] = { tg_1: { noteId: 'n1', readAt: null } };
 
     const previousData = { priorityAnalysis: [{ so: '910', name: 'Gone', status: 'Completed' }] };
     const newData = { priorityAnalysis: [] };
@@ -280,6 +283,9 @@ describe('archiveMissingCompletedProjects', () => {
 
     expect(rtdb['project_notes/910']).toBeUndefined();
     expect(rtdb['project_materials/910']).toBeUndefined();
+    // project_tags lo bajan TODOS los clientes entero en cada sesion: dejar ahi
+    // los tags de un proyecto ya archivado lo hace crecer sin techo.
+    expect(rtdb['project_tags/910']).toBeUndefined();
     // The archive kept its own copy independent of the now-cleared live node.
     expect(store.get(ARCHIVE_PATHS.completed)['910'].snapshot.notes).toEqual([{ id: 'n1', text: 'note' }]);
   });

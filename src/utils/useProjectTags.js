@@ -24,22 +24,27 @@ import { markTagRead } from './noteTags';
  */
 export function useProjectTags(currentUser, projectNotes) {
   const [raw, setRaw] = useState(null);
+  const uid = currentUser?.uid || null;
 
-  // Dependencias vacias a proposito: la suscripcion no depende de las notas ni
-  // del usuario, y re-suscribirse volveria a descargar el nodo entero.
+  // Gateado en el uid y no sin dependencias: la pagina publica del deep link
+  // (?project=123) se renderiza sin sesion, y ahi la suscripcion se disparaba
+  // igual como visitante anonimo, con un permission-denied en la consola en
+  // cada carga. Solo re-corre al entrar o salir de la sesion, asi que no
+  // reintroduce descargas repetidas del nodo entero.
   useEffect(() => {
-    if (!db) return;
+    if (!db || !uid) return;
     return onValue(
       ref(db, 'project_tags'),
       snapshot => setRaw(snapshot.val()),
       error => console.error('Failed to subscribe to project tags:', error)
     );
-  }, []);
-
-  const uid = currentUser?.uid || null;
+  }, [uid]);
 
   const projections = useMemo(() => {
-    const all = normalizeTags(raw);
+    // Sin sesion no hay tags que proyectar. Se descarta aca y no con un
+    // setRaw(null) en el efecto para no encadenar un render de mas al cerrar
+    // sesion.
+    const all = normalizeTags(uid ? raw : null);
     const live = liveTags(all, buildNoteIndex(projectNotes));
     return {
       tags: live,
