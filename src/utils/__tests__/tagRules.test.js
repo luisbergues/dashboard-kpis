@@ -23,8 +23,24 @@ describe('reglas de project_tags', () => {
     expect(write).toContain('!newData.exists()');
   });
 
-  it('solo quien tageo puede borrar el tag', () => {
-    expect(node().$so.$tagId['.write']).toContain('taggedByUid');
+  it('cualquier aprobado puede borrar un tag, igual que la nota que lo contiene', () => {
+    const write = node().$so.$tagId['.write'];
+    // JSON no admite comentarios, asi que el razonamiento vive aca.
+    //
+    // La regla exigia antes `auth.uid === data.child('taggedByUid').val()` para
+    // borrar, apoyada en el supuesto de que quien taggea es quien borra la nota.
+    // Es falso: el boton de borrar nota lo ve CUALQUIER no-admin
+    // (MyProjectsView.jsx, `{!isAdmin && ...}`) y engineer_nester ve todos los
+    // proyectos. Y como el borrado en cascada es un update() multi-path
+    // todo-o-nada (noteTags.deleteNoteWithTags), un tercero borrando una nota
+    // tageada se llevaba rechazada TAMBIEN la nota, con un console.error como
+    // unico rastro.
+    //
+    // Se alinea entonces con como project_notes ya gatea el borrado: aprobado
+    // alcanza. No se cede poder real — quien puede borrar el tag ya podia
+    // borrar la nota que lo contiene.
+    expect(write).not.toContain('taggedByUid');
+    expect(write).toContain("'approved'");
   });
 
   it('nadie puede taggear en nombre de otro', () => {
@@ -44,7 +60,23 @@ describe('reglas de engineer_directory', () => {
   });
 
   it('cada uno solo puede escribir su propia entrada', () => {
-    expect(rules.engineer_directory.$uid['.write']).toBe('auth.uid === $uid');
+    expect(rules.engineer_directory.$uid['.write']).toContain('auth.uid === $uid');
+  });
+
+  it('solo un usuario aprobado puede escribir su entrada', () => {
+    // Antes bastaba con `auth.uid === $uid`, sin la clausula de status que
+    // llevan todos los demas nodos. Como el alta de cuenta es auto-servicio,
+    // alguien parado en "pending" podia escribir contenido arbitrario en un
+    // nodo que TODOS los clientes aprobados se bajan entero.
+    expect(rules.engineer_directory.$uid['.write']).toContain("'approved'");
+  });
+
+  it('valida la forma de la entrada: name y updatedAt, con name string de hasta 40 chars', () => {
+    const validate = rules.engineer_directory.$uid['.validate'];
+    expect(validate).toBeDefined();
+    expect(validate).toContain("hasChildren(['name', 'updatedAt'])");
+    expect(validate).toContain("newData.child('name').isString()");
+    expect(validate).toContain('length <= 40');
   });
 
   it('el nodo raiz del directorio no es escribible', () => {

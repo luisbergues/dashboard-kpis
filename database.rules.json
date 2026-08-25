@@ -88,7 +88,7 @@
       ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
       "$so": {
         "$tagId": {
-          ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && (!data.exists() || (!newData.exists() && auth.uid === data.child('taggedByUid').val()))",
+          ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && (!data.exists() || !newData.exists())",
           ".validate": "data.exists() || newData.child('taggedByUid').val() === auth.uid",
           "readAt": {
             ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && auth.uid === root.child('project_tags').child($so).child($tagId).child('taggedUid').val()"
@@ -99,7 +99,8 @@
     "engineer_directory": {
       ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
       "$uid": {
-        ".write": "auth.uid === $uid"
+        ".write": "auth != null && auth.uid === $uid && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+        ".validate": "newData.hasChildren(['name', 'updatedAt']) && newData.child('name').isString() && newData.child('name').val().length <= 40"
       }
     },
     "project_designers": {
