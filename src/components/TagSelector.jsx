@@ -13,8 +13,20 @@ import './TagSelector.css';
  * Muestra a los 8 ingenieros SIEMPRE, incluso a los que todavia no se
  * registraron en el directorio — deshabilitados y con el motivo en el title. Si
  * se los ocultara, pareceria que faltan del equipo.
+ *
+ * `openDirection` decide para donde se despliega la lista, y por defecto va
+ * hacia ABAJO. Abriendo hacia arriba, dentro del compositor de notas, los
+ * primeros nombres quedaban recortados: el menu es `position: absolute` y
+ * .project-card (MyProjectsView.css) / .kanban-card (PipelineView.css) tienen
+ * `overflow: hidden`, asi que todo lo que sobresale del borde superior de la
+ * tarjeta se corta. En el compositor sobra lugar hacia abajo — el panel de
+ * notas se estira a lo alto de la tarjeta y la lista de notas arranca recien
+ * despues de esta fila.
+ *
+ * El modal de respuesta es el caso opuesto (el selector esta en el pie, contra
+ * el borde de abajo) y por eso pasa openDirection="up".
  */
-export default function TagSelector({ directory, selectedUids = [], onChange, excludeUid, language = 'es' }) {
+export default function TagSelector({ directory, selectedUids = [], onChange, excludeUid, language = 'es', openDirection = 'down' }) {
   const [isOpen, setIsOpen] = useState(false);
   const isES = language === 'es';
 
@@ -48,7 +60,7 @@ export default function TagSelector({ directory, selectedUids = [], onChange, ex
       </button>
 
       {isOpen && (
-        <div className="tag-selector-menu" role="listbox">
+        <div className={`tag-selector-menu ${openDirection === 'up' ? 'opens-up' : 'opens-down'}`} role="listbox">
           {people.map(person => {
             const selected = person.uid && selectedUids.includes(person.uid);
             return (

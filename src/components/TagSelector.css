@@ -10,18 +10,36 @@
 
 .tag-selector-count { font-size: 0.72rem; font-weight: 600; }
 
+/* El menu es `position: absolute` y sus tarjetas contenedoras
+   (.project-card en MyProjectsView.css, .kanban-card en PipelineView.css)
+   tienen `overflow: hidden`, asi que todo lo que sobresalga del borde de la
+   tarjeta se RECORTA — no se tapa, se corta, y por eso ningun z-index lo
+   arregla. De ahi que la direccion de apertura importe tanto.
+
+   La altura va acotada a la menor entre 260px y 45vh: 260px alcanza para los 8
+   ingenieros sin scroll interno, y el 45vh evita que en una pantalla baja el
+   menu salga mas alto que el lugar disponible. */
 .tag-selector-menu {
-  position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 20;
-  min-width: 160px; max-height: 240px; overflow-y: auto;
+  position: absolute; left: 0; z-index: 60;
+  min-width: 160px; max-height: min(260px, 45vh); overflow-y: auto;
   background: var(--bg-elevated, #16232F); border: 1px solid var(--overlay-10, rgba(255,255,255,0.1));
   border-radius: 8px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
 }
 
+/* Por defecto. En el compositor de notas sobra lugar hacia abajo: el panel de
+   notas se estira a lo alto de la tarjeta y la lista arranca recien despues de
+   esta fila. */
+.tag-selector-menu.opens-down { top: calc(100% + 6px); }
+
+/* Solo el modal de respuesta, donde el selector esta en el pie y hacia abajo se
+   iria fuera de la pantalla. */
+.tag-selector-menu.opens-up { bottom: calc(100% + 6px); }
+
 .tag-selector-option {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  width: 100%; padding: 7px 10px; background: none; border: none;
+  width: 100%; padding: 6px 10px; background: none; border: none;
   border-radius: 6px; color: var(--text-body, #E6EDF3);
-  font-size: 0.85rem; text-align: left; cursor: pointer;
+  font-size: 0.82rem; text-align: left; cursor: pointer;
 }
 .tag-selector-option:hover:not(:disabled) { background: var(--overlay-05); }
 .tag-selector-option.selected { color: var(--accent, #80EE98); }

@@ -79,3 +79,31 @@ describe('TagSelector', () => {
     expect(screen.getByText('Santiago').closest('button')).toBeDisabled();
   });
 });
+
+// La direccion de apertura no es cosmetica: el menu es `position: absolute` y
+// las tarjetas que lo contienen tienen `overflow: hidden`, asi que abrir para
+// el lado equivocado RECORTA la lista contra el borde de la tarjeta. Fue un bug
+// real — se veian solo los 3 ultimos nombres de 8.
+describe('TagSelector — direccion de apertura', () => {
+  const openMenu = () => fireEvent.click(screen.getByRole('button', { name: /taggear/i }));
+
+  it('por defecto se despliega hacia abajo', () => {
+    setup();
+    openMenu();
+    expect(screen.getByRole('listbox')).toHaveClass('opens-down');
+    expect(screen.getByRole('listbox')).not.toHaveClass('opens-up');
+  });
+
+  it('se despliega hacia arriba cuando se lo piden', () => {
+    setup({ openDirection: 'up' });
+    openMenu();
+    expect(screen.getByRole('listbox')).toHaveClass('opens-up');
+    expect(screen.getByRole('listbox')).not.toHaveClass('opens-down');
+  });
+
+  it('sigue listando a los 8 en cualquiera de las dos direcciones', () => {
+    setup({ openDirection: 'up' });
+    openMenu();
+    expect(screen.getAllByRole('option')).toHaveLength(8);
+  });
+});

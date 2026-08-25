@@ -92,12 +92,17 @@ export default function NoteReplyModal({
         {error && <p className="note-reply-error" role="alert">{error}</p>}
 
         <div className="note-reply-actions">
+          {/* Unico lugar que abre hacia arriba: aca el selector esta en el pie
+              del modal, asi que desplegar hacia abajo se saldria de la
+              pantalla. En los compositores de notas es al reves (ver
+              TagSelector.css). */}
           <TagSelector
             directory={directory}
             selectedUids={taggedUids}
             onChange={setTaggedUids}
             excludeUid={currentUserUid}
             language={language}
+            openDirection="up"
           />
           <div className="note-reply-buttons">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={sending}>
