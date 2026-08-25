@@ -12,6 +12,10 @@
 export const DESIGNERS = [
   'Blerta Veseli',
   'Caryn Henslovitz',
+  // Delfina es ingeniera Y disenadora: aparece tambien en la lista de
+  // ingenieros (allowed_designers / DEFAULT_DESIGNERS, que guarda ingenieros
+  // pese al nombre del nodo). Tener los dos roles es valido.
+  'Delfina Breton',
   'Iris Lopes',
   'Kat Baumgartner',
   'Krisztina Vizi',

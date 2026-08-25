@@ -8,6 +8,7 @@ import { reviewChanged, buildHistoryEntry } from '../utils/reviewHistory';
 import { stripUndefined } from '../../utils/stripUndefined';
 import { shortProjectName } from '../../utils/projectName';
 import { canForceApproveIntake } from '../../utils/intakePermissions';
+import { DESIGNERS } from '../../utils/designers';
 import { normalizeNotesBySo } from '../../utils/projectNotes';
 import { deriveComplexity, complexityFromSheet } from '../utils/complexity';
 
@@ -45,27 +46,11 @@ interface KpiContextType {
   canEditIntake: boolean;
 }
 
-// Canonical list of designers — separate from engineers
-const CANONICAL_DESIGNERS: string[] = [
-  'Monica Gabriel',
-  'Natalie Ball',
-  'Marsha Diquez',
-  'Iris Lopes',
-  'Kat Baumgartner',
-  'Melissa Barker',
-  'Nicole Dugan',
-  'Tricia Hatton',
-  'Blerta Veseli',
-  'Lana Kravtchenko',
-  'Krisztina Vizi',
-  'Luana Tamagnone',
-  'Russell Reiner',
-  'Mauricio Dasso',
-  'Sarah Manev',
-  'Caryn Henslovitz',
-  'Michael Kaboskey',
-  'Malanie Dalfrey',
-];
+// Canonical list of designers — separate from engineers.
+// Era una copia literal de utils/designers.js: dos listas que hay que acordarse
+// de editar juntas. Al sumar a Delfina Breton se habia actualizado solo una y
+// Designer Performance no la conocia, asi que ahora se consume la unica fuente.
+const CANONICAL_DESIGNERS: string[] = DESIGNERS;
 
 const KpiContext = createContext<KpiContextType | undefined>(undefined);
 
