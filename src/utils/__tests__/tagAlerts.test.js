@@ -44,6 +44,29 @@ describe('buildTagAlerts', () => {
     const [alert] = buildTagAlerts([tag()], projects, 'es');
     expect(alert.tagId).toBe('t1');
     expect(alert.noteId).toBe('n1');
+    expect(alert.tagIds).toEqual(['t1']);
+  });
+
+  it('lleva TODOS los tagIds del grupo, para que un solo click los marque juntos', () => {
+    // La alerta es una por proyecto: marcar solo el mas reciente la haria
+    // reaparecer con N-1 y obligaria a repetir el click N veces.
+    const [alert] = buildTagAlerts([
+      tag({ id: 't1', createdAt: '2026-08-01T00:00:00.000Z' }),
+      tag({ id: 't2', createdAt: '2026-08-20T00:00:00.000Z' }),
+      tag({ id: 't3', createdAt: '2026-08-10T00:00:00.000Z' }),
+    ], projects, 'es');
+    expect(alert.tagIds.sort()).toEqual(['t1', 't2', 't3']);
+    expect(alert.tagIds).toContain(alert.tagId);
+  });
+
+  it('no mezcla los tagIds de proyectos distintos', () => {
+    const alerts = buildTagAlerts([
+      tag({ id: 't1', so: '100' }),
+      tag({ id: 't2', so: '200' }),
+    ], projects, 'es');
+    const bySo = Object.fromEntries(alerts.map(a => [a.so, a.tagIds]));
+    expect(bySo['100']).toEqual(['t1']);
+    expect(bySo['200']).toEqual(['t2']);
   });
 
   it('con varios tags del mismo proyecto usa el mas reciente y dice cuantos son', () => {

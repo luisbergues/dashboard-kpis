@@ -93,7 +93,15 @@ function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [weeklyHistory, setWeeklyHistory] = useState([]);
   const [focusedProjectSo, setFocusedProjectSo] = useState(null);
-  const [focusedNoteId, setFocusedNoteId] = useState(null);
+  // Referencia { so, noteId } a la nota que abre el modal de respuesta.
+  //
+  // El SO viaja ACA ADENTRO y no se lee de focusedProjectSo a proposito: el
+  // efecto de foco de las dos vistas llama a clearFocusedProjectSo con un timer
+  // de 250 ms para hacer scroll y soltar el foco de la tarjeta. Si el modal
+  // dependiera de focusedProjectSo, ese timer lo desmontaria un cuarto de
+  // segundo despues de abrirlo y el flujo completo del feature (llegar a la
+  // nota y poder responderla) nunca se completaria.
+  const [focusedNoteRef, setFocusedNoteRef] = useState(null);
   const [projectDesigners, setProjectDesigners] = useState({});
   const [projectHistory, setProjectHistory] = useState({});
   const [engineerDirectory, setEngineerDirectory] = useState({});
@@ -683,8 +691,8 @@ function App() {
         return isDesigner ? null : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} projectHistory={projectHistory} />;
       case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} unreadByProject={unreadByProject} />;
       case 'my-projects':
-        return isDesigner ? null : <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} setActiveTab={setActiveTab} setFocusedProjectSo={setFocusedProjectSo} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} focusedNoteId={focusedNoteId} clearFocusedNoteId={() => setFocusedNoteId(null)} engineerDirectory={engineerDirectory} unreadByProject={unreadByProject} unreadForMe={unreadForMe} tagsByNote={tagsByNote} markTagRead={markTagRead} />;
-      case 'pipeline': return <PipelineView data={mergedData} currentUser={currentUser} userProfile={userProfile} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} focusedNoteId={focusedNoteId} clearFocusedNoteId={() => setFocusedNoteId(null)} engineerDirectory={engineerDirectory} unreadByProject={unreadByProject} tagsByNote={tagsByNote} />;
+        return isDesigner ? null : <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} setActiveTab={setActiveTab} setFocusedProjectSo={setFocusedProjectSo} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} focusedNoteRef={focusedNoteRef} setFocusedNoteRef={setFocusedNoteRef} clearFocusedNoteRef={() => setFocusedNoteRef(null)} engineerDirectory={engineerDirectory} unreadForMe={unreadForMe} tagsByNote={tagsByNote} markTagRead={markTagRead} />;
+      case 'pipeline': return <PipelineView data={mergedData} currentUser={currentUser} userProfile={userProfile} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} focusedNoteRef={focusedNoteRef} clearFocusedNoteRef={() => setFocusedNoteRef(null)} engineerDirectory={engineerDirectory} unreadByProject={unreadByProject} tagsByNote={tagsByNote} />;
       case 'materials':
         return isDesigner ? null : <MaterialsView data={mergedData} />;
       case 'quality': 
@@ -788,9 +796,13 @@ function App() {
             set(ref(db, refPath), new Date().toISOString());
           }
           if (alert.type === 'tag') {
-            markTagRead(alert.so, alert.tagId);
+            // Se marcan TODOS los tags sin leer del proyecto, no solo el mas
+            // reciente: la alerta esta agrupada por proyecto (ver tagAlerts.js)
+            // y dice "(N tags sin leer)". Marcando uno solo, la alerta volveria
+            // a aparecer con N-1 y habria que repetir el click N veces.
+            (alert.tagIds || [alert.tagId]).forEach(tagId => markTagRead(alert.so, tagId));
             setFocusedProjectSo(alert.so);
-            setFocusedNoteId(alert.noteId);
+            setFocusedNoteRef({ so: alert.so, noteId: alert.noteId });
             setActiveTab(tagAlertDestination(alert, mergedData?.priorityAnalysis || [], userProfile));
             return;
           }

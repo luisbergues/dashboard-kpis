@@ -51,6 +51,11 @@ export function buildTagAlerts(unreadForMe, projects, language) {
       so: String(so),
       type: 'tag',
       tagId: latest.id,
+      // Todos los tags del grupo, para que el click los marque juntos. La
+      // alerta esta agrupada por proyecto y dice "(N tags sin leer)": si el
+      // llamador marcara solo `tagId`, la alerta reaparece con N-1 y hay que
+      // repetir el click N veces para vaciarla.
+      tagIds: tagsForSo.map(t => t.id),
       noteId: latest.noteId,
       text: isES
         ? `${latest.taggedByName} te taggeó en SO #${so} ${name}: "${preview(latest.notePreview)}"${extra}`

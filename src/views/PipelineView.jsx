@@ -46,7 +46,7 @@ const getStageLabel = (stageId, language) => {
 
 export default function PipelineView({
   data, currentUser, userProfile, focusedProjectSo, clearFocusedProjectSo,
-  focusedNoteId, clearFocusedNoteId,
+  focusedNoteRef, clearFocusedNoteRef,
   engineerDirectory = {}, unreadByProject = {}, tagsByNote = {},
 }) {
   const { t, language } = useLanguage();
@@ -231,18 +231,23 @@ export default function PipelineView({
   }, [focusedProjectSo, clearFocusedProjectSo]);
 
   // Nota sobre la que se abre el modal de respuesta al llegar desde una
-  // notificacion de tag (ver App.jsx: focusedNoteId).
+  // notificacion de tag (ver App.jsx: focusedNoteRef).
+  //
+  // Depende SOLO de focusedNoteRef, que ya trae su propio SO. Gatearlo tambien
+  // en focusedProjectSo desmontaba el modal a los 250 ms, cuando el efecto de
+  // arriba llama a clearFocusedProjectSo.
   const focusedNote = React.useMemo(() => {
-    if (!focusedNoteId || !focusedProjectSo) return null;
-    return (projectNotes[focusedProjectSo] || [])
-      .find(n => noteStorageKey(n) === focusedNoteId) || null;
-  }, [focusedNoteId, focusedProjectSo, projectNotes]);
+    if (!focusedNoteRef?.noteId) return null;
+    return (projectNotes[focusedNoteRef.so] || [])
+      .find(n => noteStorageKey(n) === focusedNoteRef.noteId) || null;
+  }, [focusedNoteRef, projectNotes]);
 
   // Guarda la respuesta que se escribe en el modal como una nota nueva,
   // enlazada a la original via parentNoteId para que el timeline la muestre
   // en linea con una referencia, no anidada.
   const handleReply = async ({ text, taggedUids }) => {
     const userName = userProfile?.designerName || currentUser?.displayName || currentUser?.email || 'Unknown User';
+    const so = focusedNoteRef?.so;
     const reply = {
       id: Date.now().toString(),
       text,
@@ -250,25 +255,38 @@ export default function PipelineView({
       priority: false,
       createdAt: new Date().toISOString(),
       createdBy: userName,
-      parentNoteId: focusedNoteId,
+      parentNoteId: focusedNoteRef?.noteId,
     };
     const builtTags = buildTags({
-      so: focusedProjectSo,
+      so,
       noteKey: noteStorageKey(reply),
       taggedUids,
       directory: engineerDirectory,
-      authorUid: currentUser.uid,
+      authorUid: currentUser?.uid,
       authorName: userName,
     });
-    await createNoteWithTags({ so: focusedProjectSo, note: reply, tags: builtTags });
+    await createNoteWithTags({ so, note: reply, tags: builtTags });
   };
 
   // Hace scroll hasta la nota tageada al llegar desde la notificacion.
+  //
+  // El efecto hermano de focusedProjectSo expande la tarjeta con un setState,
+  // asi que en esta primera pasada la nota todavia no esta en el DOM. Se
+  // reintenta una vez despues de ese timer de 250 ms; sin el reintento el
+  // getElementById devolvia null siempre y el scroll no ocurria nunca.
   useEffect(() => {
-    if (!focusedNoteId) return;
-    const el = document.getElementById(`note-${focusedNoteId}`);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [focusedNoteId]);
+    if (!focusedNoteRef?.noteId) return;
+    const domId = `note-${focusedNoteRef.so}-${focusedNoteRef.noteId}`;
+    const scrollToNote = () => {
+      const el = document.getElementById(domId);
+      if (!el) return false;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return true;
+    };
+    if (scrollToNote()) return;
+    const timer = setTimeout(scrollToNote, 300);
+    return () => clearTimeout(timer);
+  }, [focusedNoteRef]);
 
   const handleAddNote = async (so, engName, noteType = 'normal') => {
     const text = newNoteTexts[so];
@@ -1126,8 +1144,13 @@ export default function PipelineView({
                       {/* Notes List */}
                       {(projectNotes[project.so] || []).length > 0 && (
                         <div className="pipeline-notes-list-wrapper">
+                          {/* El id de cada nota lleva el SO adelante porque la
+                              clave de storage de una nota del formato viejo es
+                              un indice numerico ("0", "1"), que se repite entre
+                              proyectos: sin el prefijo, getElementById
+                              encontraria la nota de otra tarjeta. */}
                           {(projectNotes[project.so] || []).map(note => (
-                            <div key={note.id} id={`note-${noteStorageKey(note)}`} className={`pipeline-note-item-card ${getNoteEffectiveType(note)}`}>
+                            <div key={note.id} id={`note-${project.so}-${noteStorageKey(note)}`} className={`pipeline-note-item-card ${getNoteEffectiveType(note)}`}>
                               <div className="pipeline-note-item-header">
                                 <div className="note-tags-left">
                                   <span className={`pipeline-note-priority-badge ${getNoteEffectiveType(note)}`}>
@@ -1152,7 +1175,7 @@ export default function PipelineView({
                                     type="button"
                                     className="note-reply-ref"
                                     onClick={() => {
-                                      const el = document.getElementById(`note-${note.parentNoteId}`);
+                                      const el = document.getElementById(`note-${project.so}-${note.parentNoteId}`);
                                       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                     }}
                                   >
@@ -1215,12 +1238,12 @@ export default function PipelineView({
       {focusedNote && (
         <NoteReplyModal
           note={focusedNote}
-          tags={tagsByNote[noteTagKey(focusedProjectSo, focusedNoteId)] || []}
+          tags={tagsByNote[noteTagKey(focusedNoteRef.so, focusedNoteRef.noteId)] || []}
           directory={engineerDirectory}
           currentUserUid={currentUser?.uid}
           language={language}
           onReply={handleReply}
-          onClose={clearFocusedNoteId}
+          onClose={clearFocusedNoteRef}
         />
       )}
     </div>
