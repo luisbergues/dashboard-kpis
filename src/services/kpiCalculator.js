@@ -4,6 +4,7 @@
  */
 import { shortProjectName } from '../utils/projectName';
 import { parseInstallDateLocal } from '../utils/dateFormat';
+import { isBlankSheetDate } from '../utils/finalsAlerts';
 
 /**
  * Parses a currency string to a float number
@@ -635,6 +636,49 @@ export function getUpcomingDeadlines(projects) {
   });
 
   return deadlines.sort((a, b) => a.daysLeft - b.daysLeft);
+}
+
+/**
+ * Gets every upcoming Finals date for an engineer.
+ *
+ * Hermana de getUpcomingDeadlines, con dos diferencias propias del dato:
+ * la celda de Finals llega como el literal "NA" cuando todavia no se agendo
+ * (no vacia), y un proyecto con Final Taken ya cargado no es "upcoming" —
+ * la fecha agendada sigue ahi pero el hito ya paso.
+ *
+ * Los finals VENCIDOS no salen en esta lista a proposito: de esos avisa la
+ * campana (ver utils/finalsAlerts.js). Aca solo va lo que todavia se puede
+ * planificar.
+ *
+ * @param {Array} projects filas de priorityAnalysis
+ * @returns {Array} { so, name, daysLeft, date }, de la mas proxima a la mas
+ *                  lejana. `date` es la celda cruda: la formatea la vista.
+ */
+export function getUpcomingFinals(projects) {
+  // Medianoche local, para que un finals de HOY cuente como 0 dias en vez de
+  // caerse de la lista segun la hora a la que se abra la app.
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const finals = [];
+  (projects || []).forEach(p => {
+    if (isBlankSheetDate(p.finalsScheduled)) return;
+    if (!isBlankSheetDate(p.finalTaken)) return;
+
+    // parseInstallDateLocal, no new Date(): con 'YYYY-MM-DD' el constructor
+    // asume UTC y en las Americas la fecha retrocede un dia.
+    const finalsDate = parseInstallDateLocal(p.finalsScheduled);
+    if (!finalsDate || finalsDate < today) return;
+
+    finals.push({
+      so: p.so,
+      name: p.name,
+      daysLeft: Math.round((finalsDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
+      date: p.finalsScheduled,
+    });
+  });
+
+  return finals.sort((a, b) => a.daysLeft - b.daysLeft);
 }
 
 /**

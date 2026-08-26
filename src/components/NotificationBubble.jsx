@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, X, AlertCircle, Clock, MessageSquare, Flag, AtSign } from 'lucide-react';
+import { Bell, X, AlertCircle, Clock, MessageSquare, Flag, AtSign, FlagTriangleRight } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import './NotificationBubble.css';
 
@@ -72,6 +72,11 @@ export default function NotificationBubble({ alerts = [], onAlertClick }) {
               >
                 <div className="notification-icon">
                   {alert.type === 'tag' ? <AtSign size={18} />
+                    /* Mismo icono que usa el calendario para los eventos de
+                       Finals, para que la campana y el calendario hablen del
+                       mismo hito. */
+                    : alert.type === 'finals' || alert.type === 'finals_overdue'
+                      ? <FlagTriangleRight size={18} />
                     : alert.type === 'note' ? <MessageSquare size={18} />
                     : alert.type === 'designer_review' ? <Flag size={18} />
                     : alert.type === 'error' ? <AlertCircle size={18} />

@@ -12,7 +12,7 @@ import {
   Briefcase, Calendar, Check, Clock,
   AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag, Users, User,
   ChevronDown, ChevronUp, ArrowUpDown, TrendingUp, CheckCircle2, Image as ImageIcon, Loader2, FileText, Paperclip,
-  LayoutGrid, NotebookPen, ListChecks, Pencil, AtSign
+  LayoutGrid, NotebookPen, ListChecks, Pencil, AtSign, FlagTriangleRight
 } from 'lucide-react';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { canManageDesignerNotes } from '../utils/notePermissions';
@@ -22,7 +22,7 @@ import { noteDaysOpen, notePenalty } from '../designer-performance/utils/redFlag
 import TerminatedEasterEgg from '../components/TerminatedEasterEgg';
 import { Chart as ChartJS, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { calculateWeeklyCompletions, getUpcomingDeadlines } from '../services/kpiCalculator';
+import { calculateWeeklyCompletions, getUpcomingDeadlines, getUpcomingFinals } from '../services/kpiCalculator';
 import SectionErrorBoundary from '../components/SectionErrorBoundary';
 import SkeletonLoader from '../components/SkeletonLoader';
 import PDFGeneratorModal from '../components/PDFGeneratorModal';
@@ -353,6 +353,7 @@ export default function MyProjectsView({
   // conviene el mismo empty state que ya usa Team Stats.
   const hasEnoughWeeklyHistory = (weeklyDataRaw.weeksWithData || 0) >= 2;
   const upcomingDeadlines = getUpcomingDeadlines(myProjectsRaw);
+  const upcomingFinals = getUpcomingFinals(myProjectsRaw);
 
   const lineOptions = {
     responsive: true, maintainAspectRatio: false,
@@ -1540,6 +1541,49 @@ export default function MyProjectsView({
                             <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>#{d.so} {shortProjectName(d.name)}</div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
                               <span>{d.date}</span>
+                              <span style={{ color: accent, fontWeight: isCritical || isSoon ? 600 : 400 }}>{daysLabel}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </SectionErrorBoundary>
+
+              <SectionErrorBoundary title="Final Dates Error">
+                <div className="analytics-card deadlines-card" style={{ background: 'var(--bg-deep)', padding: '16px', borderRadius: '8px', overflowY: 'auto', maxHeight: '260px', border: '1px solid var(--card-border)' }}>
+                  <h4 className="chart-subtitle" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {/* Mismo icono y color naranja que el calendario y la
+                        campana usan para Finals, para que el hito se
+                        reconozca en las tres pantallas. */}
+                    <FlagTriangleRight size={16} style={{ color: 'var(--color-orange, #ffa500)' }} />
+                    Upcoming Final Dates
+                  </h4>
+                  {upcomingFinals.length === 0 ? (
+                    <p className="text-muted" style={{ fontSize: '0.85rem' }}>
+                      {language === 'es' ? 'No hay finals programados.' : 'No scheduled finals.'}
+                    </p>
+                  ) : (
+                    <div className="deadlines-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {upcomingFinals.map(f => {
+                        // Tramo amarillo mas corto que en installs (<=7 en
+                        // vez de <=14): un finals a dos semanas todavia no
+                        // es accionable. El <=3 coincide con el umbral de
+                        // la alerta de la campana.
+                        const isCritical = f.daysLeft <= 3;
+                        const isSoon = !isCritical && f.daysLeft <= 7;
+                        const accent = isCritical ? 'var(--color-pink)' : isSoon ? '#FFE600' : 'var(--text-muted)';
+                        const daysLabel = f.daysLeft === 0
+                          ? (language === 'es' ? 'Hoy' : 'Today')
+                          : f.daysLeft === 1
+                            ? (language === 'es' ? 'Falta 1 día' : '1 day left')
+                            : (language === 'es' ? `Faltan ${f.daysLeft} días` : `${f.daysLeft} days left`);
+                        return (
+                          <div key={f.so} className="deadline-item" style={{ background: 'var(--card-bg)', padding: '10px', borderRadius: '6px', borderLeft: `3px solid ${accent}` }}>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>#{f.so} {shortProjectName(f.name)}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                              <span>{f.date}</span>
                               <span style={{ color: accent, fontWeight: isCritical || isSoon ? 600 : 400 }}>{daysLabel}</span>
                             </div>
                           </div>

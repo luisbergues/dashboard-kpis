@@ -204,6 +204,18 @@
   color: #8B5CF6;
 }
 
+/* Naranja: el mismo color con el que el calendario pinta los eventos de
+   Finals (ver CalendarView.css .cal-finals-event). */
+.notification-item.finals .notification-icon {
+  color: var(--color-orange, #ffa500);
+}
+
+/* Un finals cuya fecha ya paso y que nadie tomo es una falla, no un aviso:
+   se pinta con el rojo de los errores. */
+.notification-item.finals_overdue .notification-icon {
+  color: #ef4444;
+}
+
 .notification-content {
   flex: 1;
 }

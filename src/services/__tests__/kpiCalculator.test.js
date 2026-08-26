@@ -9,6 +9,7 @@ import {
   getDelayedProjectsCount,
   getProjectLocation,
   getUpcomingDeadlines,
+  getUpcomingFinals,
   calculatePersonalStageAverages
 } from '../kpiCalculator';
 
@@ -234,6 +235,77 @@ describe('KPI Calculator Service Tests', () => {
         { so: '3', name: 'Vacio', install: '' },
       ])).not.toThrow();
       expect(getUpcomingDeadlines([{ so: '2', name: 'TBD', install: 'TBD' }])).toEqual([]);
+    });
+  });
+
+  describe('getUpcomingFinals', () => {
+    const project = (over = {}) => ({
+      so: '1',
+      name: 'Chris Jaensch:[1] Chris Jaensch',
+      finalsScheduled: daysFromToday(2),
+      finalTaken: 'NA',
+      ...over,
+    });
+
+    it('incluye un finals agendado para HOY con 0 dias restantes', () => {
+      const result = getUpcomingFinals([project({ finalsScheduled: daysFromToday(0) })]);
+      expect(result).toHaveLength(1);
+      expect(result[0].daysLeft).toBe(0);
+    });
+
+    it('cuenta los dias restantes exactos, sin corrimiento', () => {
+      const result = getUpcomingFinals([
+        project({ so: 'a', finalsScheduled: daysFromToday(3) }),
+        project({ so: 'b', finalsScheduled: daysFromToday(21) }),
+      ]);
+      expect(result.find(r => r.so === 'a').daysLeft).toBe(3);
+      expect(result.find(r => r.so === 'b').daysLeft).toBe(21);
+    });
+
+    it('excluye finals pasados y ordena por proximidad', () => {
+      const result = getUpcomingFinals([
+        project({ so: 'lejos', finalsScheduled: daysFromToday(9) }),
+        project({ so: 'ayer', finalsScheduled: daysFromToday(-1) }),
+        project({ so: 'cerca', finalsScheduled: daysFromToday(1) }),
+      ]);
+      expect(result.map(r => r.so)).toEqual(['cerca', 'lejos']);
+    });
+
+    // Un finals ya tomado no es "upcoming": la fecha agendada sigue en la
+    // celda, pero el hito ya paso.
+    it('excluye el proyecto cuyo finals ya se tomo', () => {
+      const result = getUpcomingFinals([
+        project({ so: 'tomado', finalTaken: daysFromToday(-1) }),
+        project({ so: 'pendiente' }),
+      ]);
+      expect(result.map(r => r.so)).toEqual(['pendiente']);
+    });
+
+    it.each(['NA', 'na', '  ', '', null, undefined])(
+      'ignora el finals sin agendar (%s)',
+      (val) => {
+        expect(getUpcomingFinals([project({ finalsScheduled: val })])).toEqual([]);
+      }
+    );
+
+    it('ignora una fecha imparseable sin lanzar', () => {
+      expect(() => getUpcomingFinals([project({ finalsScheduled: 'TBD' })])).not.toThrow();
+      expect(getUpcomingFinals([project({ finalsScheduled: 'TBD' })])).toEqual([]);
+    });
+
+    it('devuelve la fecha cruda del sheet para que la vista la formatee', () => {
+      const scheduled = daysFromToday(2);
+      const [row] = getUpcomingFinals([project({ finalsScheduled: scheduled })]);
+      expect(row.date).toBe(scheduled);
+      expect(row.name).toBe('Chris Jaensch:[1] Chris Jaensch');
+    });
+
+    it('acepta el formato M/d/yyyy que usa el sheet', () => {
+      const d = new Date();
+      d.setDate(d.getDate() + 5);
+      const us = `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+      const [row] = getUpcomingFinals([project({ finalsScheduled: us })]);
+      expect(row.daysLeft).toBe(5);
     });
   });
 

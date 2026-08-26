@@ -914,7 +914,7 @@
 /* Projects Analytics Grid */
 .projects-analytics-grid {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: 1fr 300px 300px;
   gap: 24px;
 }
 
@@ -925,6 +925,19 @@
    against html/body's overflow-x: hidden. min-width: 0 lets the track win. */
 .analytics-card {
   min-width: 0;
+}
+
+/* Dos listas de 300px mas el grafico no entran por debajo de ~1200px sin
+   dejar el canvas en un ancho ilegible. Ahi el grafico se queda con la
+   fila entera y las dos listas pasan abajo, lado a lado. */
+@media (max-width: 1200px) {
+  .projects-analytics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .projects-analytics-grid > *:first-child {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 767px) {

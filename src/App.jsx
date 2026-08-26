@@ -58,6 +58,7 @@ import { pendingDesignerAssignments } from './utils/pendingDesignerAssignments'
 import { useProjectTags } from './utils/useProjectTags'
 import { subscribeToDirectory, registerSelf } from './utils/engineerDirectory'
 import { buildTagAlerts, tagAlertDestination } from './utils/tagAlerts'
+import { buildFinalsAlert } from './utils/finalsAlerts'
 
 // Lazy: the ESS tab pulls in pdfjs-dist (~1MB+) via essPdfExtract.js, and only
 // super-admins can ever open it. A static import would put that in the main
@@ -531,7 +532,13 @@ function App() {
         }
       }
 
-      // 3. Unread Notes logic
+      // 3. Finals proximo o vencido. buildFinalsAlert descarta por su cuenta
+      // los estados que no corresponden y los "NA" del sheet, y devuelve null
+      // cuando no hay nada que avisar.
+      const finalsAlert = buildFinalsAlert(p, today, language);
+      if (finalsAlert) alerts.push(finalsAlert);
+
+      // 4. Unread Notes logic
       if (!isCompletedOrCancelled) {
         const lastReadTimestamp = userProfile.readNotes ? userProfile.readNotes[p.so] : null;
         
@@ -577,7 +584,7 @@ function App() {
         }
       }
 
-      // 4. Notas "Designer" sin resolver — cada día que quedan abiertas le
+      // 5. Notas "Designer" sin resolver — cada día que quedan abiertas le
       // restan puntos al KPI de Fase 2 del diseñador (ver redFlags.ts), así
       // que quien puede gestionarlas (roles de ingeniería) recibe un
       // recordatorio en cada apertura de la app hasta que la resuelva o
