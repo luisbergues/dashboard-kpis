@@ -1926,7 +1926,7 @@ export default function MyProjectsView({
                             disabled={isUploadingImage[project.so]}
                           />
                           <div className="note-actions-row">
-                            <div style={{ display: 'flex', gap: '8px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                               <TagSelector
                                 directory={engineerDirectory}
                                 selectedUids={noteTagUids[project.so] || []}
