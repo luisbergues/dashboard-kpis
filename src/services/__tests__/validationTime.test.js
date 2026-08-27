@@ -115,3 +115,51 @@ describe('integracion con calculateAutomaticStages', () => {
     expect(calculateGlobalValidationTime(st, [proyecto])).toEqual({ hours: 54, sampleSize: 1 });
   });
 });
+
+/* Los proyectos cerrados salen de priorityAnalysis y su project_history se
+   borra al archivarse, asi que la muestra viva se recicla en vez de crecer.
+   archive/validation_metrics guarda la medicion congelada de cada proyecto
+   (ver validationMetrics.js) y la tarjeta la suma a lo que este vivo. */
+describe('calculateGlobalValidationTime — registros guardados', () => {
+  const guardado = (hours) => ({ checkAt: 'a', nestingAt: 'b', hours, recordedAt: 'c' });
+
+  it('suma los registros guardados a la muestra viva', () => {
+    const r = calculateGlobalValidationTime(
+      { '111': stages({ check: '2026-08-03T00:00:00Z', nesting: '2026-08-03T10:00:00Z' }) }, // 10h
+      [{ so: '111' }],
+      { '999': guardado(20) },
+    );
+    expect(r).toEqual({ hours: 15, sampleSize: 2 });
+  });
+
+  it('promedia solo con guardados cuando no queda ningun proyecto vivo medible', () => {
+    const r = calculateGlobalValidationTime({}, [], { '999': guardado(30), '888': guardado(10) });
+    expect(r).toEqual({ hours: 20, sampleSize: 2 });
+  });
+
+  it('cuenta una sola vez un SO que esta guardado y vivo a la vez', () => {
+    const r = calculateGlobalValidationTime(
+      { '111': stages({ check: '2026-08-03T00:00:00Z', nesting: '2026-08-03T10:00:00Z' }) },
+      [{ so: '111' }],
+      { '111': guardado(50) },
+    );
+    // Gana el registro guardado: es la medicion original, congelada.
+    expect(r).toEqual({ hours: 50, sampleSize: 1 });
+  });
+
+  it('descarta un registro corrupto en vez de envenenar el promedio', () => {
+    const r = calculateGlobalValidationTime({}, [], {
+      '111': guardado(10),
+      '222': guardado('muchas'),
+      '333': guardado(-5),
+      '444': guardado(91 * 24),
+      '555': null,
+    });
+    expect(r).toEqual({ hours: 10, sampleSize: 1 });
+  });
+
+  it('sigue devolviendo null cuando no hay ni guardados ni vivos', () => {
+    expect(calculateGlobalValidationTime({}, [], {})).toBeNull();
+    expect(calculateGlobalValidationTime(null, [], undefined)).toBeNull();
+  });
+});

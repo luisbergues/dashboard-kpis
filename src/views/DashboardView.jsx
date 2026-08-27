@@ -121,7 +121,15 @@ export default function DashboardView({ data, weeklyHistory = [], projectHistory
     return obj;
   }, [filteredProjects, projectHistory]);
 
-  const validationTime = calculateGlobalValidationTime(derivedProjectStages, filteredProjects);
+  // `data.validationMetrics` es el registro permanente de cada medicion (ver
+  // validationMetrics.js). Sin el, la muestra son solo las filas vivas del
+  // sheet: un proyecto que se cierra sale de priorityAnalysis y se lleva su
+  // medicion con el, asi que el promedio nunca pasaba de un puñado.
+  const validationTime = calculateGlobalValidationTime(
+    derivedProjectStages,
+    filteredProjects,
+    data.validationMetrics,
+  );
   
   const bottleneckAlerts = predictBottlenecks(filteredProjects, new Date().toISOString());
 

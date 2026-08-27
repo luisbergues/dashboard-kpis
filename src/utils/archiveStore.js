@@ -15,6 +15,11 @@ export const ARCHIVE_PATHS = {
   completed: 'archive/completed_projects',
   weekly: 'archive/weekly_history',
   deleted: 'archive/deleted_projects',
+  // Mediciones CHECK -> NESTING por proyecto (ver validationMetrics.js). A
+  // diferencia de `completed`, este nodo NO se purga: el archivo de proyectos
+  // se corta al año, pero el promedio de validacion tiene que acumular todo lo
+  // que se pueda.
+  validation: 'archive/validation_metrics',
 };
 
 // Copia en memoria de cada nodo de archivo que este cliente ya leyó, con

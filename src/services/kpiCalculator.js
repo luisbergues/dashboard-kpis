@@ -5,6 +5,7 @@
 import { shortProjectName } from '../utils/projectName';
 import { parseInstallDateLocal } from '../utils/dateFormat';
 import { isBlankSheetDate } from '../utils/finalsAlerts';
+import { measureValidation, storedMetricHours } from '../utils/validationMeasure';
 
 /**
  * Parses a currency string to a float number
@@ -797,50 +798,46 @@ export function calculateOnHoldTimeByDesigner(projectHistory, projects = [], onH
  * transiciones observadas por la app (ver statusTransitions.js). Un proyecto
  * sin esas transiciones registradas simplemente no entra en el promedio.
  *
+ * Un proyecto vivo aporta al promedio solo mientras siga en el sheet: al
+ * cerrarse sale de priorityAnalysis y clearAuxData le borra el
+ * project_history. Por eso la muestra no crecía nunca — se reciclaba. Los
+ * registros de `archive/validation_metrics` (ver validationMetrics.js) son la
+ * medición congelada de cada proyecto y hacen que la muestra sea acumulativa.
+ *
+ * @param {Object} storedMetrics - mapa SO -> medición guardada
  * @returns {{ hours: number, sampleSize: number } | null} null cuando ningún
  *   proyecto tiene las dos transiciones registradas. Deliberadamente NO es 0:
  *   "todavía no hay datos" y "el promedio es cero" son cosas distintas, y
  *   devolver 0 para las dos es lo que hacía que la tarjeta mintiera.
  */
-export function calculateGlobalValidationTime(projectStages, projects = []) {
-  if (!projectStages || Object.keys(projectStages).length === 0) return null;
+export function calculateGlobalValidationTime(projectStages, projects = [], storedMetrics = {}) {
+  // Un SO se cuenta UNA sola vez: un proyecto ya registrado que todavía sigue
+  // vivo en el sheet aparecería en las dos fuentes y pesaría el doble.
+  const hoursBySo = new Map();
 
-  const CHECK_INDEX = 3;
-  const NESTING_INDEX = 4;
-  // Tope de cordura: más de 90 días entre CHECK y NESTING es un dato sucio
-  // (un proyecto reabierto, una fecha mal cargada), no un tiempo de validación.
-  const MAX_REASONABLE_HOURS = 90 * 24;
-
-  let totalHours = 0;
-  let count = 0;
-
-  projects.forEach(p => {
-    const stages = projectStages[p.so];
-    if (!stages) return;
-
-    const check = stages[CHECK_INDEX];
-    const nesting = stages[NESTING_INDEX];
-
-    // `estimated` descarta las fechas fabricadas: sin este filtro el promedio
-    // se arma con la hora en que se abrió el dashboard.
-    const usable = (s) => s && s.completed && s.timestamp && !s.estimated;
-    if (!usable(check) || !usable(nesting)) return;
-
-    const start = new Date(check.timestamp).getTime();
-    const end = new Date(nesting.timestamp).getTime();
-    if (Number.isNaN(start) || Number.isNaN(end)) return;
-
-    const diffHours = (end - start) / (1000 * 60 * 60);
-    if (diffHours < 0 || diffHours > MAX_REASONABLE_HOURS) return;
-
-    totalHours += diffHours;
-    count++;
+  // Los guardados van primero porque ganan: son la medición original del
+  // proyecto, no una recalculada sobre datos que pudieron cambiar.
+  Object.entries(storedMetrics || {}).forEach(([so, record]) => {
+    const hours = storedMetricHours(record);
+    if (hours !== null) hoursBySo.set(String(so), hours);
   });
 
-  if (count === 0) return null;
+  if (projectStages) {
+    projects.forEach(p => {
+      const so = String(p?.so ?? '').trim();
+      if (!so || hoursBySo.has(so)) return;
+
+      const measured = measureValidation(projectStages[p.so]);
+      if (measured) hoursBySo.set(so, measured.hours);
+    });
+  }
+
+  if (hoursBySo.size === 0) return null;
+
+  const totalHours = [...hoursBySo.values()].reduce((sum, h) => sum + h, 0);
   return {
-    hours: parseFloat((totalHours / count).toFixed(1)),
-    sampleSize: count,
+    hours: parseFloat((totalHours / hoursBySo.size).toFixed(1)),
+    sampleSize: hoursBySo.size,
   };
 }
 

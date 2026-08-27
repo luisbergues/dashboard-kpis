@@ -53,6 +53,7 @@ import { auth, db, onAuthStateChanged, ref, onValue, set, get, child, signOut } 
 import { shortProjectName } from './utils/projectName'
 import { normalizeNotesBySo, noteStorageKey } from './utils/projectNotes'
 import { recordStatusTransitions } from './utils/statusTransitions'
+import { recordValidationMetrics, fetchValidationMetrics } from './utils/validationMetrics'
 import { normalizeWeeklyHistory } from './utils/weeklyHistory'
 import { pendingDesignerAssignments } from './utils/pendingDesignerAssignments'
 import { useProjectTags } from './utils/useProjectTags'
@@ -126,6 +127,7 @@ function App() {
         dataToReturn = cached.parsedData;
         // Fetch archived projects
         dataToReturn.archivedProjects = await fetchArchivedCompletedProjects();
+        dataToReturn.validationMetrics = await fetchValidationMetrics();
       } else {
         try {
           // Unico punto donde el archivo se vuelve a leer de la red. El resto
@@ -156,6 +158,17 @@ function App() {
             if (userProfile?.role !== 'designer') {
               await recordStatusTransitions(parsedData.priorityAnalysis || []);
             }
+            // Despues de recordStatusTransitions a proposito: asi ve las
+            // transiciones que aquella acaba de escribir y un proyecto que
+            // entro a NESTING en esta misma pasada queda medido ya. Corre
+            // tambien para designers (a diferencia de las transiciones): solo
+            // necesita LEER project_history y escribir bajo `archive`, dos
+            // permisos que su rol tiene.
+            await recordValidationMetrics(
+              parsedData.priorityAnalysis || [],
+              await fetchArchivedCompletedProjects(),
+              parsedData.statusHistory || [],
+            );
             await checkDbSizeAndArchive();
             await purgeExpiredArchives();
           }).catch(console.error);
@@ -163,11 +176,13 @@ function App() {
           await setCachedData(parsedData);
           dataToReturn = parsedData;
           dataToReturn.archivedProjects = await fetchArchivedCompletedProjects();
+          dataToReturn.validationMetrics = await fetchValidationMetrics();
         } catch (err) {
           if (cached) {
             console.warn('Fallback to expired cache due to fetch error', err);
             dataToReturn = cached.parsedData;
             dataToReturn.archivedProjects = await fetchArchivedCompletedProjects();
+            dataToReturn.validationMetrics = await fetchValidationMetrics();
           } else {
             throw err;
           }
