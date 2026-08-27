@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { HelpCircle, X } from 'lucide-react';
+import { HelpCircle, X, ChevronUp, ChevronDown } from 'lucide-react';
 import {
   Chart as ChartJS,
   LinearScale,
@@ -99,10 +99,42 @@ function workloadAlert(percent, isLight) {
   return { color: null, badgeBg: null, badge: null };
 }
 
+// Columnas ordenables de PeriodTable: clave del dato, texto del header, tipo
+// (decide si el sort es numerico o alfabetico) y el accessor sobre una fila.
+const SORTABLE_COLUMNS = [
+  { key: 'engineer', label: 'Engineer', type: 'string', get: r => r.engineer },
+  { key: 'ownPoints', label: 'Own Points', type: 'number', get: r => r.ownPoints },
+  { key: 'revisionPoints', label: 'Revision Points', type: 'number', get: r => r.revisionPoints },
+  { key: 'nestingPoints', label: 'Nesting Points', type: 'number', get: r => r.nestingPoints },
+  { key: 'totalKPI', label: 'Total KPI', type: 'number', get: r => r.totalKPI },
+  { key: 'percentOfTotal', label: '% of Total', type: 'number', get: r => r.percentOfTotal },
+];
+
 // Una de las tablas por periodo de la hoja (Last 30 Days / 31-60 Days) con las
 // cuatro columnas de puntos. El titulo sale de la propia hoja, asi que el rango
 // de fechas se mantiene solo cuando la hoja rota de mes.
-function PeriodTable({ table, colors, isLight, emptyLabel }) {
+function PeriodTable({ table, colors, isLight, emptyLabel, language = 'en' }) {
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
+
+  const sortedRows = useMemo(() => {
+    if (!table || !sortKey) return table?.rows || [];
+    const col = SORTABLE_COLUMNS.find(c => c.key === sortKey);
+    const withIndex = table.rows.map((row, i) => ({ row, i }));
+    withIndex.sort((a, b) => {
+      const av = col.get(a.row);
+      const bv = col.get(b.row);
+      const cmp = col.type === 'string'
+        ? String(av || '').localeCompare(String(bv || ''))
+        : (av ?? 0) - (bv ?? 0);
+      // Empate estable: conserva el orden original de la hoja en vez de
+      // barajar filas iguales en cada re-sort.
+      return cmp !== 0 ? cmp : a.i - b.i;
+    });
+    const ordered = withIndex.map(x => x.row);
+    return sortDir === 'desc' ? ordered.reverse() : ordered;
+  }, [table, sortKey, sortDir]);
+
   if (!table || table.rows.length === 0) {
     return <p style={{ color: colors.body, fontSize: '0.9rem', margin: 0 }}>{emptyLabel}</p>;
   }
@@ -114,6 +146,49 @@ function PeriodTable({ table, colors, isLight, emptyLabel }) {
   const th = { padding: '8px 8px', color: colors.accent, fontWeight: 600, wordBreak: 'break-word' };
   const td = { padding: '8px 8px', color: colors.body, wordBreak: 'break-word' };
   const colWidths = ['19%', '15%', '15%', '15%', '16%', '20%'];
+  const isES = language === 'es';
+
+  const handleSort = (key, dir) => {
+    setSortKey(key);
+    setSortDir(dir);
+  };
+
+  // Cada header lleva dos flechas fijas (no una sola que alterna): la de
+  // abajo ordena menor a mayor, la de arriba mayor a menor — pedido explicito
+  // del usuario en vez del toggle-unico habitual.
+  const SortableHeader = ({ col }) => (
+    <th style={th}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <span>{col.label}</span>
+        <span style={{ display: 'inline-flex', flexDirection: 'column', lineHeight: 0 }}>
+          <button
+            type="button"
+            onClick={() => handleSort(col.key, 'desc')}
+            title={isES ? 'Ordenar de mayor a menor' : 'Sort high to low'}
+            style={{
+              background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+              color: sortKey === col.key && sortDir === 'desc' ? colors.accent : colors.muted,
+              opacity: sortKey === col.key && sortDir === 'desc' ? 1 : 0.5,
+            }}
+          >
+            <ChevronUp size={10} />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSort(col.key, 'asc')}
+            title={isES ? 'Ordenar de menor a mayor' : 'Sort low to high'}
+            style={{
+              background: 'none', border: 'none', padding: 0, cursor: 'pointer', marginTop: '-2px',
+              color: sortKey === col.key && sortDir === 'asc' ? colors.accent : colors.muted,
+              opacity: sortKey === col.key && sortDir === 'asc' ? 1 : 0.5,
+            }}
+          >
+            <ChevronDown size={10} />
+          </button>
+        </span>
+      </div>
+    </th>
+  );
 
   return (
     <div>
@@ -127,20 +202,15 @@ function PeriodTable({ table, colors, isLight, emptyLabel }) {
           </colgroup>
           <thead>
             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-              <th style={th}>Engineer</th>
-              <th style={th}>Own Points</th>
-              <th style={th}>Revision Points</th>
-              <th style={th}>Nesting Points</th>
-              <th style={th}>Total KPI</th>
-              <th style={th}>% of Total</th>
+              {SORTABLE_COLUMNS.map(col => <SortableHeader key={col.key} col={col} />)}
             </tr>
           </thead>
           <tbody>
-            {table.rows.map((row, index) => {
+            {sortedRows.map((row, index) => {
               const alert = workloadAlert(row.percentOfTotal, isLight);
               return (
                 <tr
-                  key={index}
+                  key={row.engineer || index}
                   style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
                   // Los SOs que sumaron en el periodo (columna F de la hoja) no
                   // entran como columna propia, pero sirven para auditar una fila.
@@ -460,6 +530,7 @@ export default function DesignQualityView() {
                     table={data[key]}
                     colors={C}
                     isLight={isLight}
+                    language={language}
                     emptyLabel={language === 'es'
                       ? `La hoja no tiene la seccion "${sheetSection}".`
                       : `The sheet has no "${sheetSection}" section.`}
