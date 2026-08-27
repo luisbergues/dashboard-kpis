@@ -18,9 +18,26 @@ import {
   signOut as fbSignOut,
   onAuthStateChanged as fbOnAuthStateChanged
 } from 'firebase/auth';
-import { IS_DEMO } from './demoMode';
 import { createDemoDb, createDemoAuth } from './demoDb';
 import { buildDemoTree, DEMO_USER } from './demoData';
+
+// La puerta del modo demo se evalua ACA, en linea, y no importada desde otro
+// modulo. Vite reemplaza `import.meta.env.DEV` por el literal `false` al
+// compilar, y solo si la expresion vive en este archivo puede Rollup plegar el
+// `&&` a `false`, resolver los ternarios de mas abajo a `null` y descartar los
+// modulos de demo del bundle. Importando la constante, el plegado no cruza el
+// limite del modulo y los datos de mentira terminan viajando a produccion —
+// medido, no supuesto.
+//
+// La segunda condicion (?demo en la URL) mantiene el `npm run dev` normal
+// hablando con el Firebase real: el modo demo hay que pedirlo.
+//
+// Uso: npm run dev  ->  http://localhost:5173/?demo
+const IS_DEMO = Boolean(
+  import.meta.env.DEV &&
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).has('demo')
+);
 
 // Firebase configuration using Vite environment variables
 const firebaseConfig = {

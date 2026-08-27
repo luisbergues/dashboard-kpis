@@ -1,7 +1,7 @@
 // Base de datos en memoria que imita la API de Realtime Database.
 //
-// Existe para el modo demo (ver demoMode.js): reemplaza a `db`/`auth` en
-// firebase.js, de forma que App.jsx y TODAS las vistas corren su codigo real
+// Existe para el modo demo (la puerta esta en firebase.js): reemplaza a
+// `db`/`auth`, de forma que App.jsx y TODAS las vistas corren su codigo real
 // sin una sola rama de "si es demo". Los listeners, las proyecciones, las
 // escrituras atomicas y el estado de leido se ejercitan de verdad — lo unico
 // falso es donde se guardan los bytes.

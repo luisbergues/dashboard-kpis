@@ -134,7 +134,7 @@
   font-weight: 600;
 }
 
-.notification-body {
+.notification-list {
   padding: 8px;
   overflow-y: auto;
   flex: 1;
@@ -144,13 +144,13 @@
 }
 
 /* Custom Scrollbar for body */
-.notification-body::-webkit-scrollbar {
+.notification-list::-webkit-scrollbar {
   width: 6px;
 }
-.notification-body::-webkit-scrollbar-track {
+.notification-list::-webkit-scrollbar-track {
   background: transparent;
 }
-.notification-body::-webkit-scrollbar-thumb {
+.notification-list::-webkit-scrollbar-thumb {
   background-color: var(--border-color);
   border-radius: 10px;
 }

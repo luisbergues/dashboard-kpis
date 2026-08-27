@@ -1,4 +1,4 @@
-// Arbol inicial de la base en memoria del modo demo (ver demoMode.js).
+// Arbol inicial de la base en memoria del modo demo (la puerta esta en firebase.js).
 //
 // Los nombres de ingenieros y disenadores son los reales porque las listas
 // canonicas (engineers.js, designers.js) los usan para matchear; todo lo demas
