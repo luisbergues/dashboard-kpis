@@ -1,0 +1,233 @@
+<title>Mapa de modulos</title>
+<style>
+  @page { size: 1920px 1080px; margin: 0; }
+  html, body { margin: 0; padding: 0; background: #0B1520; }
+  body {
+    width: 1920px; height: 1080px; overflow: hidden;
+    font-family: "Segoe UI", -apple-system, system-ui, sans-serif;
+    color: #E8F0F7;
+    padding: 48px 60px 0;
+    box-sizing: border-box;
+  }
+
+  header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+  h1 { font-size: 38px; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.5px; }
+  .sub { font-size: 16px; color: #7E95AB; margin: 0; }
+
+  .legend { display: flex; gap: 24px; font-size: 13.5px; color: #7E95AB; padding-top: 10px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+
+  .cluster > h2 { font-size: 13.5px; font-weight: 700; letter-spacing: 2px; margin: 0 0 5px; text-transform: uppercase; }
+  .rule { height: 2.5px; border-radius: 2px; margin-bottom: 12px; opacity: .55; }
+  .count { font-size: 12px; font-weight: 600; letter-spacing: 0; opacity: .6; }
+
+  .card {
+    background: #101E2B; border: 1.5px solid #1E3448; border-left-width: 4px;
+    border-radius: 8px; padding: 10px 13px 11px; margin-bottom: 9px;
+  }
+  .card h3 { font-size: 16px; font-weight: 600; margin: 0 0 4px; color: #E8F0F7; }
+  .card p  { font-size: 12.5px; line-height: 1.32; color: #8FA8BE; margin: 0 0 8px; }
+  .data {
+    font-size: 11px; color: #6E8AA3; letter-spacing: .1px; line-height: 1.3;
+    border-top: 1px solid #1B2E3F; padding-top: 6px; white-space: nowrap;
+  }
+  .data b { color: #90AFC7; font-weight: 600; }
+
+  .card.dim { background: #0D1721; border-color: #1A2836; border-left-color: #33475A !important; opacity: .62; }
+  .card.dim h3 { color: #7C93A8; }
+  .tag {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    color: #0B1520; border-radius: 4px; padding: 2px 6px; margin-left: 6px; vertical-align: 2px;
+  }
+  .card.dim .tag { background: #64809A; }
+  .card.warn { border-left-color: #C98A2E !important; }
+  .card.warn .tag { background: #C98A2E; }
+
+  .aside { margin-top: 14px; border-radius: 8px; padding: 11px 13px; }
+  .aside .k { font-size: 12px; font-weight: 700; letter-spacing: 1.3px; margin-bottom: 6px; }
+  .aside p { font-size: 12px; line-height: 1.38; margin: 0; }
+
+  footer { position: absolute; left: 60px; right: 60px; bottom: 20px;
+           display: flex; justify-content: space-between; font-size: 13.5px; color: #5F7A92; }
+</style>
+
+<header>
+  <div>
+    <h1>Mapa de modulos</h1>
+    <p class="sub">19 modulos agrupados por dominio · la navegacion no es un router: es un switch de estado + array de tabs por rol + paginas por query param</p>
+  </div>
+  <div class="legend">
+    <span><i style="background:#38BDF8"></i>activo</span>
+    <span><i style="background:#C98A2E"></i>parcial</span>
+    <span><i style="background:#64809A"></i>planeado</span>
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- ============ CLUSTER 1 ============ -->
+  <section class="cluster">
+    <h2 style="color:#38BDF8">Operacion diaria <span class="count">· 7</span></h2>
+    <div class="rule" style="background:#38BDF8"></div>
+
+    <div class="card" style="border-left-color:#38BDF8">
+      <h3>Pipeline</h3>
+      <p>Ver todos los proyectos activos en un tablero por etapa y moverlos cuando avanzan.</p>
+      <div class="data"><b>lee</b> planilla · notas · kanban &nbsp;<b>escribe</b> kanban_state · /api/sync</div>
+    </div>
+
+    <div class="card" style="border-left-color:#38BDF8">
+      <h3>Mis Proyectos</h3>
+      <p>Trabajar los proyectos propios: etapas, notas, materiales, ON HOLD y PDFs.</p>
+      <div class="data"><b>lee</b> overrides · history &nbsp;<b>escribe</b> project_overrides · /api/sync</div>
+    </div>
+
+    <div class="card" style="border-left-color:#38BDF8">
+      <h3>Calendario</h3>
+      <p>Ver instalaciones y fechas clave del mes y dejar notas pegadas a un dia.</p>
+      <div class="data"><b>lee</b> calendar_notes &nbsp;<b>escribe</b> calendar_notes · /api/sync</div>
+    </div>
+
+    <div class="card" style="border-left-color:#38BDF8">
+      <h3>Bitacora y Checklist</h3>
+      <p>Cargar materiales por ambiente y tildar el control de calidad, con PDF para el taller.</p>
+      <div class="data"><b>lee</b> logbookData · checklistData &nbsp;<b>escribe</b> RTDB + localStorage</div>
+    </div>
+
+    <div class="card" style="border-left-color:#38BDF8">
+      <h3>Ficha compartible</h3>
+      <p>Pasar el estado de un proyecto por link a alguien de afuera, sin pedirle login.</p>
+      <div class="data"><b>lee</b> props (?project=SO) &nbsp;<b>escribe</b> nada — publica a proposito</div>
+    </div>
+
+    <div class="card" style="border-left-color:#38BDF8">
+      <h3>Alertas y asistente</h3>
+      <p>Avisar que necesita atencion hoy y responder preguntas sobre proyectos.</p>
+      <div class="data"><b>lee</b> alertas · manual &nbsp;<b>escribe</b> readNotes · tags · /api/chat</div>
+    </div>
+
+    <div class="card" style="border-left-color:#38BDF8">
+      <h3>Asignacion de disenador</h3>
+      <p>Pedir que se declare que disenador trajo cada proyecto nuevo antes de seguir.</p>
+      <div class="data"><b>lee</b> col ENG + designers &nbsp;<b>escribe</b> project_designers</div>
+    </div>
+  </section>
+
+  <!-- ============ CLUSTER 2 ============ -->
+  <section class="cluster">
+    <h2 style="color:#34D399">Metricas semanales <span class="count">· 5</span></h2>
+    <div class="rule" style="background:#34D399"></div>
+
+    <div class="card" style="border-left-color:#34D399">
+      <h3>Dashboard semanal</h3>
+      <p>Como viene la semana en una pantalla: activos, atrasos, costos y comparacion con la anterior.</p>
+      <div class="data"><b>lee</b> planilla · weekly_history &nbsp;<b>escribe</b> CSV local</div>
+    </div>
+
+    <div class="card" style="border-left-color:#34D399">
+      <h3>Team Stats / Calidad</h3>
+      <p>Comparar como viene cada ingeniero y ver la evolucion semana a semana.</p>
+      <div class="data"><b>lee</b> pestana Quality &nbsp;<b>escribe</b> weekly_engineer_kpi · 1/semana</div>
+    </div>
+
+    <div class="card" style="border-left-color:#34D399">
+      <h3>Materiales</h3>
+      <p>Ver que materiales lleva cada proyecto y cuales todavia faltan pedir.</p>
+      <div class="data"><b>lee</b> matriz + overrides &nbsp;<b>escribe</b> nada — se edita en Mis Proyectos</div>
+    </div>
+
+    <div class="card warn">
+      <h3>Analisis de costos <span class="tag">parcial</span></h3>
+      <p>Los proyectos mas caros de la semana. El contenido se mudo adentro del Dashboard y el archivo quedo huerfano.</p>
+      <div class="data"><b>hoy</b> no se llega desde ningun lado · cero imports</div>
+    </div>
+
+    <div class="card dim">
+      <h3>Filtro global <span class="tag">planeado</span></h3>
+      <p>Filtrar todas las vistas a la vez por disenador, estado o fecha. Escrita y con estilos, sin usar.</p>
+      <div class="data"><b>hoy</b> ninguna vista la importa todavia</div>
+    </div>
+
+    <div class="aside" style="background:#101E2B; border:1.5px dashed #2A4054;">
+      <div class="k" style="color:#7E95AB">NO ESTAN EN EL MAPA</div>
+      <p style="color:#8FA8BE"><b style="color:#B9C9D8">n8n</b> ya no participa: <b style="color:#B9C9D8">/api/sync</b> reemplazo el webhook y solo quedan comentarios viejos. <b style="color:#B9C9D8">Tauri</b> no aparece en ningun archivo del repo.</p>
+    </div>
+  </section>
+
+  <!-- ============ CLUSTER 3 ============ -->
+  <section class="cluster">
+    <h2 style="color:#A78BFA">Evaluacion de disenadores <span class="count">· 4</span></h2>
+    <div class="rule" style="background:#A78BFA"></div>
+
+    <div class="card" style="border-left-color:#A78BFA">
+      <h3>Leaderboard</h3>
+      <p>Ver el ranking de disenadores y como puntua cada uno.</p>
+      <div class="data"><b>lee</b> perf_projects x Master Schedule &nbsp;<b>escribe</b> nada</div>
+    </div>
+
+    <div class="card" style="border-left-color:#A78BFA">
+      <h3>Lista de proyectos</h3>
+      <p>Buscar un proyecto y abrir su ficha. Es donde aterrizan los links ?so=SO.</p>
+      <div class="data"><b>lee</b> KpiContext &nbsp;<b>escribe</b> nada</div>
+    </div>
+
+    <div class="card" style="border-left-color:#A78BFA">
+      <h3>Fase 1 — Intake</h3>
+      <p>Revisar si el disenador entrego la documentacion completa al arrancar, y aprobar o devolver con nota.</p>
+      <div class="data"><b>lee</b> Master Schedule · historial &nbsp;<b>escribe</b> perf_* · /api/reviewNote</div>
+    </div>
+
+    <div class="card" style="border-left-color:#A78BFA">
+      <h3>Fase 2 — Cierre</h3>
+      <p>Cerrar la evaluacion sumando los problemas que aparecieron durante la ejecucion.</p>
+      <div class="data"><b>lee</b> red flags (notas designer) &nbsp;<b>escribe</b> perf_projects · perf_history</div>
+    </div>
+
+    <div class="aside" style="background:#181233; border:1.5px solid #4B3E80;">
+      <div class="k" style="color:#B9A0F5">ROUTER PROPIO</div>
+      <p style="color:#A99BD0">Unico dominio con navegacion anidada: un <b style="color:#D3C4FF">currentView</b> propio (dashboard / projects / phase1 / phase2) dentro del tab del router principal.</p>
+    </div>
+  </section>
+
+  <!-- ============ CLUSTER 4 ============ -->
+  <section class="cluster">
+    <h2 style="color:#FBBF24">Acceso y administracion <span class="count">· 3</span></h2>
+    <div class="rule" style="background:#FBBF24"></div>
+
+    <div class="card" style="border-left-color:#FBBF24">
+      <h3>Ingreso y alta</h3>
+      <p>Entrar a la app, o pedir el alta y quedar en espera hasta que un administrador apruebe.</p>
+      <div class="data"><b>lee</b> Firebase Auth &nbsp;<b>escribe</b> users/{uid} — sin role ni status</div>
+    </div>
+
+    <div class="card" style="border-left-color:#FBBF24">
+      <h3>Administracion de usuarios</h3>
+      <p>Aprobar o rechazar a quien pide acceso, asignar rol y detectar proyectos sin dueno.</p>
+      <div class="data"><b>lee</b> nodo users completo &nbsp;<b>escribe</b> users/{uid} role + status</div>
+    </div>
+
+    <div class="card" style="border-left-color:#FBBF24">
+      <h3>ESS — generador desde PDFs</h3>
+      <p>Subir contrato, cotizacion y planos, y obtener la especificacion armada sin cargar medidas a mano.</p>
+      <div class="data"><b>lee</b> ess_file_index · pdf.js &nbsp;<b>escribe</b> ess_files (base64) · retencion</div>
+    </div>
+
+    <div class="aside" style="background:#1A1305; border:1.5px solid #6B4E12;">
+      <div class="k" style="color:#D9A93C">HALLAZGO</div>
+      <p style="color:#C9B489"><b style="color:#EFD79B">project_stages</b> se lee pero nunca se escribe: hay un listener vivo sobre un nodo fosil. Las fechas reales por etapa salen del <b style="color:#EFD79B">statusHistory</b> de la planilla.</p>
+    </div>
+
+    <div class="aside" style="background:#101E2B; border:1.5px dashed #2A4054;">
+      <div class="k" style="color:#7E95AB">GATES ANTES DEL SWITCH</div>
+      <p style="color:#8FA8BE">Sin sesion → Login. Sin aprobar → pantalla de espera. Rol <b style="color:#B9C9D8">designer</b> fuera de sus 3 tabs → redirect a Pipeline.</p>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <span>Los tres estados salen del codigo, no de un backlog: <b style="color:#8FA8BE">parcial</b> y <b style="color:#8FA8BE">planeado</b> son modulos escritos que hoy no se alcanzan desde ninguna vista.</span>
+  <span style="color:#41586D">commit 07b94a0</span>
+</footer>

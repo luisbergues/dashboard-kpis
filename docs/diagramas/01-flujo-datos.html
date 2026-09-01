@@ -1,0 +1,230 @@
+<title>Flujo de datos</title>
+<style>
+  @page { size: 1920px 1080px; margin: 0; }
+  html, body { margin: 0; padding: 0; background: #0B1520; }
+  body { width: 1920px; height: 1080px; overflow: hidden;
+         font-family: "Segoe UI", -apple-system, system-ui, sans-serif; }
+  svg { display: block; width: 1920px; height: 1080px; }
+  .t-title  { font-size: 40px; font-weight: 700; fill: #E8F0F7; letter-spacing: -0.5px; }
+  .t-sub    { font-size: 17px; font-weight: 400; fill: #7E95AB; }
+  .t-colhdr { font-size: 15px; font-weight: 700; letter-spacing: 2.4px; }
+  .t-node   { font-size: 19px; font-weight: 600; fill: #E8F0F7; }
+  .t-nodesm { font-size: 18px; font-weight: 600; fill: #E8F0F7; }
+  .t-meta   { font-size: 13px; font-weight: 400; fill: #86A0B8; }
+  .t-arrow  { font-size: 13.5px; font-weight: 600; fill: #8FD4F5; }
+  .t-write  { font-size: 13.5px; font-weight: 600; fill: #F9A857; }
+  .t-chip   { font-size: 15px; font-weight: 600; fill: #FFD9AE; }
+  .rd { fill: none; stroke: #4FA9D8; stroke-width: 2.1; }
+  .wr { fill: none; stroke: #E8792B; stroke-width: 2.1; stroke-dasharray: 8 6; }
+  .wr-thin { fill: none; stroke: #E8792B; stroke-width: 1.7; stroke-dasharray: 6 5; opacity: .75; }
+</style>
+
+<svg viewBox="0 0 1920 1080" role="img"
+     aria-label="Flujo de datos del dashboard en cuatro columnas: fuentes, ingesta, estado y UI. Las lecturas avanzan de izquierda a derecha en linea continua azul; las escrituras vuelven de derecha a izquierda en linea punteada naranja, por tres rutas: a la base en tiempo real, a la planilla via el backend propio, y a Gemini.">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4FA9D8"/>
+    </marker>
+    <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#E8792B"/>
+    </marker>
+  </defs>
+
+  <rect width="1920" height="1080" fill="#0B1520"/>
+
+  <!-- ============ ENCABEZADO ============ -->
+  <text x="130" y="72" class="t-title">Flujo de datos real</text>
+  <text x="130" y="104" class="t-sub">Dashboard KPIs · JL Closets Engineering — verificado sobre el codigo, cada flecha es el mecanismo exacto</text>
+
+  <line x1="1489" y1="66" x2="1549" y2="66" class="rd" marker-end="url(#ar)"/>
+  <text x="1561" y="71" class="t-arrow">lectura</text>
+  <line x1="1489" y1="96" x2="1549" y2="96" class="wr" marker-end="url(#aw)"/>
+  <text x="1561" y="101" class="t-write">escritura</text>
+
+  <!-- ============ CABECERAS ============ -->
+  <text x="130"  y="172" class="t-colhdr" fill="#38BDF8">FUENTES</text>
+  <text x="583"  y="172" class="t-colhdr" fill="#A78BFA">INGESTA</text>
+  <text x="1036" y="172" class="t-colhdr" fill="#34D399">ESTADO</text>
+  <text x="1489" y="172" class="t-colhdr" fill="#FBBF24">UI</text>
+  <line x1="130"  y1="186" x2="430"  y2="186" stroke="#38BDF8" stroke-width="2.5" opacity="0.55"/>
+  <line x1="583"  y1="186" x2="883"  y2="186" stroke="#A78BFA" stroke-width="2.5" opacity="0.55"/>
+  <line x1="1036" y1="186" x2="1336" y2="186" stroke="#34D399" stroke-width="2.5" opacity="0.55"/>
+  <line x1="1489" y1="186" x2="1789" y2="186" stroke="#FBBF24" stroke-width="2.5" opacity="0.55"/>
+
+  <!-- ============ COL 1 · FUENTES ============ -->
+  <rect x="130" y="215" width="300" height="66" rx="9" fill="#102437" stroke="#2A5A7D" stroke-width="1.6"/>
+  <text x="150" y="243" class="t-node">Google Sheet</text>
+  <text x="150" y="265" class="t-meta">4 pestanas por gid · export CSV publico</text>
+
+  <rect x="130" y="360" width="300" height="66" rx="9" fill="#102437" stroke="#2A5A7D" stroke-width="1.6"/>
+  <text x="150" y="388" class="t-node">Firebase Auth</text>
+  <text x="150" y="410" class="t-meta">email/password · emite el ID token</text>
+
+  <rect x="130" y="490" width="300" height="100" rx="9" fill="#102437" stroke="#2A5A7D" stroke-width="1.6"/>
+  <text x="150" y="520" class="t-node">Firebase RTDB</text>
+  <text x="150" y="542" class="t-meta">persistencia principal · 33 nodos</text>
+  <text x="150" y="562" class="t-meta">project_notes, _overrides, _history,</text>
+  <text x="150" y="579" class="t-meta">_designers, ess_files, users…</text>
+
+  <!-- ============ COL 2 · INGESTA ============ -->
+  <rect x="583" y="215" width="300" height="66" rx="9" fill="#151B33" stroke="#514489" stroke-width="1.6"/>
+  <text x="603" y="243" class="t-node">sheetParser.js</text>
+  <text x="603" y="265" class="t-meta">+ masterSchedule.js · PapaParse</text>
+
+  <rect x="583" y="315" width="300" height="100" rx="9" fill="#151B33" stroke="#514489" stroke-width="1.6"/>
+  <text x="603" y="344" class="t-node">dbCache.js</text>
+  <text x="603" y="366" class="t-meta">cache compartido · TTL 5 min</text>
+  <text x="603" y="386" class="t-meta">fingerprint FNV-1a (data / meta)</text>
+  <text x="603" y="404" class="t-meta">+ espejo en localStorage</text>
+
+  <rect x="583" y="490" width="300" height="100" rx="9" fill="#151B33" stroke="#514489" stroke-width="1.6"/>
+  <text x="603" y="520" class="t-node">firebase.js</text>
+  <text x="603" y="542" class="t-meta">fachada unica de RTDB + Auth</text>
+  <text x="603" y="562" class="t-meta">authHeaders() → Bearer idToken</text>
+  <text x="603" y="579" class="t-meta">swap a demoDb con ?demo</text>
+
+  <rect x="583" y="630" width="300" height="66" rx="9" fill="#151B33" stroke="#514489" stroke-width="1.6"/>
+  <text x="603" y="658" class="t-node">pdf.js (ESS)</text>
+  <text x="603" y="680" class="t-meta">parseo de PDF en el navegador</text>
+
+  <!-- ============ COL 3 · ESTADO ============ -->
+  <rect x="1036" y="240" width="300" height="90" rx="9" fill="#0E2A25" stroke="#2C7A62" stroke-width="1.6"/>
+  <text x="1056" y="268" class="t-node">React Query</text>
+  <text x="1056" y="290" class="t-meta">dashboardData · masterSchedule</text>
+  <text x="1056" y="310" class="t-meta">refetchInterval 30 s</text>
+
+  <rect x="1036" y="400" width="300" height="140" rx="9" fill="#0E2A25" stroke="#2C7A62" stroke-width="1.6"/>
+  <text x="1056" y="430" class="t-node">App.jsx</text>
+  <text x="1056" y="452" class="t-meta">dueno del estado global</text>
+  <text x="1056" y="472" class="t-meta">notes · overrides · designers</text>
+  <text x="1056" y="492" class="t-meta">history · directory · tags</text>
+  <text x="1056" y="516" class="t-meta" fill="#5FCFA8">sin Redux ni store: props hacia abajo</text>
+
+  <rect x="1036" y="590" width="300" height="90" rx="9" fill="#0E2A25" stroke="#2C7A62" stroke-width="1.6"/>
+  <text x="1056" y="618" class="t-node">KpiContext</text>
+  <text x="1056" y="640" class="t-meta">estado propio de Designer Perf.</text>
+  <text x="1056" y="660" class="t-meta">unico Context de datos</text>
+
+  <!-- ============ COL 4 · UI ============ -->
+  <rect x="1489" y="215" width="300" height="64" rx="9" fill="#2A2110" stroke="#8A6A22" stroke-width="1.6"/>
+  <text x="1509" y="242" class="t-nodesm">Pipeline</text>
+  <text x="1509" y="263" class="t-meta">tablero por etapa · kanban</text>
+
+  <rect x="1489" y="300" width="300" height="64" rx="9" fill="#2A2110" stroke="#8A6A22" stroke-width="1.6"/>
+  <text x="1509" y="327" class="t-nodesm">Mis Proyectos</text>
+  <text x="1509" y="348" class="t-meta">etapas, notas, ON HOLD, PDFs</text>
+
+  <rect x="1489" y="385" width="300" height="64" rx="9" fill="#2A2110" stroke="#8A6A22" stroke-width="1.6"/>
+  <text x="1509" y="412" class="t-nodesm">Calendario</text>
+  <text x="1509" y="433" class="t-meta">instalaciones · notas fechadas</text>
+
+  <rect x="1489" y="470" width="300" height="64" rx="9" fill="#2A2110" stroke="#8A6A22" stroke-width="1.6"/>
+  <text x="1509" y="497" class="t-nodesm">Dashboard · Metricas</text>
+  <text x="1509" y="518" class="t-meta">KPI semanal · Team Stats</text>
+
+  <rect x="1489" y="555" width="300" height="64" rx="9" fill="#2A2110" stroke="#8A6A22" stroke-width="1.6"/>
+  <text x="1509" y="582" class="t-nodesm">Designer Performance</text>
+  <text x="1509" y="603" class="t-meta">router propio · Fase 1 / Fase 2</text>
+
+  <rect x="1489" y="640" width="300" height="64" rx="9" fill="#2A2110" stroke="#8A6A22" stroke-width="1.6"/>
+  <text x="1509" y="667" class="t-nodesm">ESS · Admin · Login</text>
+  <text x="1509" y="688" class="t-meta">solo super admin (ESS / Admin)</text>
+
+  <!-- ============ LECTURAS · col1 → col2 ============ -->
+  <line x1="430" y1="248" x2="575" y2="248" class="rd" marker-end="url(#ar)"/>
+  <text x="502" y="234" class="t-arrow" text-anchor="middle">fetch(csv)</text>
+  <text x="502" y="272" class="t-arrow" text-anchor="middle">+ PapaParse</text>
+
+  <line x1="430" y1="393" x2="575" y2="512" class="rd" marker-end="url(#ar)"/>
+  <text x="440" y="428" class="t-arrow">onAuthStateChanged</text>
+
+  <line x1="430" y1="545" x2="575" y2="545" class="rd" marker-end="url(#ar)"/>
+  <text x="502" y="534" class="t-arrow" text-anchor="middle">onValue · get</text>
+
+  <!-- ============ dentro de col2 · el cache pasa por la fachada ============ -->
+  <line x1="680" y1="482" x2="680" y2="423" class="rd" marker-end="url(#ar)"/>
+  <text x="668" y="458" class="t-arrow" text-anchor="end">onValue meta</text>
+  <line x1="800" y1="423" x2="800" y2="482" class="wr" marker-end="url(#aw)"/>
+  <text x="812" y="458" class="t-write">update</text>
+
+  <!-- ============ LECTURAS · col2 → col3 ============ -->
+  <line x1="883" y1="248" x2="1028" y2="270" class="rd" marker-end="url(#ar)"/>
+  <text x="955" y="228" class="t-arrow" text-anchor="middle">queryFn</text>
+  <text x="955" y="244" class="t-arrow" text-anchor="middle">refetch 30 s</text>
+
+  <line x1="883" y1="358" x2="1028" y2="306" class="rd" marker-end="url(#ar)"/>
+  <text x="955" y="348" class="t-arrow" text-anchor="middle">getCachedData</text>
+  <text x="955" y="364" class="t-arrow" text-anchor="middle">TTL 5 min</text>
+
+  <line x1="883" y1="515" x2="1028" y2="462" class="rd" marker-end="url(#ar)"/>
+  <text x="955" y="470" class="t-arrow" text-anchor="middle">onValue x5</text>
+
+  <line x1="883" y1="552" x2="1028" y2="620" class="rd" marker-end="url(#ar)"/>
+  <text x="953" y="578" class="t-arrow" text-anchor="middle">onValue x3</text>
+  <text x="953" y="594" class="t-arrow" text-anchor="middle">designer_perf.</text>
+
+  <!-- pdf.js → ESS -->
+  <path d="M 733 696 V 742 H 1639 V 712" class="rd" marker-end="url(#ar)"/>
+  <text x="1180" y="732" class="t-arrow" text-anchor="middle">extractPdfPages(file.arrayBuffer()) · sin round-trip al servidor</text>
+
+  <!-- ============ dentro de col3 ============ -->
+  <line x1="1186" y1="330" x2="1186" y2="392" class="rd" marker-end="url(#ar)"/>
+  <text x="1200" y="366" class="t-arrow">mergedData (useMemo)</text>
+
+  <line x1="1186" y1="540" x2="1186" y2="582" class="rd" marker-end="url(#ar)"/>
+  <text x="1200" y="568" class="t-arrow">props · masterProjects</text>
+
+  <!-- ============ col3 → col4 ============ -->
+  <line x1="1336" y1="462" x2="1481" y2="247" class="rd" marker-end="url(#ar)"/>
+  <line x1="1336" y1="465" x2="1481" y2="332" class="rd" marker-end="url(#ar)"/>
+  <line x1="1336" y1="468" x2="1481" y2="417" class="rd" marker-end="url(#ar)"/>
+  <line x1="1336" y1="471" x2="1481" y2="502" class="rd" marker-end="url(#ar)"/>
+  <line x1="1336" y1="474" x2="1481" y2="668" class="rd" marker-end="url(#ar)"/>
+  <text x="1350" y="437" class="t-arrow">props</text>
+
+  <line x1="1336" y1="628" x2="1481" y2="596" class="rd" marker-end="url(#ar)"/>
+  <text x="1404" y="622" class="t-arrow" text-anchor="middle">context</text>
+
+  <!-- ============ BANDA DE ESCRITURA ============ -->
+  <line x1="60" y1="778" x2="1860" y2="778" stroke="#243748" stroke-width="1.4"/>
+  <text x="640" y="768" class="t-write" opacity="0.9">CAMINO DE ESCRITURA — vuelve de derecha a izquierda</text>
+
+  <!-- rail vertical: todas las vistas escriben -->
+  <line x1="1789" y1="247" x2="1815" y2="247" class="wr-thin"/>
+  <line x1="1789" y1="332" x2="1815" y2="332" class="wr-thin"/>
+  <line x1="1789" y1="417" x2="1815" y2="417" class="wr-thin"/>
+  <line x1="1789" y1="502" x2="1815" y2="502" class="wr-thin"/>
+  <line x1="1789" y1="587" x2="1815" y2="587" class="wr-thin"/>
+  <line x1="1789" y1="672" x2="1815" y2="672" class="wr-thin"/>
+  <path d="M 1815 247 V 950" class="wr"/>
+
+  <!-- lane A · a RTDB -->
+  <path d="M 1815 812 H 100 V 540 H 122" class="wr" marker-end="url(#aw)"/>
+  <text x="900" y="802" class="t-write" text-anchor="middle">set · update · push  →  ref(db, 'project_notes' | 'project_overrides' | 'project_kanban_state' | 'calendar_notes' | …)</text>
+
+  <!-- lane B · a la planilla -->
+  <path d="M 1815 878 H 1304" class="wr" marker-end="url(#aw)"/>
+  <text x="1558" y="868" class="t-write" text-anchor="middle">sendStageEvent() · sendNoteEvent()</text>
+  <rect x="1076" y="855" width="220" height="46" rx="7" fill="#2A1B0C" stroke="#8A5A22" stroke-width="1.5"/>
+  <text x="1186" y="884" class="t-chip" text-anchor="middle">sheetSync.js</text>
+  <path d="M 1076 878 H 861" class="wr" marker-end="url(#aw)"/>
+  <text x="968" y="868" class="t-write" text-anchor="middle">POST + Bearer idToken</text>
+  <rect x="613" y="855" width="240" height="46" rx="7" fill="#2A1B0C" stroke="#8A5A22" stroke-width="1.5"/>
+  <text x="733" y="884" class="t-chip" text-anchor="middle">/api/sync · Vercel</text>
+  <path d="M 613 878 H 60 V 248 H 122" class="wr" marker-end="url(#aw)"/>
+  <text x="340" y="868" class="t-write" text-anchor="middle">values.batchUpdate · fila hallada por SO (col B)</text>
+
+  <!-- lane C · a Gemini -->
+  <path d="M 1815 948 H 1354" class="wr" marker-end="url(#aw)"/>
+  <text x="1585" y="938" class="t-write" text-anchor="middle">POST + Bearer</text>
+  <rect x="1026" y="925" width="320" height="46" rx="7" fill="#2A1B0C" stroke="#8A5A22" stroke-width="1.5"/>
+  <text x="1186" y="954" class="t-chip" text-anchor="middle">/api/chat · /translate · /reviewNote</text>
+  <path d="M 1026 948 H 851" class="wr" marker-end="url(#aw)"/>
+  <text x="938" y="938" class="t-write" text-anchor="middle">fetchGeminiWithRetry()</text>
+  <rect x="613" y="925" width="220" height="46" rx="7" fill="#102437" stroke="#2A5A7D" stroke-width="1.5"/>
+  <text x="723" y="954" class="t-chip" fill="#9FD8F5" text-anchor="middle">Gemini API</text>
+
+  <!-- ============ PIE ============ -->
+  <text x="130" y="1032" font-size="14" fill="#5F7A92">La API key de Gemini y la service account de Sheets viven solo en el servidor · todo /api/* verifica el ID token y que el usuario este aprobado</text>
+  <text x="1860" y="1032" font-size="14" fill="#41586D" text-anchor="end">commit 07b94a0</text>
+</svg>

@@ -1,0 +1,528 @@
+{
+  "_meta": {
+    "generado": "2026-08-30",
+    "alcance": "Flujo de datos real verificado leyendo el codigo en el commit 07b94a0 (main). Cada nodo y arista apunta a file:line. 'verificado' = lei esa linea; 'inferido' = no se puede confirmar solo con el codigo (ver unknowns).",
+    "no_modelado": "Precache de assets del service worker (vite-plugin-pwa/workbox, vite.config.js:9) - cachea el bundle, no datos de negocio."
+  },
+
+  "nodes": [
+    {
+      "id": "google-sheet",
+      "label": "Google Sheet KPI (doc 1qENXOvl..., 4 pestanas por gid)",
+      "layer": "fuente",
+      "tech": "Google Sheets /export?format=csv (publico, sin auth en el cliente)",
+      "file": "src/utils/sheetParser.js",
+      "line": 3,
+      "status": "verificado"
+    },
+    {
+      "id": "sheet-ingest",
+      "label": "Ingesta CSV (sheetParser.js + masterSchedule.js)",
+      "layer": "ingesta",
+      "tech": "fetch + PapaParse -> objetos de dominio",
+      "file": "src/utils/sheetParser.js",
+      "line": 99,
+      "status": "verificado"
+    },
+    {
+      "id": "react-query",
+      "label": "TanStack Query: queries 'dashboardData' y 'masterSchedule' (refetch 30s, no en background)",
+      "layer": "estado",
+      "tech": "@tanstack/react-query useQuery, montado dentro de App.jsx",
+      "file": "src/App.jsx",
+      "line": 112,
+      "status": "verificado"
+    },
+    {
+      "id": "db-cache",
+      "label": "Cache compartido firebase_cache/{data,meta} (TTL 5 min + fingerprint FNV-1a)",
+      "layer": "ingesta",
+      "tech": "nodo RTDB partido en data pesado + meta de ~60 bytes, con espejo en localStorage",
+      "file": "src/utils/dbCache.js",
+      "line": 16,
+      "status": "verificado"
+    },
+    {
+      "id": "local-storage",
+      "label": "localStorage del navegador (tab activo, idioma, sidebar, historial de chat, borradores ESS/IP/logbook/checklist, espejo del cache)",
+      "layer": "ingesta",
+      "tech": "Web Storage API - NO hay IndexedDB en el repo",
+      "file": "src/App.jsx",
+      "line": 75,
+      "status": "verificado"
+    },
+    {
+      "id": "firebase-client",
+      "label": "firebase.js - initializeApp + fachada unica de RTDB/Auth (swap a demoDb en memoria con ?demo en dev)",
+      "layer": "ingesta",
+      "tech": "firebase/app + firebase/database + firebase/auth; config por import.meta.env.VITE_FIREBASE_*",
+      "file": "src/utils/firebase.js",
+      "line": 80,
+      "status": "verificado"
+    },
+    {
+      "id": "rtdb",
+      "label": "Firebase Realtime Database - persistencia principal (project_notes, project_overrides, project_history, project_designers, project_tags, project_kanban_*, ess_files, designer_performance_*, users, weekly_history, firebase_cache)",
+      "layer": "externo",
+      "tech": "Firebase RTDB, autorizacion por database.rules.json (rol + status del usuario)",
+      "file": "database.rules.json",
+      "line": 2,
+      "status": "verificado"
+    },
+    {
+      "id": "firebase-auth",
+      "label": "Firebase Auth (email/password) - emite el ID token que firma cada llamada a /api/*",
+      "layer": "externo",
+      "tech": "firebase/auth; alta abierta, aprobacion posterior via users/{uid}.status",
+      "file": "src/utils/firebase.js",
+      "line": 82,
+      "status": "verificado"
+    },
+    {
+      "id": "app-state",
+      "label": "App.jsx - dueno del estado global (projectNotes, overrides, materialOverrides, projectDesigners, projectHistory, engineerDirectory, tags, currentUser/userProfile)",
+      "layer": "estado",
+      "tech": "useState + useMemo y props hacia abajo. NO hay Redux/Zustand/useReducer global; los unicos Context son LanguageContext, ThemeContext y KpiContext",
+      "file": "src/App.jsx",
+      "line": 77,
+      "status": "verificado"
+    },
+    {
+      "id": "kpi-context",
+      "label": "KpiContext - estado propio del modulo Designer Performance (performanceProjects, projects, notes, history)",
+      "layer": "estado",
+      "tech": "React Context + useState; recibe data/masterProjects/projectDesigners por props desde App.jsx",
+      "file": "src/designer-performance/context/KpiContext.tsx",
+      "line": 75,
+      "status": "verificado"
+    },
+    {
+      "id": "views",
+      "label": "Vistas y componentes (Pipeline, MyProjects, Calendar, Dashboard, AdminUsers, ESS, ProjectChatbot, modales PDF/IP)",
+      "layer": "ui",
+      "tech": "React 19; 4 vistas estaticas y el resto por React.lazy",
+      "file": "src/App.jsx",
+      "line": 714,
+      "status": "verificado"
+    },
+    {
+      "id": "ess-pdf",
+      "label": "Pipeline ESS - extraccion de PDF 100% en el cliente + persistencia Base64",
+      "layer": "ingesta",
+      "tech": "pdfjs-dist en web worker (essPdfExtract.js) + parsers de contract/quote/drawings + essFiles.js (limite 7MB por archivo)",
+      "file": "src/utils/essPdfExtract.js",
+      "line": 24,
+      "status": "verificado"
+    },
+    {
+      "id": "sheet-sync",
+      "label": "sheetSync.js - traduce eventos de la app a columnas de la hoja y los postea (fire-and-forget, nunca lanza a la UI)",
+      "layer": "ingesta",
+      "tech": "fetch POST /api/sync con Authorization: Bearer <idToken>",
+      "file": "src/utils/sheetSync.js",
+      "line": 45,
+      "status": "verificado"
+    },
+    {
+      "id": "api-vercel",
+      "label": "Backend propio /api/* - sync (Sheets), chat, translate, reviewNote (proxies Gemini)",
+      "layer": "ingesta",
+      "tech": "Vercel Serverless Functions (Node). Gate: verifyAuth.js (firebase-admin verifyIdToken) + requireApprovedUser.js (status/rol via RTDB REST). Secretos server-side: GEMINI_API_KEY, GOOGLE_SERVICE_ACCOUNT_KEY, SYNC_SHEET_ID",
+      "file": "api/sync.js",
+      "line": 23,
+      "status": "verificado"
+    },
+    {
+      "id": "gemini",
+      "label": "Google Gemini API (gemini-flash-latest)",
+      "layer": "externo",
+      "tech": "generativelanguage.googleapis.com/v1beta/models/...:generateContent - jamas se llama desde el navegador",
+      "file": "api/chat.js",
+      "line": 11,
+      "status": "verificado"
+    }
+  ],
+
+  "edges": [
+    {
+      "from": "google-sheet",
+      "to": "sheet-ingest",
+      "label": "fetch(`${CSV_URL}&t=${Date.now()}`) -> Papa.parse(csvText) - pestana weekly KPI (sin gid)",
+      "kind": "lectura",
+      "file": "src/utils/sheetParser.js",
+      "line": 103,
+      "status": "verificado"
+    },
+    {
+      "from": "google-sheet",
+      "to": "sheet-ingest",
+      "label": "fetch(QUALITY_CSV_URL gid=1762634268) -> parseQualityCsv()",
+      "kind": "lectura",
+      "file": "src/utils/sheetParser.js",
+      "line": 509,
+      "status": "verificado"
+    },
+    {
+      "from": "google-sheet",
+      "to": "sheet-ingest",
+      "label": "fetch(PROJECT_MATERIALS_CSV_URL gid=2135314033) -> Papa.parse",
+      "kind": "lectura",
+      "file": "src/utils/sheetParser.js",
+      "line": 523,
+      "status": "verificado"
+    },
+    {
+      "from": "google-sheet",
+      "to": "sheet-ingest",
+      "label": "fetch(MASTER_SCHEDULE_CSV_URL gid=1648942410) -> parseMasterSchedule() - fuente aguas arriba de Designer Performance",
+      "kind": "lectura",
+      "file": "src/utils/masterSchedule.js",
+      "line": 83,
+      "status": "verificado"
+    },
+    {
+      "from": "sheet-ingest",
+      "to": "react-query",
+      "label": "queryFn: Promise.all([fetchAndParseData(), fetchAndParseProjectMaterials()]) - solo si el cache no esta fresco",
+      "kind": "lectura",
+      "file": "src/App.jsx",
+      "line": 143,
+      "status": "verificado"
+    },
+    {
+      "from": "sheet-ingest",
+      "to": "react-query",
+      "label": "useQuery({queryKey:['masterSchedule'], queryFn: fetchAndParseMasterSchedule, refetchInterval: 30000})",
+      "kind": "lectura",
+      "file": "src/App.jsx",
+      "line": 200,
+      "status": "verificado"
+    },
+    {
+      "from": "db-cache",
+      "to": "react-query",
+      "label": "getCachedData() - si isCacheFresh(timestamp) (5 min) devuelve el payload y NO se toca la hoja",
+      "kind": "lectura",
+      "file": "src/App.jsx",
+      "line": 115,
+      "status": "verificado"
+    },
+    {
+      "from": "react-query",
+      "to": "db-cache",
+      "label": "setCachedData(parsedData) tras cada fetch vivo",
+      "kind": "escritura",
+      "file": "src/App.jsx",
+      "line": 176,
+      "status": "verificado"
+    },
+    {
+      "from": "db-cache",
+      "to": "rtdb",
+      "label": "update(ref(db), {firebase_cache/data, firebase_cache/meta}) - multi-path atomico; si el fingerprint no cambio escribe solo meta",
+      "kind": "escritura",
+      "file": "src/utils/dbCache.js",
+      "line": 182,
+      "status": "verificado"
+    },
+    {
+      "from": "rtdb",
+      "to": "db-cache",
+      "label": "onValue(ref(db,'firebase_cache/meta')) - espejo vivo de ~60 bytes; get() puntual como respaldo (dbCache.js:78)",
+      "kind": "sync",
+      "file": "src/utils/dbCache.js",
+      "line": 63,
+      "status": "verificado"
+    },
+    {
+      "from": "db-cache",
+      "to": "local-storage",
+      "label": "localStorage.setItem('dashboard_parsed_data', JSON.stringify(cachePayload)); lectura en dbCache.js:84",
+      "kind": "escritura",
+      "file": "src/utils/dbCache.js",
+      "line": 157,
+      "status": "verificado"
+    },
+    {
+      "from": "react-query",
+      "to": "app-state",
+      "label": "const { data } = useQuery(...) -> mergedData = useMemo(...) que baja por props",
+      "kind": "lectura",
+      "file": "src/App.jsx",
+      "line": 112,
+      "status": "verificado"
+    },
+    {
+      "from": "react-query",
+      "to": "rtdb",
+      "label": "efectos de escritura DENTRO del queryFn, bajo withArchiveLease(): archiveCurrentlyCompletedProjects + recordStatusTransitions (update(ref(db,'project_history')) en statusTransitions.js:97) + recordValidationMetrics + purgeExpiredArchives",
+      "kind": "escritura",
+      "file": "src/App.jsx",
+      "line": 159,
+      "status": "verificado"
+    },
+    {
+      "from": "app-state",
+      "to": "rtdb",
+      "label": "set(ref(db, `weekly_history/${toKey(label)}`), snapshot) - snapshot semanal si la clave no existe todavia; salteado para rol 'designer'",
+      "kind": "escritura",
+      "file": "src/App.jsx",
+      "line": 237,
+      "status": "verificado"
+    },
+    {
+      "from": "firebase-client",
+      "to": "rtdb",
+      "label": "initializeApp(firebaseConfig) + getDatabase(firebaseApp) - o demoDb en memoria si DEV && ?demo",
+      "kind": "sync",
+      "file": "src/utils/firebase.js",
+      "line": 80,
+      "status": "verificado"
+    },
+    {
+      "from": "firebase-client",
+      "to": "firebase-auth",
+      "label": "getAuth(firebaseApp)",
+      "kind": "sync",
+      "file": "src/utils/firebase.js",
+      "line": 82,
+      "status": "verificado"
+    },
+    {
+      "from": "firebase-auth",
+      "to": "app-state",
+      "label": "onAuthStateChanged(auth, user => setCurrentUser(user))",
+      "kind": "sync",
+      "file": "src/App.jsx",
+      "line": 282,
+      "status": "verificado"
+    },
+    {
+      "from": "rtdb",
+      "to": "app-state",
+      "label": "onValue(ref(db, `users/${user.uid}`)) -> setUserProfile(profile) + registerSelf() en engineer_directory",
+      "kind": "sync",
+      "file": "src/App.jsx",
+      "line": 286,
+      "status": "verificado"
+    },
+    {
+      "from": "rtdb",
+      "to": "app-state",
+      "label": "5 onValue en un solo useEffect: project_overrides (311), project_notes (319, normalizeNotesBySo), project_materials (324), project_designers (329), project_history (339)",
+      "kind": "sync",
+      "file": "src/App.jsx",
+      "line": 311,
+      "status": "verificado"
+    },
+    {
+      "from": "rtdb",
+      "to": "app-state",
+      "label": "onValue(ref(db,'project_tags')) via useProjectTags(currentUser, projectNotes) - fuente unica de tags, gateada por uid",
+      "kind": "sync",
+      "file": "src/utils/useProjectTags.js",
+      "line": 36,
+      "status": "verificado"
+    },
+    {
+      "from": "rtdb",
+      "to": "app-state",
+      "label": "subscribeToDirectory -> onValue(ref(db,'engineer_directory')) -> setEngineerDirectory",
+      "kind": "sync",
+      "file": "src/utils/engineerDirectory.js",
+      "line": 42,
+      "status": "verificado"
+    },
+    {
+      "from": "local-storage",
+      "to": "app-state",
+      "label": "seed del estado inicial: useState(() => localStorage.getItem('active_tab')) y barrido de claves project_materials_* (App.jsx:81-88)",
+      "kind": "lectura",
+      "file": "src/App.jsx",
+      "line": 75,
+      "status": "verificado"
+    },
+    {
+      "from": "app-state",
+      "to": "local-storage",
+      "label": "localStorage.setItem('active_tab', activeTab) en useEffect",
+      "kind": "escritura",
+      "file": "src/App.jsx",
+      "line": 366,
+      "status": "verificado"
+    },
+    {
+      "from": "app-state",
+      "to": "views",
+      "label": "props: <PipelineView data={mergedData} currentUser userProfile engineerDirectory unreadByProject tagsByNote .../> (mismo patron para MyProjects/Calendar/Dashboard)",
+      "kind": "lectura",
+      "file": "src/App.jsx",
+      "line": 717,
+      "status": "verificado"
+    },
+    {
+      "from": "app-state",
+      "to": "kpi-context",
+      "label": "<DesignerPerformanceApp data={mergedData} projectDesigners userProfile currentUser masterProjects/> -> <KpiProvider externalData=...> (designer-performance/App.tsx:35)",
+      "kind": "lectura",
+      "file": "src/App.jsx",
+      "line": 726,
+      "status": "verificado"
+    },
+    {
+      "from": "rtdb",
+      "to": "kpi-context",
+      "label": "3 onValue propios: designer_performance_projects (97), project_notes (108), designer_performance_history (120)",
+      "kind": "sync",
+      "file": "src/designer-performance/context/KpiContext.tsx",
+      "line": 97,
+      "status": "verificado"
+    },
+    {
+      "from": "kpi-context",
+      "to": "rtdb",
+      "label": "set(ref(db, `designer_performance_projects/${project.id}`), stripUndefined(project)) + push(ref(db, `designer_performance_history/${project.id}`), buildHistoryEntry(...)) en la linea 253",
+      "kind": "escritura",
+      "file": "src/designer-performance/context/KpiContext.tsx",
+      "line": 288,
+      "status": "verificado"
+    },
+    {
+      "from": "views",
+      "to": "rtdb",
+      "label": "escrituras directas por vista: set(ref(db,`project_kanban_state/${so}`), columnId) en PipelineView:559, set(`project_notes/${so}/${noteStorageKey(note)}`) en MyProjectsView:1011, set(`calendar_notes/${noteId}`) en CalendarView:293, update(`users/${uid}`,{role,status}) en AdminUsersView:50",
+      "kind": "escritura",
+      "file": "src/views/PipelineView.jsx",
+      "line": 559,
+      "status": "verificado"
+    },
+    {
+      "from": "rtdb",
+      "to": "views",
+      "label": "cada vista monta ademas sus propios onValue (PipelineView 160-198: project_notes, engineering_checks, project_collaborators, project_designers, nesting_checks, project_materials, project_kanban_state, project_kanban_order; MyProjectsView 536-614 hace lo mismo)",
+      "kind": "sync",
+      "file": "src/views/PipelineView.jsx",
+      "line": 160,
+      "status": "verificado"
+    },
+    {
+      "from": "views",
+      "to": "local-storage",
+      "label": "persistencia por feature: historial del chatbot ('jl_chatbot_history', ProjectChatbot.jsx:350), checklistData.js:12, essData.js:12, ipData.js:12, logbookData.js:12 (todos cache-first con fallback a RTDB)",
+      "kind": "escritura",
+      "file": "src/components/ProjectChatbot.jsx",
+      "line": 350,
+      "status": "verificado"
+    },
+    {
+      "from": "views",
+      "to": "ess-pdf",
+      "label": "input file -> extractPdfPages(await file.arrayBuffer()) - parseo en el worker de pdf.js, sin round-trip al servidor",
+      "kind": "lectura",
+      "file": "src/views/EssProjectDetail.jsx",
+      "line": 102,
+      "status": "verificado"
+    },
+    {
+      "from": "ess-pdf",
+      "to": "rtdb",
+      "label": "saveEssFile -> update(ref(db), {`ess_files/${so}/${docType}`: {data: base64}, `ess_file_index/${so}/${docType}`: {name, uploadedAt}}) - un solo multi-path atomico; no hay Firebase Storage en el repo",
+      "kind": "escritura",
+      "file": "src/utils/essFiles.js",
+      "line": 53,
+      "status": "verificado"
+    },
+    {
+      "from": "rtdb",
+      "to": "ess-pdf",
+      "label": "loadEssFile(so, docType) -> base64ToArrayBuffer(file.data) -> extractPdfPages(...) para regenerar el ESS",
+      "kind": "lectura",
+      "file": "src/views/EssProjectDetail.jsx",
+      "line": 196,
+      "status": "verificado"
+    },
+    {
+      "from": "views",
+      "to": "sheet-sync",
+      "label": "handlers de UI disparan los eventos: sendStageEvent(so,'nesting','started',user) en PipelineView:385, sendNoteEvent en MyProjectsView:955, sendCalendarNoteEvent en CalendarView:295, sendEngineerAssignEvent en PipelineView:597",
+      "kind": "escritura",
+      "file": "src/views/PipelineView.jsx",
+      "line": 385,
+      "status": "verificado"
+    },
+    {
+      "from": "sheet-sync",
+      "to": "api-vercel",
+      "label": "fetch('/api/sync', {method:'POST', headers:{...await authHeaders()}, body:{eventType, so, sheetStatus, fechas}}) - un 401 dispara el aviso de sesion vencida una sola vez por carga",
+      "kind": "escritura",
+      "file": "src/utils/sheetSync.js",
+      "line": 45,
+      "status": "verificado"
+    },
+    {
+      "from": "api-vercel",
+      "to": "google-sheet",
+      "label": "sheets.spreadsheets.values.get('copy testing!B2:B') para ubicar la fila por SO (api/sync.js:58) y luego values.batchUpdate() celda por celda",
+      "kind": "escritura",
+      "file": "api/sync.js",
+      "line": 78,
+      "status": "inferido"
+    },
+    {
+      "from": "views",
+      "to": "api-vercel",
+      "label": "askLLM({message, language, context, history}) -> fetch('/api/chat') desde ProjectChatbot.jsx:596; translateText -> fetch('/api/translate') (translateContent.js:80); generateReviewNote -> fetch('/api/reviewNote') (reviewNoteApi.ts:25, timeout 8s con fallback deterministico)",
+      "kind": "escritura",
+      "file": "src/utils/llmChat.js",
+      "line": 7,
+      "status": "verificado"
+    },
+    {
+      "from": "api-vercel",
+      "to": "gemini",
+      "label": "fetchGeminiWithRetry(`${GEMINI_URL}?key=${apiKey}`, {generationConfig, thinkingBudget:0}) - misma llamada en api/translate.js:47 y api/reviewNote.js:66",
+      "kind": "escritura",
+      "file": "api/chat.js",
+      "line": 60,
+      "status": "verificado"
+    },
+    {
+      "from": "api-vercel",
+      "to": "firebase-auth",
+      "label": "requireAuth -> getAuth(adminApp).verifyIdToken(token) (firebase-admin, solo projectId, sin service account)",
+      "kind": "lectura",
+      "file": "api/lib/verifyAuth.js",
+      "line": 33,
+      "status": "verificado"
+    },
+    {
+      "from": "api-vercel",
+      "to": "rtdb",
+      "label": "requireApprovedUser -> fetch(`${databaseUrl}/users/${uid}.json?auth=${idToken}`) por REST con el token del PROPIO usuario, timeout 5s, falla cerrada a 403",
+      "kind": "lectura",
+      "file": "api/lib/requireApprovedUser.js",
+      "line": 39,
+      "status": "verificado"
+    },
+    {
+      "from": "firebase-client",
+      "to": "sheet-sync",
+      "label": "authHeaders() -> {Authorization: `Bearer ${await auth.currentUser.getIdToken()}`} - mismo helper para /api/sync, /api/chat, /api/translate y /api/reviewNote",
+      "kind": "lectura",
+      "file": "src/utils/firebase.js",
+      "line": 101,
+      "status": "verificado"
+    }
+  ],
+
+  "unknowns": [
+    "SYNC_SHEET_ID (api/sync.js:33) es una variable de entorno del servidor: el codigo NO permite confirmar que la hoja donde /api/sync escribe (pestana 'copy testing') sea el mismo documento 1qENXOvl... del que el cliente lee los CSV. Por eso la arista api-vercel -> google-sheet queda 'inferido'. Se resuelve mirando el valor en Vercel, no en el repo.",
+    "n8n NO aparece en el flujo real. api/sync.js:2 dice explicitamente que reemplaza al webhook de n8n, y ningun archivo de src/ o api/ contiene una URL de webhook. Quedan en el repo el blueprint n8n-workflow-app-to-sheet.json, N8N_SETUP.md y comentarios sueltos ('Notificar a n8n -> Google Sheets' en PipelineView.jsx:384, MyProjectsView.jsx:679, CalendarView.jsx:294) que son restos desactualizados. No lo modele como nodo.",
+    "database.rules.json existe en el repo y define la autorizacion completa, pero nada en el codigo prueba que ese ruleset este publicado en Firebase. El unico despliegue es manual (npm run deploy:rules, package.json:11); no hay CI que lo corra. El archivo por si solo no garantiza nada en produccion.",
+    "No pude verificar en tiempo de ejecucion cuantos onValue quedan montados simultaneamente. Por lectura estatica hay al menos 4 suscripciones al mismo nodo project_notes (App.jsx:319, KpiContext.tsx:108, PipelineView.jsx:160, MyProjectsView.jsx:578), y cada vista remonta su propio set completo al entrar. Es la causa candidata del consumo de descargas, pero medirlo requiere la consola de Firebase.",
+    "El cache firebase_cache es global y compartido entre todos los clientes: cualquier navegador abierto puede ser el que dispare el fetch vivo y la escritura. Quien gana la carrera depende del lease en archiveCoordinator.js:23 y no es determinable leyendo el codigo.",
+    "Firebase Storage no se usa en ningun lado: los adjuntos de notas (imageService.js:40, devuelve el Base64 del FileReader) y los PDFs de ESS (essFiles.js:53) viven como strings Base64 dentro de RTDB. Eso si esta verificado en el codigo, pero no pude confirmar cuanto pesa hoy en la base real.",
+    "Modo demo (firebase.js:36): con DEV && ?demo toda la fachada RTDB/Auth se cambia por demoDb/demoData en memoria. Verifique el swap y el razonamiento de tree-shaking en los comentarios, pero no corri un build de produccion para confirmar que Rollup efectivamente descarta esos modulos.",
+    "'gemini-flash-latest' (api/chat.js:10) es un alias del lado de Google; que modelo concreto responde hoy no es determinable desde el repo."
+  ]
+}

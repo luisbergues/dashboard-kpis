@@ -1,0 +1,255 @@
+{
+  "_router": {
+    "resumen": "No hay react-router. La navegacion son tres mecanismos distintos, y de ahi sale este mapa.",
+    "1_switch_de_estado": "src/App.jsx:710 - switch (activeTab) dentro de renderView(). 9 casos + default. activeTab es useState sembrado desde localStorage.getItem('active_tab') (App.jsx:75).",
+    "2_array_de_tabs": "src/components/Navbar.jsx:32-46 - dos arrays segun rol: el designer solo ve pipeline/calendar/designer-performance; el resto ve hasta 8 tabs, con admin y ess condicionados a isSuperAdmin.",
+    "3_paginas_por_query_param": "src/App.jsx:653-701 - ?project=<SO> (publica, sin auth, antes del gate), ?logbook=<SO> y ?checklist=<SO> (detras del gate de aprobacion). ?so=<SO> no es una pagina: fuerza activeTab a 'designer-performance' (App.jsx:74).",
+    "4_router_anidado": "src/designer-performance/App.tsx:23-29 - el tab designer-performance tiene su propio currentView (dashboard/projects/phase1/phase2) con el sidebar de Sidebar.tsx:20-31.",
+    "gates_antes_del_switch": "loading/error -> ViewSkeleton; sin currentUser -> LoginView (App.jsx:675); status != 'approved' -> pantalla de espera (App.jsx:678); rol designer fuera de sus 3 tabs -> redirect a pipeline (App.jsx:705)."
+  },
+
+  "groups": [
+    {
+      "name": "Operacion diaria del proyecto",
+      "modules": [
+        {
+          "name": "Pipeline",
+          "file": "src/views/PipelineView.jsx",
+          "purpose": "Ver todos los proyectos activos en un tablero por etapa y moverlos a medida que avanzan.",
+          "reads": [
+            "planilla semanal (llega por props como mergedData)",
+            "project_notes, project_designers, project_collaborators",
+            "engineering_checks, nesting_checks, project_materials",
+            "project_kanban_state y project_kanban_order",
+            "tags de notas (tagsByNote) y no-leidos por proyecto"
+          ],
+          "writes": [
+            "project_kanban_state/{so} y project_kanban_order/{columna}",
+            "nesting_checks/{so}",
+            "project_notes/{so}/{noteId}",
+            "/api/sync -> planilla (STAGE_UPDATE, NOTE_ADDED, ENGINEER_ASSIGNED)"
+          ],
+          "status": "activo"
+        },
+        {
+          "name": "Mis Proyectos",
+          "file": "src/views/MyProjectsView.jsx",
+          "purpose": "Trabajar sobre los proyectos propios: avanzar etapas, dejar notas, marcar materiales, poner en espera y armar los PDFs de entrega.",
+          "reads": [
+            "planilla semanal (props)",
+            "project_overrides, project_history, project_notes, project_collaborators",
+            "project_designers, allowed_designers, project_materials",
+            "engineering_checks, nesting_checks, kanban",
+            "project_stages (ver nota de estado)"
+          ],
+          "writes": [
+            "project_overrides/{so} y project_history/{so}",
+            "project_notes/{so}/{noteId}",
+            "project_qa_checklist/{so}/{etapa}",
+            "project_collaborators/{so}, project_materials/{so}, project_kanban_state/{so}",
+            "/api/sync -> planilla (ON_HOLD, RELEASE_HOLD, QA_CHECKLIST, NOTE_ADDED, STAGE_UPDATE)",
+            "PDF local via jsPDF y react-to-print"
+          ],
+          "status": "parcial"
+        },
+        {
+          "name": "Calendario",
+          "file": "src/views/CalendarView.jsx",
+          "purpose": "Ver las instalaciones y fechas clave del mes y dejar notas pegadas a un dia.",
+          "reads": ["calendar_notes", "project_designers", "planilla semanal (props)"],
+          "writes": [
+            "calendar_notes/{noteId} (set y remove)",
+            "/api/sync -> planilla (CALENDAR_NOTE_ADDED / CALENDAR_NOTE_UPDATED)"
+          ],
+          "status": "activo"
+        },
+        {
+          "name": "Bitacora (Logbook)",
+          "file": "src/views/LogbookView.jsx",
+          "purpose": "Cargar los materiales y detalles de cada ambiente de un proyecto y bajarlo en PDF para el taller.",
+          "reads": ["logbookData/{so}", "project_designers/{so}", "designer_contacts"],
+          "writes": ["logbookData/{so}", "localStorage logbook_data_{so}", "PDF local (jsPDF)"],
+          "status": "activo"
+        },
+        {
+          "name": "Checklist de ingenieria",
+          "file": "src/views/ChecklistView.jsx",
+          "purpose": "Ir tildando el control de calidad de un proyecto sin perder el avance aunque se cierre la pagina.",
+          "reads": ["checklistData/{so}, con localStorage como respaldo si Firebase no responde"],
+          "writes": ["checklistData/{so}", "localStorage checklist_data_{so}"],
+          "status": "activo"
+        },
+        {
+          "name": "Ficha compartible del proyecto",
+          "file": "src/views/ProjectDetailView.jsx",
+          "purpose": "Pasarle a alguien de afuera el estado completo de un proyecto por link, sin pedirle que se loguee.",
+          "reads": ["todo por props desde App.jsx: mergedData, projectNotes, projectDesigners, overrides, tags"],
+          "writes": [],
+          "status": "activo"
+        },
+        {
+          "name": "Alertas y asistente",
+          "file": "src/components/NotificationBubble.jsx",
+          "purpose": "Avisar que necesita atencion hoy y contestar preguntas sobre los proyectos en lenguaje natural.",
+          "reads": [
+            "alertas derivadas de la planilla (finales, tags, notas sin leer, pedidos de alta)",
+            "manual de ingenieria embebido y historial del chat en localStorage",
+            "ProjectChatbot.jsx se monta al lado, en App.jsx:801"
+          ],
+          "writes": [
+            "users/{uid}/readNotes/{so} y project_tags/{so}/{tagId}/readAt al marcar leido",
+            "localStorage jl_chatbot_history",
+            "POST /api/chat -> Gemini"
+          ],
+          "status": "activo"
+        },
+        {
+          "name": "Asignacion de disenador",
+          "file": "src/components/AssignDesignerGate.jsx",
+          "purpose": "Antes de dejar seguir trabajando, pedirle al ingeniero que diga que disenador trajo cada proyecto nuevo suyo.",
+          "reads": ["cola calculada con pendingDesignerAssignments (columna ENG de la planilla + project_designers)"],
+          "writes": ["project_designers/{so}, releyendo antes de escribir para no pisar a quien haya asignado en paralelo"],
+          "status": "activo"
+        }
+      ]
+    },
+    {
+      "name": "Metricas semanales del equipo",
+      "modules": [
+        {
+          "name": "Dashboard semanal",
+          "file": "src/views/DashboardView.jsx",
+          "purpose": "Ver en una sola pantalla como viene la semana: proyectos activos, atrasos, costos y comparacion con la semana anterior.",
+          "reads": [
+            "planilla semanal (props)",
+            "weekly_history (snapshots por semana)",
+            "project_history (transiciones reales de etapa)",
+            "validationMetrics y proyectos archivados"
+          ],
+          "writes": [
+            "exportacion a CSV en la maquina del usuario (csvExport.js)",
+            "no escribe en la base: los snapshots de weekly_history los guarda App.jsx:237"
+          ],
+          "status": "activo"
+        },
+        {
+          "name": "Team Stats / Calidad",
+          "file": "src/views/DesignQualityView.jsx",
+          "purpose": "Comparar como viene cada ingeniero y ver la evolucion semana a semana.",
+          "reads": ["pestana Quality de la planilla (gid 1762634268)", "weekly_engineer_kpi (historial)"],
+          "writes": ["weekly_engineer_kpi/{semanaISO}: un snapshot por semana, solo si esa clave todavia no existe"],
+          "status": "activo"
+        },
+        {
+          "name": "Materiales",
+          "file": "src/views/MaterialsView.jsx",
+          "purpose": "Ver que materiales lleva cada proyecto y cuales todavia faltan pedir.",
+          "reads": ["matriz de materiales de la planilla, ya con los overrides aplicados en App.jsx:420"],
+          "writes": ["ninguno: es solo lectura, los cambios de material se guardan desde Mis Proyectos"],
+          "status": "activo"
+        },
+        {
+          "name": "Analisis de costos",
+          "file": "src/views/CostAnalysisView.jsx",
+          "purpose": "Ver los proyectos mas caros de la semana. Hoy no se llega desde ningun lado: el contenido se mudo adentro del Dashboard y el archivo quedo huerfano.",
+          "reads": [],
+          "writes": [],
+          "status": "parcial"
+        },
+        {
+          "name": "Barra de filtros global",
+          "file": "src/components/GlobalFilterBar.jsx",
+          "purpose": "Filtrar todas las vistas a la vez por disenador, estado o fecha. Esta escrita y con estilos propios, pero ninguna vista la usa todavia.",
+          "reads": ["recibiria projects y onHoldNotes por props"],
+          "writes": [],
+          "status": "planeado"
+        }
+      ]
+    },
+    {
+      "name": "Evaluacion de disenadores",
+      "modules": [
+        {
+          "name": "Leaderboard",
+          "file": "src/designer-performance/views/DashboardView.tsx",
+          "purpose": "Ver el ranking de disenadores y como puntua cada uno.",
+          "reads": ["KpiContext: designer_performance_projects cruzado con la pestana Master Schedule Mirror y project_designers"],
+          "writes": [],
+          "status": "activo"
+        },
+        {
+          "name": "Lista de proyectos evaluados",
+          "file": "src/designer-performance/views/ProjectsView.tsx",
+          "purpose": "Buscar un proyecto y abrir su ficha de evaluacion. Es tambien donde aterrizan los links compartidos ?so=<SO>.",
+          "reads": ["KpiContext (proyectos ya mezclados con puntaje, complejidad e historial)"],
+          "writes": [],
+          "status": "activo"
+        },
+        {
+          "name": "Fase 1 - Intake",
+          "file": "src/designer-performance/views/Phase1Form.tsx",
+          "purpose": "Revisar si el disenador entrego la documentacion completa al arrancar el proyecto, y aprobar o devolver con una nota explicando que falta.",
+          "reads": [
+            "KpiContext: proyectos activos de Master Schedule Mirror, complejidad derivada de la planilla e historial previo",
+            "permiso de force-approve segun rol"
+          ],
+          "writes": [
+            "designer_performance_projects/{so}",
+            "designer_performance_history/{so} (append-only, con push)",
+            "project_designers/{so}",
+            "POST /api/reviewNote: Gemini redacta la nota, con texto deterministico de respaldo si tarda mas de 8s o falla"
+          ],
+          "status": "activo"
+        },
+        {
+          "name": "Fase 2 - Cierre",
+          "file": "src/designer-performance/views/Phase2Form.tsx",
+          "purpose": "Cerrar la evaluacion del proyecto sumando los problemas que aparecieron durante la ejecucion.",
+          "reads": [
+            "KpiContext",
+            "las notas de tipo 'designer' (red flags) que se cargan desde Pipeline y Mis Proyectos"
+          ],
+          "writes": ["designer_performance_projects/{so}", "designer_performance_history/{so}"],
+          "status": "activo"
+        }
+      ]
+    },
+    {
+      "name": "Acceso, administracion y documentos",
+      "modules": [
+        {
+          "name": "Ingreso y alta de usuario",
+          "file": "src/views/LoginView.jsx",
+          "purpose": "Entrar a la app, o pedir el alta y quedar en espera hasta que un administrador apruebe.",
+          "reads": ["Firebase Auth (email/password)"],
+          "writes": ["users/{uid} con email, designerName, requestedRole y createdAt. El rol y el status reales los pone el admin, no el usuario"],
+          "status": "activo"
+        },
+        {
+          "name": "Administracion de usuarios",
+          "file": "src/views/AdminUsersView.jsx",
+          "purpose": "Aprobar o rechazar a quien pide acceso, asignarle su rol y detectar proyectos que quedaron sin dueno.",
+          "reads": ["nodo users completo", "planilla y Master Schedule para el panel de proyectos huerfanos"],
+          "writes": ["users/{uid} (role y status)"],
+          "status": "activo"
+        },
+        {
+          "name": "ESS - generador desde PDFs",
+          "file": "src/views/EssView.jsx",
+          "purpose": "Subir el contrato, la cotizacion y los planos de un proyecto y obtener la especificacion ya armada, sin cargar las medidas a mano.",
+          "reads": [
+            "ess_file_index (solo si existe cada archivo, para no bajar los PDF enteros al abrir la lista)",
+            "essAutoData y ess_files (base64) al abrir un proyecto",
+            "el PDF se parsea en el navegador con pdf.js en un web worker"
+          ],
+          "writes": [
+            "ess_files/{so} y ess_file_index/{so} en un update multi-path atomico",
+            "essAutoData/{so} y ess_corrections/{so}",
+            "marcas de retencion: purgeMarkedAt y borrado definitivo pasado el plazo"
+          ],
+          "status": "activo"
+        }
+      ]
+    }
+  ]
+}
