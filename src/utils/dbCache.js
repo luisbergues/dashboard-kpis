@@ -1,4 +1,5 @@
 import { db, ref, get, update, onValue } from './firebase';
+import { normalizeParsedData } from './parsedDataShape';
 
 const CACHE_KEY = 'dashboard_parsed_data';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache validity
@@ -86,7 +87,7 @@ function readLocalCache() {
       const cached = JSON.parse(localVal);
       if (cached && cached.parsedData) {
         console.log('⚡ Retrieved cached data from localStorage');
-        return cached;
+        return { ...cached, parsedData: normalizeParsedData(cached.parsedData) };
       }
     }
   } catch (error) {
@@ -96,7 +97,14 @@ function readLocalCache() {
 }
 
 /**
- * Gets cached dashboard data from Firebase or LocalStorage
+ * Gets cached dashboard data from Firebase or LocalStorage.
+ *
+ * Todo lo que sale de aca pasa por normalizeParsedData: RTDB borra la clave
+ * cuando el valor es un array u objeto vacio, asi que una seccion sin filas
+ * vuelve como `undefined` y revienta a la primera vista que la recorra sin
+ * guard. Reponer la forma aca (y no en cada vista) es lo que mantiene el
+ * contrato del parser vivo del otro lado del cache. Ver parsedDataShape.js.
+ *
  * @returns {Promise<{parsedData: Object, timestamp: string} | null>}
  */
 export async function getCachedData() {
@@ -110,7 +118,7 @@ export async function getCachedData() {
       // asi que no hay nada nuevo que bajar. Esto es lo que hace que un tick
       // sin novedades no descargue nada.
       if (meta?.version && memory && memory.version === meta.version) {
-        return { timestamp: meta.timestamp, parsedData: { ...memory.parsedData } };
+        return { timestamp: meta.timestamp, parsedData: normalizeParsedData(memory.parsedData) };
       }
 
       const snapshot = await get(ref(db, DATA_PATH));
@@ -128,7 +136,7 @@ export async function getCachedData() {
           // Copia superficial: App.jsx le cuelga `archivedProjects` al objeto
           // que recibe, y esa mutacion no debe ensuciar la copia en memoria
           // (ensuciarla desincronizaria el payload de su propia huella).
-          return { timestamp: cached.timestamp, parsedData: { ...cached.parsedData } };
+          return { timestamp: cached.timestamp, parsedData: normalizeParsedData(cached.parsedData) };
         }
       }
     } catch (error) {

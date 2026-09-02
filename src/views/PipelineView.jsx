@@ -517,6 +517,12 @@ export default function PipelineView({
   };
 
   const getOnHoldNote = (projectName) => {
+    // El mismo guard que ya tenia MyProjectsView y a este gemelo nunca se le
+    // aplico: sin el, un cache sin la seccion On Hold Notes tumbaba la vista
+    // entera con "Cannot read properties of undefined (reading 'find')".
+    // El origen se repara en el cache (ver parsedDataShape.js); esto es la
+    // segunda linea, por si el objeto llega de otro lado.
+    if (!onHoldNotes) return null;
     // try to match part of the name
     const note = onHoldNotes.find(n => projectName.includes(n.project) || n.project.includes(projectName));
     return note ? note.notes : null;

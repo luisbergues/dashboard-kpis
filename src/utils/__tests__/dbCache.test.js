@@ -256,3 +256,55 @@ describe('setCachedData — no reescribe el nodo pesado al pedo', () => {
       .toHaveLength(2);
   });
 });
+
+// Firebase RTDB BORRA la clave cuando el valor es un array vacio. Una semana
+// sin notas de On Hold guarda `onHoldNotes: []`, RTDB tira la clave, y
+// PipelineView -- que hace `onHoldNotes.find(...)` sin guard dentro de un .map
+// -- revienta con "Cannot read properties of undefined (reading 'find')".
+// El cache es el borde donde se repara, porque de ahi sale el objeto que
+// consume media app.
+describe('getCachedData — repone las secciones que RTDB borro por venir vacias', () => {
+  const guardarCacheDegradado = () => {
+    rtdb['firebase_cache/data'] = {
+      timestamp: new Date().toISOString(),
+      parsedData: {
+        priorityAnalysis: [{ so: '111', name: 'Casa A' }],
+        weekOverWeek: [],
+        // onHoldNotes / statusHistory / materialRequirements / alerts: borrados.
+      },
+    };
+  };
+
+  it('onHoldNotes vuelve como array y no como undefined', async () => {
+    resetCacheStateForTests();
+    guardarCacheDegradado();
+    const cached = await getCachedData();
+    expect(cached.parsedData.onHoldNotes).toEqual([]);
+    expect(() => cached.parsedData.onHoldNotes.find(n => n.project === 'x')).not.toThrow();
+  });
+
+  it('repone tambien el resto de las secciones y alerts', async () => {
+    resetCacheStateForTests();
+    guardarCacheDegradado();
+    const { parsedData } = await getCachedData();
+    expect(Array.isArray(parsedData.statusHistory)).toBe(true);
+    expect(Array.isArray(parsedData.materialRequirements)).toBe(true);
+    expect(Array.isArray(parsedData.topCostProjects)).toBe(true);
+    expect(parsedData.alerts).toEqual({ unassignedEngineer: null, pendingCheckReview: null });
+  });
+
+  it('no toca los datos que si llegaron', async () => {
+    resetCacheStateForTests();
+    guardarCacheDegradado();
+    const { parsedData } = await getCachedData();
+    expect(parsedData.priorityAnalysis).toEqual([{ so: '111', name: 'Casa A' }]);
+  });
+
+  it('el camino rapido en memoria devuelve la misma forma reparada', async () => {
+    resetCacheStateForTests();
+    guardarCacheDegradado();
+    await getCachedData();               // primera bajada, llena la memoria
+    const segunda = await getCachedData(); // ahora sale por el atajo de memoria
+    expect(segunda.parsedData.onHoldNotes).toEqual([]);
+  });
+});
