@@ -53,7 +53,11 @@ export function weeklyTimeline(previous, current, language = 'en') {
     engineer,
     data: columns.map(({ table, weekIndex }) => {
       const row = table.rows.find(r => r.engineer === engineer);
-      return row ? (row.weeks[weekIndex] || 0) : 0;
+      // No puede haber puntos negativos en una semana: un valor negativo en la
+      // hoja (Luis, Oct W4: -50,026.22) es un error de carga, y se grafica en
+      // positivo a pedido del usuario. Solo en este grafico — Month Total
+      // sigue mostrando lo que dice la hoja.
+      return row ? Math.abs(row.weeks[weekIndex] || 0) : 0;
     }),
   }));
 

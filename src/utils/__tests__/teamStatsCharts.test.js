@@ -42,8 +42,8 @@ describe('weeklyTimeline', () => {
     expect(andres.data).toEqual([0, 0, 40735.88, 17321.05, 10404.8, 0, 0]);
   });
 
-  it('conserva los negativos de la hoja', () => {
-    expect(t.series.find(s => s.engineer === 'Luis').data[3]).toBeCloseTo(-50026.22);
+  it('un valor negativo de la hoja se grafica en positivo', () => {
+    expect(t.series.find(s => s.engineer === 'Luis').data[3]).toBeCloseTo(50026.22);
   });
 
   it('sin tablas devuelve null', () => {
