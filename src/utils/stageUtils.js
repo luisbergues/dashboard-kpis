@@ -60,6 +60,19 @@ const asArray = (value) => {
   return [];
 };
 
+// Un proyecto terminado sale del sheet en vez de pasar a "Completed" en el,
+// asi que la app nunca observa la transicion a COMPLETED y esa etapa quedaba
+// siempre `estimated` (la serie "Fully Completed" daba 0 todas las semanas).
+// El archivador la detecta al desaparecer y sella `archivedAt`: esa es la
+// observacion real del cierre. Va al final para que una transicion COMPLETED
+// efectivamente registrada siga ganando (el primer evento de cada estado gana).
+function withArchiveCompletion(project, recorded) {
+  const isArchivedCompleted = project?.archivedAt
+    && String(project.status || '').toUpperCase().trim() === 'COMPLETED';
+  if (!isArchivedCompleted) return recorded;
+  return [...recorded, { status: 'COMPLETED', timestamp: project.archivedAt }];
+}
+
 /**
  * Etapas de un proyecto que puede estar vivo o archivado.
  *
@@ -78,10 +91,12 @@ const asArray = (value) => {
  */
 export function stagesFromProjectOrArchive(project, liveHistory) {
   const snapshot = project?.snapshot;
-  if (!snapshot) return calculateAutomaticStages(project, liveHistory);
-
   const live = asArray(liveHistory);
-  const recorded = live.length > 0 ? live : asArray(snapshot.history);
+  const recorded = withArchiveCompletion(
+    project,
+    live.length > 0 || !snapshot ? live : asArray(snapshot.history),
+  );
+  if (!snapshot) return calculateAutomaticStages(project, recorded);
 
   const ownStatusHistory = asArray(project.statusHistory);
   if (ownStatusHistory.length > 0) return calculateAutomaticStages(project, recorded);

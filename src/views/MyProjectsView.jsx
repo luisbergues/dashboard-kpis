@@ -19,6 +19,7 @@ import { canManageDesignerNotes } from '../utils/notePermissions';
 import { ownedArchivedProjects, visibleArchivedProjects } from '../utils/archivedVisibility';
 import { ownsProject } from '../utils/projectOwnership';
 import { noteDaysOpen, notePenalty } from '../designer-performance/utils/redFlags';
+import { DESIGNER_PERFORMANCE_ENABLED } from '../utils/featureFlags';
 import TerminatedEasterEgg from '../components/TerminatedEasterEgg';
 import { Chart as ChartJS, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
 import { Line } from 'react-chartjs-2';
@@ -2179,7 +2180,8 @@ export default function MyProjectsView({
                                         ? (language === 'es' ? `Resuelta en ${dias} días` : `Resolved in ${dias} days`)
                                         : (language === 'es' ? `${dias} días abierta` : `${dias} days open`)}
                                     </span>
-                                    <span className="note-redflag-penalty">&minus;{pts}</span>
+                                    {/* Puntos del KPI de Fase 2: ocultos con el modulo en pausa (ver featureFlags.js). */}
+                                    {DESIGNER_PERFORMANCE_ENABLED && <span className="note-redflag-penalty">&minus;{pts}</span>}
                                   </div>
                                 );
                               })()}

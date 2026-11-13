@@ -16,20 +16,8 @@ export const DESIGNERS = [
   // ingenieros (allowed_designers / DEFAULT_DESIGNERS, que guarda ingenieros
   // pese al nombre del nodo). Tener los dos roles es valido.
   'Delfina Breton',
-  'Iris Lopes',
-  'Kat Baumgartner',
-  'Krisztina Vizi',
-  'Lana Kravtchenko',
-  'Luana Tamagnone',
   'Malanie Dalfrey',
-  'Marsha Diquez',
-  'Mauricio Dasso',
   'Melissa Barker',
-  'Michael Kaboskey',
-  'Monica Gabriel',
-  'Natalie Ball',
-  'Nicole Dugan',
   'Russell Reiner',
   'Sarah Manev',
-  'Tricia Hatton',
 ];

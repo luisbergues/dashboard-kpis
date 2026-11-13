@@ -50,6 +50,13 @@
       ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
       ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"
     },
+    "weekly_completed": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      "$week": {
+        ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'",
+        ".validate": "$week.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.child('weekStart').val() === $week && newData.child('completedTotal').isNumber()"
+      }
+    },
     "deleted_projects": {
       ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
       ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && root.child('users').child(auth.uid).child('role').val() !== 'designer'"

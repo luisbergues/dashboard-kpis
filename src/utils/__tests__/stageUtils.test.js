@@ -168,3 +168,31 @@ describe('stagesFromProjectOrArchive — un proyecto archivado no pierde su hist
     expect(stagesFromProjectOrArchive(p, [])).toEqual(calculateAutomaticStages(p, []));
   });
 });
+
+describe('stagesFromProjectOrArchive — fecha de cierre de un archivado', () => {
+  // El proyecto sale del sheet en vez de pasar a "Completed" en el, asi que
+  // nunca hay una transicion COMPLETED observada: la serie "Fully Completed"
+  // del grafico semanal daba 0 siempre.
+  it('usa archivedAt como fecha real de COMPLETED', () => {
+    const project = { so: '100', status: 'Completed', archivedAt: '2026-10-20T15:00:00.000Z' };
+    const stages = stagesFromProjectOrArchive(project, undefined);
+    expect(stages[5]).toMatchObject({ completed: true, estimated: false });
+    expect(day(stages[5].timestamp)).toBe('2026-10-20');
+  });
+
+  it('una transicion COMPLETED observada gana sobre archivedAt', () => {
+    const project = {
+      so: '100',
+      status: 'Completed',
+      archivedAt: '2026-10-20T15:00:00.000Z',
+      snapshot: { history: [stageEvent('COMPLETED', '2026-10-15T10:00:00.000Z')] },
+    };
+    const stages = stagesFromProjectOrArchive(project, undefined);
+    expect(day(stages[5].timestamp)).toBe('2026-10-15');
+  });
+
+  it('un proyecto activo sin archivedAt sigue igual', () => {
+    const stages = stagesFromProjectOrArchive({ so: '100', status: 'Engineering' }, []);
+    expect(stages[5]).toBe(false);
+  });
+});

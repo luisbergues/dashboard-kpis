@@ -68,19 +68,19 @@ describe('AssignDesignerGate — asignacion', () => {
 
   it('guarda el SO y el disenador elegido', async () => {
     const { onAssign } = renderGate();
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Iris Lopes' } });
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Blerta Veseli' } });
     fireEvent.click(screen.getByRole('button', { name: /save and continue/i }));
-    await waitFor(() => expect(onAssign).toHaveBeenCalledWith('12116', 'Iris Lopes'));
+    await waitFor(() => expect(onAssign).toHaveBeenCalledWith('12116', 'Blerta Veseli'));
   });
 
   it('muestra el error devuelto y no deja el formulario colgado', async () => {
     const onAssign = vi.fn().mockResolvedValue({ error: 'Could not save.' });
     renderGate({ onAssign });
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Iris Lopes' } });
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Blerta Veseli' } });
     fireEvent.click(screen.getByRole('button', { name: /save and continue/i }));
     await waitFor(() => expect(screen.getByText('Could not save.')).toBeTruthy());
     // El select conserva el valor: se puede reintentar sin volver a elegir.
-    expect(screen.getByRole('combobox').value).toBe('Iris Lopes');
+    expect(screen.getByRole('combobox').value).toBe('Blerta Veseli');
   });
 
   it('la unica salida es cerrar sesion', () => {

@@ -14,18 +14,17 @@ import { Bar } from 'react-chartjs-2';
 import { fetchAndParseQualityData } from '../utils/sheetParser';
 import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
-import { db, ref, get, set } from '../utils/firebase';
+import { weeklyTimeline, monthTotals } from '../utils/teamStatsCharts';
 
 ChartJS.register(LinearScale, CategoryScale, BarElement, Legend, Tooltip, BarController);
-
-// Weeks of history the chart is sized for — bar width is capped so a single
-// loaded week already renders at its "full capacity" width (see
-// weeklyChartData's maxBarThickness) instead of stretching to fill the axis.
-const WEEKLY_CHART_CAPACITY = 16;
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 };
+
+// Los graficos muestran puntos KPI, no dolares: sin signo $.
+const formatPoints = (value) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
+const axisPoints = (value) => (Math.abs(value) >= 1000 ? `${Math.round(value / 1000)}k` : `${value}`);
 
 // Muted, low-saturation palette so the weekly stacked bars stay readable and
 // don't compete visually with the alert colors used elsewhere in this view
@@ -39,43 +38,18 @@ function colorForEngineer(name, index) {
   return ENGINEER_PALETTE[index % ENGINEER_PALETTE.length] || `hsl(${(index * 47) % 360}, 30%, 55%)`;
 }
 
-// ISO-week key so the same calendar week always maps to the same RTDB node,
-// regardless of which day someone happens to load this view.
-function isoWeekKey(date = new Date()) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-  return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`;
-}
-
-function shortWeekLabel(weekKey) {
-  const [, week] = weekKey.split('-W');
-  return `W${week}`;
-}
-
 // Los cuatro bloques por periodo de la hoja, del mas reciente al mas viejo (el
 // mismo orden en que aparecen en el tab). `sheetSection` es el titulo que se
 // busca ahi; `shortLabel` es el que va en la leyenda del grafico.
 const PERIOD_TABLES = [
+  // Desde noviembre 2026 la hoja solo trae la tabla del mes en curso; las de
+  // abajo quedan por si vuelven y simplemente no se muestran si no estan.
+  { key: 'currentMonth', sheetSection: 'KPI (MM/DD - MM/DD)', shortLabel: 'Month' },
   { key: 'last30Days', sheetSection: 'KPI Last 30 Days', shortLabel: '0-30d' },
   { key: 'days31to60', sheetSection: 'KPI 31-60 Days', shortLabel: '31-60d' },
   { key: 'days61to90', sheetSection: 'KPI 61-90 Days', shortLabel: '61-90d' },
   { key: 'days91to120', sheetSection: 'KPI 91-120 Days', shortLabel: '91-120d' },
 ];
-
-// Los periodos son una escala ordenada, no categorias sueltas, asi que van con
-// una rampa de un solo tono (el cyan de la app) en vez de cuatro colores
-// distintos: el periodo mas reciente es el mas prominente contra su fondo y se
-// va apagando hacia el mas viejo. Cada modo tiene sus propios pasos — no es el
-// mismo array invertido — y ambos pasan el validador de rampa ordinal
-// (monotonia de luminosidad, salto >= 0.06 entre pasos, y el extremo palido
-// por encima de 2:1 contra su superficie: #1C1C22 en dark, #FFFFFF en light).
-const PERIOD_RAMP = {
-  dark: ['#09D1C7', '#16A6A0', '#197F7C', '#1B5A59'],
-  light: ['#0A5F5C', '#0D827D', '#12A39C', '#45C4BD'],
-};
 
 // Semantica de la "Workload Distribution Guide": amarillo por debajo del 10%,
 // naranja por encima del 30%. El color nunca va solo — siempre lo acompania el
@@ -269,6 +243,9 @@ export default function DesignQualityView() {
   };
   const [data, setData] = useState({
     kpiData: [],
+    weeklyCurrent: null,
+    weeklyPrevious: null,
+    currentMonth: null,
     last30Days: null,
     days31to60: null,
     days61to90: null,
@@ -277,7 +254,6 @@ export default function DesignQualityView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showGuide, setShowGuide] = useState(false);
-  const [weeklyEngineerHistory, setWeeklyEngineerHistory] = useState([]);
 
   // Sin esto, la pagina de fondo seguia siendo scrolleable con el modal
   // abierto: su propia scrollbar nativa (del viewport, no la del modal) se
@@ -306,169 +282,90 @@ export default function DesignQualityView() {
     loadData();
   }, []);
 
-  // Save this week's per-engineer KPI % as a snapshot (once per calendar
-  // week — same dedupe pattern as App.jsx's weekly_history), then load the
-  // recent history so the distribution can be charted over time instead of
-  // only showing the current snapshot.
-  useEffect(() => {
-    if (!db || data.kpiData.length === 0) return;
+  // ─── Graficos: salen SOLO de las tablas WEEKLY KPI de la hoja ───────────
+  // (mes actual y mes anterior — ver teamStatsCharts.js). El snapshot propio
+  // que se guardaba en weekly_engineer_kpi ya no se escribe; el nodo queda en
+  // Firebase como historico.
+  const chartTooltip = useMemo(() => ({
+    backgroundColor: isLight ? 'rgba(255, 255, 255, 0.98)' : 'rgba(11, 21, 32, 0.95)',
+    titleColor: C.accent,
+    bodyColor: isLight ? '#0f172a' : '#fff',
+    borderColor: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    padding: 10,
+    callbacks: {
+      label: (ctx) => `${ctx.dataset.label}: ${formatPoints(ctx.parsed.y)} pts`,
+    },
+  }), [isLight, C.accent]);
 
-    const weekKey = isoWeekKey();
+  const chartScales = useMemo(() => ({
+    x: {
+      grid: { display: false, drawBorder: false },
+      ticks: { color: C.body, font: { size: 11 } },
+    },
+    y: {
+      beginAtZero: true,
+      grid: { color: isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+      ticks: { color: C.muted, callback: axisPoints },
+    },
+  }), [isLight, C.body, C.muted]);
 
-    async function saveAndLoadWeeklyEngineerHistory() {
-      try {
-        const snapRef = ref(db, `weekly_engineer_kpi/${weekKey}`);
-        const snap = await get(snapRef);
-        if (!snap.exists()) {
-          const percentages = {};
-          data.kpiData.forEach(row => { percentages[row.engineer] = row.percent || 0; });
-          await set(snapRef, { savedAt: new Date().toISOString(), percentages });
-        }
+  const legend = useMemo(() => ({
+    position: 'bottom',
+    labels: { color: C.body, font: { family: 'Inter', size: 11 }, boxWidth: 10, padding: 10 },
+  }), [C.body]);
 
-        const historyRef = ref(db, 'weekly_engineer_kpi');
-        const historySnap = await get(historyRef);
-        if (historySnap.exists()) {
-          const allWeeks = historySnap.val();
-          const weeksArray = Object.entries(allWeeks)
-            .map(([key, val]) => ({ key, ...val }))
-            .sort((a, b) => a.key.localeCompare(b.key));
-          setWeeklyEngineerHistory(weeksArray.slice(-WEEKLY_CHART_CAPACITY));
-        }
-      } catch (err) {
-        console.error('Error managing weekly engineer KPI history:', err);
-      }
-    }
-
-    saveAndLoadWeeklyEngineerHistory();
-  }, [data.kpiData]);
-
+  // Semana por semana, apilado por ingeniero: Oct W1 ... Nov W2.
   const weeklyChartData = useMemo(() => {
-    if (weeklyEngineerHistory.length === 0) return null;
-
-    const engineers = Array.from(
-      new Set(weeklyEngineerHistory.flatMap(w => Object.keys(w.percentages || {})))
-    ).sort();
-    if (engineers.length === 0) return null;
-
+    const timeline = weeklyTimeline(data.weeklyPrevious, data.weeklyCurrent, language);
+    if (!timeline) return null;
     return {
-      labels: weeklyEngineerHistory.map(w => shortWeekLabel(w.key)),
-      datasets: engineers.map((engineer, index) => ({
-        label: engineer,
-        data: weeklyEngineerHistory.map(w => w.percentages?.[engineer] ?? 0),
-        backgroundColor: colorForEngineer(engineer, index),
+      labels: timeline.labels,
+      datasets: timeline.series.map((serie, index) => ({
+        label: serie.engineer,
+        data: serie.data,
+        backgroundColor: colorForEngineer(serie.engineer, index),
         borderRadius: 3,
         stack: 'engineers',
-        // Cap each bar at 1/WEEKLY_CHART_CAPACITY of the plotted width so a
-        // single loaded week renders at the same width it will have once
-        // all WEEKLY_CHART_CAPACITY weeks are present, instead of Chart.js's
-        // default of stretching the lone category to fill the axis.
-        maxBarThickness: (ctx) => (ctx.chart.chartArea?.width || 0) / WEEKLY_CHART_CAPACITY,
       })),
     };
-  }, [weeklyEngineerHistory]);
+  }, [data.weeklyPrevious, data.weeklyCurrent, language]);
 
   const weeklyChartOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: { color: C.body, font: { family: 'Inter', size: 11 }, boxWidth: 10, padding: 8 },
-      },
-      tooltip: {
-        backgroundColor: isLight ? 'rgba(255, 255, 255, 0.98)' : 'rgba(11, 21, 32, 0.95)',
-        titleColor: C.accent,
-        bodyColor: isLight ? '#0f172a' : '#fff',
-        borderColor: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)',
-        borderWidth: 1,
-        padding: 10,
-        callbacks: {
-          label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`,
-        },
-      },
-    },
+    plugins: { legend, tooltip: chartTooltip },
     scales: {
-      x: {
-        stacked: true,
-        grid: { display: false, drawBorder: false },
-        ticks: { color: C.body, font: { size: 11 } },
-      },
-      y: {
-        stacked: true,
-        beginAtZero: true,
-        grid: { color: isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-        ticks: { color: C.muted, callback: (v) => `${v}%` },
-      },
+      x: { ...chartScales.x, stacked: true },
+      y: { ...chartScales.y, stacked: true },
     },
-    // isLight drives the chart's text/grid colors, so recompute on theme change.
-  }), [isLight]);
+  }), [legend, chartTooltip, chartScales]);
 
-  // Un ingeniero por grupo, una barra por periodo: es la misma matriz que las
-  // cuatro tablas de abajo, leida de corrido. Los ingenieros salen de la union
-  // de las tablas presentes (alguien puede no figurar en un periodo viejo) y en
-  // ese caso su barra va en 0, no se saltea la posicion.
-  const periodShareChartData = useMemo(() => {
-    const present = PERIOD_TABLES
-      .map(period => ({ ...period, table: data[period.key] }))
-      .filter(period => period.table?.rows.length > 0);
-    if (present.length === 0) return null;
-
-    const engineers = [...new Set(present.flatMap(p => p.table.rows.map(r => r.engineer)))];
-    const ramp = PERIOD_RAMP[isLight ? 'light' : 'dark'];
-
+  // Month Total de cada ingeniero: mes anterior (tono apagado) contra el
+  // actual (tono pleno).
+  const monthTotalsChartData = useMemo(() => {
+    const totals = monthTotals(data.weeklyPrevious, data.weeklyCurrent);
+    if (!totals) return null;
+    const tones = isLight ? ['#45C4BD', '#0A5F5C'] : ['#197F7C', '#09D1C7'];
     return {
-      labels: engineers,
-      datasets: present.map((period, index) => ({
-        label: period.shortLabel,
-        data: engineers.map(name => {
-          const row = period.table.rows.find(r => r.engineer === name);
-          return row ? row.percentOfTotal : 0;
-        }),
-        // El color sigue al periodo, no a su posicion entre los presentes: si
-        // la hoja pierde un bloque, los que quedan no se repintan.
-        backgroundColor: ramp[PERIOD_TABLES.findIndex(p => p.key === period.key)] ?? ramp[index],
+      labels: totals.engineers,
+      datasets: totals.months.map((m, index) => ({
+        label: m.month,
+        data: m.data,
+        backgroundColor: totals.months.length === 1 ? tones[1] : tones[index],
         borderRadius: 4,
-        // Deja ~2px de superficie entre barras vecinas y aire entre grupos.
         categoryPercentage: 0.7,
         barPercentage: 0.86,
       })),
     };
-  }, [data, isLight]);
+  }, [data.weeklyPrevious, data.weeklyCurrent, isLight]);
 
-  const periodShareChartOptions = useMemo(() => ({
+  const monthTotalsChartOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: { color: C.body, font: { family: 'Inter', size: 11 }, boxWidth: 10, padding: 12 },
-      },
-      tooltip: {
-        backgroundColor: isLight ? 'rgba(255, 255, 255, 0.98)' : 'rgba(11, 21, 32, 0.95)',
-        titleColor: C.accent,
-        bodyColor: isLight ? '#0f172a' : '#fff',
-        borderColor: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)',
-        borderWidth: 1,
-        padding: 10,
-        callbacks: {
-          label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        grid: { display: false, drawBorder: false },
-        ticks: { color: C.body, font: { size: 11 } },
-      },
-      y: {
-        beginAtZero: true,
-        grid: { color: isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-        ticks: { color: C.muted, callback: (v) => `${v}%` },
-      },
-    },
-    // Los C.* son strings derivados de isLight, asi que listarlos no dispara
-    // recalculos de mas y deja el hook honesto frente a exhaustive-deps.
-  }), [isLight, C.accent, C.body, C.muted]);
+    plugins: { legend, tooltip: chartTooltip },
+    scales: chartScales,
+  }), [legend, chartTooltip, chartScales]);
 
   if (loading) {
     return <div className="loading-state text-muted" style={{ padding: '24px', color: C.body }}>Loading Team Stats...</div>;
@@ -482,8 +379,8 @@ export default function DesignQualityView() {
   // alimentando el snapshot semanal de RTDB y con eso el grafico de evolucion,
   // asi que cuenta como contenido: la vista solo esta vacia si tampoco hay
   // ninguna tabla por periodo.
-  const hasPeriodData = PERIOD_TABLES.some(({ key }) => data[key]?.rows.length > 0);
-  const isEmpty = !hasPeriodData && data.kpiData.length === 0;
+  const presentTables = PERIOD_TABLES.filter(({ key }) => data[key]?.rows.length > 0);
+  const isEmpty = presentTables.length === 0 && !weeklyChartData && data.kpiData.length === 0;
 
   return (
     <div className="design-quality-view animate-fade-in" style={{ padding: '24px' }}>
@@ -504,18 +401,18 @@ export default function DesignQualityView() {
             {/* A todo el ancho de la tarjeta, arriba de las tablas: es el
                 resumen y ellas son el detalle (y el "table view" accesible de
                 los mismos numeros). */}
-            {periodShareChartData && (
+            {weeklyChartData && (
               <div style={{ marginBottom: '32px' }}>
                 <h5 style={{ color: C.title, fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
-                  {language === 'es' ? '% del Total por Período' : '% of Total by Period'}
+                  {language === 'es' ? 'KPI Semanal por Ingeniero' : 'Weekly KPI by Engineer'}
                 </h5>
                 <p style={{ color: C.muted, fontSize: '0.78rem', margin: '0 0 12px 0' }}>
                   {language === 'es'
-                    ? 'Participación de cada ingeniero en el Total KPI de cada ventana. Cada período suma 100% por separado.'
-                    : "Each engineer's share of the period's Total KPI. Every period adds up to 100% on its own."}
+                    ? 'Puntos KPI de cada semana, de las tablas WEEKLY KPI de la hoja (mes anterior y mes actual).'
+                    : "KPI points per week, from the sheet's WEEKLY KPI tables (previous and current month)."}
                 </p>
                 <div style={{ height: '300px' }}>
-                  <Bar data={periodShareChartData} options={periodShareChartOptions} />
+                  <Bar data={weeklyChartData} options={weeklyChartOptions} />
                 </div>
               </div>
             )}
@@ -524,36 +421,30 @@ export default function DesignQualityView() {
               {/* minWidth: 0 para que el overflow-x de cada tabla actue dentro
                   de la columna en vez de estirar el flex container. */}
               <div style={{ flex: '2 1 460px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '28px' }}>
-                {PERIOD_TABLES.map(({ key, sheetSection }) => (
+                {/* Solo las tablas que la hoja trae hoy: las ventanas de
+                    30/60/90/120 dias desaparecieron en noviembre de 2026 y
+                    dejaban cuatro avisos de "seccion inexistente". */}
+                {presentTables.map(({ key }) => (
                   <PeriodTable
                     key={key}
                     table={data[key]}
                     colors={C}
                     isLight={isLight}
                     language={language}
-                    emptyLabel={language === 'es'
-                      ? `La hoja no tiene la seccion "${sheetSection}".`
-                      : `The sheet has no "${sheetSection}" section.`}
                   />
                 ))}
               </div>
 
               <div style={{ flex: '1 1 280px', minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {weeklyChartData ? (
+                {monthTotalsChartData && (
                   <div>
                     <h5 style={{ color: C.title, fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
-                      {language === 'es' ? 'Evolución Semanal por Ingeniero' : 'Weekly Evolution by Engineer'}
+                      {language === 'es' ? 'Total del Mes por Ingeniero' : 'Month Total by Engineer'}
                     </h5>
-                    <div style={{ height: '220px' }}>
-                      <Bar data={weeklyChartData} options={weeklyChartOptions} />
+                    <div style={{ height: '240px' }}>
+                      <Bar data={monthTotalsChartData} options={monthTotalsChartOptions} />
                     </div>
                   </div>
-                ) : (
-                  <p style={{ color: C.body, lineHeight: '1.7', fontSize: '0.9rem', margin: 0 }}>
-                    {language === 'es'
-                      ? 'Aún no hay suficiente historial semanal para graficar la evolución. Volvé a revisar esta vista en las próximas semanas.'
-                      : "Not enough weekly history yet to chart the evolution. Check back on this view in the coming weeks."}
-                  </p>
                 )}
                 <div style={{ marginTop: '12px', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)', background: 'var(--overlay-01)' }}>
                   <h5 style={{ color: C.title, fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>

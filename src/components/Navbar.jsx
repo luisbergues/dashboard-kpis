@@ -4,6 +4,7 @@ import { auth, db, ref, set, signOut } from '../utils/firebase';
 import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
 import TerminatedEasterEgg from './TerminatedEasterEgg';
+import { DESIGNER_PERFORMANCE_ENABLED } from '../utils/featureFlags';
 import './Navbar.css';
 
 export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAdmin, pendingUsersCount = 0 }) {
@@ -32,7 +33,7 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
   const tabs = isDesigner ? [
     { id: 'pipeline', label: t('navbar.pipeline'), icon: ListTodo },
     { id: 'calendar', label: t('navbar.calendar'), icon: CalendarDays },
-    { id: 'designer-performance', label: t('navbar.designerPerf'), icon: Activity },
+    ...(DESIGNER_PERFORMANCE_ENABLED ? [{ id: 'designer-performance', label: t('navbar.designerPerf'), icon: Activity }] : []),
   ] : [
     { id: 'dashboard', label: t('navbar.dashboard'), icon: LayoutDashboard },
     { id: 'calendar', label: t('navbar.calendar'), icon: CalendarDays },
@@ -40,7 +41,8 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
     { id: 'pipeline', label: t('navbar.pipeline'), icon: ListTodo },
     { id: 'materials', label: t('navbar.materials'), icon: Hammer },
     ...(userProfile?.role !== 'administrative' ? [{ id: 'quality', label: t('navbar.teamStats'), icon: Award }] : []),
-    { id: 'designer-performance', label: t('navbar.designerPerf'), icon: Activity },
+    // Oculto mientras el modulo este en pausa (ver featureFlags.js).
+    ...(DESIGNER_PERFORMANCE_ENABLED ? [{ id: 'designer-performance', label: t('navbar.designerPerf'), icon: Activity }] : []),
     ...(isSuperAdmin ? [{ id: 'admin', label: t('navbar.admin'), icon: ShieldCheck, badge: pendingUsersCount > 0 }] : []),
     ...(isSuperAdmin ? [{ id: 'ess', label: t('navbar.ess'), icon: FileStack }] : [])
   ];

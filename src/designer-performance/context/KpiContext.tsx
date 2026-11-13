@@ -11,6 +11,7 @@ import { canForceApproveIntake } from '../../utils/intakePermissions';
 import { DESIGNERS } from '../../utils/designers';
 import { normalizeNotesBySo } from '../../utils/projectNotes';
 import { deriveComplexity, complexityFromSheet } from '../utils/complexity';
+import { withEvaluatedProjects } from '../utils/projectSource';
 
 // Result of a project_designers/{so} write attempt. `project_designers` is
 // also written directly from MyProjectsView (the main app's "Designer in
@@ -129,8 +130,11 @@ export const KpiProvider: React.FC<{
     // weekly KPI), para que el intake de Fase 1 se evalúe en su etapa real.
     // Si esa lectura falla o todavía no llegó, se cae a priorityAnalysis: es
     // preferible mostrar los proyectos que ya venían que dejar el módulo vacío.
-    const source = masterProjects?.length ? masterProjects : externalData?.priorityAnalysis;
-    if (!source?.length) return;
+    const activeSource = masterProjects?.length ? masterProjects : externalData?.priorityAnalysis;
+    if (!activeSource?.length) return;
+    // Los ya evaluados que terminaron y salieron de la fuente siguen contando
+    // para el Leaderboard (ver projectSource.ts).
+    const source = withEvaluatedProjects(activeSource, performanceProjects);
 
     const merged: Project[] = source.map((p: any) => {
       const so = String(p.so);

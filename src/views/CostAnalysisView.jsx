@@ -59,6 +59,7 @@ export default function CostAnalysisView({ data }) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    layout: { padding: { left: 24 } },
     plugins: {
       legend: {
         display: false
@@ -109,7 +110,14 @@ export default function CostAnalysisView({ data }) {
         ticks: {
           color: '#94A3B8',
           maxRotation: 45,
-          minRotation: 45
+          minRotation: 45,
+          // Rotada a 45°, una etiqueta larga ("Cherry Luxury Interiors LLC")
+          // se salia del canvas por la izquierda. El nombre completo queda en
+          // el tooltip.
+          callback: function(value) {
+            const label = this.getLabelForValue(value);
+            return label.length > 18 ? `${label.slice(0, 17)}…` : label;
+          }
         }
       }
     }

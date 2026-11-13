@@ -4,7 +4,9 @@ import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
 import { shortProjectName } from '../utils/projectName';
 import { formatDisplayDate } from '../utils/dateFormat';
+import { startOfWeek } from 'date-fns';
 import { formatWeekAxisLabel } from '../utils/weeklyHistory';
+import { completedChartSeries, COMPLETED_CHART_START } from '../utils/weeklyCompleted';
 import {
   Chart as ChartJS,
   LinearScale,
@@ -47,20 +49,8 @@ ChartJS.register(
   Filler
 );
 
-// Metric colors used across historical bars
-const METRIC_COLORS = {
-  'ON HOLD': '#FFE600',
-  'Check': '#80EE98',
-  'Review': '#09D1C7',
-  'Nesting': '#9CA3AF',
-  'Engineering': '#8A2BE2',
-  'Check Eng': '#15919B',
-  'Paperwork': '#0C6478'
-};
 
-const STACKED_METRICS = Object.keys(METRIC_COLORS);
-
-export default function DashboardView({ data, weeklyHistory = [], projectHistory = {} }) {
+export default function DashboardView({ data, weeklyCompleted = [], projectHistory = {} }) {
   const { t, language } = useLanguage();
   const { theme } = useTheme();
 
@@ -97,7 +87,7 @@ export default function DashboardView({ data, weeklyHistory = [], projectHistory
     );
   }
 
-  const { weekOverWeek = [], insights = {}, meetingPoints = [], topCostProjects = [], weekLabels = {}, financialImpact = { rows: [] }, alerts = {} } = data;
+  const { weekOverWeek = [], insights = {}, meetingPoints = [], topCostProjects = [], financialImpact = { rows: [] }, alerts = {} } = data;
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const filteredProjects = data.priorityAnalysis || [];
@@ -152,116 +142,25 @@ export default function DashboardView({ data, weeklyHistory = [], projectHistory
     exportToCSV(exportData, `dashboard_projects_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
-  const getMetricLabel = (metricName) => {
-    if (language === 'es') {
-      switch (metricName) {
-        case 'Completed Projects': return 'Proyectos Completados';
-        case 'ON HOLD': return 'EN PAUSA (HOLD)';
-        case 'Check': return 'Check';
-        case 'Review': return 'Revisión';
-        case 'Nesting': return 'Nesting';
-        case 'Engineering': return 'Ingeniería';
-        case 'Check Eng': return 'Check Ing.';
-        case 'Paperwork': return 'Trámites (Paperwork)';
-        case 'Total Active Projects': return 'Proyectos Activos';
-        default: return metricName;
-      }
-    }
-    return metricName;
-  };
+  // ─── Week over Week: solo Completed ────────────────────────────────────
+  // Cada barra es lo completado EN esa semana, no el acumulado de la fila
+  // "Completed Projects" del sheet (ver weeklyCompleted). Se mide desde
+  // COMPLETED_CHART_START: antes de eso el grafico queda en blanco. Una
+  // semana sin dato confiable queda sin barra en vez de mostrar un numero
+  // inventado.
+  const completedSeries = useMemo(() => completedChartSeries(weeklyCompleted), [weeklyCompleted]);
 
-  // ─── Build Historical Chart (up to 10 weeks) ─────────────────────────────
-  const historicalChartData = useMemo(() => {
-    // If we have history from Firebase, use it for multi-bar chart
-    if (weeklyHistory.length > 0) {
-      // Each entry in weeklyHistory has: label, metrics: { 'Total Active Projects': N, ... }
-      // El label se deriva de la FECHA ya parseada (weekDate), no del texto del
-      // sheet. Antes se acortaba con un regex que conservaba los digitos tal
-      // cual, asi que "JULY 06, 2026" daba "Jul 06" y "JULY 6, 2026" daba
-      // "Jul 6": la misma semana con dos etiquetas distintas.
-      const labels = weeklyHistory.map(w => (
-        w.weekDate
-          ? formatWeekAxisLabel(w.weekDate, language)
-          : w.label
-      ));
-
-      const datasets = [];
-
-      // Line: Total Active Projects
-      datasets.push({
-        type: 'line',
-        label: getMetricLabel('Total Active Projects'),
-        data: weeklyHistory.map(w => {
-          const v = w.metrics?.['Total Active Projects'];
-          return typeof v === 'object' ? (v?.current ?? 0) : (v ?? 0);
-        }),
-        borderColor: theme === 'light' ? '#3B82F6' : '#FFFFFF',
-        backgroundColor: theme === 'light' ? '#3B82F6' : '#FFFFFF',
-        borderWidth: 3,
-        pointBackgroundColor: '#FF2E93',
-        pointBorderColor: theme === 'light' ? '#3B82F6' : '#FFFFFF',
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        fill: false,
-        tension: 0.3,
-        yAxisID: 'y'
-      });
-
-      // Stacked bars for each metric
-      STACKED_METRICS.forEach(metric => {
-        datasets.push({
-          type: 'bar',
-          label: getMetricLabel(metric),
-          data: weeklyHistory.map(w => {
-            const v = w.metrics?.[metric];
-            return typeof v === 'object' ? (v?.current ?? 0) : (v ?? 0);
-          }),
-          backgroundColor: METRIC_COLORS[metric],
-          stack: 'Stack 0',
-        });
-      });
-
-      return { labels, datasets };
-    }
-
-    // Fallback: only current sheet data (2 bars)
-    const getMetricData = (metricName) => {
-      const item = weekOverWeek.find(m => m.metric === metricName);
-      return item ? [parseInt(item.previous, 10) || 0, parseInt(item.current, 10) || 0] : [0, 0];
-    };
-
-    const prevLabel = weekLabels?.previous || (language === 'es' ? 'Semana Anterior' : 'Previous Week');
-    const currLabel = weekLabels?.current || (language === 'es' ? 'Semana Actual' : 'Current Week');
-
-    return {
-      labels: [prevLabel, currLabel],
-      datasets: [
-        {
-          type: 'line',
-          label: getMetricLabel('Total Active Projects'),
-          data: getMetricData('Total Active Projects'),
-          borderColor: theme === 'light' ? '#3B82F6' : '#FFFFFF',
-          backgroundColor: theme === 'light' ? '#3B82F6' : '#FFFFFF',
-          borderWidth: 3,
-          pointBackgroundColor: '#FF2E93',
-          pointBorderColor: theme === 'light' ? '#3B82F6' : '#FFFFFF',
-          pointRadius: 6,
-          pointHoverRadius: 8,
-          fill: false,
-          tension: 0.3,
-          yAxisID: 'y'
-        },
-        ...STACKED_METRICS.map(metric => ({
-          type: 'bar',
-          label: getMetricLabel(metric),
-          data: getMetricData(metric),
-          backgroundColor: METRIC_COLORS[metric],
-          stack: 'Stack 0',
-        }))
-      ]
-    };
-  }, [weekOverWeek, weekLabels, weeklyHistory, language, theme]);
-
+  const historicalChartData = useMemo(() => ({
+    labels: completedSeries.map(w => formatWeekAxisLabel(w.weekDate, language)),
+    datasets: [{
+      type: 'bar',
+      // "Completed" en ambos idiomas, a pedido: es el nombre que usa el equipo.
+      label: 'Completed',
+      data: completedSeries.map(w => w.value),
+      backgroundColor: theme === 'light' ? '#10B981' : '#80EE98',
+      borderRadius: 4,
+    }],
+  }), [completedSeries, language, theme]);
 
   const chartOptions = {
     responsive: true,
@@ -290,12 +189,10 @@ export default function DashboardView({ data, weeklyHistory = [], projectHistory
     },
     scales: {
       x: {
-        stacked: true,
         grid: { display: false, drawBorder: false },
         ticks: { color: theme === 'light' ? '#374151' : '#94A3B8', font: { size: 11 } }
       },
       y: {
-        stacked: true,
         beginAtZero: true,
         grid: { color: theme === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.05)', drawBorder: false },
         ticks: { color: theme === 'light' ? '#4B5563' : '#64748B' }
@@ -325,10 +222,13 @@ export default function DashboardView({ data, weeklyHistory = [], projectHistory
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num);
   };
 
-  // ─── Subtitle with real dates from sheet ───────────────────────────────
-  const subtitleText = language === 'es' 
-    ? `${weekLabels?.current || 'Semana Actual'} vs ${weekLabels?.previous || 'Semana Anterior'}`
-    : `${weekLabels?.current || 'Current Week'} vs ${weekLabels?.previous || 'Previous Week'}`;
+  // ─── Subtitle ─────────────────────────────────────────────────────────
+  // La semana sale del calendario: los encabezados de la tabla del sheet
+  // quedaron congelados ("vs August 24, 2026").
+  const weekStartLabel = formatWeekAxisLabel(startOfWeek(new Date(), { weekStartsOn: 1 }), language);
+  const subtitleText = language === 'es'
+    ? `Semana del ${weekStartLabel}`
+    : `Week of ${weekStartLabel}`;
 
   // ─── Action Plan / Key Takeaways ───────────────────────────────────────
   const rawActionPoints = insights.actionPlan ? insights.actionPlan.split('•').map(p => p.trim()).filter(Boolean) : [];
@@ -403,6 +303,21 @@ export default function DashboardView({ data, weeklyHistory = [], projectHistory
     const s = String(p.status || '').toUpperCase();
     return !s.includes('HOLD') && !s.includes('PAUSA');
   };
+
+  // Mismo criterio que realOnHoldProjects: la lista sale de priorityAnalysis y
+  // no del texto del actionPlan. Ese texto se parte por ' - ', y un nombre que
+  // lo contiene ("The Oaks - Tennis Pro Shop:[12420] ...") perdia el SO (la
+  // tarjeta mostraba solo "#"); ademas la IA puede omitir proyectos, asi que
+  // el conteo no coincidia con el resto del Dashboard.
+  const realActiveProjects = filteredProjects
+    .filter(isNotOnHold)
+    .map(p => ({
+      so: p.so,
+      name: shortProjectName(p.name),
+      status: p.status,
+      install: p.install || 'TBD',
+      notes: '',
+    }));
 
   const getStatusColorClass = (status) => {
     // Same guard as PipelineView/CalendarView: a blank Status cell in the sheet
@@ -549,11 +464,19 @@ export default function DashboardView({ data, weeklyHistory = [], projectHistory
                 {t('dashboard.wowTitle')}
               </h3>
               <span className="history-badge">
-                {weeklyHistory.length > 0 ? `${weeklyHistory.length} ${t('dashboard.trackedWeeks')}` : t('dashboard.currentData')}
+                {completedSeries.length > 0
+                  ? `${completedSeries.length} ${t('dashboard.trackedWeeks')}`
+                  : `${t('dashboard.chartStartsOn')} ${formatWeekAxisLabel(COMPLETED_CHART_START, language)}`}
               </span>
             </div>
             <div className="mixed-chart-container-wide">
-              <Chart type="bar" data={historicalChartData} options={chartOptions} />
+              {completedSeries.length > 0 ? (
+                <Chart type="bar" data={historicalChartData} options={chartOptions} />
+              ) : (
+                <p className="text-muted" style={{ padding: '24px', textAlign: 'center' }}>
+                  {t('dashboard.chartStartsOnBody')} {formatWeekAxisLabel(COMPLETED_CHART_START, language)}.
+                </p>
+              )}
             </div>
           </section>
         </SectionErrorBoundary>
@@ -628,7 +551,7 @@ export default function DashboardView({ data, weeklyHistory = [], projectHistory
           </div>
 
           <div className="carousel-content">
-            {actionProjects.length === 0 && realOnHoldProjects.length === 0 ? (
+            {realActiveProjects.length === 0 && realOnHoldProjects.length === 0 ? (
               <p className="text-muted">{t('dashboard.noPriority')}</p>
             ) : (
               <div className="action-plan-split-container">
@@ -670,11 +593,10 @@ export default function DashboardView({ data, weeklyHistory = [], projectHistory
                 <div className="action-plan-sector">
                   <h4 className="sector-heading text-mint">
                     <span className="sector-dot bg-mint"></span>
-                    {language === 'es' ? 'Proyectos Activos' : 'Active Projects'} ({actionProjects.filter(isNotOnHold).length})
+                    {language === 'es' ? 'Proyectos Activos' : 'Active Projects'} ({realActiveProjects.length})
                   </h4>
                   <div className="projects-carousel-grid small-cards">
-                    {actionProjects
-                      .filter(isNotOnHold)
+                    {realActiveProjects
                       .map((project, idx) => (
                         <div key={idx} className={`project-carousel-card small-card ${getStatusColorClass(project.status)}`}>
                           <div className="proj-card-header">
@@ -693,7 +615,7 @@ export default function DashboardView({ data, weeklyHistory = [], projectHistory
                           )}
                         </div>
                       ))}
-                    {actionProjects.filter(isNotOnHold).length === 0 && (
+                    {realActiveProjects.length === 0 && (
                       <p className="text-muted" style={{ fontSize: '0.85rem' }}>{language === 'es' ? 'No hay proyectos activos prioritarios' : 'No active priority projects'}</p>
                     )}
                   </div>

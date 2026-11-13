@@ -249,3 +249,100 @@ describe('parseQualityCsv — hoja sin las secciones esperadas', () => {
     expect(result.days91to120).toBeNull();
   });
 });
+
+// Layout del tab a noviembre de 2026: desaparecieron las tablas "KPI Last 30
+// Days / 31-60 / 61-90 / 91-120" y quedo una tabla del mes en curso
+// ("KPI (11/01 - 11/30)") con una columna nueva "Previous Month KPI" en F, que
+// corre Projects/Explanation a G/H. La tabla de % paso a tener la columna
+// "KPI (30 Days)" en el medio, y la hoja formatea algunos % como moneda
+// ("$0.22" = 22%).
+const CSV_NOV_2026 = [
+  'Engineer,KPI (30 Days),% of Total',
+  'Luis,"$189,394.46",39.5%',
+  'Jose,"$107,063.73",$0.22',
+  'Joaquin Paiva,$0.00,$0.00',
+  ',,,,',
+  'KPI (11/01 - 11/30)',
+  'Engineer,Own Points,Revision Points,Nesting Points,Total KPI,Previous Month KPI,Projects that Added,Dynamic Explanation',
+  'Luis,"71,665.92",0.00,$0.00,"$71,665.92","141,635.61","12868, 12921","Luis has accumulated 71,665.92 pts"',
+  'Jose,0.00,0.00,"$30,532.50","$30,532.50","103,209.87","12979, 12868","Jose has accumulated 30,532.50 pts"',
+  ',,,,',
+  'π',
+  'Engineer,Working Days,Labor Hours,Value Produced,$/Hour',
+  'Luis,10,80,"$71,665.92",$895.82',
+].join('\n');
+
+describe('parseQualityCsv — layout de noviembre 2026', () => {
+  const result = parseQualityCsv(CSV_NOV_2026);
+
+  it('encuentra la columna "% of Total" aunque no sea la B', () => {
+    expect(result.kpiData.map(r => r.engineer)).toEqual(['Luis', 'Jose', 'Joaquin Paiva']);
+    expect(result.kpiData[0].percent).toBeCloseTo(39.5);
+  });
+
+  it('lee un % formateado como fraccion en moneda ("$0.22" = 22%)', () => {
+    expect(result.kpiData[1].percent).toBeCloseTo(22);
+    expect(result.kpiData[2].percent).toBe(0);
+  });
+
+  it('toma la tabla del mes en curso con su titulo real', () => {
+    expect(result.currentMonth.title).toBe('KPI (11/01 - 11/30)');
+    expect(result.currentMonth.rows.map(r => r.engineer)).toEqual(['Luis', 'Jose']);
+  });
+
+  it('ubica proyectos y explicacion por encabezado, no por posicion', () => {
+    const luis = result.currentMonth.rows[0];
+    expect(luis.totalKPI).toBeCloseTo(71665.92);
+    expect(luis.projects).toBe('12868, 12921');
+    expect(luis.explanation).toBe('Luis has accumulated 71,665.92 pts');
+  });
+
+  it('no confunde la tabla de performance con la del mes', () => {
+    expect(result.currentMonth.rows).toHaveLength(2);
+  });
+});
+
+// Tablas WEEKLY KPI (filas 285-305 del tab a noviembre 2026): la fuente de los
+// graficos de Team Stats.
+const CSV_WEEKLY = [
+  'WEEKLY KPI - NOVEMBER 2026 (CURRENT MONTH),,,,,,',
+  'Engineer,Week 1,Week 2,Week 3,Week 4,Week 5,Month Total',
+  'Luis,"85,939.22","4,165.90",0.00,0.00,0.00,"90,105.12"',
+  'Rocio,0.00,0.00,0.00,0.00,0.00,0.00',
+  'Total,"85,939.22","4,165.90",0.00,0.00,0.00,"90,105.12"',
+  ',,,,,,',
+  'WEEKLY KPI - OCTOBER 2026 (PREVIOUS MONTH),,,,,,',
+  'Engineer,Week 1,Week 2,Week 3,Week 4,Week 5,Month Total',
+  'Luis,"25,176.90","15,977.50","48,931.65","-50,026.22","101,575.78","141,635.61"',
+  'Total,"25,176.90","15,977.50","48,931.65","-50,026.22","101,575.78","141,635.61"',
+].join('\n');
+
+describe('parseQualityCsv — tablas WEEKLY KPI', () => {
+  const { weeklyCurrent, weeklyPrevious } = parseQualityCsv(CSV_WEEKLY);
+
+  it('separa el mes actual del anterior y toma el mes del titulo', () => {
+    expect(weeklyCurrent.month).toBe('November 2026');
+    expect(weeklyPrevious.month).toBe('October 2026');
+  });
+
+  it('lee las semanas y el Month Total de cada ingeniero', () => {
+    expect(weeklyCurrent.weeks).toEqual(['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5']);
+    expect(weeklyCurrent.rows[0]).toEqual({
+      engineer: 'Luis',
+      weeks: [85939.22, 4165.9, 0, 0, 0],
+      monthTotal: 90105.12,
+    });
+  });
+
+  it('la fila Total no es un ingeniero', () => {
+    expect(weeklyCurrent.rows.map(r => r.engineer)).toEqual(['Luis', 'Rocio']);
+  });
+
+  it('respeta los valores negativos de la hoja', () => {
+    expect(weeklyPrevious.rows[0].weeks[3]).toBeCloseTo(-50026.22);
+  });
+
+  it('sin las tablas devuelve null', () => {
+    expect(parseQualityCsv('a,b\n1,2').weeklyCurrent).toBeNull();
+  });
+});

@@ -13,17 +13,14 @@ import {
 import { useLanguage } from '../utils/LanguageContext';
 import { Mail, Lock, User, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import LoginIntroBackground from './LoginIntroBackground';
+import { DESIGNERS } from '../utils/designers';
 import './LoginView.css';
 
 const DEFAULT_DESIGNERS = ['Joaquin', 'Jose', 'Luis', 'Santiago', 'Julieta', 'Andres', 'Delfina', 'Josema'];
 
-const DESIGNER_NAMES = [
-  "Blerta Veseli", "Caryn Henslovitz", "Iris Lopes", "Kat Baumgartner",
-  "Krisztina Vizi", "Lana Kravtchenko", "Luana Tamagnone", "Malanie Dalfrey",
-  "Marsha Diquez", "Mauricio Dasso", "melissa Barker", "Michael Kaboskey",
-  "Monica Gabriel", "Natalie Ball", "Nicole Dugan", "Russell Reiner",
-  "Sarah Manev", "Tricia Hatton"
-].sort();
+// Misma lista canonica que el resto de la app (era una copia aparte que habia
+// quedado desfasada, con "melissa Barker" en minuscula).
+const DESIGNER_NAMES = [...DESIGNERS].sort();
 
 export default function LoginView({ data }) {
   const { t, language } = useLanguage();

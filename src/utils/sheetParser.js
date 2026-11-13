@@ -164,6 +164,13 @@ export async function fetchAndParseData() {
         if (data[i + 1]) headers = createHeaderMap(data[i + 1]);
         i++; // skip header row
         continue;
+      } else if (currentSection !== 'onHoldNotes' && row.some(c => String(c || '').trim().toLowerCase() === 'designer & email')) {
+        // Misma tabla sin su fila de titulo: la hoja la perdio en noviembre de
+        // 2026 y sus filas caian dentro de priorityAnalysis como proyectos
+        // con SO "Designer & Email" y SO "<nombre>\n<email>".
+        currentSection = 'onHoldNotes';
+        headers = createHeaderMap(row);
+        continue;
       } else if (rowString.includes('Week over Week Comparison')) {
         currentSection = 'weekOverWeek';
         // The NEXT row is the header with date labels - parse it
@@ -194,6 +201,22 @@ export async function fetchAndParseData() {
           parsedData.financialImpact.description = data[i + 1].join('').trim();
         }
         i++; // skip description row
+        continue;
+      } else if (normalize(row[1]) === 'status' && normalize(row[2]) === 'value') {
+        // Misma tabla sin su fila de titulo "Financial Impact Analysis" (la hoja
+        // la perdio en noviembre de 2026): se reconoce por su encabezado, y la
+        // descripcion es el texto de la fila de arriba.
+        currentSection = 'financialImpact';
+        if (!parsedData.financialImpact.description) {
+          let k = i - 1;
+          while (k >= 0 && isBlankRow(data[k])) k--;
+          if (k >= 0) parsedData.financialImpact.description = data[k].join('').trim();
+        }
+        continue;
+      } else if (rowString.includes('Performance Improvement Recommendations')) {
+        // Ninguna vista la usa; solo cierra la seccion anterior para que su
+        // texto no se cuele en ella.
+        currentSection = null;
         continue;
       } else if (rowString.includes('Top Active Projects by Cost')) {
         currentSection = 'topCostProjects';
@@ -321,7 +344,14 @@ export async function fetchAndParseData() {
         const elementIdx = getIdx(headers, ['elementdoors', 'element'], 6);
         const installIdx = getIdx(headers, ['installdate', 'install'], 7);
 
-        if (row[soIdx] && row[soIdx].toUpperCase() !== 'SO#') {
+        // La tabla termina en la primera fila sin SO numerico. Sin este corte,
+        // cuando la hoja perdio el titulo "Financial Impact Analysis", el texto
+        // de ON HOLD, la tabla Status/Value y las recomendaciones aparecian en
+        // Materials como proyectos con SO "#Status", "#Total"...
+        const soCell = String(row[soIdx] ?? '').trim();
+        if (soCell && !/^\d+$/.test(soCell) && soCell.toUpperCase() !== 'SO#') {
+          currentSection = null;
+        } else if (soCell && soCell.toUpperCase() !== 'SO#') {
           parsedData.materialRequirements.push({
             so: row[soIdx],
             name: row[nameIdx],
@@ -411,10 +441,17 @@ const isBlankRow = (row) => !row || row.every(cell => normalize(cell) === '');
 // unica fuente de porcentajes: la tabla de totales de arriba no tiene columna
 // de %, y leerla por posicion daba la lista de SOs de "Projects that Added"
 // interpretada como numero (porcentajes de 1.2e+49).
+//
+// La columna del % se busca por encabezado: en noviembre de 2026 la hoja metio
+// "KPI (30 Days)" en la B y el % paso a la C, y leerlo fijo en la B dejo la
+// tabla vacia (Team Stats mostraba "No data found").
 function parsePercentTable(data) {
-  const headerIndex = data.findIndex(row =>
-    normalize(row?.[0]) === 'engineer' && normalize(row?.[1]).includes('% of total')
-  );
+  let percentCol = -1;
+  const headerIndex = data.findIndex(row => {
+    if (normalize(row?.[0]) !== 'engineer') return false;
+    percentCol = (row || []).findIndex(cell => normalize(cell).includes('% of total'));
+    return percentCol !== -1;
+  });
   if (headerIndex === -1) return [];
 
   const rows = [];
@@ -426,10 +463,18 @@ function parsePercentTable(data) {
     if (!engineer) break;
     if (['total', 'so.team', 'team'].some(kw => normalize(engineer).includes(kw))) break;
 
-    rows.push({ engineer, percent: parseNumericCell(row[1]) });
+    rows.push({ engineer, percent: parsePercentCell(row[percentCol]) });
   }
   return rows;
 }
+
+// "39.5%" -> 39.5. Sin signo de % la hoja trae la fraccion con formato de
+// moneda ("$0.22" = 22%), asi que un valor <= 1 se escala.
+const parsePercentCell = (value) => {
+  const n = parseNumericCell(value);
+  if (String(value ?? '').includes('%')) return n;
+  return Math.abs(n) <= 1 ? n * 100 : n;
+};
 
 // Tablas por periodo: una fila-titulo ("KPI Last 30 Days (07/20 - 08/19)"),
 // una fila de encabezado y las filas de ingenieros hasta la primera vacia.
@@ -447,7 +492,18 @@ function parsePeriodTable(data, titlePattern) {
   // La fila siguiente deberia ser el encabezado de columnas; si la hoja lo
   // pierde, se arranca igual desde ahi antes que devolver una tabla vacia.
   let cursor = titleIndex + 1;
-  if (normalize(data[cursor]?.[0]) === 'engineer') cursor++;
+  // Proyectos y explicacion se ubican por encabezado: la tabla mensual de
+  // noviembre 2026 metio "Previous Month KPI" en la F y los corrio a G/H.
+  // Sin encabezado se cae a las posiciones historicas (F y G).
+  let projectsCol = 5;
+  let explanationCol = 6;
+  const header = data[cursor];
+  if (normalize(header?.[0]) === 'engineer') {
+    const find = (label) => header.findIndex(cell => normalize(cell).includes(label));
+    if (find('projects') !== -1) projectsCol = find('projects');
+    if (find('explanation') !== -1) explanationCol = find('explanation');
+    cursor++;
+  }
 
   const rows = [];
   for (let i = cursor; i < data.length; i++) {
@@ -469,8 +525,8 @@ function parsePeriodTable(data, titlePattern) {
       // suma de lo que se muestra da un centavo mas. Se muestra lo que dice
       // la hoja.
       totalKPI: parseNumericCell(row[4]),
-      projects: String(row[5] ?? '').trim(),
-      explanation: String(row[6] ?? '').trim(),
+      projects: String(row[projectsCol] ?? '').trim(),
+      explanation: String(row[explanationCol] ?? '').trim(),
     });
   }
 
@@ -491,11 +547,60 @@ function parsePeriodTable(data, titlePattern) {
   return { title, rows, periodTotal };
 }
 
+// Tablas "WEEKLY KPI - NOVEMBER 2026 (CURRENT MONTH)" / "(PREVIOUS MONTH)":
+// puntos de cada ingeniero semana por semana. Son la fuente de los graficos de
+// Team Stats. Las columnas se ubican por encabezado ("Week N", "Month Total").
+function parseWeeklyKpiTable(data, which) {
+  const titlePattern = new RegExp(`^weekly\\s+kpi\\s*-\\s*(.+?)\\s*\\(${which}\\s+month\\)`, 'i');
+  const titleIndex = data.findIndex(row => titlePattern.test(String(row?.[0] ?? '').trim()));
+  if (titleIndex === -1) return null;
+
+  const title = String(data[titleIndex][0]).trim();
+  const month = title.match(titlePattern)[1]
+    .toLowerCase()
+    .replace(/\b\w/g, c => c.toUpperCase());
+
+  const header = data[titleIndex + 1] || [];
+  const weekCols = [];
+  let totalCol = -1;
+  header.forEach((cell, i) => {
+    const h = normalize(cell);
+    if (/^week\s*\d+$/.test(h)) weekCols.push(i);
+    else if (h === 'month total') totalCol = i;
+  });
+  if (weekCols.length === 0) return null;
+
+  const rows = [];
+  for (let i = titleIndex + 2; i < data.length; i++) {
+    const row = data[i];
+    if (isBlankRow(row)) break;
+    const engineer = String(row[0] ?? '').trim();
+    if (!engineer || normalize(engineer) === 'total') break;
+    rows.push({
+      engineer,
+      weeks: weekCols.map(c => parseNumericCell(row[c])),
+      monthTotal: totalCol !== -1 ? parseNumericCell(row[totalCol]) : 0,
+    });
+  }
+
+  return {
+    title,
+    month,
+    weeks: weekCols.map(c => String(header[c]).trim()),
+    rows,
+  };
+}
+
 export function parseQualityCsv(csvText) {
   const { data } = Papa.parse(csvText, { skipEmptyLines: false });
 
   return {
     kpiData: parsePercentTable(data),
+    weeklyCurrent: parseWeeklyKpiTable(data, 'current'),
+    weeklyPrevious: parseWeeklyKpiTable(data, 'previous'),
+    // "KPI (11/01 - 11/30)": la tabla del mes en curso que reemplazo a las
+    // ventanas de 30/60/90/120 dias.
+    currentMonth: parsePeriodTable(data, /^kpi\s*\(\s*\d{1,2}\/\d{1,2}\s*-\s*\d{1,2}\/\d{1,2}\s*\)\s*$/i),
     last30Days: parsePeriodTable(data, /^kpi\s+last\s+30\s+days/i),
     days31to60: parsePeriodTable(data, /^kpi\s+31\s*-\s*60\s+days/i),
     days61to90: parsePeriodTable(data, /^kpi\s+61\s*-\s*90\s+days/i),

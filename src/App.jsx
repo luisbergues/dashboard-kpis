@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchAndParseData, fetchAndParseProjectMaterials } from './utils/sheetParser'
 import { fetchAndParseMasterSchedule } from './utils/masterSchedule'
 import { getSharedProjectSo } from './utils/projectDeepLink'
+import { DESIGNER_PERFORMANCE_ENABLED } from './utils/featureFlags'
 import { getCachedData, setCachedData, isCacheFresh } from './utils/dbCache'
 import { checkDbSizeAndArchive } from './utils/archiveHelpers'
 import { archiveMissingCompletedProjects, archiveCurrentlyCompletedProjects, fetchArchivedCompletedProjects, purgeExpiredArchives } from './utils/completedProjectsArchive'
@@ -54,7 +55,7 @@ import { shortProjectName } from './utils/projectName'
 import { normalizeNotesBySo, noteStorageKey } from './utils/projectNotes'
 import { recordStatusTransitions } from './utils/statusTransitions'
 import { recordValidationMetrics, fetchValidationMetrics } from './utils/validationMetrics'
-import { normalizeWeeklyHistory } from './utils/weeklyHistory'
+import { WEEKLY_COMPLETED_PATH, buildCompletedEntry, completedEntryChanged, normalizeWeeklyCompleted } from './utils/weeklyCompleted'
 import { pendingDesignerAssignments } from './utils/pendingDesignerAssignments'
 import { useProjectTags } from './utils/useProjectTags'
 import { subscribeToDirectory, registerSelf } from './utils/engineerDirectory'
@@ -71,8 +72,12 @@ function App() {
   const [activeTab, setActiveTab] = useState(() => {
     // Un link compartido (?so=12705) manda directo a Designer Perf., por encima
     // de la ultima pestana usada: el disenador lo abre para ver ese proyecto.
-    if (getSharedProjectSo()) return 'designer-performance';
-    return localStorage.getItem('active_tab') || 'dashboard';
+    // Con el modulo apagado (ver featureFlags.js) ni el link ni una pestaña
+    // guardada pueden abrirlo.
+    if (DESIGNER_PERFORMANCE_ENABLED && getSharedProjectSo()) return 'designer-performance';
+    const stored = localStorage.getItem('active_tab');
+    if (!DESIGNER_PERFORMANCE_ENABLED && stored === 'designer-performance') return 'dashboard';
+    return stored || 'dashboard';
   });
   const [projectNotes, setProjectNotes] = useState({});
   const [overrides, setOverrides] = useState({});
@@ -93,7 +98,7 @@ function App() {
   const [userProfile, setUserProfile] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
-  const [weeklyHistory, setWeeklyHistory] = useState([]);
+  const [weeklyCompleted, setWeeklyCompleted] = useState([]);
   const [focusedProjectSo, setFocusedProjectSo] = useState(null);
   // Referencia { so, noteId } a la nota que abre el modal de respuesta.
   //
@@ -197,76 +202,43 @@ function App() {
   // Fuente de Designer Performance: la pestaña "Master Schedule Mirror", aguas
   // arriba del weekly KPI. Va en su propia query — no en el cache de
   // dashboardData — para no invalidar las entradas de cache ya guardadas.
+  //
+  // Con Designer Performance apagado solo se pide al abrir Admin (detector de
+  // huerfanos), en vez de bajar ~450 KB cada 30 s para todos.
   const { data: masterProjects } = useQuery({
     queryKey: ['masterSchedule'],
     queryFn: fetchAndParseMasterSchedule,
+    enabled: DESIGNER_PERFORMANCE_ENABLED || activeTab === 'admin',
     refetchInterval: 30000,
     refetchIntervalInBackground: false,
   });
 
-  // Save weekly snapshots to Firebase & load history
-  // We save TWO snapshots per sheet update: one for 'previous week' and one for 'current week'
+  // Medicion semanal de "Completed" para el grafico Week over Week. Va a su
+  // propio nodo, weekly_completed (ver weeklyCompleted.js): weekly_history
+  // guarda las mediciones viejas y se conserva sin tocar.
   //
   // Skip entirely for designers: database.rules.json denies designer writes
-  // to weekly_history, so this used to fire a set() that always failed with
-  // PERMISSION_DENIED for that role (silently swallowed by the catch below).
+  // here, so the set() would always fail with PERMISSION_DENIED for that role.
   useEffect(() => {
     if (!data || !db || userProfile?.role === 'designer') return;
 
     const saveAndLoadHistory = async () => {
       try {
-        const prevLabel = data.weekLabels?.previous || 'Previous';
-        const currLabel = data.weekLabels?.current || 'Current';
-
-        // Helper: sanitize label for Firebase key (convert to lowercase for case-insensitivity)
-        const toKey = (label) => label.toLowerCase().replace(/[.#$/\[\]]/g, '_').replace(/\s+/g, '_');
-
-        // Save previous week snapshot (with 'previous' values)
-        const prevKey = toKey(prevLabel);
-        const prevRef = ref(db, `weekly_history/${prevKey}`);
-        const prevSnap = await get(prevRef);
-        if (!prevSnap.exists()) {
-          const prevSnapshot = {
-            label: prevLabel,
-            savedAt: new Date().toISOString(),
-            metrics: {}
-          };
-          data.weekOverWeek.forEach(m => {
-            prevSnapshot.metrics[m.metric] = parseInt(m.previous, 10) || 0;
-          });
-          await set(prevRef, prevSnapshot);
-          console.log(`📊 Saved weekly snapshot for: ${prevLabel}`);
+        // Solo la semana en curso. Se reescribe mientras la semana sigue
+        // abierta, asi el registro termina reflejando el ultimo estado de la
+        // semana y no el del primer dia en que alguien abrio la app.
+        const entry = buildCompletedEntry(data.weekOverWeek, data.weekLabels?.previous);
+        const weekRef = ref(db, `${WEEKLY_COMPLETED_PATH}/${entry.weekStart}`);
+        const weekSnap = await get(weekRef);
+        if (completedEntryChanged(weekSnap.exists() ? weekSnap.val() : null, entry)) {
+          await set(weekRef, { ...entry, savedAt: new Date().toISOString() });
+          console.log(`📊 Saved weekly Completed for: ${entry.weekStart}`);
         }
 
-        // Save current week snapshot (with 'current' values)
-        const currKey = toKey(currLabel);
-        const currRef = ref(db, `weekly_history/${currKey}`);
-        const currSnap = await get(currRef);
-        if (!currSnap.exists()) {
-          const currSnapshot = {
-            label: currLabel,
-            savedAt: new Date().toISOString(),
-            metrics: {}
-          };
-          data.weekOverWeek.forEach(m => {
-            currSnapshot.metrics[m.metric] = parseInt(m.current, 10) || 0;
-          });
-          await set(currRef, currSnapshot);
-          console.log(`📊 Saved weekly snapshot for: ${currLabel}`);
-        }
-
-        // Load all historical snapshots
-        const historyRef = ref(db, 'weekly_history');
-        const historySnap = await get(historyRef);
-        if (historySnap.exists()) {
-          // Ordenar/deduplicar por la FECHA de la semana, no por el texto de la
-          // etiqueta: eso colapsa "JULY 06, 2026" con "JULY 6, 2026" y descarta
-          // los snapshots sin fecha ("Previous Week") que quedaron guardados de
-          // una lectura fallida del sheet. Ver weeklyHistory.js.
-          setWeeklyHistory(normalizeWeeklyHistory(historySnap.val(), 10));
-        }
+        const allSnap = await get(ref(db, WEEKLY_COMPLETED_PATH));
+        setWeeklyCompleted(normalizeWeeklyCompleted(allSnap.exists() ? allSnap.val() : null));
       } catch (err) {
-        console.error('Error managing weekly history:', err);
+        console.error('Error managing weekly Completed:', err);
       }
     };
 
@@ -604,7 +576,9 @@ function App() {
       // que quien puede gestionarlas (roles de ingeniería) recibe un
       // recordatorio en cada apertura de la app hasta que la resuelva o
       // confirme si el diseñador realmente pidió ese cambio.
-      if (!isCompletedOrCancelled && canManageDesignerNotes(userProfile)) {
+      // Apagado junto con el modulo (ver featureFlags.js): sin Designer
+      // Performance no hay KPI al que esos dias le resten puntos.
+      if (DESIGNER_PERFORMANCE_ENABLED && !isCompletedOrCancelled && canManageDesignerNotes(userProfile)) {
         const unresolvedDesignerNotes = notes.filter(n => {
           const effectiveType = n.noteType || (n.priority ? 'priority' : 'normal');
           return effectiveType === 'designer' && !n.resolvedAt;
@@ -703,14 +677,15 @@ function App() {
     const isDesigner = userProfile?.role === 'designer';
 
     // Redirect designer away from restricted tabs
-    if (isDesigner && !['pipeline', 'calendar', 'designer-performance'].includes(activeTab)) {
+    const designerTabs = ['pipeline', 'calendar', ...(DESIGNER_PERFORMANCE_ENABLED ? ['designer-performance'] : [])];
+    if (isDesigner && !designerTabs.includes(activeTab)) {
       setTimeout(() => setActiveTab('pipeline'), 0);
       return <div className="loading-state"><Loader2 size={20} className="animate-spin" /> Loading...</div>;
     }
 
     switch (activeTab) {
       case 'dashboard':
-        return isDesigner ? null : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} projectHistory={projectHistory} />;
+        return isDesigner ? null : <DashboardView data={mergedData} weeklyCompleted={weeklyCompleted} projectHistory={projectHistory} />;
       case 'calendar': return <CalendarView data={mergedData} currentUser={currentUser} userProfile={userProfile} unreadByProject={unreadByProject} />;
       case 'my-projects':
         return isDesigner ? null : <MyProjectsView data={mergedData} currentUser={currentUser} userProfile={userProfile} setActiveTab={setActiveTab} setFocusedProjectSo={setFocusedProjectSo} focusedProjectSo={focusedProjectSo} clearFocusedProjectSo={() => setFocusedProjectSo(null)} focusedNoteRef={focusedNoteRef} setFocusedNoteRef={setFocusedNoteRef} clearFocusedNoteRef={() => setFocusedNoteRef(null)} engineerDirectory={engineerDirectory} unreadForMe={unreadForMe} tagsByNote={tagsByNote} markTagRead={markTagRead} />;
@@ -719,20 +694,23 @@ function App() {
         return isDesigner ? null : <MaterialsView data={mergedData} />;
       case 'quality': 
         if (userProfile?.role === 'administrative') {
-          return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} projectHistory={projectHistory} />;
+          return <DashboardView data={mergedData} weeklyCompleted={weeklyCompleted} projectHistory={projectHistory} />;
         }
         return isDesigner ? null : <DesignQualityView data={mergedData} />;
       case 'designer-performance':
+        if (!DESIGNER_PERFORMANCE_ENABLED) {
+          return <DashboardView data={mergedData} weeklyCompleted={weeklyCompleted} projectHistory={projectHistory} />;
+        }
         return <DesignerPerformanceApp data={mergedData} projectDesigners={projectDesigners} userProfile={userProfile} currentUser={currentUser} masterProjects={masterProjects} />;
       case 'admin':
-        return isSuperAdminRole(userProfile?.role) ? <AdminUsersView userProfile={userProfile} data={mergedData} masterProjects={masterProjects} /> : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} projectHistory={projectHistory} />;
+        return isSuperAdminRole(userProfile?.role) ? <AdminUsersView userProfile={userProfile} data={mergedData} masterProjects={masterProjects} /> : <DashboardView data={mergedData} weeklyCompleted={weeklyCompleted} projectHistory={projectHistory} />;
       case 'ess':
         return isSuperAdminRole(userProfile?.role) ? (
           <Suspense fallback={<div className="loading-state"><Loader2 size={20} className="animate-spin" /> Loading...</div>}>
             <EssView data={mergedData} />
           </Suspense>
-        ) : <DashboardView data={mergedData} weeklyHistory={weeklyHistory} projectHistory={projectHistory} />;
-      default: return <DashboardView data={mergedData} weeklyHistory={weeklyHistory} projectHistory={projectHistory} />;
+        ) : <DashboardView data={mergedData} weeklyCompleted={weeklyCompleted} projectHistory={projectHistory} />;
+      default: return <DashboardView data={mergedData} weeklyCompleted={weeklyCompleted} projectHistory={projectHistory} />;
     }
   };
 

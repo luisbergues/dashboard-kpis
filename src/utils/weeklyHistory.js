@@ -1,5 +1,7 @@
-// Normalizacion del nodo weekly_history (snapshots semanales del Week over
-// Week Comparison — ver App.jsx saveAndLoadHistory).
+// Normalizacion del nodo weekly_history: las mediciones VIEJAS del grafico
+// Week over Week (activos + etapas). Desde noviembre de 2026 la app ya no lo
+// lee ni lo escribe — la medicion actual vive en weekly_completed (ver
+// weeklyCompleted.js) — y el nodo se conserva como historico.
 //
 // Cada snapshot se guarda bajo una clave derivada de la etiqueta que escribe
 // una persona en el sheet ("JULY 6, 2026"), y esa etiqueta era ademas lo que
