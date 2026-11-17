@@ -33,11 +33,18 @@ import { buildDemoTree, DEMO_USER } from './demoData';
 // hablando con el Firebase real: el modo demo hay que pedirlo.
 //
 // Uso: npm run dev  ->  http://localhost:5173/?demo
-const IS_DEMO = Boolean(
+//
+// Sin `Boolean(...)` a proposito. Envuelto en esa llamada, Rolldown (el
+// bundler de Vite 8) deja de plegar la constante: `Boolean(false)` sigue
+// siendo una llamada a funcion, asi que IS_DEMO no se resuelve a `false` en
+// tiempo de compilacion, los ternarios de mas abajo no colapsan y los modulos
+// de demo viajan ENTEROS a produccion — backend falso y datos de mentira
+// incluidos. Estaba pasando: `grep __demoAuth dist/` daba positivo.
+// Con el `&&` pelado, `false && ...` se pliega y el bloque entero desaparece.
+const IS_DEMO =
   import.meta.env.DEV &&
   typeof window !== 'undefined' &&
-  new URLSearchParams(window.location.search).has('demo')
-);
+  new URLSearchParams(window.location.search).has('demo');
 
 // Firebase configuration using Vite environment variables
 const firebaseConfig = {

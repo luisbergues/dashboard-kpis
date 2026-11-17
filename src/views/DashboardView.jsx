@@ -50,7 +50,7 @@ ChartJS.register(
 );
 
 
-export default function DashboardView({ data, weeklyCompleted = [], projectHistory = {} }) {
+function DashboardViewInner({ data, weeklyCompleted = [], projectHistory = {} }) {
   const { t, language } = useLanguage();
   const { theme } = useTheme();
 
@@ -72,20 +72,6 @@ export default function DashboardView({ data, weeklyCompleted = [], projectHisto
     return () => { cancelled = true; };
   }, [data?.insights?.executive, data?.insights?.weekly, language]);
   const showTranslatedInsights = language === 'es' && translatedInsights.forLang === 'es';
-
-  if (!data) {
-    return (
-      <div className="dashboard-view animate-fade-in">
-        <header className="dashboard-header">
-          <SkeletonLoader type="text" width="250px" height="32px" />
-          <SkeletonLoader type="text" width="180px" height="20px" className="mt-sm" />
-        </header>
-        <div className="mixed-chart-container-wide">
-          <SkeletonLoader type="chart" />
-        </div>
-      </div>
-    );
-  }
 
   const { weekOverWeek = [], insights = {}, meetingPoints = [], topCostProjects = [], financialImpact = { rows: [] }, alerts = {} } = data;
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -157,7 +143,7 @@ export default function DashboardView({ data, weeklyCompleted = [], projectHisto
       // "Completed" en ambos idiomas, a pedido: es el nombre que usa el equipo.
       label: 'Completed',
       data: completedSeries.map(w => w.value),
-      backgroundColor: theme === 'light' ? '#10B981' : '#80EE98',
+      backgroundColor: theme === 'light' ? '#22A45D' : '#80EE98',
       borderRadius: 4,
     }],
   }), [completedSeries, language, theme]);
@@ -172,7 +158,7 @@ export default function DashboardView({ data, weeklyCompleted = [], projectHisto
     plugins: {
       legend: {
         labels: {
-          color: theme === 'light' ? '#374151' : '#94A3B8',
+          color: theme === 'light' ? '#4A4F47' : '#94A3B8',
           font: { family: 'Inter', size: 11 },
           boxWidth: 12,
           padding: 10,
@@ -180,8 +166,8 @@ export default function DashboardView({ data, weeklyCompleted = [], projectHisto
       },
       tooltip: {
         backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.98)' : 'rgba(11, 21, 32, 0.95)',
-        titleColor: theme === 'light' ? '#10B981' : '#80EE98',
-        bodyColor: theme === 'light' ? '#111827' : '#fff',
+        titleColor: theme === 'light' ? '#22A45D' : '#80EE98',
+        bodyColor: theme === 'light' ? '#1F2320' : '#fff',
         borderColor: theme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)',
         borderWidth: 1,
         padding: 12,
@@ -190,12 +176,12 @@ export default function DashboardView({ data, weeklyCompleted = [], projectHisto
     scales: {
       x: {
         grid: { display: false, drawBorder: false },
-        ticks: { color: theme === 'light' ? '#374151' : '#94A3B8', font: { size: 11 } }
+        ticks: { color: theme === 'light' ? '#4A4F47' : '#94A3B8', font: { size: 11 } }
       },
       y: {
         beginAtZero: true,
-        grid: { color: theme === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-        ticks: { color: theme === 'light' ? '#4B5563' : '#64748B' }
+        grid: { color: theme === 'light' ? 'rgba(40, 50, 30, 0.08)' : 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+        ticks: { color: theme === 'light' ? '#8A8F85' : '#64748B' }
       }
     }
   };
@@ -743,3 +729,23 @@ export default function DashboardView({ data, weeklyCompleted = [], projectHisto
   );
 }
 
+// El esqueleto de carga vive en este wrapper y no adentro del cuerpo. Adentro
+// quedaba ANTES de parte de los hooks (useState de currentSlide y los que
+// siguen), asi que React contaba distinta cantidad de hooks segun hubiera
+// datos o no. El cuerpo no se toco.
+export default function DashboardView(props) {
+  if (!props.data) {
+    return (
+      <div className="dashboard-view animate-fade-in">
+        <header className="dashboard-header">
+          <SkeletonLoader type="text" width="250px" height="32px" />
+          <SkeletonLoader type="text" width="180px" height="20px" className="mt-sm" />
+        </header>
+        <div className="mixed-chart-container-wide">
+          <SkeletonLoader type="chart" />
+        </div>
+      </div>
+    );
+  }
+  return <DashboardViewInner {...props} />;
+}

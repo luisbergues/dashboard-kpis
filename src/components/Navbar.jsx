@@ -166,6 +166,14 @@ export default function Navbar({ activeTab, setActiveTab, userProfile, isSuperAd
           type="button"
           className="nav-collapse-toggle"
           onClick={() => setIsSidebarCollapsed(prev => !prev)}
+          // `title` solo no alcanza: los lectores de pantalla lo anuncian de
+          // forma inconsistente y varios lo ignoran del todo. El boton no
+          // tiene texto, solo un chevron, asi que sin aria-label se anuncia
+          // como "boton" a secas.
+          aria-label={isSidebarCollapsed
+            ? (language === 'es' ? 'Expandir menú' : 'Expand menu')
+            : (language === 'es' ? 'Colapsar menú' : 'Collapse menu')}
+          aria-expanded={!isSidebarCollapsed}
           title={isSidebarCollapsed
             ? (language === 'es' ? 'Expandir menú' : 'Expand menu')
             : (language === 'es' ? 'Colapsar menú' : 'Collapse menu')}

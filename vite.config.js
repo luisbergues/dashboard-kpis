@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     VitePWA({
@@ -41,6 +41,30 @@ export default defineConfig({
     })
   ],
   build: {
-    chunkSizeWarningLimit: 2000
-  }
-})
+    chunkSizeWarningLimit: 2000,
+    // Tirar los console.* y los debugger del build de produccion.
+    //
+    // OJO: la receta habitual `esbuild: { drop: [...] }` NO hace nada en este
+    // proyecto. Vite 8 dejo de transformar con esbuild (la opcion figura como
+    // @deprecated en sus propios tipos) y ahora bundlea con Rolldown/Oxc, asi
+    // que esa clave se ignora en silencio: probado, el bundle salia byte por
+    // byte igual con y sin ella. El equivalente real es la opcion `minify` del
+    // output de Rolldown.
+    //
+    // `mangle` y `codegen` van explicitos porque pasar un objeto reemplaza los
+    // defaults: sin ellos se pierde el renombrado de identificadores y el
+    // bundle crece.
+    rollupOptions: {
+      output: {
+        minify: command === 'build'
+          ? {
+              module: true,
+              compress: { dropConsole: true, dropDebugger: true },
+              mangle: true,
+              codegen: true,
+            }
+          : undefined,
+      },
+    },
+  },
+}))

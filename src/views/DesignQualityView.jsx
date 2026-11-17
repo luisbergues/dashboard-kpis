@@ -38,6 +38,19 @@ function colorForEngineer(name, index) {
   return ENGINEER_PALETTE[index % ENGINEER_PALETTE.length] || `hsl(${(index * 47) % 360}, 30%, 55%)`;
 }
 
+// En modo claro las barras van semitransparentes para que no se vean tan
+// pesadas sobre fondo blanco; el hover vuelve al color pleno.
+const LIGHT_BAR_ALPHA = 0.6;
+
+function withAlpha(color, alpha) {
+  if (color.startsWith('#') && color.length === 7) {
+    const a = Math.round(alpha * 255).toString(16).padStart(2, '0');
+    return `${color}${a}`;
+  }
+  // hsl(...) de respaldo
+  return color.replace(/^hsl\((.*)\)$/, `hsla($1, ${alpha})`);
+}
+
 // Los cuatro bloques por periodo de la hoja, del mas reciente al mas viejo (el
 // mismo orden en que aparecen en el tab). `sheetSection` es el titulo que se
 // busca ahi; `shortLabel` es el que va en la leyenda del grafico.
@@ -321,15 +334,19 @@ export default function DesignQualityView() {
     if (!timeline) return null;
     return {
       labels: timeline.labels,
-      datasets: timeline.series.map((serie, index) => ({
-        label: serie.engineer,
-        data: serie.data,
-        backgroundColor: colorForEngineer(serie.engineer, index),
-        borderRadius: 3,
-        stack: 'engineers',
-      })),
+      datasets: timeline.series.map((serie, index) => {
+        const color = colorForEngineer(serie.engineer, index);
+        return {
+          label: serie.engineer,
+          data: serie.data,
+          backgroundColor: isLight ? withAlpha(color, LIGHT_BAR_ALPHA) : color,
+          hoverBackgroundColor: color,
+          borderRadius: 3,
+          stack: 'engineers',
+        };
+      }),
     };
-  }, [data.weeklyPrevious, data.weeklyCurrent, language]);
+  }, [data.weeklyPrevious, data.weeklyCurrent, language, isLight]);
 
   const weeklyChartOptions = useMemo(() => ({
     responsive: true,

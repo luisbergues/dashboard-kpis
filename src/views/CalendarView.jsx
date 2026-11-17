@@ -15,9 +15,8 @@ import { db, ref, set, remove, onValue } from '../utils/firebase';
 import { sendCalendarNoteEvent } from '../utils/sheetSync';
 import TerminatedEasterEgg from '../components/TerminatedEasterEgg';
 
-export default function CalendarView({ data, currentUser, userProfile, unreadByProject = {} }) {
+function CalendarViewInner({ data, currentUser, userProfile, unreadByProject = {} }) {
   const { t, language } = useLanguage();
-  if (!data) return null;
 
 
   const { priorityAnalysis } = data;
@@ -770,3 +769,13 @@ export default function CalendarView({ data, currentUser, userProfile, unreadByP
   );
 }
 
+// El guard de `data` vive en este wrapper y no adentro del cuerpo. Adentro
+// quedaba ANTES de todos los hooks, asi que React contaba una cantidad
+// distinta de hooks segun hubiera datos o no -- "Rendered more hooks than
+// during the previous render" en cuanto `data` pasara de null a objeto. Eran
+// los 99 errores de react-hooks/rules-of-hooks. El cuerpo no se toco: ahora
+// solo corre cuando ya hay data, que es lo que siempre quiso decir el guard.
+export default function CalendarView(props) {
+  if (!props.data) return null;
+  return <CalendarViewInner {...props} />;
+}

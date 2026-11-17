@@ -50,10 +50,10 @@ const PROJECTS = [
 // Forma exacta que devuelve sheetParser.parseCSV — si esto se desalinea, las
 // vistas rompen. Ver el objeto `parsedData` en sheetParser.js.
 const parsedData = {
-  priorityAnalysis: PROJECTS.map(p => ({
+  priorityAnalysis: /* @__PURE__ */ PROJECTS.map(p => ({
     so: p.so,
     name: p.name,
-    install: installDate(p.install),
+    install: /* @__PURE__ */ installDate(p.install),
     eng: p.eng,
     status: p.status,
     finalsScheduled: '',
@@ -73,17 +73,17 @@ const parsedData = {
     { name: 'Lopez Penthouse',  cost: '$48,200' },
     { name: 'Perez Residence',  cost: '$31,750' },
   ],
-  materialRequirements: PROJECTS.map(p => ({
+  materialRequirements: /* @__PURE__ */ PROJECTS.map(p => ({
     so: p.so,
     name: p.name,
     thermofoil: 'No',
     noHoles: 'No',
     dovetail: 'Yes',
     element: 'No',
-    installDate: installDate(p.install),
+    installDate: /* @__PURE__ */ installDate(p.install),
   })),
-  statusHistory: PROJECTS.map(p => ({
-    so: p.so, name: p.name, status: p.status, statusDate: installDate(p.install - 20),
+  statusHistory: /* @__PURE__ */ PROJECTS.map(p => ({
+    so: p.so, name: p.name, status: p.status, statusDate: /* @__PURE__ */ installDate(p.install - 20),
   })),
   weekLabels: { previous: 'AUGUST 17, 2026', current: 'AUGUST 24, 2026' },
   financialImpact: { description: '', rows: [] },
@@ -92,16 +92,16 @@ const parsedData = {
 
 const notes = {
   '12480': {
-    n_1: { id: 'n_1', text: 'Medidas finales entregadas, todo OK.', noteType: 'normal', priority: false, createdAt: iso(-3, 11), createdBy: 'Julieta' },
-    n_2: { id: 'n_2', text: 'Cliente pidio sumar un cajon XL en el walk-in principal.', noteType: 'normal', priority: false, createdAt: iso(-1, 17), createdBy: 'Luis' },
-    n_3: { id: 'n_3', text: 'Confirmar el color del edgeband antes de mandar a CNC. Lo miras vos?', noteType: 'priority', priority: true, createdAt: iso(0, 9), createdBy: 'Santiago' },
+    n_1: { id: 'n_1', text: 'Medidas finales entregadas, todo OK.', noteType: 'normal', priority: false, createdAt: /* @__PURE__ */ iso(-3, 11), createdBy: 'Julieta' },
+    n_2: { id: 'n_2', text: 'Cliente pidio sumar un cajon XL en el walk-in principal.', noteType: 'normal', priority: false, createdAt: /* @__PURE__ */ iso(-1, 17), createdBy: 'Luis' },
+    n_3: { id: 'n_3', text: 'Confirmar el color del edgeband antes de mandar a CNC. Lo miras vos?', noteType: 'priority', priority: true, createdAt: /* @__PURE__ */ iso(0, 9), createdBy: 'Santiago' },
   },
   '12511': {
-    n_4: { id: 'n_4', text: 'Quote actualizado con los tres ambientes.', noteType: 'normal', priority: false, createdAt: iso(-2, 15), createdBy: 'Jose' },
-    n_5: { id: 'n_5', text: 'Falta la firma en los planos. Necesito que lo revises antes del jueves.', noteType: 'designer', priority: false, urgency: 'yellow', createdAt: iso(0, 8), createdBy: 'Julieta' },
+    n_4: { id: 'n_4', text: 'Quote actualizado con los tres ambientes.', noteType: 'normal', priority: false, createdAt: /* @__PURE__ */ iso(-2, 15), createdBy: 'Jose' },
+    n_5: { id: 'n_5', text: 'Falta la firma en los planos. Necesito que lo revises antes del jueves.', noteType: 'designer', priority: false, urgency: 'yellow', createdAt: /* @__PURE__ */ iso(0, 8), createdBy: 'Julieta' },
   },
   '12533': {
-    n_6: { id: 'n_6', text: 'On hold hasta que el cliente decida el herraje.', noteType: 'normal', priority: false, createdAt: iso(-4, 10), createdBy: 'Luis' },
+    n_6: { id: 'n_6', text: 'On hold hasta que el cliente decida el herraje.', noteType: 'normal', priority: false, createdAt: /* @__PURE__ */ iso(-4, 10), createdBy: 'Luis' },
   },
 };
 
@@ -114,13 +114,13 @@ const project_tags = {
       id: 'tg_1', noteId: 'n_3', so: '12480',
       taggedUid: UIDS.Luis, taggedName: 'Luis',
       taggedByUid: UIDS.Santiago, taggedByName: 'Santiago',
-      createdAt: iso(0, 9), readAt: null,
+      createdAt: /* @__PURE__ */ iso(0, 9), readAt: null,
     },
     tg_2: {
       id: 'tg_2', noteId: 'n_2', so: '12480',
       taggedUid: UIDS.Santiago, taggedName: 'Santiago',
       taggedByUid: UIDS.Luis, taggedByName: 'Luis',
-      createdAt: iso(-1, 17), readAt: iso(-1, 18),
+      createdAt: /* @__PURE__ */ iso(-1, 17), readAt: /* @__PURE__ */ iso(-1, 18),
     },
   },
   '12511': {
@@ -128,15 +128,15 @@ const project_tags = {
       id: 'tg_3', noteId: 'n_5', so: '12511',
       taggedUid: UIDS.Luis, taggedName: 'Luis',
       taggedByUid: UIDS.Julieta, taggedByName: 'Julieta',
-      createdAt: iso(0, 8), readAt: null,
+      createdAt: /* @__PURE__ */ iso(0, 8), readAt: null,
     },
   },
 };
 
 // Los ocho registrados: el punto de la demo es que el selector se pueda usar,
 // que es justo lo que en produccion todavia no pasa.
-const engineer_directory = Object.fromEntries(
-  ENGINEERS.map(name => [UIDS[name], { name, updatedAt: iso(-5) }])
+const engineer_directory = /* @__PURE__ */ Object.fromEntries(
+  ENGINEERS.map(name => [UIDS[name], { name, updatedAt: /* @__PURE__ */ iso(-5) }])
 );
 
 export function buildDemoTree() {
@@ -147,7 +147,7 @@ export function buildDemoTree() {
         designerName: 'Luis',
         role: 'engineer',
         status: 'approved',
-        createdAt: iso(-120),
+        createdAt: /* @__PURE__ */ iso(-120),
       },
     },
 
@@ -184,8 +184,8 @@ export function buildDemoTree() {
     // saldria a buscar la planilla de Google REAL y reemplazaria los datos de
     // la demo por los de produccion, justo lo que este modo quiere evitar.
     firebase_cache: {
-      data: { timestamp: iso(365 * 20), parsedData },
-      meta: { timestamp: iso(365 * 20), version: 'demo' },
+      data: { timestamp: /* @__PURE__ */ iso(365 * 20), parsedData },
+      meta: { timestamp: /* @__PURE__ */ iso(365 * 20), version: 'demo' },
     },
   };
 }

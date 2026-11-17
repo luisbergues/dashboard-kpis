@@ -497,3 +497,14 @@
   font-weight: 500;
 }
 
+
+/* Light theme: color liso en vez de un degradé de un solo color (ambos
+   tokens valen #2B2B2B en claro) y sombra neutra en vez del glow azul. */
+:root.light-theme .chatbot-toggle-btn {
+  background: #2B2B2B;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+:root.light-theme .chatbot-toggle-btn:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+}

@@ -98,7 +98,7 @@
 }
 
 :root.light-theme .notification-header {
-  background: #F9FAFB !important;
+  background: #F6F7F0 !important;
   border-bottom: 1px solid var(--card-border) !important;
 }
 
@@ -179,7 +179,7 @@
 }
 
 :root.light-theme .notification-item:hover {
-  background: #F3F4F6 !important;
+  background: #F6F7F0 !important;
   border-color: var(--card-border) !important;
 }
 
@@ -235,3 +235,13 @@
    campana que ocultaba el widget entero por el resto de la sesion, sin
    confirmacion ni deshacer. Ver NotificationBubble.jsx. */
 
+
+/* Light theme: campanita carbón lisa; el badge numérico sigue rojo. */
+:root.light-theme .notification-toggle-btn {
+  background: #2B2B2B;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+:root.light-theme .notification-toggle-btn:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+}

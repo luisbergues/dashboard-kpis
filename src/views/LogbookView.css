@@ -30,7 +30,7 @@
 }
 
 :root.light-theme .lb-root {
-  --lb-accent-light: #EEF0F3;
+  --lb-accent-light: #F6F7F0;
   --lb-hover-tint: rgba(0,0,0,0.04);
   --lb-subtle-tint: rgba(0,0,0,0.02);
 }

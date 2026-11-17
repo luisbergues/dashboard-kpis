@@ -30,7 +30,7 @@
 }
 
 :root.light-theme .cl-root {
-  --cl-accent-light: #EEF0F3;
+  --cl-accent-light: #F6F7F0;
   --cl-hover-tint: rgba(0,0,0,0.04);
   --cl-subtle-tint: rgba(0,0,0,0.02);
 }

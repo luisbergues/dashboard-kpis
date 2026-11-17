@@ -770,3 +770,49 @@
   }
 }
 
+
+/* ─── Light theme: dashboard minimalista ─────────────────
+   Paleta neutra (texto #1f2320 / #6b6f6c, superficies #fff #fafafa #f3f4f3,
+   bordes #e4e6e4). El rojo #e5484d queda solo para alertas reales.
+   Los colores del Action Plan (pastillas de estado, bordes de cards,
+   puntitos y subtítulos) no se tocan a propósito. */
+:root.light-theme .section-title svg,
+:root.light-theme .alert-banner-header svg,
+:root.light-theme .takeaways-title svg {
+  color: #1F2320;
+}
+
+:root.light-theme .history-badge {
+  color: #6B6F6C;
+  background: #F3F4F3;
+  border-color: #E4E6E4;
+}
+
+:root.light-theme .pipeline-value {
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  -webkit-text-fill-color: currentColor;
+  color: #1F2320;
+  text-shadow: none;
+}
+
+:root.light-theme .fi-card-value.fi-hold,
+:root.light-theme .fi-card-value.fi-progress {
+  color: #1F2320;
+  text-shadow: none;
+}
+
+:root.light-theme .fi-card-value.fi-risk {
+  color: #E5484D;
+  text-shadow: none;
+}
+
+:root.light-theme .carousel-takeaways {
+  background: #FAFAFA;
+  border-color: #E4E6E4;
+}
+
+:root.light-theme .takeaways-title {
+  color: #1F2320;
+}

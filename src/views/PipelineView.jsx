@@ -9,7 +9,7 @@ import { sendStageEvent, sendNoteEvent, sendEngineerAssignEvent } from '../utils
 import { shortProjectName } from '../utils/projectName';
 import { formatDisplayDate } from '../utils/dateFormat';
 import { noteStorageKey, normalizeNotesBySo } from '../utils/projectNotes';
-import { ENGINEERS } from '../utils/engineers';
+import { useTeamEngineers } from '../utils/useTeam';
 import TagSelector from '../components/TagSelector';
 import NoteReplyModal from '../components/NoteReplyModal';
 import NoteTagChips from '../components/NoteTagChips';
@@ -44,13 +44,15 @@ const getStageLabel = (stageId, language) => {
 };
 
 
-export default function PipelineView({
+function PipelineViewInner({
   data, currentUser, userProfile, focusedProjectSo, clearFocusedProjectSo,
   focusedNoteRef, clearFocusedNoteRef,
   engineerDirectory = {}, unreadByProject = {}, tagsByNote = {},
 }) {
   const { t, language } = useLanguage();
-  if (!data) return null;
+  // Viene de /team/engineers en RTDB, con la lista del codigo como respaldo:
+  // dar de alta a alguien ya no necesita un commit. Ver useTeam.js.
+  const engineers = useTeamEngineers();
 
   const [filter, setFilter] = useState('ALL');
   const [showMyProjects, setShowMyProjects] = useState(false);
@@ -843,7 +845,25 @@ export default function PipelineView({
                 key={project.so}
                 className={`project-card glass-card ${isCollapsed ? 'collapsed' : 'expanded'}`}
               >
-                <div className="project-header-row" onClick={() => toggleCollapse(project.so)}>
+                {/* Es un <div> y no un <button> para no tocar el CSS de la
+                    fila, asi que el rol, el foco y el teclado hay que
+                    declararlos a mano: sin esto no se puede expandir un
+                    proyecto sin mouse, y el lector de pantalla no anuncia
+                    que la fila se abre ni si esta abierta. */}
+                <div
+                  className="project-header-row"
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={!isCollapsed}
+                  aria-label={`${isCollapsed ? (language === 'es' ? 'Expandir' : 'Expand') : (language === 'es' ? 'Colapsar' : 'Collapse')} #${project.so}`}
+                  onClick={() => toggleCollapse(project.so)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleCollapse(project.so);
+                    }
+                  }}
+                >
                   <div className="project-main">
                     <div className="project-title-container">
                       <a
@@ -877,7 +897,7 @@ export default function PipelineView({
                           value=""
                         >
                           <option value="" disabled>{language === 'es' ? 'Asignar ING' : 'Assign ENG'}</option>
-                          {ENGINEERS.map(d => (
+                          {engineers.map(d => (
                             <option key={d} value={d} style={{ color: '#000' }}>{d}</option>
                           ))}
                         </select>
@@ -1254,4 +1274,15 @@ export default function PipelineView({
       )}
     </div>
   );
+}
+
+// El guard de `data` vive en este wrapper y no adentro del cuerpo. Adentro
+// quedaba ANTES de todos los hooks, asi que React contaba una cantidad
+// distinta de hooks segun hubiera datos o no -- "Rendered more hooks than
+// during the previous render" en cuanto `data` pasara de null a objeto. Eran
+// los 99 errores de react-hooks/rules-of-hooks. El cuerpo no se toco: ahora
+// solo corre cuando ya hay data, que es lo que siempre quiso decir el guard.
+export default function PipelineView(props) {
+  if (!props.data) return null;
+  return <PipelineViewInner {...props} />;
 }

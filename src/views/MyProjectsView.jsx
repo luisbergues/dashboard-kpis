@@ -71,7 +71,7 @@ const getStageLabel = (stageId, language) => {
 };
 
 
-export default function MyProjectsView({
+function MyProjectsViewInner({
   data, currentUser, userProfile, setActiveTab,
   setFocusedProjectSo, focusedProjectSo, clearFocusedProjectSo,
   focusedNoteRef, setFocusedNoteRef, clearFocusedNoteRef,
@@ -85,7 +85,6 @@ export default function MyProjectsView({
   // background show through — invisible on light theme's white background.
   const textOnSurface = isLight ? '#1e293b' : '#fff';
   const mutedOnSurface = isLight ? '#64748b' : '#94A3B8';
-  if (!data) return null;
 
   const { priorityAnalysis, onHoldNotes } = data;
 
@@ -1679,7 +1678,24 @@ export default function MyProjectsView({
               <div id={`project-card-${project.so}`} key={project.so} className={`project-card glass-card ${isCollapsed ? '' : 'is-expanded'}`} style={{ paddingBottom: isCollapsed ? '12px' : '24px' }}>
                 <div className="project-card-layout">
                   <div className="project-card-main">
-                    <div className="card-header-main" onClick={() => toggleCollapse(project.so)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {/* Mismo caso que PipelineView: la flecha ▼/▲ de mas abajo
+                        no es un boton, el clickeable es este div. Rol, foco y
+                        teclado van a mano para no tocar el layout. */}
+                    <div
+                      className="card-header-main"
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={!isCollapsed}
+                      aria-label={`${isCollapsed ? (language === 'es' ? 'Expandir' : 'Expand') : (language === 'es' ? 'Colapsar' : 'Collapse')} #${project.so}`}
+                      onClick={() => toggleCollapse(project.so)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          toggleCollapse(project.so);
+                        }
+                      }}
+                      style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
                       <div>
                         <a
                           href={`${window.location.origin}${window.location.pathname}?project=${project.so}`}
@@ -2529,3 +2545,13 @@ export default function MyProjectsView({
   );
 }
 
+// El guard de `data` vive en este wrapper y no adentro del cuerpo. Adentro
+// quedaba ANTES de todos los hooks, asi que React contaba una cantidad
+// distinta de hooks segun hubiera datos o no -- "Rendered more hooks than
+// during the previous render" en cuanto `data` pasara de null a objeto. Eran
+// los 99 errores de react-hooks/rules-of-hooks. El cuerpo no se toco: ahora
+// solo corre cuando ya hay data, que es lo que siempre quiso decir el guard.
+export default function MyProjectsView(props) {
+  if (!props.data) return null;
+  return <MyProjectsViewInner {...props} />;
+}

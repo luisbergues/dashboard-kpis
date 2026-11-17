@@ -1,11 +1,12 @@
 import Papa from 'papaparse';
+import { fetchSheetRows } from './fetchSheet';
 
 // Pestaña "Master Schedule Mirror" del mismo documento que el resto del
 // dashboard. Es la fuente aguas arriba: los proyectos aparecen acá antes de
 // llegar al weekly KPI, que es lo que necesita Designer Performance para
 // evaluar el intake (Fase 1) en su etapa real.
-export const MASTER_SCHEDULE_CSV_URL =
-  'https://docs.google.com/spreadsheets/d/1qENXOvlEEY70LQ4i4EQBA0rGpuDr9L1sQIPtEL-Rm1I/export?format=csv&gid=1648942410';
+// La URL de docs.google.com se fue de aca: obligaba a tener la planilla
+// publicada en la web y viajaba en el bundle. Ver api/sheet.js.
 
 const norm = (s) => String(s || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -27,7 +28,15 @@ export function parseMasterSchedule(csvText) {
   // Papa maneja comillas, comas internas y saltos de línea embebidos, que esta
   // pestaña tiene de sobra en la columna Comments.
   const { data } = Papa.parse(csvText, { skipEmptyLines: false });
-  if (!data.length) return [];
+  return parseMasterScheduleRows(data);
+}
+
+/**
+ * Igual que parseMasterSchedule pero desde filas ya parseadas, que es lo que
+ * devuelve /api/sheet. El wrapper de CSV de arriba queda para los tests.
+ */
+export function parseMasterScheduleRows(data) {
+  if (!data || !data.length) return [];
 
   const header = data[0].map(norm);
   const col = (...names) => {
@@ -79,10 +88,7 @@ export function parseMasterSchedule(csvText) {
 
 export async function fetchAndParseMasterSchedule() {
   try {
-    const cacheBuster = `&t=${new Date().getTime()}`;
-    const response = await fetch(`${MASTER_SCHEDULE_CSV_URL}${cacheBuster}`);
-    if (!response.ok) throw new Error('Failed to fetch Master Schedule CSV data');
-    return parseMasterSchedule(await response.text());
+    return parseMasterScheduleRows(await fetchSheetRows('masterSchedule'));
   } catch (error) {
     console.error('Error fetching Master Schedule Mirror:', error);
     return [];

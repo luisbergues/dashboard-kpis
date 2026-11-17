@@ -28,3 +28,16 @@ dist-ssr
 
 # Scratch de superpowers (ledger, briefs, review packages)
 .superpowers
+
+# Dumps y scripts sueltos de debug que quedaron commiteados por error.
+# Ignorarlos NO los saca del indice: siguen versionados hasta correr
+# `git rm --cached <archivo>`. No se borran aca a proposito: el contenido es un
+# volcado de sesion de herramienta, pero la decision de sacarlos es del usuario.
+recovered_*.json
+recover*.cjs
+recover.js
+verify-retention.mjs
+verify-archive-rules.js
+*.log
+debug*
+test-*.html

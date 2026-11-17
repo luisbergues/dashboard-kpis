@@ -1092,3 +1092,17 @@
   }
 }
 
+
+/* Light theme: botón primario liso (sin degradé ni glow). :not(:disabled)
+   evita que el hover le gane a las reglas de deshabilitado de arriba. */
+:root.light-theme .btn-primary {
+  background: #2B2B2B;
+  color: #FFFFFF;
+  box-shadow: none;
+}
+
+:root.light-theme .btn-primary:hover:not(:disabled) {
+  background: #1F2320;
+  filter: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}

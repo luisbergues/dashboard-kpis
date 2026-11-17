@@ -693,8 +693,8 @@
 /* In light theme, make the dark states of sliders look correct */
 :root.light-theme .theme-toggle-btn,
 :root.light-theme .lang-toggle-btn {
-  background: #E5E7EB;
-  border-color: #D1D5DB;
+  background: #E3E7D8;
+  border-color: #DDE1D3;
   box-shadow: none;
 }
 

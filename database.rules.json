@@ -71,6 +71,14 @@
       ".write": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved' && (root.child('users').child(auth.uid).child('role').val() === 'engineer_nester' || root.child('users').child(auth.uid).child('role').val() === 'engineer-admin')"
     },
 
+    "team": {
+      ".read": "auth != null",
+      ".write": "root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' && root.child('users').child(auth.uid).child('status').val() === 'approved'",
+      "engineers": {
+        ".validate": "newData.hasChildren()"
+      }
+    },
+
     "allowed_designers": {
       ".read": "auth != null && root.child('users').child(auth.uid).child('status').val() === 'approved'",
       ".write": "root.child('users').child(auth.uid).child('role').val() === 'engineer-admin' && root.child('users').child(auth.uid).child('status').val() === 'approved'"

@@ -1,7 +1,10 @@
 import Papa from 'papaparse';
 
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/1qENXOvlEEY70LQ4i4EQBA0rGpuDr9L1sQIPtEL-Rm1I/export?format=csv';
-const QUALITY_CSV_URL = 'https://docs.google.com/spreadsheets/d/1qENXOvlEEY70LQ4i4EQBA0rGpuDr9L1sQIPtEL-Rm1I/export?format=csv&gid=1762634268';
+import { fetchSheetRows } from './fetchSheet';
+
+// Las URLs de docs.google.com se fueron de aca a proposito: obligaban a tener
+// la planilla publicada en la web y viajaban en el bundle. Ahora la lectura
+// pasa por /api/sheet. Ver fetchSheet.js y api/sheet.js.
 
 // Helper function to map header titles to column indices
 const createHeaderMap = (row) => {
@@ -98,13 +101,10 @@ const parseDateStringOrNumber = (val) => {
 
 export async function fetchAndParseData() {
   try {
-    // Append a unique timestamp to prevent browser and CDN caching
-    const cacheBuster = `&t=${new Date().getTime()}`;
-    const response = await fetch(`${CSV_URL}${cacheBuster}`);
-    if (!response.ok) throw new Error('Failed to fetch CSV data');
-    const csvText = await response.text();
-
-    const { data } = Papa.parse(csvText, { skipEmptyLines: false });
+    // Sin cacheBuster: /api/sheet responde `Cache-Control: private, max-age=60`
+    // y lee la planilla en vivo en cada invocacion, asi que no hay CDN que
+    // enganar.
+    const data = await fetchSheetRows('main');
     
     // Data structures to hold parsed sections
     const parsedData = {
@@ -591,9 +591,12 @@ function parseWeeklyKpiTable(data, which) {
   };
 }
 
-export function parseQualityCsv(csvText) {
-  const { data } = Papa.parse(csvText, { skipEmptyLines: false });
-
+/**
+ * Igual que parseQualityCsv pero partiendo de filas ya parseadas, que es lo
+ * que devuelve /api/sheet. El wrapper de CSV queda abajo porque los tests
+ * (y cualquier pegado manual de un CSV) siguen entrando por ahi.
+ */
+export function parseQualityRows(data) {
   return {
     kpiData: parsePercentTable(data),
     weeklyCurrent: parseWeeklyKpiTable(data, 'current'),
@@ -608,28 +611,23 @@ export function parseQualityCsv(csvText) {
   };
 }
 
+export function parseQualityCsv(csvText) {
+  const { data } = Papa.parse(csvText, { skipEmptyLines: false });
+  return parseQualityRows(data);
+}
+
 export async function fetchAndParseQualityData() {
   try {
-    const cacheBuster = `&t=${new Date().getTime()}`;
-    const response = await fetch(`${QUALITY_CSV_URL}${cacheBuster}`);
-    if (!response.ok) throw new Error('Failed to fetch Quality CSV data');
-    return parseQualityCsv(await response.text());
+    return parseQualityRows(await fetchSheetRows('quality'));
   } catch (error) {
     console.error('Error parsing Quality sheet:', error);
     throw error;
   }
 }
 
-const PROJECT_MATERIALS_CSV_URL = 'https://docs.google.com/spreadsheets/d/1qENXOvlEEY70LQ4i4EQBA0rGpuDr9L1sQIPtEL-Rm1I/export?format=csv&gid=2135314033';
-
 export async function fetchAndParseProjectMaterials() {
   try {
-    const cacheBuster = `&t=${new Date().getTime()}`;
-    const response = await fetch(`${PROJECT_MATERIALS_CSV_URL}${cacheBuster}`);
-    if (!response.ok) throw new Error('Failed to fetch Project Materials CSV data');
-    const csvText = await response.text();
-
-    const { data } = Papa.parse(csvText, { skipEmptyLines: false });
+    const data = await fetchSheetRows('projectMaterials');
     
     // Group materials by SO
     const materialsBySo = {};

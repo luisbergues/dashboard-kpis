@@ -1,8 +1,18 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import Papa from 'papaparse';
 import { LanguageProvider } from '../../utils/LanguageContext';
 import { ThemeProvider } from '../../utils/ThemeContext';
+
+// La planilla ya no se baja con fetch: pasa por /api/sheet, que exige sesion
+// y devuelve filas ya parseadas (ver fetchSheet.js). Este test mira los
+// GRAFICOS, asi que se mockea esa frontera con el mismo CSV de antes vuelto
+// filas, que es lo que el endpoint real entrega.
+const sheet = vi.hoisted(() => ({ csv: '' }));
+vi.mock('../../utils/fetchSheet', () => ({
+  fetchSheetRows: vi.fn(async () => Papa.parse(sheet.csv, { skipEmptyLines: false }).data),
+}));
 
 // Chart.js necesita canvas, que jsdom no tiene: se captura lo que recibiria.
 const charts = [];
@@ -33,7 +43,7 @@ const CSV = [
 
 beforeEach(() => {
   charts.length = 0;
-  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, text: async () => CSV })));
+  sheet.csv = CSV;
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 

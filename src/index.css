@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
   /* Dark solid backgrounds */
@@ -288,114 +288,162 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ─── Light Theme Overrides ─────────────────────────── */
+/* Paleta "sage" inspirada en JL Engineering Check: fondo gris-verdoso cálido,
+   tarjetas blancas con borde suave, acento carbón, botones píldora y
+   Plus Jakarta Sans. Solo afecta al modo claro; el oscuro queda igual. */
 :root.light-theme {
-    --bg-deep: #FFFFFF;        /* Very light background */
-    --bg-surface: #FFFFFF;     /* Deeper light grey background */
-    
-    --card-bg: #FFFFFF;        /* White cards */
-    --card-border: #D1D5DB;    /* Soft grey borders */
-    --card-hover: #F9FAFB;     /* Slight off-white hover background */
-    
-    --color-navy: #FFFFFF;     /* Pill background */
-  
-  --text-primary: #111827;   /* Dark grey text */
-  --text-secondary: #374151; /* Medium grey text */
-  --text-muted: #6B7280;     /* Muted grey text */
+  --bg-deep: #EEF1E6;        /* Página */
+  --bg-surface: #F6F7F0;     /* Sidebar / paneles suaves */
 
-  --overlay-01: rgba(0, 0, 0, 0.015);
-  --overlay-02: rgba(0, 0, 0, 0.02);
-  --overlay-03: rgba(0, 0, 0, 0.03);
-  --overlay-04: rgba(0, 0, 0, 0.04);
-  --overlay-05: rgba(0, 0, 0, 0.05);
-  --overlay-06: rgba(0, 0, 0, 0.06);
-  --overlay-08: rgba(0, 0, 0, 0.08);
-  --overlay-10: rgba(0, 0, 0, 0.1);
-  --overlay-12: rgba(0, 0, 0, 0.12);
-  --overlay-15: rgba(0, 0, 0, 0.15);
-  --overlay-18: rgba(0, 0, 0, 0.18);
-  --overlay-20: rgba(0, 0, 0, 0.2);
+  --card-bg: #FFFFFF;        /* Tarjetas blancas */
+  --card-border: #E6E9DD;    /* Borde cálido */
+  --card-hover: #F6F7F0;     /* Hover suave */
+
+  /* Acentos: carbón como color principal, verde/rojo/violeta para estados */
+  --color-neon-green: #2B2B2B;
+  --color-cyan: #2B2B2B;
+  --color-teal: #2B2B2B;
+  --color-dark-teal: #1F2320;
+  --color-navy: #DDE1D3;     /* Pills / scrollbar thumb */
+  --color-mint: #22A45D;
+  --color-pink: #E5484D;
+  --color-purple: #6E6AE8;
+  --color-yellow: #D9A21B;
+
+  --text-primary: #1F2320;
+  --text-secondary: #4A4F47;
+  --text-muted: #8A8F85;
+
+  --overlay-01: rgba(40, 50, 30, 0.015);
+  --overlay-02: rgba(40, 50, 30, 0.02);
+  --overlay-03: rgba(40, 50, 30, 0.03);
+  --overlay-04: rgba(40, 50, 30, 0.04);
+  --overlay-05: rgba(40, 50, 30, 0.05);
+  --overlay-06: rgba(40, 50, 30, 0.06);
+  --overlay-08: rgba(40, 50, 30, 0.08);
+  --overlay-10: rgba(40, 50, 30, 0.1);
+  --overlay-12: rgba(40, 50, 30, 0.12);
+  --overlay-15: rgba(40, 50, 30, 0.15);
+  --overlay-18: rgba(40, 50, 30, 0.18);
+  --overlay-20: rgba(40, 50, 30, 0.2);
+
+  --radius-md: 14px;
+  --radius-lg: 18px;
+
+  --shadow-card: 0 1px 2px rgba(40, 50, 30, 0.05);
+  --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --line: #DDE1D3;
+  --tab: #E3E7D8;
 }
 
 /* Light Theme Global Rules */
 :root.light-theme body {
   background: var(--bg-deep);
   color: var(--text-primary);
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+:root.light-theme h1,
+:root.light-theme h2,
+:root.light-theme h3,
+:root.light-theme h4,
+:root.light-theme h5,
+:root.light-theme h6 {
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+:root.light-theme .glass-card {
+  box-shadow: var(--shadow-card);
+}
+
+:root.light-theme .glass-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-pop) !important;
+}
+
+/* Sidebar / tabbar: panel claro con acento carbón (como el rail de referencia) */
 :root.light-theme .navbar {
-    background: var(--color-cyan) !important;
-    border-color: var(--color-cyan) !important;
-  }
-  
-  :root.light-theme .mobile-header {
-    background: var(--color-cyan) !important;
-    border-color: var(--color-cyan) !important;
-  }
-  
-  :root.light-theme .nav-btn {
-    color: rgba(255, 255, 255, 0.75);
-  }
-  
-  :root.light-theme .nav-btn:hover {
-    background: rgba(255, 255, 255, 0.1) !important;
-    color: #FFFFFF;
-  }
+  background: var(--bg-surface) !important;
+  border-color: var(--card-border) !important;
+  box-shadow: var(--shadow-card);
+}
 
-  :root.light-theme .nav-btn.active {
-    background: #E5E7EB !important;
-    color: var(--color-cyan) !important;
-  }
-  
-  :root.light-theme .nav-user-profile {
-    background: #E5E7EB !important;
-  }
-  
-  :root.light-theme .nav-user-profile:hover {
-    background: #D1D5DB !important;
-  }
-  
-  :root.light-theme .nav-user-profile .user-name {
-    color: var(--color-cyan) !important;
-  }
+:root.light-theme .mobile-header {
+  background: var(--bg-surface) !important;
+  border-color: var(--card-border) !important;
+}
 
-  :root.light-theme .nav-user-profile .user-role {
-    color: var(--text-secondary) !important;
-  }
+:root.light-theme .nav-btn {
+  color: var(--text-muted);
+}
 
-  :root.light-theme .nav-btn.signout-btn {
-    background: #E5E7EB !important;
-    color: var(--color-pink) !important;
-  }
+:root.light-theme .nav-btn:hover {
+  background: var(--card-bg) !important;
+  color: var(--text-primary);
+}
 
-  :root.light-theme .nav-btn.signout-btn:hover {
-    background: #D1D5DB !important;
-  }
-  
-  :root.light-theme .navbar .brand-text,
-  :root.light-theme .mobile-header .brand-text {
-    background: none !important;
-    -webkit-text-fill-color: #FFFFFF !important;
-    color: #FFFFFF !important;
-  }
-  
-  :root.light-theme .navbar .brand-logo,
-  :root.light-theme .mobile-header .brand-logo {
-    background: #FFFFFF !important;
-    color: var(--color-cyan) !important;
-  }
+:root.light-theme .nav-btn.active {
+  background: #2B2B2B !important;
+  color: #FFFFFF !important;
+  box-shadow: none;
+}
+
+:root.light-theme .nav-user-profile {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--line);
+}
+
+:root.light-theme .nav-user-profile:hover {
+  background: var(--card-hover) !important;
+}
+
+:root.light-theme .nav-user-profile .user-name {
+  color: var(--text-primary) !important;
+}
+
+:root.light-theme .nav-user-profile .user-role {
+  color: var(--text-muted) !important;
+}
+
+:root.light-theme .nav-btn.signout-btn {
+  background: transparent !important;
+  color: var(--color-pink) !important;
+}
+
+:root.light-theme .nav-btn.signout-btn:hover {
+  background: #FDECEC !important;
+}
+
+:root.light-theme .navbar .brand-text,
+:root.light-theme .mobile-header .brand-text {
+  background: none !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  color: var(--text-primary) !important;
+  font-weight: 800;
+}
+
+:root.light-theme .navbar .brand-logo,
+:root.light-theme .mobile-header .brand-logo {
+  background: #2B2B2B !important;
+  color: #FFFFFF !important;
+  border-radius: 50%;
+  font-weight: 800;
+}
 
 :root.light-theme .lang-selector-btn {
-  background: rgba(0, 122, 255, 0.06) !important;
-  border-color: rgba(0, 122, 255, 0.15) !important;
+  background: var(--card-bg) !important;
+  border-color: var(--line) !important;
 }
 
 :root.light-theme .lang-selector-btn:hover {
-  background: rgba(0, 122, 255, 0.12) !important;
+  background: var(--card-hover) !important;
 }
 
 :root.light-theme .lang-dropdown-menu {
-  background: rgba(255, 255, 255, 0.98) !important;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1) !important;
+  background: var(--card-bg) !important;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-pop) !important;
 }
 
 :root.light-theme .lang-dropdown-item {
@@ -403,117 +451,121 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 :root.light-theme .lang-dropdown-item:hover {
-  background: rgba(0, 0, 0, 0.04) !important;
-}
-
-:root.light-theme .glass-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06) !important;
+  background: var(--card-hover) !important;
 }
 
 /* Dashboard kpi / cost cards overrides */
-  :root.light-theme .fi-card,
-  :root.light-theme .insight-point-card,
-  :root.light-theme .takeaway-item {
-    background: var(--card-bg) !important;
-    border-color: var(--card-border) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  }
+:root.light-theme .fi-card,
+:root.light-theme .insight-point-card,
+:root.light-theme .takeaway-item {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+  box-shadow: var(--shadow-card);
+}
 
-  :root.light-theme .kpi-card {
-    background: var(--color-cyan) !important;
-    border-color: var(--color-cyan) !important;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2) !important;
-  }
-  
-  :root.light-theme .kpi-card .kpi-label {
-    color: rgba(255, 255, 255, 0.9) !important;
-  }
-  
-  :root.light-theme .kpi-card .kpi-value {
-    color: #FFFFFF !important;
-  }
+/* KPI: tarjeta blanca con número carbón (antes relleno azul) */
+:root.light-theme .kpi-card {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+  box-shadow: var(--shadow-card) !important;
+}
 
-  /* Alert variant must stay visually distinct from the generic cyan KPI
-     fill above — same specificity trick (extra class = higher specificity
-     than the plain .kpi-card block, so this wins without needing !important
-     wars beyond matching the pattern already used here). */
-  :root.light-theme .kpi-card.is-alert {
-    background: rgba(255, 46, 147, 0.08) !important;
-    border-color: var(--color-pink) !important;
-    box-shadow: 0 4px 12px rgba(255, 46, 147, 0.15) !important;
-  }
+:root.light-theme .kpi-card .kpi-label {
+  color: var(--text-muted) !important;
+}
 
-  :root.light-theme .kpi-card.is-alert .kpi-label {
-    color: var(--color-pink) !important;
-  }
+:root.light-theme .kpi-card .kpi-value {
+  color: var(--text-primary) !important;
+}
 
-  :root.light-theme .kpi-card.is-alert .kpi-value {
-    color: var(--color-pink) !important;
-  }
+/* Alert variant must stay visually distinct from the plain KPI card —
+   extra class = higher specificity than the plain .kpi-card block. */
+/* !important se mantiene: tiene que ganarle a las reglas .kpi-card de arriba,
+   que ya lo usan. */
+:root.light-theme .kpi-card.is-alert {
+  background: var(--card-bg) !important;
+  border-color: rgba(229, 72, 77, 0.35) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+:root.light-theme .kpi-card.is-alert .kpi-label {
+  color: #6B6F6C !important;
+}
+
+:root.light-theme .kpi-card.is-alert .kpi-value {
+  color: #E5484D !important;
+}
 
 :root.light-theme .insight-point-card:hover,
 :root.light-theme .fi-card:hover {
   background: var(--card-hover) !important;
 }
 
-/* Page title text-shadow / gradients for light theme */
+/* Títulos sólidos, sin gradiente */
 :root.light-theme .page-title {
-  background: linear-gradient(135deg, #111827 0%, #4B5563 100%) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
+  background: none !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+:root.light-theme .text-gradient {
+  background: none;
+  -webkit-text-fill-color: var(--text-primary);
+  color: var(--text-primary);
 }
 
 /* Modals styling for light theme */
 :root.light-theme .pdf-modal-content,
 :root.light-theme .profile-modal-content {
-  background: #FFFFFF !important;
+  background: var(--card-bg) !important;
   border-color: var(--card-border) !important;
-  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 24px 50px rgba(40, 50, 30, 0.15) !important;
 }
 
 /* Project cards and pipeline overrides */
-  :root.light-theme .project-card,
-  :root.light-theme .kanban-column {
-    background: var(--card-bg) !important;
-    border-color: var(--card-border) !important;
-  }
-  
-  :root.light-theme .kanban-column {
-    background: rgba(229, 231, 235, 0.4) !important;
-  }
-  
-  :root.light-theme .search-bar {
-    background: var(--card-bg) !important;
-    border: 1px solid var(--card-border) !important;
-  }
+:root.light-theme .project-card {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+  box-shadow: var(--shadow-card);
+}
 
-  :root.light-theme .search-bar input {
-    background: transparent !important;
-    color: var(--text-primary) !important;
-  }
+:root.light-theme .kanban-column {
+  background: var(--bg-surface) !important;
+  border-color: var(--card-border) !important;
+}
+
+:root.light-theme .search-bar {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--line) !important;
+}
+
+:root.light-theme .search-bar input {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+}
 
 /* Form inputs & textareas overrides */
-  :root.light-theme .form-input,
-  :root.light-theme .form-select,
-  :root.light-theme textarea,
-  :root.light-theme input[type="text"],
-  :root.light-theme select {
-    background: #FFFFFF !important;
-    border-color: var(--card-border) !important;
-    color: var(--text-primary) !important;
-  }
+:root.light-theme .form-input,
+:root.light-theme .form-select,
+:root.light-theme textarea,
+:root.light-theme input[type="text"],
+:root.light-theme select {
+  background: var(--card-bg) !important;
+  border-color: var(--line) !important;
+  color: var(--text-primary) !important;
+}
 
 :root.light-theme .form-input:focus,
 :root.light-theme .form-select:focus,
 :root.light-theme textarea:focus,
 :root.light-theme input[type="text"]:focus {
-  border-color: var(--color-neon-green) !important;
+  border-color: #2B2B2B !important;
 }
 
 /* Materials table and calendar overrides */
 :root.light-theme .materials-table th {
-  background: #F3F4F6 !important;
-  color: var(--text-secondary) !important;
+  background: var(--bg-surface) !important;
+  color: var(--text-muted) !important;
 }
 
 :root.light-theme .materials-table td {
@@ -526,86 +578,85 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 :root.light-theme .calendar-day-card.other-month {
-  background: #F9FAFB !important;
+  background: var(--bg-surface) !important;
 }
 
 :root.light-theme .calendar-day-card.today {
-  background: rgba(0, 122, 255, 0.05) !important;
+  background: #E8F7EE !important;
 }
 
 /* Floating Chatbot Overrides for Light Theme */
 :root.light-theme .chatbot-window {
-  background: rgba(255, 255, 255, 0.98) !important;
+  background: var(--card-bg) !important;
   border-color: var(--card-border) !important;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 12px 40px rgba(40, 50, 30, 0.15) !important;
 }
 
 :root.light-theme .chatbot-header {
-  background: rgba(0, 0, 0, 0.02) !important;
+  background: var(--bg-surface) !important;
 }
 
 :root.light-theme .chat-message.bot .message-content {
-  background: #F3F4F6 !important;
+  background: var(--bg-surface) !important;
   border-color: var(--card-border) !important;
   color: var(--text-primary) !important;
 }
 
 :root.light-theme .chatbot-chips {
-  background: rgba(0, 0, 0, 0.02) !important;
+  background: var(--bg-surface) !important;
 }
 
 :root.light-theme .chatbot-chip {
-  background: #FFFFFF !important;
-  border-color: var(--card-border) !important;
+  background: var(--card-bg) !important;
+  border-color: var(--line) !important;
   color: var(--text-secondary) !important;
 }
 
 :root.light-theme .chatbot-chip:hover {
-  background: rgba(0, 122, 255, 0.08) !important;
-  border-color: var(--color-neon-green) !important;
-  color: var(--color-neon-green) !important;
+  background: var(--tab) !important;
+  border-color: #2B2B2B !important;
+  color: var(--text-primary) !important;
 }
 
 :root.light-theme .chatbot-footer {
-  background: #FFFFFF !important;
+  background: var(--card-bg) !important;
 }
 
 :root.light-theme .chatbot-footer input {
-  background: #F3F4F6 !important;
+  background: var(--bg-surface) !important;
 }
 
 /* Pipeline Filter Chips Override */
 :root.light-theme .chip.active {
-  background: var(--color-cyan) !important;
-  border-color: var(--color-cyan) !important;
+  background: #2B2B2B !important;
+  border-color: #2B2B2B !important;
   color: #FFFFFF !important;
 }
 
-/* Calendar Cells Override */
+/* Calendar Cells Override: celdas blancas con borde, en vez de azul */
 :root.light-theme .cal-cell {
-  background: var(--color-cyan) !important;
-  border-color: var(--color-cyan) !important;
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
 }
 
 :root.light-theme .cal-date-num {
-  color: #FFFFFF !important;
+  color: var(--text-primary) !important;
 }
 
 :root.light-theme .cal-cell.disabled {
-  background: #E5E7EB !important;
-  border-color: #D1D5DB !important;
+  background: var(--bg-surface) !important;
+  border-color: var(--card-border) !important;
 }
 
 :root.light-theme .cal-cell.disabled .cal-date-num {
-  color: #9CA3AF !important;
+  color: var(--text-muted) !important;
 }
 
 :root.light-theme .cal-event,
 :root.light-theme .cal-event-title,
 :root.light-theme .cal-event-so {
-  color: #FFFFFF !important;
+  color: var(--text-primary) !important;
 }
-
 
 .pipeline-comments-bubble {
   background: rgba(9, 209, 199, 0.1);
@@ -647,3 +698,60 @@ h1, h2, h3, h4, h5, h6 {
   white-space: nowrap;
 }
 
+
+/* ─── Light Theme Typography ─────────────────────────
+   Tipografía más liviana estilo JL Engineering Check: base 14px (todo lo
+   que está en rem escala en proporción), títulos chicos y grosor 600 como
+   máximo en vez de 700/bold. Solo modo claro; no toca layouts de impresión. */
+:root.light-theme {
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+:root.light-theme .page-title {
+  font-size: 1.75rem;   /* ~24px */
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 767px) {
+  :root.light-theme .page-title {
+    font-size: 1.45rem;
+  }
+}
+
+:root.light-theme .kpi-value,
+:root.light-theme .fi-card-value,
+:root.light-theme .pipeline-value,
+:root.light-theme .proj-so,
+:root.light-theme .proj-card-header,
+:root.light-theme .proj-status-badge,
+:root.light-theme .dashboard-header,
+:root.light-theme .user-name,
+:root.light-theme .user-details,
+:root.light-theme .project-name-title,
+:root.light-theme .progress-label,
+:root.light-theme .progress-percent,
+:root.light-theme .stage-number,
+:root.light-theme .urgency-toggle,
+:root.light-theme .kanban-column-header h3,
+:root.light-theme .status-badge,
+:root.light-theme .pipeline-note-author,
+:root.light-theme .pipeline-note-tag,
+:root.light-theme .pipeline-note-priority-badge,
+:root.light-theme .pipeline-notes-panel-count,
+:root.light-theme .note-priority-tag,
+:root.light-theme .cal-event-tag,
+:root.light-theme .u-day,
+:root.light-theme .cl-section-header h2,
+:root.light-theme .cl-progress-badge,
+:root.light-theme .lb-section-header h2,
+:root.light-theme .lb-subsection-title,
+:root.light-theme .assign-designer-so,
+:root.light-theme .pdf-tab.active,
+:root.light-theme .login-title,
+:root.light-theme b,
+:root.light-theme strong,
+:root.light-theme th {
+  font-weight: 600;
+}
