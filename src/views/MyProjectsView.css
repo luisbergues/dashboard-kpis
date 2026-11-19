@@ -302,6 +302,13 @@
   box-shadow: 0 0 8px var(--color-mint);
 }
 
+/* Light theme: barra lisa en el verde de las etapas completas, sin degradé
+   (carbón→verde) ni glow. */
+:root.light-theme .progress-bar-fill {
+  background: var(--color-mint);
+  box-shadow: none;
+}
+
 /* Stages Timeline */
 .stages-timeline {
   display: flex;

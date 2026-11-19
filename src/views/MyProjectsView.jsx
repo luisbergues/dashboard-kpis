@@ -19,7 +19,7 @@ import { canManageDesignerNotes } from '../utils/notePermissions';
 import { ownedArchivedProjects, visibleArchivedProjects } from '../utils/archivedVisibility';
 import { ownsProject } from '../utils/projectOwnership';
 import { noteDaysOpen, notePenalty } from '../designer-performance/utils/redFlags';
-import { DESIGNER_PERFORMANCE_ENABLED } from '../utils/featureFlags';
+import { DESIGNER_PERFORMANCE_ENABLED, COMPLETE_ESS_IP_BUTTONS_ENABLED } from '../utils/featureFlags';
 import TerminatedEasterEgg from '../components/TerminatedEasterEgg';
 import { Chart as ChartJS, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
 import { Line } from 'react-chartjs-2';
@@ -1881,7 +1881,8 @@ function MyProjectsViewInner({
                             <Download size={14} />
                             <span>{t('myProjects.downloadPdf')}</span>
                           </button>
-                          <button 
+                          {COMPLETE_ESS_IP_BUTTONS_ENABLED && (<>
+                          <button
                             onClick={() => { setActiveESSProject(project); setIsESSModalOpen(true); }}
                             className="btn-primary btn-sm btn-download-pdf"
                             style={{ background: 'var(--color-cyan)', color: '#fff', fontWeight: 'bold' }}
@@ -1897,6 +1898,7 @@ function MyProjectsViewInner({
                             <StickyNote size={14} />
                             <span>{t('myProjects.completarIP')}</span>
                           </button>
+                          </>)}
                           <a
                             href={`${window.location.origin}${window.location.pathname}?logbook=${project.so}`}
                             target="_blank"

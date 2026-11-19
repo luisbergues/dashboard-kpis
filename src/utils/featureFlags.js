@@ -19,3 +19,11 @@
  * designer_performance_history) quedan intactos.
  */
 export const DESIGNER_PERFORMANCE_ENABLED = false;
+
+/**
+ * Botones "Complete ESS" y "Complete IP" de cada card en My Projects, ocultos
+ * por el momento. Con `false` solo dejan de renderizarse los botones: los
+ * modales, su logica y sus datos quedan como estaban. Volver a `true` los
+ * muestra de nuevo sin otro cambio.
+ */
+export const COMPLETE_ESS_IP_BUTTONS_ENABLED = false;
