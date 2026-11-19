@@ -643,7 +643,9 @@ function App() {
     }
 
     if (loading || authLoading) return <ViewSkeleton />;
-    if (error) return <div className="error-state">Error: {error}</div>;
+    // useQuery entrega un objeto Error: renderizarlo tal cual hace que React
+    // tire "Objects are not valid as a React child" y se caiga toda la vista.
+    if (error) return <div className="error-state">Error: {error?.message || String(error)}</div>;
 
     if (!currentUser) {
       return <LoginView data={data} />;

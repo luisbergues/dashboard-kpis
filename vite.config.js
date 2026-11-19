@@ -40,6 +40,20 @@ export default defineConfig(({ command }) => ({
       }
     })
   ],
+  // `npm run dev` solo sirve el frontend: las funciones de /api (sheet, chat,
+  // translate, sync, reviewNote) viven en Vercel. Sin este proxy, en local
+  // /api/sheet da 404 y no carga ningun dato. Se reenvian a produccion con el
+  // mismo token de Firebase del usuario logueado, igual que en la app real.
+  // Solo afecta al dev server; el build no lo usa.
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://dashboard-kpis-jl.vercel.app',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
   build: {
     chunkSizeWarningLimit: 2000,
     // Tirar los console.* y los debugger del build de produccion.
