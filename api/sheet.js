@@ -15,7 +15,7 @@
 // Si aceptara un spreadsheetId del cliente, la cuenta de servicio se
 // convertiria en un proxy para leer cualquier planilla a la que tenga acceso.
 import { google } from 'googleapis';
-import { requireAuth, getBearerToken } from './lib/verifyAuth.js';
+import { requireAuth, getBearerToken } from './_lib/verifyAuth.js';
 
 // Mapa fijo nombre -> pestaña. El gid es el identificador de la pestaña que
 // venia en las URLs viejas; la API v4 lee por TITULO, asi que el gid se

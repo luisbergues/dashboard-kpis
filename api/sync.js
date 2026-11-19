@@ -2,8 +2,8 @@
 // of the project Sheet, matched by SO#. Replaces the former n8n webhook.
 // Secrets (GOOGLE_SERVICE_ACCOUNT_KEY, SYNC_SHEET_ID) stay server-side.
 import { google } from 'googleapis';
-import { mapEventToCells } from './lib/syncMapping.js';
-import { requireApprovedUser } from './lib/requireApprovedUser.js';
+import { mapEventToCells } from './_lib/syncMapping.js';
+import { requireApprovedUser } from './_lib/requireApprovedUser.js';
 
 const TAB = 'copy testing';
 

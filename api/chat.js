@@ -1,8 +1,8 @@
 // Vercel serverless function — proxies chat requests to Google Gemini.
 // Keeps GEMINI_API_KEY server-side only (never exposed to the client bundle).
-import { requireAuth } from './lib/verifyAuth.js';
-import { getGeminiApiKey } from './lib/getGeminiApiKey.js';
-import { fetchGeminiWithRetry } from './lib/fetchGeminiWithRetry.js';
+import { requireAuth } from './_lib/verifyAuth.js';
+import { getGeminiApiKey } from './_lib/getGeminiApiKey.js';
+import { fetchGeminiWithRetry } from './_lib/fetchGeminiWithRetry.js';
 
 // gemini-flash-latest always points at the current Flash model (currently
 // gemini-3.5-flash). The old pinned gemini-2.0-flash is retired and returns

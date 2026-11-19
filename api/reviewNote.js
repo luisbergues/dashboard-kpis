@@ -8,9 +8,9 @@
 // corregir, así que no puede salir de un modelo que puede inventar u omitir.
 //
 // Si esto falla, el cliente guarda el texto determinístico sin pasar por acá.
-import { requireApprovedUser } from './lib/requireApprovedUser.js';
-import { getGeminiApiKey } from './lib/getGeminiApiKey.js';
-import { fetchGeminiWithRetry } from './lib/fetchGeminiWithRetry.js';
+import { requireApprovedUser } from './_lib/requireApprovedUser.js';
+import { getGeminiApiKey } from './_lib/getGeminiApiKey.js';
+import { fetchGeminiWithRetry } from './_lib/fetchGeminiWithRetry.js';
 
 const GEMINI_MODEL = 'gemini-flash-latest';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
