@@ -176,7 +176,7 @@ export default function EssView({ data }) {
                   tabIndex={0}
                   onClick={() => openProject(project.so)}
                   onKeyDown={e => openOnKey(e, project.so)}
-                  style={{ cursor: 'pointer', borderTop: '1px solid var(--card-border, #333)' }}
+                  style={{ cursor: 'pointer', borderTop: '1px solid var(--card-border)' }}
                 >
                   <td style={{ padding: '8px' }}>{project.so}</td>
                   <td style={{ padding: '8px' }}>{shortProjectName(project.name)}</td>

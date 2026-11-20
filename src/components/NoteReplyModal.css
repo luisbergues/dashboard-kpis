@@ -7,8 +7,8 @@
 
 .note-reply-modal {
   width: 100%; max-width: 520px;
-  background: var(--bg-elevated, #16232F);
-  border: 1px solid var(--overlay-10, rgba(255,255,255,0.1));
+  background: var(--bg-elevated);
+  border: 1px solid var(--overlay-10);
   border-radius: 12px; padding: 16px;
   display: flex; flex-direction: column; gap: 12px;
 }
@@ -26,11 +26,11 @@
 
 .note-reply-input {
   width: 100%; resize: vertical; padding: 8px;
-  background: var(--overlay-05); color: var(--text-body, #E6EDF3);
-  border: 1px solid var(--overlay-10, rgba(255,255,255,0.1)); border-radius: 8px;
+  background: var(--overlay-05); color: var(--text-body);
+  border: 1px solid var(--overlay-10); border-radius: 8px;
 }
 
-.note-reply-error { margin: 0; color: #EF4444; font-size: 0.8rem; }
+.note-reply-error { margin: 0; color: var(--danger); font-size: 0.8rem; }
 
 .note-reply-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .note-reply-buttons { display: flex; gap: 8px; }

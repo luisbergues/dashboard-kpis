@@ -55,9 +55,9 @@
 }
 
 .nav-btn.active {
-  color: #FFFFFF !important;
+  color: var(--on-primary) !important;
   background: var(--color-neon-green) !important; /* Solid blue active background */
-  box-shadow: 0 4px 15px rgba(0, 122, 255, 0.4); /* Glowing electric blue shadow */
+  box-shadow: 0 4px 15px var(--overlay-15); /* Glowing electric blue shadow */
 }
 
 .nav-label {
@@ -78,8 +78,8 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ff3b30;
-  box-shadow: 0 0 0 2px var(--color-bg-card, #1a1a1a);
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--color-bg-card);
 }
 
 /* Desktop styles */
@@ -108,8 +108,8 @@
   }
 
   .brand-logo {
-    background: linear-gradient(135deg, var(--color-neon-green), var(--color-cyan));
-    color: var(--bg-deep);
+    background: var(--text);
+    color: var(--on-primary);
     font-weight: 700;
     width: 40px;
     height: 40px;
@@ -176,12 +176,12 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: rgba(0, 122, 255, 0.1);
+    background: var(--surface-2);
     color: var(--color-cyan);
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(0, 122, 255, 0.2);
+    border: 1px solid var(--border);
     flex-shrink: 0;
   }
 
@@ -204,16 +204,16 @@
   .signout-btn {
     width: 100%;
     margin-top: 4px;
-    color: var(--color-pink) !important;
-    border: 1px solid rgba(255, 46, 147, 0.1) !important;
-    background: rgba(255, 46, 147, 0.05) !important;
+    color: var(--danger-ink) !important;
+    border: 1px solid var(--danger-line) !important;
+    background: var(--danger-soft) !important;
     justify-content: center;
   }
 
   .signout-btn:hover {
-    background: rgba(255, 46, 147, 0.15) !important;
-    color: var(--color-pink) !important;
-    border-color: rgba(255, 46, 147, 0.3) !important;
+    background: var(--danger-soft) !important;
+    color: var(--danger-ink) !important;
+    border-color: var(--danger-line) !important;
   }
 
   /* ─── Sidebar collapse toggle ─────────────────────────── */
@@ -294,7 +294,7 @@
 
 .lang-selector-btn {
   width: 100%;
-  background: rgba(0, 122, 255, 0.1);
+  background: var(--surface-2);
   color: var(--color-cyan);
   border: none;
   padding: 10px 16px;
@@ -312,7 +312,7 @@
 }
 
 .lang-selector-btn:hover {
-  background: rgba(0, 122, 255, 0.2);
+  background: var(--surface-2);
 }
 
 .chevron-arrow {
@@ -328,7 +328,7 @@
   bottom: calc(100% + 8px); /* Pop up upwards */
   left: 0;
   right: 0;
-  background: rgba(28, 28, 34, 0.95);
+  background: var(--surface);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--card-border);
@@ -364,8 +364,8 @@
 }
 
 .lang-dropdown-item.active {
-  background: rgba(0, 122, 255, 0.15);
-  color: #FFFFFF;
+  background: var(--surface-2);
+  color: var(--text);
   font-weight: 600;
 }
 
@@ -427,8 +427,8 @@
   }
 
   .mobile-brand .brand-logo {
-    background: linear-gradient(135deg, var(--color-neon-green), var(--color-cyan));
-    color: #FFFFFF;
+    background: var(--text);
+    color: var(--on-primary);
     font-weight: 700;
     width: 32px;
     height: 32px;
@@ -481,12 +481,12 @@
     width: 26px !important;
     height: 26px !important;
     border-radius: 50%;
-    background: rgba(0, 122, 255, 0.1);
+    background: var(--surface-2);
     color: var(--color-cyan);
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(0, 122, 255, 0.2);
+    border: 1px solid var(--border);
     flex-shrink: 0;
   }
 
@@ -507,9 +507,9 @@
   }
 
   .mobile-signout-btn {
-    background: rgba(255, 46, 147, 0.1);
-    border: 1px solid rgba(255, 46, 147, 0.2);
-    color: var(--color-pink);
+    background: var(--danger-soft);
+    border: 1px solid var(--danger-line);
+    color: var(--danger-ink);
     border-radius: 50%;
     width: 32px;
     height: 32px;
@@ -521,7 +521,7 @@
   }
 
   .mobile-signout-btn:hover {
-    background: rgba(255, 46, 147, 0.2);
+    background: var(--danger-soft);
   }
 }
 
@@ -543,7 +543,7 @@
 }
 
 .profile-modal-content {
-  background: #1C1C22;
+  background: var(--surface);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
   width: 90%;
@@ -582,7 +582,7 @@
 }
 
 .profile-modal-form .form-input {
-  background: #0F0F12;
+  background: var(--bg);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
@@ -595,7 +595,7 @@
 .profile-modal-form .form-input:focus {
   outline: none;
   border-color: var(--color-neon-green);
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+  box-shadow: 0 0 0 2px var(--overlay-15);
 }
 
 .profile-modal-form .form-select {
@@ -638,13 +638,13 @@
 .btn-save {
   background: var(--color-neon-green);
   border: none;
-  color: #FFFFFF;
-  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+  color: var(--on-primary);
+  box-shadow: 0 4px 12px var(--overlay-15);
 }
 
 .btn-save:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 122, 255, 0.5);
+  box-shadow: 0 6px 16px var(--overlay-15);
 }
 
 @keyframes fadeIn {
@@ -685,16 +685,16 @@
 .theme-toggle-btn.light,
 .lang-toggle-btn.en {
   /* Light mode for theme, or English mode for language */
-  background: #E5E7EB;
-  border-color: #D1D5DB;
+  background: var(--surface-2);
+  border-color: var(--border);
   box-shadow: none;
 }
 
 /* In light theme, make the dark states of sliders look correct */
 :root.light-theme .theme-toggle-btn,
 :root.light-theme .lang-toggle-btn {
-  background: #E3E7D8;
-  border-color: #DDE1D3;
+  background: var(--surface-2);
+  border-color: var(--border);
   box-shadow: none;
 }
 
@@ -710,7 +710,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #FFFFFF;
+  background: var(--surface);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: none;
   position: absolute;
@@ -720,12 +720,12 @@
 
 .theme-toggle-btn.light .theme-toggle-knob {
   left: calc(100% - 27px);
-  background: #1F2937;
+  background: var(--surface);
   box-shadow: none;
 }
 
 :root.light-theme .theme-toggle-btn.dark .theme-toggle-knob {
-  background: #FFFFFF;
+  background: var(--surface);
   left: 3px;
 }
 
@@ -764,11 +764,11 @@
 }
 
 .lang-toggle-btn.es .lang-toggle-label.es {
-  color: #FFFFFF;
+  color: var(--text);
 }
 
 .lang-toggle-btn.en .lang-toggle-label.en {
-  color: #FFFFFF;
+  color: var(--text);
 }
 
 /* Icons for theme */
@@ -783,7 +783,7 @@
 
 .theme-toggle-icon.moon {
   right: 10px;
-  color: #FFE600;
+  color: var(--warn);
   opacity: 1;
   transform: scale(1);
 }
@@ -800,7 +800,7 @@
 
 .theme-toggle-icon.sun {
   left: 10px;
-  color: #F59E0B;
+  color: var(--warn);
   opacity: 0;
   transform: scale(0.6);
 }

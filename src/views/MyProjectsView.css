@@ -42,8 +42,8 @@
 
 .my-tags-count {
   font-size: 0.7rem;
-  background: rgba(9, 209, 199, 0.15);
-  color: var(--color-cyan);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
   padding: 2px 8px;
   border-radius: 10px;
   font-weight: 600;
@@ -74,7 +74,7 @@
 }
 
 .my-tags-panel li button:hover {
-  background: var(--overlay-08, rgba(255,255,255,0.08));
+  background: var(--overlay-08);
 }
 
 .my-tags-panel li button strong {
@@ -112,8 +112,8 @@
   font-family: 'Outfit', sans-serif;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--color-cyan);
-  background: rgba(9, 209, 199, 0.1);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
   padding: 4px 10px;
   border-radius: 100px;
   display: inline-block;
@@ -133,57 +133,61 @@
   gap: 12px;
 }
 
+/* Badges de estado: verde suave = activo/en curso, ámbar = en pausa (alerta).
+   Texto sobre fondo soft siempre en su -ink. */
 .status-badge-inline {
   font-size: 0.75rem;
   font-weight: 600;
   padding: 4px 12px;
-  border-radius: 100px;
+  border-radius: 999px;
   text-transform: uppercase;
   border: 1px solid transparent;
 }
 
 .status-badge-inline.on-hold {
-  background: rgba(255, 46, 147, 0.1);
-  color: var(--color-pink);
-  border-color: rgba(255, 46, 147, 0.2);
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+  border-color: var(--warn-line);
 }
 
 .status-badge-inline.check {
-  background: rgba(70, 223, 177, 0.1);
-  color: var(--color-mint);
-  border-color: rgba(70, 223, 177, 0.2);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-color: var(--accent-line);
 }
 
 .status-badge-inline.review {
-  background: rgba(9, 209, 199, 0.1);
-  color: var(--color-cyan);
-  border-color: rgba(9, 209, 199, 0.2);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-color: var(--accent-line);
 }
 
 .status-badge-inline.engineering {
-  background: rgba(138, 43, 226, 0.1);
-  color: var(--color-purple);
-  border-color: rgba(138, 43, 226, 0.2);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-color: var(--accent-line);
 }
 
 .status-badge-inline.nesting {
-  background: rgba(156, 163, 175, 0.1);
-  color: #9CA3AF;
-  border-color: rgba(156, 163, 175, 0.2);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-color: var(--accent-line);
 }
 
 .status-badge-inline.active {
-  background: rgba(70, 223, 177, 0.1);
-  color: var(--color-mint);
-  border-color: rgba(70, 223, 177, 0.2);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-color: var(--accent-line);
 }
 
 /* Hold toggle button */
+/* Toggle On Hold: apagado neutro; prendido (cualquier motivo) en ámbar,
+   porque un proyecto en pausa es una alerta. */
 .btn-hold-toggle {
-  background: var(--overlay-05);
-  border: 1px solid var(--card-border);
-  color: var(--text-secondary);
-  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 999px;
   padding: 4px 10px;
   display: flex;
   align-items: center;
@@ -200,50 +204,46 @@
 }
 
 .btn-hold-toggle:hover {
-  background: var(--overlay-10);
-  color: var(--text-primary);
+  background: var(--border);
+  color: var(--text);
 }
 
-.btn-hold-toggle.active-hold {
-  background: rgba(255, 46, 147, 0.15);
-  border-color: rgba(255, 46, 147, 0.3);
-  color: var(--color-pink);
-}
-
-.btn-hold-toggle.active-hold svg {
-  color: var(--color-pink);
-}
-
-.btn-hold-toggle.active-material {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.4);
-  color: var(--color-mint);
-}
-
-.btn-hold-toggle.active-material svg {
-  color: var(--color-mint);
-}
-
+.btn-hold-toggle.active-hold,
+.btn-hold-toggle.active-material,
 .btn-hold-toggle.active-procurement {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.4);
-  color: #3B82F6;
+  background: var(--warn);
+  border-color: var(--warn);
+  color: var(--on-primary);
 }
 
+/* Pills de equipo (contador de colaboradores, diseñador): misma forma que el
+   toggle, pero superficie con borde y texto principal. */
+.btn-hold-toggle.collab-btn {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.btn-hold-toggle.collab-btn svg {
+  color: var(--text-muted);
+}
+
+.btn-hold-toggle.active-hold svg,
+.btn-hold-toggle.active-material svg,
 .btn-hold-toggle.active-procurement svg {
-  color: #3B82F6;
+  color: var(--on-primary);
 }
 
 .hold-reason-banner {
-  background: rgba(255, 46, 147, 0.08);
-  border: 1px dashed rgba(255, 46, 147, 0.3);
+  background: var(--warn-soft);
+  border: 1px dashed var(--warn-line);
   border-radius: var(--radius-sm);
   padding: 10px var(--spacing-md);
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 0.85rem;
-  color: #ff5287;
+  color: var(--danger-ink);
 }
 
 .hold-reason-banner p {
@@ -283,30 +283,22 @@
 }
 
 .progress-percent {
-  color: var(--color-mint);
+  color: var(--accent-ink);
   font-weight: 700;
 }
 
 .progress-bar-container {
   height: 8px;
-  background: var(--overlay-05);
+  background: var(--surface-2);
   border-radius: 100px;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-cyan), var(--color-mint));
+  background: var(--accent);
   border-radius: 100px;
   transition: width 0.4s ease;
-  box-shadow: 0 0 8px var(--color-mint);
-}
-
-/* Light theme: barra lisa en el verde de las etapas completas, sin degradé
-   (carbón→verde) ni glow. */
-:root.light-theme .progress-bar-fill {
-  background: var(--color-mint);
-  box-shadow: none;
 }
 
 /* Stages Timeline */
@@ -337,7 +329,7 @@
   left: calc(100% / 12);
   right: calc(100% / 12);
   height: 2px;
-  background: var(--overlay-08);
+  background: var(--border);
   z-index: 1;
 }
 
@@ -358,8 +350,9 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #0b1320; /* Matches card dark background */
-  border: 2px solid var(--overlay-15); /* Clean default borders */
+  /* Etapa pendiente: neutra. */
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -382,7 +375,7 @@
 }
 
 .stage-connector-line.filled {
-  background: var(--color-mint);
+  background: var(--accent);
 }
 
 .stage-number {
@@ -393,8 +386,7 @@
 }
 
 .icon-completed {
-  color: var(--color-mint);
-  filter: drop-shadow(0 0 6px rgba(70, 223, 177, 0.4));
+  color: var(--accent);
 }
 
 .stage-step-label {
@@ -409,8 +401,8 @@
 /* Hover effects */
 .stage-step:hover .stage-icon-container {
   transform: translateY(-2px); /* Premium gentle lift */
-  border-color: var(--color-cyan);
-  box-shadow: 0 4px 12px rgba(9, 209, 199, 0.2);
+  border-color: var(--text-muted);
+  box-shadow: 0 4px 12px var(--overlay-10);
 }
 
 .stage-step:hover .stage-step-label {
@@ -419,17 +411,16 @@
 
 /* Completed styles */
 .stage-step.completed .stage-icon-container {
-  border-color: var(--color-mint);
-  background: var(--color-mint); /* Solid fill, not a translucent ring */
+  border-color: var(--accent);
+  background: var(--accent); /* Solid fill, not a translucent ring */
 }
 
 .stage-step.completed .icon-completed {
-  color: #fff;
-  filter: none;
+  color: var(--on-primary);
 }
 
 .stage-step.completed .stage-step-label {
-  color: var(--color-mint);
+  color: var(--accent-ink);
   font-weight: 600;
 }
 
@@ -449,10 +440,10 @@
   font-weight: 600;
 }
 
-.btn-download-pdf:hover {
-  border-color: var(--color-cyan);
-  color: var(--color-cyan);
-  background: rgba(9, 209, 199, 0.05);
+.btn-secondary.btn-download-pdf:hover {
+  border-color: var(--border);
+  color: var(--text);
+  background: var(--border);
 }
 
 @media (max-width: 767px) {
@@ -488,8 +479,8 @@
   align-items: center;
   margin-top: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-md);
-  background: rgba(138, 43, 226, 0.05); /* subtle purple for engineering */
-  border: 1px solid rgba(138, 43, 226, 0.15);
+  background: var(--surface-2); /* subtle purple for engineering */
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
 
@@ -521,9 +512,9 @@
 }
 
 .active-check {
-  background: rgba(138, 43, 226, 0.2) !important;
+  background: var(--surface-2) !important;
   color: var(--color-purple) !important;
-  border-color: rgba(138, 43, 226, 0.4) !important;
+  border-color: var(--border) !important;
 }
 
 .active-check svg {
@@ -581,8 +572,8 @@
 
 .notes-panel-count {
   font-size: 0.7rem;
-  background: rgba(9, 209, 199, 0.15);
-  color: var(--color-cyan);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
   padding: 2px 8px;
   border-radius: 10px;
   font-weight: 600;
@@ -617,7 +608,7 @@
 .note-input:focus {
   outline: none;
   border-color: var(--color-cyan);
-  box-shadow: 0 0 0 2px rgba(9, 209, 199, 0.1);
+  box-shadow: 0 0 0 2px var(--accent-line);
 }
 
 .note-input::placeholder {
@@ -640,41 +631,42 @@
   font-size: 0.75rem;
   font-weight: 600;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: 999px;
   border: 1px solid transparent;
   transition: all 0.2s;
   user-select: none;
 }
 
 .priority-toggle.is-priority {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--color-danger);
-  border-color: rgba(239, 68, 68, 0.3);
+  background: var(--danger-soft);
+  color: var(--danger-ink);
+  border-color: var(--danger-line);
 }
 
 .priority-toggle.is-obs {
-  background: rgba(156, 163, 175, 0.15);
-  color: #9ca3af;
-  border-color: rgba(156, 163, 175, 0.3);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border-color: var(--border);
 }
 
 .priority-toggle.not-priority {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
-  border-color: rgba(59, 130, 246, 0.3);
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
 }
 
 .priority-toggle.is-designer {
-  background: rgba(139, 92, 246, 0.15);
-  color: #8B5CF6;
-  border-color: rgba(139, 92, 246, 0.3);
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
 }
 
+/* "+ Add": acción de crear → acento suave con su -ink. */
 .btn-add-note {
-  background: rgba(9, 209, 199, 0.12);
-  border: 1px solid rgba(9, 209, 199, 0.25);
-  color: var(--color-cyan);
-  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  color: var(--accent-ink);
+  border-radius: 999px;
   padding: 5px 14px;
   font-family: 'Outfit', sans-serif;
   font-size: 0.78rem;
@@ -687,8 +679,8 @@
 }
 
 .btn-add-note:hover {
-  background: rgba(9, 209, 199, 0.2);
-  box-shadow: 0 0 8px rgba(9, 209, 199, 0.2);
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .btn-add-note:disabled {
@@ -757,7 +749,7 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 2px 9px;
-  border-radius: 100px;
+  border-radius: 999px;
   border: 1px solid transparent;
   transition: all 0.2s;
   user-select: none;
@@ -775,33 +767,33 @@
 }
 
 .urgency-toggle.urgency-green {
-  background: rgba(34, 197, 94, 0.14);
-  color: #22c55e;
-  border-color: rgba(34, 197, 94, 0.3);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border-color: var(--border);
 }
 
 .urgency-toggle.urgency-green .urgency-dot {
-  background: #22c55e;
+  background: var(--text-muted);
 }
 
 .urgency-toggle.urgency-yellow {
-  background: rgba(234, 179, 8, 0.14);
-  color: #eab308;
-  border-color: rgba(234, 179, 8, 0.3);
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+  border-color: var(--warn-line);
 }
 
 .urgency-toggle.urgency-yellow .urgency-dot {
-  background: #eab308;
+  background: var(--warn);
 }
 
 .urgency-toggle.urgency-red {
-  background: rgba(239, 68, 68, 0.14);
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.3);
+  background: var(--danger-soft);
+  color: var(--danger-ink);
+  border-color: var(--danger-line);
 }
 
 .urgency-toggle.urgency-red .urgency-dot {
-  background: #ef4444;
+  background: var(--danger);
 }
 
 .note-priority-tag {
@@ -813,7 +805,7 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 2px 8px;
-  border-radius: 8px;
+  border-radius: 999px;
 }
 
 .note-tag-edit-btn {
@@ -834,23 +826,23 @@
 }
 
 .note-priority-tag.priority {
-  background: rgba(255, 59, 48, 0.14);
-  color: #FF3B30;
+  background: var(--danger-soft);
+  color: var(--danger-ink);
 }
 
 .note-priority-tag.normal {
-  background: rgba(9, 209, 199, 0.1);
-  color: var(--color-cyan);
+  background: var(--surface-2);
+  color: var(--text-muted);
 }
 
 .note-priority-tag.obs {
-  background: rgba(156, 163, 175, 0.14);
-  color: #9ca3af;
+  background: var(--surface-2);
+  color: var(--text-muted);
 }
 
 .note-priority-tag.designer {
-  background: rgba(139, 92, 246, 0.14);
-  color: #8B5CF6;
+  background: var(--surface-2);
+  color: var(--text);
 }
 
 .note-delete-btn {
@@ -871,8 +863,8 @@
 }
 
 .note-delete-btn:hover {
-  color: #FF3B30;
-  background: rgba(255, 59, 48, 0.1);
+  color: var(--danger-ink);
+  background: var(--danger-soft);
 }
 
 .note-item-text {
@@ -967,14 +959,15 @@
   margin-top: 12px;
 }
 
+/* Chips de Project Elements: inactivo neutro, activo en acento suave. */
 .material-toggle-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--overlay-03);
-  border: 1px solid var(--card-border);
-  color: var(--text-secondary);
-  border-radius: 100px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 999px;
   padding: 6px 16px;
   font-family: 'Outfit', sans-serif;
   font-size: 0.8rem;
@@ -985,34 +978,32 @@
 }
 
 .material-toggle-btn:hover {
-  background: var(--overlay-06);
-  color: var(--text-primary);
-  border-color: var(--overlay-20);
+  background: var(--border);
+  color: var(--text);
 }
 
 .material-toggle-btn.active {
-  background: rgba(70, 223, 177, 0.1);
-  border-color: rgba(70, 223, 177, 0.35);
-  color: var(--color-mint);
-  box-shadow: 0 0 10px rgba(70, 223, 177, 0.08);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .checkbox-indicator {
   width: 16px;
   height: 16px;
   border-radius: 4px;
-  border: 1px solid var(--overlay-20);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--surface);
   transition: all 0.2s ease;
 }
 
 .material-toggle-btn.active .checkbox-indicator {
-  border-color: var(--color-mint);
-  background: var(--color-mint);
-  color: #0b1320;
+  border-color: var(--accent);
+  background: transparent;
+  color: var(--accent);
 }
 
 /* Static (non-toggleable) variant used for the read-only Materials pills,
@@ -1036,9 +1027,9 @@
   gap: 4px;
   padding: 2px 8px;
   border-radius: 999px;
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
   font-size: 0.7rem;
   font-weight: 600;
   cursor: pointer;
@@ -1046,13 +1037,13 @@
 }
 
 .note-resolve-btn:hover {
-  background: rgba(16, 185, 129, 0.22);
+  background: var(--accent-soft);
 }
 
 .note-resolve-btn.is-resolved {
-  border-color: rgba(148, 163, 184, 0.35);
-  background: rgba(148, 163, 184, 0.12);
-  color: #94a3b8;
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--text);
 }
 
 .note-item.note-resolved {
@@ -1075,5 +1066,5 @@
 
 .note-redflag-penalty {
   font-weight: 700;
-  color: #ef4444;
+  color: var(--danger);
 }

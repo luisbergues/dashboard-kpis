@@ -452,24 +452,21 @@ export function calculateMonthlyCompletions(projectStages, myProjects = []) {
       {
         label: 'Engineering Completed',
         data: engData,
-        borderColor: '#09D1C7',
-        backgroundColor: 'rgba(9, 209, 199, 0.1)',
+        tone: 'primary', // color: lo resuelve la vista según el tema (utils/chartColors.js)
         tension: 0.4,
         fill: true
       },
       {
         label: 'Nesting Completed',
         data: nestingData,
-        borderColor: '#FF2E93',
-        backgroundColor: 'rgba(255, 46, 147, 0.1)',
+        tone: 'muted',
         tension: 0.4,
         fill: true
       },
       {
         label: 'Fully Completed',
         data: completeData,
-        borderColor: '#80EE98',
-        backgroundColor: 'rgba(128, 238, 152, 0.1)',
+        tone: 'accent',
         tension: 0.4,
         fill: true
       }
@@ -575,8 +572,7 @@ export function calculateWeeklyCompletions(projectStages, myProjects = [], weekC
         labelKey: 'charts.engineeringCompleted',
         label: 'Engineering Completed',
         data: engData,
-        borderColor: '#09D1C7',
-        backgroundColor: 'rgba(9, 209, 199, 0.1)',
+        tone: 'primary', // color: lo resuelve la vista según el tema (utils/chartColors.js)
         tension: 0.4,
         fill: true
       },
@@ -584,8 +580,7 @@ export function calculateWeeklyCompletions(projectStages, myProjects = [], weekC
         labelKey: 'charts.nestingCompleted',
         label: 'Nesting Completed',
         data: nestingData,
-        borderColor: '#FF2E93',
-        backgroundColor: 'rgba(255, 46, 147, 0.1)',
+        tone: 'muted',
         tension: 0.4,
         fill: true
       },
@@ -593,8 +588,7 @@ export function calculateWeeklyCompletions(projectStages, myProjects = [], weekC
         labelKey: 'charts.fullyCompleted',
         label: 'Fully Completed',
         data: completeData,
-        borderColor: '#80EE98',
-        backgroundColor: 'rgba(128, 238, 152, 0.1)',
+        tone: 'accent',
         tension: 0.4,
         fill: true
       }

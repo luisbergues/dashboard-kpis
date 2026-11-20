@@ -1,32 +1,77 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
+/* ─── Paleta unificada ───────────────────────────────────
+   Base neutra + UN acento verde + semánticos solo cuando significan algo:
+   verde = hecho/activo, ámbar = alerta, rojo = problema. Todo lo demás es
+   negro (primario) o gris. Texto sobre fondo "soft" siempre en su -ink.
+
+   El tema oscuro es el :root por defecto; el claro se activa con la clase
+   .light-theme en <html> (ThemeContext.jsx) y redefine los MISMOS tokens más
+   abajo. Ningún componente debería usar un color literal: si algo necesita
+   destacarse sin tener significado, va el primario (--text / --on-primary). */
 :root {
-  /* Dark solid backgrounds */
-  --bg-deep: #0A0A0C;
-  --bg-surface: #0F0F12;
-  
-  /* Solid dark cards */
-  --card-bg: #1C1C22;
-  --card-border: #26272C;
-  --card-hover: #202128;
-  
-  /* Electric Blue Palette */
-  --color-neon-green: #007AFF; /* Active highlights (Electric Blue) */
-  --color-mint: #10B981;       /* Emerald/Mint checks & success */
-  --color-cyan: #3B82F6;       /* Accent blue */
-  --color-teal: #1D4ED8;       /* Primary CTA blue */
-  --color-dark-teal: #1E3A8A;
-  --color-navy: #25262B;
-  
-  /* Accents */
-  --color-pink: #FF2E93;
-  --color-yellow: #FFE600;
-  --color-purple: #8A2BE2;
-  
-  /* Text */
-  --text-primary: #FFFFFF;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
+  --bg:          #111312;
+  --surface:     #191C1A;
+  --surface-2:   #212522;
+  --border:      #2C302D;
+  --text:        #E7EAE5;
+  --text-muted:  #959B92;
+  /* Texto/ícono sobre el primario (fondo --text) o sobre un relleno sólido
+     de acento/semántico. En claro es blanco; en oscuro el primario es claro,
+     así que va oscuro. */
+  --on-primary:  #111312;
+
+  --accent:      #3BB26A;
+  --accent-soft: rgba(59, 178, 106, 0.14);
+  --accent-ink:  #74D29C;
+  --warn:        #D99A2B;
+  --warn-soft:   rgba(217, 154, 43, 0.14);
+  --warn-ink:    #EDC06E;
+  --danger:      #DE5A52;
+  --danger-soft: rgba(222, 90, 82, 0.14);
+  --danger-ink:  #F08E88;
+
+  /* Bordes suaves de los semánticos (mismo tono, 35% de opacidad). */
+  --accent-line: rgba(59, 178, 106, 0.35);
+  --warn-line:   rgba(217, 154, 43, 0.35);
+  --danger-line: rgba(222, 90, 82, 0.35);
+
+  /* ─── Alias heredados ───
+     Nombres viejos que usan los componentes. Apuntan a la paleta nueva, así
+     que siguen al tema solos: no redefinirlos en .light-theme. */
+  --bg-deep: var(--bg);
+  --bg-surface: var(--surface-2);
+  --bg-elevated: var(--surface-2);
+  --bg-card-hover: var(--surface-2);
+  --card-bg: var(--surface);
+  --color-bg-card: var(--surface);
+  --card-border: var(--border);
+  --border-color: var(--border);
+  --border-light: var(--border);
+  --card-hover: var(--surface-2);
+  --line: var(--border);
+  --tab: var(--surface-2);
+
+  /* Antes azul eléctrico/violeta sin significado: ahora primario. */
+  --color-neon-green: var(--text);
+  --color-cyan: var(--text);
+  --color-teal: var(--text);
+  --color-dark-teal: var(--text);
+  --color-purple: var(--text);
+  --primary: var(--text);
+  --color-navy: var(--surface-2);
+
+  --color-mint: var(--accent);
+  --color-green: var(--accent);
+  --color-pink: var(--danger);
+  --color-danger: var(--danger);
+  --color-yellow: var(--warn);
+  --color-orange: var(--warn);
+  --color-warning: var(--warn);
+
+  --text-primary: var(--text);
+  --text-body: var(--text);
+  --text-secondary: color-mix(in srgb, var(--text) 70%, var(--text-muted));
 
   /* Superficies translúcidas que siguen al tema (reemplazan rgba(255,255,255,x) hardcodeado) */
   --overlay-01: rgba(255, 255, 255, 0.01);
@@ -55,7 +100,7 @@
   --bell-safe-area: 90px;
   
   /* Radii - Súper redondeados */
-  --radius-sm: 100px;  /* Pills for buttons, inputs, tabs, chips */
+  --radius-sm: 999px;  /* Pills: botones, inputs, tabs y chips. Todas iguales. */
   --radius-md: 20px;   /* Minor sections */
   --radius-lg: 28px;   /* Large cards and layout wrapper */
 }
@@ -76,7 +121,7 @@ html, body {
 
 body {
   font-family: 'Inter', sans-serif;
-  background: var(--bg-surface);
+  background: var(--bg);
   color: var(--text-primary);
   min-height: 100vh;
   overflow-y: scroll;
@@ -130,7 +175,7 @@ h1, h2, h3, h4, h5, h6 {
    navegador, que varios resets pisaban: navegar por teclado era casi ciego.
    :focus-visible no molesta al usuario de mouse. */
 :where(button, a, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid #007AFF;
+  outline: 2px solid var(--text);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -280,7 +325,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Utilities */
 .text-gradient {
-  background: linear-gradient(90deg, var(--color-neon-green), var(--color-cyan));
+  background: var(--text);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -292,27 +337,30 @@ h1, h2, h3, h4, h5, h6 {
    tarjetas blancas con borde suave, acento carbón, botones píldora y
    Plus Jakarta Sans. Solo afecta al modo claro; el oscuro queda igual. */
 :root.light-theme {
-  --bg-deep: #EEF1E6;        /* Página */
-  --bg-surface: #F6F7F0;     /* Sidebar / paneles suaves */
+  /* Paleta unificada, modo claro. Los alias heredados (--card-bg,
+     --color-cyan, ...) se definen una sola vez en :root y siguen a estos
+     tokens solos. */
+  --bg:          #EEF0EA;
+  --surface:     #FFFFFF;
+  --surface-2:   #F5F6F2;
+  --border:      #E1E3DC;
+  --text:        #1E211F;
+  --text-muted:  #7A7F78;
+  --on-primary:  #FFFFFF;
 
-  --card-bg: #FFFFFF;        /* Tarjetas blancas */
-  --card-border: #E6E9DD;    /* Borde cálido */
-  --card-hover: #F6F7F0;     /* Hover suave */
+  --accent:      #2E9E5B;
+  --accent-soft: #E6F4EC;
+  --accent-ink:  #1F7A45;
+  --warn:        #C98A1B;
+  --warn-soft:   #FBF1DC;
+  --warn-ink:    #8A5C0E;
+  --danger:      #C2453D;
+  --danger-soft: #F8E4E2;
+  --danger-ink:  #8E2C26;
 
-  /* Acentos: carbón como color principal, verde/rojo/violeta para estados */
-  --color-neon-green: #2B2B2B;
-  --color-cyan: #2B2B2B;
-  --color-teal: #2B2B2B;
-  --color-dark-teal: #1F2320;
-  --color-navy: #DDE1D3;     /* Pills / scrollbar thumb */
-  --color-mint: #22A45D;
-  --color-pink: #E5484D;
-  --color-purple: #6E6AE8;
-  --color-yellow: #D9A21B;
-
-  --text-primary: #1F2320;
-  --text-secondary: #4A4F47;
-  --text-muted: #8A8F85;
+  --accent-line: rgba(46, 158, 91, 0.35);
+  --warn-line:   rgba(201, 138, 27, 0.35);
+  --danger-line: rgba(194, 69, 61, 0.35);
 
   --overlay-01: rgba(40, 50, 30, 0.015);
   --overlay-02: rgba(40, 50, 30, 0.02);
@@ -332,8 +380,6 @@ h1, h2, h3, h4, h5, h6 {
 
   --shadow-card: 0 1px 2px rgba(40, 50, 30, 0.05);
   --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.08);
-  --line: #DDE1D3;
-  --tab: #E3E7D8;
 }
 
 /* Light Theme Global Rules */
@@ -384,8 +430,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 :root.light-theme .nav-btn.active {
-  background: #2B2B2B !important;
-  color: #FFFFFF !important;
+  background: var(--text) !important;
+  color: var(--on-primary) !important;
   box-shadow: none;
 }
 
@@ -412,7 +458,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 :root.light-theme .nav-btn.signout-btn:hover {
-  background: #FDECEC !important;
+  background: var(--surface-2) !important;
 }
 
 :root.light-theme .navbar .brand-text,
@@ -425,8 +471,8 @@ h1, h2, h3, h4, h5, h6 {
 
 :root.light-theme .navbar .brand-logo,
 :root.light-theme .mobile-header .brand-logo {
-  background: #2B2B2B !important;
-  color: #FFFFFF !important;
+  background: var(--text) !important;
+  color: var(--on-primary) !important;
   border-radius: 50%;
   font-weight: 800;
 }
@@ -484,16 +530,16 @@ h1, h2, h3, h4, h5, h6 {
    que ya lo usan. */
 :root.light-theme .kpi-card.is-alert {
   background: var(--card-bg) !important;
-  border-color: rgba(229, 72, 77, 0.35) !important;
+  border-color: var(--danger-line) !important;
   box-shadow: var(--shadow-card) !important;
 }
 
 :root.light-theme .kpi-card.is-alert .kpi-label {
-  color: #6B6F6C !important;
+  color: var(--text-muted) !important;
 }
 
 :root.light-theme .kpi-card.is-alert .kpi-value {
-  color: #E5484D !important;
+  color: var(--danger) !important;
 }
 
 :root.light-theme .insight-point-card:hover,
@@ -559,7 +605,7 @@ h1, h2, h3, h4, h5, h6 {
 :root.light-theme .form-select:focus,
 :root.light-theme textarea:focus,
 :root.light-theme input[type="text"]:focus {
-  border-color: #2B2B2B !important;
+  border-color: var(--text) !important;
 }
 
 /* Materials table and calendar overrides */
@@ -582,7 +628,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 :root.light-theme .calendar-day-card.today {
-  background: #E8F7EE !important;
+  background: var(--surface-2) !important;
 }
 
 /* Floating Chatbot Overrides for Light Theme */
@@ -614,7 +660,7 @@ h1, h2, h3, h4, h5, h6 {
 
 :root.light-theme .chatbot-chip:hover {
   background: var(--tab) !important;
-  border-color: #2B2B2B !important;
+  border-color: var(--text) !important;
   color: var(--text-primary) !important;
 }
 
@@ -628,9 +674,9 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Pipeline Filter Chips Override */
 :root.light-theme .chip.active {
-  background: #2B2B2B !important;
-  border-color: #2B2B2B !important;
-  color: #FFFFFF !important;
+  background: var(--text) !important;
+  border-color: var(--text) !important;
+  color: var(--on-primary) !important;
 }
 
 /* Calendar Cells Override: celdas blancas con borde, en vez de azul */
@@ -659,7 +705,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .pipeline-comments-bubble {
-  background: rgba(9, 209, 199, 0.1);
+  background: var(--accent-soft);
   color: var(--primary);
   padding: 4px 10px;
   border-radius: 20px;

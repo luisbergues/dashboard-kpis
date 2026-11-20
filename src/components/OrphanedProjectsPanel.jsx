@@ -151,8 +151,8 @@ export default function OrphanedProjectsPanel({ data, masterProjects }) {
           <div style={{
             display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 14,
             padding: '10px 14px', borderRadius: 10,
-            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
-            color: '#f87171', fontSize: '0.85rem',
+            background: 'var(--danger-soft)', border: '1px solid var(--danger-line)',
+            color: 'var(--danger)', fontSize: '0.85rem',
           }}>
             <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
             <span>{error}</span>
@@ -193,8 +193,8 @@ export default function OrphanedProjectsPanel({ data, masterProjects }) {
                         placeholder={language === 'es' ? 'Sin asignar' : 'Unassigned'}
                         style={{
                           width: '100%', minWidth: 120, padding: '5px 9px', borderRadius: 8,
-                          background: 'rgba(255,255,255,0.05)', color: 'inherit',
-                          border: `1px solid ${engineerFor(o).trim() ? 'rgba(16,185,129,0.35)' : 'rgba(255,255,255,0.12)'}`,
+                          background: 'var(--overlay-05)', color: 'inherit',
+                          border: `1px solid ${engineerFor(o).trim() ? 'var(--accent-line)' : 'var(--border)'}`,
                           fontSize: '0.85rem', outline: 'none',
                         }}
                       />

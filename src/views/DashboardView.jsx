@@ -34,6 +34,7 @@ import {
 } from '../services/kpiCalculator';
 import { db, ref, onValue } from '../utils/firebase';
 import { translateText } from '../utils/translateContent';
+import { chartColors, chartTooltip } from '../utils/chartColors';
 import './DashboardView.css';
 
 ChartJS.register(
@@ -53,6 +54,8 @@ ChartJS.register(
 function DashboardViewInner({ data, weeklyCompleted = [], projectHistory = {} }) {
   const { t, language } = useLanguage();
   const { theme } = useTheme();
+  // Chart.js dibuja en canvas: necesita colores resueltos, no var(--token).
+  const cc = chartColors(theme === 'light');
 
   // The Executive/Weekly Summary is free text sourced straight from the
   // spreadsheet (not a catalogued UI string), so the static i18n system
@@ -143,10 +146,10 @@ function DashboardViewInner({ data, weeklyCompleted = [], projectHistory = {} })
       // "Completed" en ambos idiomas, a pedido: es el nombre que usa el equipo.
       label: 'Completed',
       data: completedSeries.map(w => w.value),
-      backgroundColor: theme === 'light' ? '#22A45D' : '#80EE98',
+      backgroundColor: cc.accent,
       borderRadius: 4,
     }],
-  }), [completedSeries, language, theme]);
+  }), [completedSeries, language, cc]);
 
   const chartOptions = {
     responsive: true,
@@ -158,30 +161,26 @@ function DashboardViewInner({ data, weeklyCompleted = [], projectHistory = {} })
     plugins: {
       legend: {
         labels: {
-          color: theme === 'light' ? '#4A4F47' : '#94A3B8',
+          color: cc.textMuted,
           font: { family: 'Inter', size: 11 },
           boxWidth: 12,
           padding: 10,
         }
       },
       tooltip: {
-        backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.98)' : 'rgba(11, 21, 32, 0.95)',
-        titleColor: theme === 'light' ? '#22A45D' : '#80EE98',
-        bodyColor: theme === 'light' ? '#1F2320' : '#fff',
-        borderColor: theme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)',
-        borderWidth: 1,
+        ...chartTooltip(theme === 'light'),
         padding: 12,
       }
     },
     scales: {
       x: {
         grid: { display: false, drawBorder: false },
-        ticks: { color: theme === 'light' ? '#4A4F47' : '#94A3B8', font: { size: 11 } }
+        ticks: { color: cc.textMuted, font: { size: 11 } }
       },
       y: {
         beginAtZero: true,
-        grid: { color: theme === 'light' ? 'rgba(40, 50, 30, 0.08)' : 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-        ticks: { color: theme === 'light' ? '#8A8F85' : '#64748B' }
+        grid: { color: cc.grid, drawBorder: false },
+        ticks: { color: cc.textMuted }
       }
     }
   };
@@ -650,11 +649,11 @@ function DashboardViewInner({ data, weeklyCompleted = [], projectHistory = {} })
                   {t('costs.subtitle')}
                 </p>
               </div>
-              <div className="total-value-card" style={{ padding: '8px 16px', borderRadius: '8px', background: 'var(--overlay-03)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'right' }}>
+              <div className="total-value-card" style={{ padding: '8px 16px', borderRadius: '8px', background: 'var(--overlay-03)', border: '1px solid var(--border)', textAlign: 'right' }}>
                 <span className="text-muted" style={{ fontSize: '0.75rem', display: 'block' }}>
                   {t('costs.totalPipeline')}
                 </span>
-                <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#80EE98' }}>
+                <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--accent-ink)' }}>
                   {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
                     topCostProjects.reduce((sum, p) => sum + parseFloat(p.cost.replace(/[^0-9.-]+/g,"")), 0)
                   )}
@@ -670,8 +669,8 @@ function DashboardViewInner({ data, weeklyCompleted = [], projectHistory = {} })
                     {
                       label: t('costs.projectCost'),
                       data: topCostProjects.map(p => parseFloat(p.cost.replace(/[^0-9.-]+/g,""))),
-                      backgroundColor: 'rgba(9, 209, 199, 0.85)',
-                      hoverBackgroundColor: '#80EE98',
+                      backgroundColor: cc.accent,
+                      hoverBackgroundColor: cc.accentInk,
                       borderRadius: 6,
                       borderWidth: 0,
                     }
@@ -683,11 +682,7 @@ function DashboardViewInner({ data, weeklyCompleted = [], projectHistory = {} })
                   plugins: {
                     legend: { display: false },
                     tooltip: {
-                      backgroundColor: 'rgba(11, 21, 32, 0.95)',
-                      titleColor: '#80EE98',
-                      bodyColor: '#fff',
-                      borderColor: 'rgba(255,255,255,0.1)',
-                      borderWidth: 1,
+                      ...chartTooltip(theme === 'light'),
                       padding: 12,
                       callbacks: {
                         label: function(context) {
@@ -704,16 +699,16 @@ function DashboardViewInner({ data, weeklyCompleted = [], projectHistory = {} })
                   scales: {
                     y: {
                       beginAtZero: true,
-                      grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                      grid: { color: cc.grid },
                       ticks: {
-                        color: '#64748B',
+                        color: cc.textMuted,
                         callback: function(value) { return '$' + value / 1000 + 'k'; }
                       }
                     },
                     x: {
                       grid: { display: false },
                       ticks: {
-                        color: '#94A3B8',
+                        color: cc.text,
                         maxRotation: 45,
                         minRotation: 45
                       }

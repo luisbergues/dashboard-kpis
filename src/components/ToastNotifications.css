@@ -14,7 +14,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(11, 21, 32, 0.95);
+  background: var(--surface);
   border: 1px solid var(--overlay-10);
   padding: 12px 16px;
   border-radius: 8px;
@@ -27,13 +27,13 @@
 
 .toast-error { border-left: 4px solid var(--color-pink); }
 .toast-success { border-left: 4px solid var(--color-green); }
-.toast-warning { border-left: 4px solid #FFE600; }
-.toast-info { border-left: 4px solid #09D1C7; }
+.toast-warning { border-left: 4px solid var(--warn); }
+.toast-info { border-left: 4px solid var(--accent); }
 
 .toast-content {
   flex: 1;
   font-size: 0.85rem;
-  color: #fff;
+  color: var(--text);
   line-height: 1.4;
 }
 
@@ -52,7 +52,7 @@
 
 .toast-close:hover {
   background: var(--overlay-10);
-  color: #fff;
+  color: var(--text);
 }
 
 @keyframes slideInRight {

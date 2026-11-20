@@ -4,35 +4,29 @@
 :root.light-theme .lb-root { color-scheme: light; }
 
 .lb-root {
-  --lb-bg: var(--bg-deep, #0A0A0C);
-  --lb-surface: var(--card-bg, #1C1C22);
-  --lb-border: var(--card-border, #26272C);
-  --lb-border-strong: var(--card-border, #33343B);
-  --lb-text: var(--text-primary, #FFFFFF);
+  --lb-bg: var(--bg-deep);
+  --lb-surface: var(--card-bg);
+  --lb-border: var(--card-border);
+  --lb-border-strong: var(--card-border);
+  --lb-text: var(--text-primary);
   --lb-muted: var(--text-secondary, var(--text-muted));
-  --lb-accent: var(--color-teal, #1D4ED8);
-  --lb-accent-2: var(--color-cyan, #3B82F6);
-  --lb-accent-light: #23242B;
+  --lb-accent: var(--color-teal);
+  --lb-accent-2: var(--color-cyan);
+  --lb-accent-light: var(--surface-2);
   --lb-hover-tint: var(--overlay-04);
   --lb-subtle-tint: var(--overlay-02);
-  --lb-danger: #FF5C5C;
+  --lb-danger: var(--danger);
   --lb-radius: var(--radius-sm, 100px);
   --lb-radius-card: var(--radius-md, 20px);
   --lb-shadow: 0 2px 10px rgba(0,0,0,0.35);
 
-  background: var(--bg-surface, #0F0F12);
+  background: var(--bg-surface);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
   color: var(--lb-text);
   line-height: 1.5;
   min-height: 100vh;
   padding: 20px;
-}
-
-:root.light-theme .lb-root {
-  --lb-accent-light: #F6F7F0;
-  --lb-hover-tint: rgba(0,0,0,0.04);
-  --lb-subtle-tint: rgba(0,0,0,0.02);
 }
 
 .lb-window {
@@ -50,7 +44,7 @@
   padding: 40px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   color: var(--text-secondary, var(--text-muted));
-  background: var(--bg-surface, #0F0F12);
+  background: var(--bg-surface);
   min-height: 100vh;
 }
 
@@ -97,7 +91,7 @@
 }
 .lb-btn-pdf:active, .lb-btn-secondary:active { transform: scale(0.97); }
 
-.lb-btn-pdf { background: linear-gradient(135deg, var(--lb-accent-2), var(--lb-accent)); color: #fff; }
+.lb-btn-pdf { background: var(--lb-accent); color: var(--on-primary); }
 .lb-btn-pdf:disabled { opacity: 0.5; cursor: not-allowed; }
 .lb-btn-secondary { background: var(--lb-accent-light); color: var(--lb-text); border: 1px solid var(--lb-border-strong); }
 .lb-btn-pdf:hover:not(:disabled), .lb-btn-secondary:hover { opacity: 0.85; }
@@ -244,8 +238,8 @@
   gap: 8px;
   width: 100%;
   padding: 16px;
-  background: linear-gradient(135deg, var(--lb-accent-2), var(--lb-accent));
-  color: white;
+  background: var(--lb-accent);
+  color: var(--on-primary);
   border: none;
   border-radius: var(--lb-radius-card);
   font-size: 14px;

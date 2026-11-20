@@ -32,7 +32,7 @@
 }
 
 .materials-table th {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--overlay-20);
   color: var(--text-muted);
   font-weight: 600;
   font-size: 0.85rem;
@@ -89,12 +89,12 @@
 }
 
 .badge-yes {
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--color-mint);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
 }
 
 .badge-no {
-  background: rgba(100, 116, 139, 0.15);
+  background: var(--surface-2);
   color: var(--text-muted);
 }
 

@@ -55,18 +55,33 @@ function KeyValueList({ data }) {
   );
 }
 
+// Verde = activo/hecho, ámbar = en pausa (alerta), gris = cancelado/sin dato.
+// Texto sobre fondo soft siempre en su -ink (ver getStatusInk).
 function getStatusColor(status) {
   switch (status) {
-    case 'ENGINEERING': return '#3b82f6';
-    case 'CHECK ENG.': return '#8b5cf6';
-    case 'PAPERWORK': return '#f59e0b';
-    case 'CHECK': return '#ec4899';
-    case 'NESTING': return '#10b981';
-    case 'INSTALL': return '#06b6d4';
-    case 'ON HOLD': return '#ef4444';
-    case 'COMPLETED': return '#22c55e';
-    case 'CANCELLED': return '#6b7280';
-    default: return '#94a3b8';
+    case 'ENGINEERING':
+    case 'CHECK ENG.':
+    case 'PAPERWORK':
+    case 'CHECK':
+    case 'NESTING':
+    case 'INSTALL': return 'var(--accent-soft)';
+    case 'COMPLETED': return 'var(--accent)';
+    case 'ON HOLD': return 'var(--warn-soft)';
+    default: return 'var(--surface-2)';
+  }
+}
+
+function getStatusInk(status) {
+  switch (status) {
+    case 'ENGINEERING':
+    case 'CHECK ENG.':
+    case 'PAPERWORK':
+    case 'CHECK':
+    case 'NESTING':
+    case 'INSTALL': return 'var(--accent-ink)';
+    case 'COMPLETED': return 'var(--on-primary)';
+    case 'ON HOLD': return 'var(--warn-ink)';
+    default: return 'var(--text-muted)';
   }
 }
 
@@ -106,7 +121,7 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
     return (
       <div style={styles.root}>
         <div style={styles.card}>
-          <AlertTriangle size={32} color="#ef4444" style={{ marginBottom: 12 }} />
+          <AlertTriangle size={32} style={{ marginBottom: 12, color: 'var(--danger)' }} />
           <h2 style={{ color: 'var(--text-primary)', marginBottom: 8 }}>{language === 'es' ? 'Proyecto no encontrado' : 'Project not found'}</h2>
           <p style={{ color: 'var(--text-muted)' }}>{language === 'es' ? `No se pudo encontrar la SO #${so} en los datos actuales.` : `SO #${so} could not be found in the current data.`}</p>
         </div>
@@ -135,7 +150,7 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
 
       {/* Status Badge */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <span style={{ ...styles.statusBadge, background: getStatusColor(status) }}>
+        <span style={{ ...styles.statusBadge, background: getStatusColor(status), color: getStatusInk(status) }}>
           {status}
         </span>
         {onHoldReason && (
@@ -150,7 +165,7 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
       <div style={styles.grid}>
         {/* Install Date */}
         <div style={styles.infoCard}>
-          <div style={styles.infoIcon}><Calendar size={18} color="#3b82f6" /></div>
+          <div style={styles.infoIcon}><Calendar size={18} style={{ color: 'var(--text-muted)' }} /></div>
           <div>
             <div style={styles.infoLabel}>Install Date</div>
             <div style={styles.infoValue}>{project.install || 'N/A'}</div>
@@ -159,7 +174,7 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
 
         {/* Engineer */}
         <div style={styles.infoCard}>
-          <div style={styles.infoIcon}><User size={18} color="#8b5cf6" /></div>
+          <div style={styles.infoIcon}><User size={18} style={{ color: 'var(--text-muted)' }} /></div>
           <div>
             <div style={styles.infoLabel}>Engineer</div>
             <div style={styles.infoValue}>{project.eng || 'N/A'}</div>
@@ -169,7 +184,7 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
         {/* Designer */}
         {designer && (
           <div style={styles.infoCard}>
-            <div style={styles.infoIcon}><User size={18} color="#f59e0b" /></div>
+            <div style={styles.infoIcon}><User size={18} style={{ color: 'var(--text-muted)' }} /></div>
             <div>
               <div style={styles.infoLabel}>Designer</div>
               <div style={styles.infoValue}>{designer}</div>
@@ -181,7 +196,7 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
         {/* Due Week */}
         {project.dueWeek && (
           <div style={styles.infoCard}>
-            <div style={styles.infoIcon}><Clock size={18} color="#10b981" /></div>
+            <div style={styles.infoIcon}><Clock size={18} style={{ color: 'var(--text-muted)' }} /></div>
             <div>
               <div style={styles.infoLabel}>Due Week</div>
               <div style={styles.infoValue}>{project.dueWeek}</div>
@@ -202,17 +217,17 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
                 {idx < STAGES.length - 1 && (
                   <div style={{
                     ...styles.stageConnectorLine,
-                    background: isCompleted && isNextCompleted ? '#10b981' : 'rgba(255,255,255,0.1)',
+                    background: isCompleted && isNextCompleted ? 'var(--accent)' : 'var(--border)',
                   }} />
                 )}
                 <div style={{
                   ...styles.stageDot,
-                  background: isCompleted ? '#10b981' : '#0b1320',
-                  border: isCompleted ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.15)',
+                  background: isCompleted ? 'var(--accent)' : 'var(--surface-2)',
+                  border: isCompleted ? '2px solid var(--accent)' : '1.5px solid var(--border)',
                 }}>
-                  {isCompleted && <Check size={14} color="#fff" strokeWidth={3} />}
+                  {isCompleted && <Check size={14} strokeWidth={3} style={{ color: 'var(--on-primary)' }} />}
                 </div>
-                <span style={{ ...styles.stageLabel, color: isCompleted ? '#10b981' : 'var(--text-muted)' }}>
+                <span style={{ ...styles.stageLabel, color: isCompleted ? 'var(--accent-ink)' : 'var(--text-muted)' }}>
                   {t(stage.labelKey)}
                 </span>
               </div>
@@ -229,15 +244,15 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
             {notes.map((note, i) => (
               <div key={note.id || i} style={styles.noteCard}>
                 <div style={styles.noteMeta}>
-                  <span style={{ color: '#60a5fa', fontWeight: 600, fontSize: '0.8rem' }}>
+                  <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.8rem' }}>
                     {note.createdBy || 'Unknown'}
                   </span>
-                  <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                     {note.createdAt ? new Date(note.createdAt).toLocaleString() : ''}
                   </span>
                 </div>
                 {note.parentNoteId && (
-                  <p style={{ color: '#64748b', fontSize: '0.72rem', margin: '0 0 4px 0' }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', margin: '0 0 4px 0' }}>
                     ↩ {language === 'es' ? 'En respuesta a una nota anterior' : 'In reply to an earlier note'}
                   </p>
                 )}
@@ -297,8 +312,8 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
 
       {/* Footer */}
       <div style={styles.footer}>
-        <span style={{ color: '#475569', fontSize: '0.8rem' }}>JL Closets · Project Detail</span>
-        <a href={window.location.origin} style={{ color: '#3b82f6', fontSize: '0.8rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <span style={{ color: 'var(--text)', fontSize: '0.8rem' }}>JL Closets · Project Detail</span>
+        <a href={window.location.origin} style={{ color: 'var(--text)', fontSize: '0.8rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
           <ExternalLink size={12} /> Open Dashboard
         </a>
       </div>
@@ -309,7 +324,7 @@ export default function ProjectDetailView({ data, projectNotes = {}, projectDesi
 const styles = {
   root: {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+    background: 'linear-gradient(135deg, var(--surface) 0%, var(--surface) 50%, var(--surface) 100%)',
     padding: '40px 20px',
     fontFamily: "'Inter', sans-serif",
     display: 'flex',
@@ -319,7 +334,7 @@ const styles = {
   },
   card: {
     background: 'var(--overlay-05)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    border: '1px solid var(--border)',
     borderRadius: 16,
     padding: 40,
     textAlign: 'center',
@@ -334,7 +349,7 @@ const styles = {
     flexWrap: 'wrap',
   },
   soLabel: {
-    color: '#3b82f6',
+    color: 'var(--text)',
     fontSize: '0.9rem',
     fontWeight: 700,
     letterSpacing: '0.05em',
@@ -363,10 +378,10 @@ const styles = {
     alignItems: 'center',
     gap: 6,
     padding: '8px 16px',
-    background: 'rgba(59,130,246,0.15)',
-    border: '1px solid rgba(59,130,246,0.3)',
+    background: 'var(--surface-2)',
+    border: '1px solid var(--border)',
     borderRadius: 8,
-    color: '#60a5fa',
+    color: 'var(--text)',
     cursor: 'pointer',
     fontSize: '0.85rem',
     fontWeight: 600,
@@ -374,22 +389,22 @@ const styles = {
   },
   statusBadge: {
     padding: '6px 14px',
-    borderRadius: 20,
+    borderRadius: 999,
     fontSize: '0.8rem',
     fontWeight: 700,
-    color: '#fff',
+    color: 'var(--text)',
     letterSpacing: '0.05em',
   },
   holdReason: {
     display: 'flex',
     alignItems: 'center',
     gap: 6,
-    color: '#fca5a5',
+    color: 'var(--danger)',
     fontSize: '0.85rem',
-    background: 'rgba(239,68,68,0.1)',
+    background: 'var(--danger-soft)',
     padding: '4px 10px',
     borderRadius: 8,
-    border: '1px solid rgba(239,68,68,0.2)',
+    border: '1px solid var(--danger-line)',
   },
   grid: {
     display: 'grid',
@@ -399,7 +414,7 @@ const styles = {
   },
   infoCard: {
     background: 'var(--overlay-04)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    border: '1px solid var(--border)',
     borderRadius: 12,
     padding: '14px 16px',
     display: 'flex',
@@ -412,7 +427,7 @@ const styles = {
     flexShrink: 0,
   },
   infoLabel: {
-    color: '#64748b',
+    color: 'var(--text-muted)',
     fontSize: '0.72rem',
     fontWeight: 600,
     textTransform: 'uppercase',
@@ -420,24 +435,24 @@ const styles = {
     marginBottom: 4,
   },
   infoValue: {
-    color: '#e2e8f0',
+    color: 'var(--text)',
     fontSize: '0.95rem',
     fontWeight: 600,
   },
   infoSub: {
-    color: '#64748b',
+    color: 'var(--text-muted)',
     fontSize: '0.78rem',
     marginTop: 3,
   },
   section: {
     background: 'var(--overlay-03)',
-    border: '1px solid rgba(255,255,255,0.07)',
+    border: '1px solid var(--border)',
     borderRadius: 14,
     padding: '20px 24px',
     marginBottom: 16,
   },
   sectionTitle: {
-    color: '#cbd5e1',
+    color: 'var(--text)',
     fontSize: '0.85rem',
     fontWeight: 700,
     textTransform: 'uppercase',
@@ -491,22 +506,22 @@ const styles = {
     justifyContent: 'space-between',
     gap: 12,
     padding: '8px 0',
-    borderBottom: '1px solid rgba(255,255,255,0.06)',
+    borderBottom: '1px solid var(--border)',
   },
   kvKey: {
-    color: '#64748b',
+    color: 'var(--text-muted)',
     fontSize: '0.8rem',
     textTransform: 'capitalize',
   },
   kvValue: {
-    color: '#e2e8f0',
+    color: 'var(--text)',
     fontSize: '0.85rem',
     fontWeight: 500,
     textAlign: 'right',
     wordBreak: 'break-word',
   },
   checkLabel: {
-    color: '#cbd5e1',
+    color: 'var(--text)',
     fontSize: '0.78rem',
     fontWeight: 700,
     textTransform: 'uppercase',
@@ -515,15 +530,15 @@ const styles = {
   },
   collabBadge: {
     background: 'var(--overlay-05)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    border: '1px solid var(--border)',
     borderRadius: 20,
     padding: '4px 12px',
     fontSize: '0.82rem',
-    color: '#e2e8f0',
+    color: 'var(--text)',
   },
   noteCard: {
     background: 'var(--overlay-04)',
-    border: '1px solid rgba(255,255,255,0.07)',
+    border: '1px solid var(--border)',
     borderRadius: 10,
     padding: '12px 16px',
   },
@@ -535,7 +550,7 @@ const styles = {
     flexWrap: 'wrap',
   },
   noteText: {
-    color: '#cbd5e1',
+    color: 'var(--text)',
     fontSize: '0.9rem',
     margin: 0,
     lineHeight: 1.5,
@@ -552,6 +567,6 @@ const styles = {
     alignItems: 'center',
     marginTop: 24,
     paddingTop: 16,
-    borderTop: '1px solid rgba(255,255,255,0.06)',
+    borderTop: '1px solid var(--border)',
   },
 };

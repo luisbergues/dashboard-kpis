@@ -12,6 +12,8 @@ import {
   Legend
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+import { useTheme } from '../utils/ThemeContext';
+import { chartColors, chartTooltip } from '../utils/chartColors';
 import './CostAnalysisView.css';
 
 ChartJS.register(
@@ -25,6 +27,9 @@ ChartJS.register(
 
 export default function CostAnalysisView({ data }) {
   const { t, language } = useLanguage();
+  const { theme } = useTheme();
+  // Chart.js dibuja en canvas: colores resueltos, no var(--token).
+  const cc = chartColors(theme === 'light');
   if (!data) return <SkeletonLoader type="table" count={5} />;
 
   const { topCostProjects } = data;
@@ -40,16 +45,7 @@ export default function CostAnalysisView({ data }) {
       {
         label: language === 'es' ? 'Costo del Proyecto ($)' : 'Project Cost ($)',
         data: topCostProjects.map(p => processCost(p.cost)),
-        backgroundColor: function(context) {
-          const chart = context.chart;
-          const {ctx, chartArea} = chart;
-          if (!chartArea) return null;
-          
-          const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-          gradient.addColorStop(0, '#09D1C7');
-          gradient.addColorStop(1, '#80EE98');
-          return gradient;
-        },
+        backgroundColor: cc.accent,
         borderRadius: 6,
         borderWidth: 0,
       }
@@ -68,11 +64,7 @@ export default function CostAnalysisView({ data }) {
         display: false
       },
       tooltip: {
-        backgroundColor: 'rgba(11, 21, 32, 0.9)',
-        titleColor: '#80EE98',
-        bodyColor: '#fff',
-        borderColor: 'rgba(255,255,255,0.1)',
-        borderWidth: 1,
+        ...chartTooltip(theme === 'light'),
         padding: 12,
         callbacks: {
           label: function(context) {
@@ -92,11 +84,11 @@ export default function CostAnalysisView({ data }) {
       y: {
         beginAtZero: true,
         grid: {
-          color: 'rgba(255, 255, 255, 0.05)',
+          color: cc.grid,
           drawBorder: false,
         },
         ticks: {
-          color: '#64748B',
+          color: cc.textMuted,
           callback: function(value) {
             return '$' + value / 1000 + 'k';
           }
@@ -108,7 +100,7 @@ export default function CostAnalysisView({ data }) {
           drawBorder: false,
         },
         ticks: {
-          color: '#94A3B8',
+          color: cc.textMuted,
           maxRotation: 45,
           minRotation: 45,
           // Rotada a 45°, una etiqueta larga ("Cherry Luxury Interiors LLC")

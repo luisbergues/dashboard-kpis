@@ -4,6 +4,6 @@
 .note-tag-chip {
   display: inline-flex; align-items: center; gap: 3px;
   font-size: 0.7rem; padding: 2px 7px; border-radius: 10px;
-  background: var(--overlay-10, rgba(255,255,255,0.1)); color: var(--text-muted, #8B98A5);
+  background: var(--overlay-10); color: var(--text-muted);
 }
-.note-tag-chip.read { color: var(--accent, #80EE98); }
+.note-tag-chip.read { color: var(--accent); }

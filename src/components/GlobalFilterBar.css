@@ -7,7 +7,7 @@
   padding: 12px 20px;
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-lg);
-  background: rgba(18, 33, 48, 0.75);
+  background: var(--text);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--overlay-08);
@@ -56,8 +56,8 @@
 .filter-input-group:focus-within,
 .filter-input-group:hover {
   border-color: var(--color-cyan);
-  background: rgba(9, 209, 199, 0.04);
-  box-shadow: 0 0 10px rgba(9, 209, 199, 0.1);
+  background: var(--accent-soft);
+  box-shadow: 0 0 10px var(--accent-line);
 }
 
 .input-icon {
@@ -91,9 +91,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 46, 147, 0.08);
-  border: 1px solid rgba(255, 46, 147, 0.2);
-  color: var(--color-pink);
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-line);
+  color: var(--danger-ink);
   padding: 8px 14px;
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
@@ -104,7 +104,7 @@
 }
 
 .btn-reset-filters:hover {
-  background: rgba(255, 46, 147, 0.15);
+  background: var(--danger-soft);
   border-color: var(--color-pink);
   transform: translateY(-1px);
 }

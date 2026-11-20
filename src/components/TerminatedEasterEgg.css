@@ -16,7 +16,7 @@
 .terminated-egg-img {
   max-width: min(420px, 80vw);
   max-height: 80vh;
-  filter: drop-shadow(0 0 40px rgba(255, 0, 0, 0.35));
+  filter: drop-shadow(0 0 40px var(--danger-line));
   animation: terminatedEggPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 

@@ -719,10 +719,10 @@ function PipelineViewInner({
               aria-label={language === 'es' ? 'Cerrar imagen' : 'Close image'}
               style={{
                 position: 'absolute', top: '0', right: '-50px',
-                background: 'none', border: 'none', color: '#fff',
+                background: 'none', border: 'none', color: 'var(--text)',
                 cursor: 'pointer', padding: '8px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(255,255,255,0.1)', borderRadius: '50%'
+                background: 'var(--overlay-10)', borderRadius: '50%'
               }}
             >
               <X size={24} />
@@ -888,7 +888,7 @@ function PipelineViewInner({
                       ) : (
                         <select
                           className="meta-item eng-badge"
-                          style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', cursor: 'pointer', outline: 'none' }}
+                          style={{ background: 'var(--overlay-10)', border: 'none', color: 'var(--text)', cursor: 'pointer', outline: 'none' }}
                           onClick={(e) => e.stopPropagation()}
                           onChange={(e) => {
                             e.stopPropagation();
@@ -1085,7 +1085,7 @@ function PipelineViewInner({
                                   <button 
                                     type="button"
                                     onClick={() => setNoteImages(prev => ({ ...prev, [project.so]: prev[project.so].filter((_, i) => i !== idx) }))}
-                                    style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#EF4444', color: '#fff', borderRadius: '50%', border: 'none', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
+                                    style={{ position: 'absolute', top: '-6px', right: '-6px', background: 'var(--danger)', color: 'var(--on-primary)', borderRadius: '50%', border: 'none', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
                                   >
                                     <X size={10} />
                                   </button>
@@ -1222,7 +1222,7 @@ function PipelineViewInner({
                                         <div key={i} style={{ textDecoration: 'none' }}>
                                           {att.type === 'document' ? (
                                             <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'var(--overlay-05)', borderRadius: '4px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
+                                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'var(--overlay-05)', borderRadius: '4px', color: 'var(--accent-ink)', border: '1px solid var(--accent-line)' }}>
                                                 <FileText size={14} />
                                                 <span title={att.name || 'Document'} style={{ fontSize: '0.75rem', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                   {att.name || 'Document'}

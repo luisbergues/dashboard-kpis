@@ -15,6 +15,7 @@ import { fetchAndParseQualityData } from '../utils/sheetParser';
 import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
 import { weeklyTimeline, monthTotals } from '../utils/teamStatsCharts';
+import { chartColors, withAlpha as hexWithAlpha } from '../utils/chartColors';
 
 ChartJS.register(LinearScale, CategoryScale, BarElement, Legend, Tooltip, BarController);
 
@@ -68,18 +69,18 @@ const PERIOD_TABLES = [
 // naranja por encima del 30%. El color nunca va solo — siempre lo acompania el
 // badge con el texto — y en tema claro usa pasos oscurecidos, porque el
 // #FFE600 de la guia sobre fondo blanco es practicamente invisible (1.1:1).
-function workloadAlert(percent, isLight) {
+function workloadAlert(percent) {
   if (percent < 10) {
     return {
-      color: isLight ? '#A16207' : '#FFE600',
-      badgeBg: isLight ? 'rgba(161,98,7,0.12)' : 'rgba(255,230,0,0.1)',
+      color: 'var(--warn-ink)',
+      badgeBg: 'var(--warn-soft)',
       badge: '< 10% Low',
     };
   }
   if (percent > 30) {
     return {
-      color: isLight ? '#C2410C' : '#FF9500',
-      badgeBg: isLight ? 'rgba(194,65,12,0.12)' : 'rgba(255,149,0,0.1)',
+      color: 'var(--warn-ink)',
+      badgeBg: 'var(--warn-soft)',
       badge: '> 30% High',
     };
   }
@@ -100,7 +101,7 @@ const SORTABLE_COLUMNS = [
 // Una de las tablas por periodo de la hoja (Last 30 Days / 31-60 Days) con las
 // cuatro columnas de puntos. El titulo sale de la propia hoja, asi que el rango
 // de fechas se mantiene solo cuando la hoja rota de mes.
-function PeriodTable({ table, colors, isLight, emptyLabel, language = 'en' }) {
+function PeriodTable({ table, colors, emptyLabel, language = 'en' }) {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
 
@@ -188,17 +189,17 @@ function PeriodTable({ table, colors, isLight, emptyLabel, language = 'en' }) {
             {colWidths.map((w, i) => <col key={i} style={{ width: w }} />)}
           </colgroup>
           <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+            <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--overlay-02)' }}>
               {SORTABLE_COLUMNS.map(col => <SortableHeader key={col.key} col={col} />)}
             </tr>
           </thead>
           <tbody>
             {sortedRows.map((row, index) => {
-              const alert = workloadAlert(row.percentOfTotal, isLight);
+              const alert = workloadAlert(row.percentOfTotal);
               return (
                 <tr
                   key={row.engineer || index}
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                  style={{ borderBottom: '1px solid var(--border)' }}
                   // Los SOs que sumaron en el periodo (columna F de la hoja) no
                   // entran como columna propia, pero sirven para auditar una fila.
                   title={row.projects ? `SO: ${row.projects}` : undefined}
@@ -207,7 +208,7 @@ function PeriodTable({ table, colors, isLight, emptyLabel, language = 'en' }) {
                   <td style={td}>{formatCurrency(row.ownPoints)}</td>
                   <td style={td}>{formatCurrency(row.revisionPoints)}</td>
                   <td style={td}>{formatCurrency(row.nestingPoints)}</td>
-                  <td style={{ ...td, fontWeight: 'bold', color: '#09D1C7' }}>{formatCurrency(row.totalKPI)}</td>
+                  <td style={{ ...td, fontWeight: 'bold', color: 'var(--accent-ink)' }}>{formatCurrency(row.totalKPI)}</td>
                   {/* Umbrales de la Workload Distribution Guide. El color no va
                       solo: cuando hay alerta la acompania el badge con el
                       texto, para que no dependa de distinguir tonos. */}
@@ -224,7 +225,7 @@ function PeriodTable({ table, colors, isLight, emptyLabel, language = 'en' }) {
             })}
           </tbody>
           <tfoot>
-            <tr style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+            <tr style={{ borderTop: '1px solid var(--border)' }}>
               <td style={{ ...td, color: colors.muted, fontWeight: 600 }}>Total</td>
               <td style={td} colSpan={3}></td>
               <td style={{ ...td, color: colors.muted, fontWeight: 600 }}>{formatCurrency(table.periodTotal)}</td>
@@ -248,11 +249,14 @@ export default function DesignQualityView() {
 
   // Colors were hardcoded for a dark background (#fff titles, #94A3B8 body),
   // leaving titles and engineer names nearly invisible in light theme.
+  // Valores resueltos (no var()): C también alimenta a Chart.js, que dibuja en
+  // canvas. Ver utils/chartColors.js.
+  const cc = chartColors(isLight);
   const C = {
-    title: isLight ? '#0f172a' : '#fff',
-    body: isLight ? '#475569' : '#94A3B8',
-    muted: isLight ? '#64748b' : '#64748B',
-    accent: isLight ? '#0f766e' : '#80EE98',
+    title: cc.text,
+    body: cc.textMuted,
+    muted: cc.textMuted,
+    accent: cc.accentInk,
   };
   const [data, setData] = useState({
     kpiData: [],
@@ -300,16 +304,16 @@ export default function DesignQualityView() {
   // que se guardaba en weekly_engineer_kpi ya no se escribe; el nodo queda en
   // Firebase como historico.
   const chartTooltip = useMemo(() => ({
-    backgroundColor: isLight ? 'rgba(255, 255, 255, 0.98)' : 'rgba(11, 21, 32, 0.95)',
+    backgroundColor: cc.surface,
     titleColor: C.accent,
-    bodyColor: isLight ? '#0f172a' : '#fff',
-    borderColor: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)',
+    bodyColor: cc.text,
+    borderColor: cc.border,
     borderWidth: 1,
     padding: 10,
     callbacks: {
       label: (ctx) => `${ctx.dataset.label}: ${formatPoints(ctx.parsed.y)} pts`,
     },
-  }), [isLight, C.accent]);
+  }), [cc, C.accent]);
 
   const chartScales = useMemo(() => ({
     x: {
@@ -318,10 +322,10 @@ export default function DesignQualityView() {
     },
     y: {
       beginAtZero: true,
-      grid: { color: isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+      grid: { color: cc.grid, drawBorder: false },
       ticks: { color: C.muted, callback: axisPoints },
     },
-  }), [isLight, C.body, C.muted]);
+  }), [cc, C.body, C.muted]);
 
   const legend = useMemo(() => ({
     position: 'bottom',
@@ -363,7 +367,8 @@ export default function DesignQualityView() {
   const monthTotalsChartData = useMemo(() => {
     const totals = monthTotals(data.weeklyPrevious, data.weeklyCurrent);
     if (!totals) return null;
-    const tones = isLight ? ['#45C4BD', '#0A5F5C'] : ['#197F7C', '#09D1C7'];
+    // Mes anterior en verde apagado, mes actual en verde pleno.
+    const tones = [hexWithAlpha(cc.accent, 0.4), cc.accent];
     return {
       labels: totals.engineers,
       datasets: totals.months.map((m, index) => ({
@@ -375,7 +380,7 @@ export default function DesignQualityView() {
         barPercentage: 0.86,
       })),
     };
-  }, [data.weeklyPrevious, data.weeklyCurrent, isLight]);
+  }, [data.weeklyPrevious, data.weeklyCurrent, cc]);
 
   const monthTotalsChartOptions = useMemo(() => ({
     responsive: true,
@@ -389,7 +394,7 @@ export default function DesignQualityView() {
   }
 
   if (error) {
-    return <div className="error-state text-danger" style={{ padding: '24px', color: '#FF2E93' }}>{error}</div>;
+    return <div className="error-state text-danger" style={{ padding: '24px', color: 'var(--danger)' }}>{error}</div>;
   }
 
   // `kpiData` (el bloque acumulado "% of Total") ya no se muestra, pero sigue
@@ -446,7 +451,6 @@ export default function DesignQualityView() {
                     key={key}
                     table={data[key]}
                     colors={C}
-                    isLight={isLight}
                     language={language}
                   />
                 ))}
@@ -463,22 +467,22 @@ export default function DesignQualityView() {
                     </div>
                   </div>
                 )}
-                <div style={{ marginTop: '12px', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)', background: 'var(--overlay-01)' }}>
+                <div style={{ marginTop: '12px', padding: '16px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--overlay-01)' }}>
                   <h5 style={{ color: C.title, fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
                     {language === 'es' ? 'Guía de Distribución de Carga' : 'Workload Distribution Guide'}
                   </h5>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.82rem', lineHeight: '1.4' }}>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FFE600', marginTop: '4px', flexShrink: 0 }}></div>
-                      <span style={{ color: '#FFE600' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--warn)', marginTop: '4px', flexShrink: 0 }}></div>
+                      <span style={{ color: 'var(--warn)' }}>
                         {language === 'es'
                           ? 'Alerta Amarilla (< 10%): Se le debe asignar más proyectos al ingeniero para balancear la carga.'
                           : 'Yellow Alert (< 10%): More projects should be assigned to the engineer to balance workload.'}
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FF9500', marginTop: '4px', flexShrink: 0 }}></div>
-                      <span style={{ color: '#FF9500' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--warn)', marginTop: '4px', flexShrink: 0 }}></div>
+                      <span style={{ color: 'var(--warn)' }}>
                         {language === 'es'
                           ? 'Alerta Naranja (> 30%): Sobrecarga crítica. Se debe reducir la concentración de proyectos del ingeniero.'
                           : 'Orange Alert (> 30%): Critical overload. Reduce project concentration for this engineer.'}
@@ -508,12 +512,12 @@ export default function DesignQualityView() {
               width: '56px',
               height: '56px',
               borderRadius: '50%',
-              backgroundColor: '#007BFF',
-              color: '#fff',
+              backgroundColor: 'var(--text)',
+              color: 'var(--on-primary)',
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              boxShadow: '0 4px 12px rgba(0, 123, 255, 0.4)',
+              boxShadow: '0 4px 12px var(--overlay-15)',
               border: 'none',
               cursor: 'pointer',
               zIndex: 1000
@@ -551,7 +555,7 @@ export default function DesignQualityView() {
                 >
                   <X size={24} />
                 </button>
-                <h2 style={{ color: C.title, marginBottom: '24px', fontSize: '1.5rem', borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'}`, paddingBottom: '16px' }}>
+                <h2 style={{ color: C.title, marginBottom: '24px', fontSize: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
                   {language === 'es' ? 'GUÍA DE USUARIO E INSTRUCCIONES' : 'DASHBOARD USER GUIDE & INSTRUCTIONS'}
                 </h2>
 

@@ -171,7 +171,7 @@ export default function IPGeneratorModal({ project, onClose }) {
                 <input type="text" name="clientName" value={clientName} onChange={handleChange} />
               </label>
               <label>CLIENT'S ADDRESS: 
-                <textarea name="clientAddress" value={clientAddress} onChange={handleChange} rows={3} style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.95rem', resize: 'vertical' }} />
+                <textarea name="clientAddress" value={clientAddress} onChange={handleChange} rows={3} style={{ background: 'var(--overlay-05)', border: '1px solid var(--border)', color: 'var(--text)', padding: '8px 12px', borderRadius: '6px', fontSize: '0.95rem', resize: 'vertical' }} />
               </label>
               <label>CLIENT'S PHONE NUMBER: 
                 <input type="text" name="clientPhone" value={clientPhone} onChange={handleChange} />
@@ -183,7 +183,7 @@ export default function IPGeneratorModal({ project, onClose }) {
                 <input type="text" name="collectPayment" value={collectPayment} onChange={handleChange} />
               </label>
               <label>OBSERVATIONS: 
-                <textarea name="observations" value={observations} onChange={handleChange} rows={6} style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.95rem', resize: 'vertical' }} />
+                <textarea name="observations" value={observations} onChange={handleChange} rows={6} style={{ background: 'var(--overlay-05)', border: '1px solid var(--border)', color: 'var(--text)', padding: '8px 12px', borderRadius: '6px', fontSize: '0.95rem', resize: 'vertical' }} />
               </label>
             </div>
           </div>

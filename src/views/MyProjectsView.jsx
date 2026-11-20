@@ -12,7 +12,7 @@ import {
   Briefcase, Calendar, Check, Clock,
   AlertCircle, Download, ToggleLeft, ToggleRight, X, Info, StickyNote, Plus, Trash2, Flag, Users, User,
   ChevronDown, ChevronUp, ArrowUpDown, TrendingUp, CheckCircle2, Image as ImageIcon, Loader2, FileText, Paperclip,
-  LayoutGrid, NotebookPen, ListChecks, Pencil, AtSign, FlagTriangleRight
+  LayoutGrid, NotebookPen, ListChecks, Pencil, AtSign, FlagTriangleRight, AlertTriangle
 } from 'lucide-react';
 import { compressImage, uploadNoteAttachment } from '../services/imageService';
 import { canManageDesignerNotes } from '../utils/notePermissions';
@@ -42,6 +42,7 @@ import NoteTagChips from '../components/NoteTagChips';
 import { buildTags, createNoteWithTags, deleteNoteWithTags } from '../utils/noteTags';
 import { noteTagKey } from '../utils/projectTags';
 import { tagAlertDestination } from '../utils/tagAlerts';
+import { chartColors, chartTooltip, withAlpha as hexWithAlpha } from '../utils/chartColors';
 import './MyProjectsView.css';
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Title, ChartTooltip, Legend, Filler);
@@ -79,12 +80,11 @@ function MyProjectsViewInner({
 }) {
   const { t, language } = useLanguage();
   const { theme } = useTheme();
-  const isLight = theme === 'light';
   // A few inline styles hardcoded dark-theme text (#fff / #94A3B8) on top of a
   // translucent rgba(255,255,255,...) surface, which lets the real page
   // background show through — invisible on light theme's white background.
-  const textOnSurface = isLight ? '#1e293b' : '#fff';
-  const mutedOnSurface = isLight ? '#64748b' : '#94A3B8';
+  const textOnSurface = 'var(--text)';
+  const mutedOnSurface = 'var(--text-muted)';
 
   const { priorityAnalysis, onHoldNotes } = data;
 
@@ -342,13 +342,22 @@ function MyProjectsViewInner({
   );
   // Los labels de las series salen del diccionario estatico (antes estaban
   // fijos en ingles dentro de kpiCalculator).
+  // El color de cada serie sale de su `tone` (kpiCalculator no conoce el
+  // tema). Chart.js dibuja en canvas: colores resueltos, no var(--token).
+  const cc = chartColors(theme === 'light');
   const weeklyData = React.useMemo(() => ({
     ...weeklyDataRaw,
-    datasets: weeklyDataRaw.datasets.map(ds => ({
-      ...ds,
-      label: ds.labelKey ? t(ds.labelKey) : ds.label,
-    })),
-  }), [weeklyDataRaw, t]);
+    datasets: weeklyDataRaw.datasets.map(ds => {
+      const toneColor = { primary: cc.text, muted: cc.textMuted, accent: cc.accent };
+      const color = toneColor[ds.tone] || cc.textMuted;
+      return {
+        ...ds,
+        label: ds.labelKey ? t(ds.labelKey) : ds.label,
+        borderColor: color,
+        backgroundColor: hexWithAlpha(color, 0.1),
+      };
+    }),
+  }), [weeklyDataRaw, t, cc]);
   // Con una sola semana el grafico degenera en puntos sueltos sin linea; ahi
   // conviene el mismo empty state que ya usa Team Stats.
   const hasEnoughWeeklyHistory = (weeklyDataRaw.weeksWithData || 0) >= 2;
@@ -358,21 +367,17 @@ function MyProjectsViewInner({
   const lineOptions = {
     responsive: true, maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'top', labels: { color: theme === 'light' ? '#374151' : '#94A3B8' } },
+      legend: { position: 'top', labels: { color: cc.textMuted } },
       tooltip: {
-        backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.98)' : 'rgba(11, 21, 32, 0.95)',
-        titleColor: theme === 'light' ? '#10B981' : '#80EE98',
-        bodyColor: theme === 'light' ? '#111827' : '#fff',
-        borderColor: theme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)',
-        borderWidth: 1,
+        ...chartTooltip(theme === 'light'),
         padding: 10,
       },
     },
     scales: {
-      x: { ticks: { color: theme === 'light' ? '#374151' : '#94A3B8' }, grid: { display: false } },
+      x: { ticks: { color: cc.textMuted }, grid: { display: false } },
       y: {
-        ticks: { color: theme === 'light' ? '#374151' : '#94A3B8', precision: 0 },
-        grid: { color: theme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(148,163,184,0.2)' }
+        ticks: { color: cc.textMuted, precision: 0 },
+        grid: { color: cc.grid }
       }
     }
   };
@@ -1472,7 +1477,7 @@ function MyProjectsViewInner({
         <button
           className="btn-primary btn-sm"
           onClick={() => setIsCompletedProjectsModalOpen(true)}
-          style={{ background: 'var(--color-cyan)', color: '#fff', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '90px' }}
+          style={{ background: 'var(--color-cyan)', color: 'var(--on-primary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '90px' }}
         >
           <CheckCircle2 size={14} />
           <span>Completed Projects</span>
@@ -1530,7 +1535,7 @@ function MyProjectsViewInner({
                         // (yellow), further out is informational (muted).
                         const isCritical = d.daysLeft <= 3;
                         const isSoon = !isCritical && d.daysLeft <= 14;
-                        const accent = isCritical ? 'var(--color-pink)' : isSoon ? '#FFE600' : 'var(--text-muted)';
+                        const accent = isCritical ? 'var(--danger)' : isSoon ? 'var(--warn)' : 'var(--text-muted)';
                         const daysLabel = d.daysLeft === 0
                           ? (language === 'es' ? 'Hoy' : 'Today')
                           : d.daysLeft === 1
@@ -1557,7 +1562,7 @@ function MyProjectsViewInner({
                     {/* Mismo icono y color naranja que el calendario y la
                         campana usan para Finals, para que el hito se
                         reconozca en las tres pantallas. */}
-                    <FlagTriangleRight size={16} style={{ color: 'var(--color-orange, #ffa500)' }} />
+                    <FlagTriangleRight size={16} style={{ color: 'var(--color-orange)' }} />
                     Upcoming Final Dates
                   </h4>
                   {upcomingFinals.length === 0 ? (
@@ -1573,7 +1578,7 @@ function MyProjectsViewInner({
                         // la alerta de la campana.
                         const isCritical = f.daysLeft <= 3;
                         const isSoon = !isCritical && f.daysLeft <= 7;
-                        const accent = isCritical ? 'var(--color-pink)' : isSoon ? '#FFE600' : 'var(--text-muted)';
+                        const accent = isCritical ? 'var(--danger)' : isSoon ? 'var(--warn)' : 'var(--text-muted)';
                         const daysLabel = f.daysLeft === 0
                           ? (language === 'es' ? 'Hoy' : 'Today')
                           : f.daysLeft === 1
@@ -1865,7 +1870,8 @@ function MyProjectsViewInner({
                                   <span key={`${idx}-${partIdx}`} className="material-toggle-btn material-pill-static">
                                     {part}
                                     {mat.quantity && <span style={{ opacity: 0.6 }}>({mat.quantity})</span>}
-                                    {mat.urgency === '⚠️' && <span title="Urgent">⚠️</span>}
+                                    {/* Ícono en vez del emoji ⚠️: el emoji no toma el color de la paleta. */}
+                                    {mat.urgency === '⚠️' && <AlertTriangle size={13} aria-label="Urgent" style={{ color: 'var(--warn)' }} />}
                                   </span>
                                 ));
                               })}
@@ -1885,7 +1891,7 @@ function MyProjectsViewInner({
                           <button
                             onClick={() => { setActiveESSProject(project); setIsESSModalOpen(true); }}
                             className="btn-primary btn-sm btn-download-pdf"
-                            style={{ background: 'var(--color-cyan)', color: '#fff', fontWeight: 'bold' }}
+                            style={{ fontWeight: 'bold' }}
                           >
                             <StickyNote size={14} />
                             <span>{t('myProjects.completarESS')}</span>
@@ -1893,7 +1899,7 @@ function MyProjectsViewInner({
                           <button
                             onClick={() => { setActiveIPProject(project); setIsIPModalOpen(true); }}
                             className="btn-primary btn-sm btn-download-pdf"
-                            style={{ background: '#80EE98', color: '#fff', fontWeight: 'bold' }}
+                            style={{ fontWeight: 'bold' }}
                           >
                             <StickyNote size={14} />
                             <span>{t('myProjects.completarIP')}</span>
@@ -1904,8 +1910,8 @@ function MyProjectsViewInner({
                             target="_blank"
                             rel="noreferrer"
                             onClick={e => e.stopPropagation()}
-                            className="btn-primary btn-sm btn-download-pdf"
-                            style={{ background: '#F5A623', color: '#fff', fontWeight: 'bold', textDecoration: 'none' }}
+                            className="btn-secondary btn-sm btn-download-pdf"
+                            style={{ fontWeight: 'bold', textDecoration: 'none' }}
                           >
                             <NotebookPen size={14} />
                             <span>{t('myProjects.logbook')}</span>
@@ -1916,7 +1922,7 @@ function MyProjectsViewInner({
                             rel="noreferrer"
                             onClick={e => e.stopPropagation()}
                             className="btn-primary btn-sm btn-download-pdf"
-                            style={{ background: '#8B5CF6', color: '#fff', fontWeight: 'bold', textDecoration: 'none' }}
+                            style={{ fontWeight: 'bold', textDecoration: 'none', border: 'none' }}
                           >
                             <ListChecks size={14} />
                             <span>{t('myProjects.checklistBtn')}</span>
@@ -1962,7 +1968,7 @@ function MyProjectsViewInner({
                                   <button 
                                     type="button"
                                     onClick={() => setNoteImages(prev => ({ ...prev, [project.so]: prev[project.so].filter((_, i) => i !== idx) }))}
-                                    style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#EF4444', color: '#fff', borderRadius: '50%', border: 'none', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                    style={{ position: 'absolute', top: '-6px', right: '-6px', background: 'var(--danger)', color: 'var(--on-primary)', borderRadius: '50%', border: 'none', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                                   >
                                     <X size={12} />
                                   </button>
@@ -2126,7 +2132,7 @@ function MyProjectsViewInner({
                                     );
                                   })()}
                                   {note.createdBy && project.eng && note.createdBy.toLowerCase() !== project.eng.toLowerCase() && (
-                                    <span className="note-author" style={{ fontSize: '0.72rem', color: '#09D1C7', marginLeft: '6px', fontWeight: 'bold' }}>
+                                    <span className="note-author" style={{ fontSize: '0.72rem', color: 'var(--accent-ink)', marginLeft: '6px', fontWeight: 'bold' }}>
                                       | By {note.createdBy}
                                     </span>
                                   )}
@@ -2215,7 +2221,7 @@ function MyProjectsViewInner({
                                       <div key={i} style={{ textDecoration: 'none' }}>
                                         {att.type === 'document' ? (
                                           <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--overlay-05)', borderRadius: '6px', color: '#09D1C7', border: '1px solid rgba(9,209,199,0.2)' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--overlay-05)', borderRadius: '6px', color: 'var(--accent-ink)', border: '1px solid var(--accent-line)' }}>
                                               <FileText size={16} />
                                               <span title={att.name || 'Document'} style={{ fontSize: '0.85rem', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                 {att.name || 'Document'}
@@ -2364,7 +2370,7 @@ function MyProjectsViewInner({
                     {(projectCollaborators[activeCollabProjectSo] || []).map((collab, idx) => (
                       <li key={idx} className="collab-item glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderRadius: '8px' }}>
                         <div className="collab-info" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(9, 209, 199, 0.15)', color: 'var(--color-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-soft)', color: 'var(--accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <Users size={16} />
                           </div>
                           <span style={{ fontWeight: '500', fontSize: '0.95rem' }}>{collab}</span>
@@ -2373,7 +2379,7 @@ function MyProjectsViewInner({
                           onClick={() => handleRemoveCollab(activeCollabProjectSo, collab)}
                           title={language === 'es' ? 'Eliminar' : 'Remove'}
                           style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', transition: 'all 0.2s' }}
-                          onMouseOver={(e) => { e.currentTarget.style.color = '#FF3B30'; e.currentTarget.style.background = 'rgba(255,59,48,0.1)'; }}
+                          onMouseOver={(e) => { e.currentTarget.style.color = 'var(--danger-ink)'; e.currentTarget.style.background = 'var(--danger-soft)'; }}
                           onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
                         >
                           <Trash2 size={16} />
@@ -2391,8 +2397,8 @@ function MyProjectsViewInner({
       {isQAModalOpen && qaType && (
         <div className="modal-overlay" onClick={() => { setIsQAModalOpen(false); setQAPendingAction(null); setQAType(''); }}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '650px', width: '90%' }}>
-            <div className="modal-header" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '16px' }}>
-              <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#80EE98' }}>
+            <div className="modal-header" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
+              <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-ink)' }}>
                 <CheckCircle2 size={20} />
                 {qaType === 'engineering' && (language === 'es' ? '🛠️ 1. Checklist de Ingeniería' : '🛠️ 1. Engineering Checklist')}
                 {qaType === 'ess_ip' && (language === 'es' ? '📄 2. Checklist Eng Shop Sheet (ESS) / Installer Packet (IP)' : '📄 2. Eng Shop Sheet (ESS) / Installer Packet (IP)')}
@@ -2411,25 +2417,25 @@ function MyProjectsViewInner({
 
               <div 
                 onScroll={handleScroll}
-                style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px', maxHeight: '350px', overflowY: 'auto', paddingRight: '8px', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '12px', background: 'rgba(0,0,0,0.1)' }}
+                style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px', maxHeight: '350px', overflowY: 'auto', paddingRight: '8px', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', background: 'var(--overlay-10)' }}
               >
                 {(t(`myProjects.checklists.${qaType}`) || []).map((item, idx) => (
-                  <label key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', color: textOnSurface, fontSize: '0.92rem', padding: '8px 10px', background: 'var(--overlay-02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}
-                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
-                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}>
+                  <label key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', color: textOnSurface, fontSize: '0.92rem', padding: '8px 10px', background: 'var(--overlay-02)', borderRadius: '6px', border: '1px solid var(--border)', transition: 'background 0.2s' }}
+                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--overlay-05)'}
+                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--overlay-02)'}>
                     <input
                       type="checkbox"
                       name={`qaCheck-${qaType}-${idx}`}
                       checked={!!qaChecks[idx]}
                       onChange={(e) => setQAChecks(prev => ({ ...prev, [idx]: e.target.checked }))}
-                      style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: '#09D1C7', flexShrink: 0 }}
+                      style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--accent)', flexShrink: 0 }}
                     />
                     <span style={{ lineHeight: '1.4' }}>{item}</span>
                   </label>
                 ))}
               </div>
 
-              <div className="form-actions" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '16px' }}>
+              <div className="form-actions" style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
                 <div className="form-actions-right" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', alignItems: 'center' }}>
                   <span className="text-muted" style={{ fontSize: '0.82rem', marginRight: 'auto' }}>
                     {!hasScrolledToBottom 
@@ -2440,7 +2446,7 @@ function MyProjectsViewInner({
                     type="button" 
                     className="btn-secondary"
                     onClick={() => { setIsQAModalOpen(false); setQAPendingAction(null); setQAType(''); }}
-                    style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: mutedOnSurface, cursor: 'pointer' }}
+                    style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: mutedOnSurface, cursor: 'pointer' }}
                   >
                     {t('common.cancel')}
                   </button>
@@ -2451,8 +2457,8 @@ function MyProjectsViewInner({
                     style={{ 
                       padding: '10px 16px', 
                       borderRadius: '8px', 
-                      background: hasScrolledToBottom ? 'var(--color-cyan)' : 'rgba(255,255,255,0.05)', 
-                      color: hasScrolledToBottom ? '#0B1520' : '#64748B',
+                      background: hasScrolledToBottom ? 'var(--color-cyan)' : 'var(--overlay-05)', 
+                      color: hasScrolledToBottom ? 'var(--on-primary)' : 'var(--text-muted)',
                       border: 'none',
                       fontWeight: 'bold',
                       cursor: hasScrolledToBottom ? 'pointer' : 'not-allowed'
@@ -2514,10 +2520,10 @@ function MyProjectsViewInner({
               aria-label={language === 'es' ? 'Cerrar imagen' : 'Close image'}
               style={{
                 position: 'absolute', top: '0', right: '-50px',
-                background: 'none', border: 'none', color: '#fff',
+                background: 'none', border: 'none', color: 'var(--text)',
                 cursor: 'pointer', padding: '8px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(255,255,255,0.1)', borderRadius: '50%'
+                background: 'var(--overlay-10)', borderRadius: '50%'
               }}
             >
               <X size={24} />

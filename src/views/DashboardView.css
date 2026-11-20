@@ -12,9 +12,7 @@
   font-size: 2.2rem;
   font-weight: 700;
   margin-bottom: 4px;
-  background: linear-gradient(135deg, #FFFFFF 0%, var(--text-muted) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text);
 }
 
 .page-subtitle {
@@ -182,9 +180,9 @@
 .history-badge {
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--color-mint);
-  background: rgba(70, 223, 177, 0.08);
-  border: 1px solid rgba(70, 223, 177, 0.15);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
   padding: 10px;
   border-radius: var(--radius-full);
   text-transform: uppercase;
@@ -209,7 +207,7 @@
 .pipeline-value {
   font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #80EE98, #09D1C7);
+  background: linear-gradient(135deg, var(--accent), var(--accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -229,33 +227,33 @@
 }
 
 .fi-card-value.fi-hold {
-  color: #FFE600;
-  text-shadow: 0 0 20px rgba(255, 230, 0, 0.2);
+  color: var(--warn);
+  text-shadow: 0 0 20px var(--warn-line);
 }
 
 .fi-card-value.fi-progress {
-  color: #80EE98;
-  text-shadow: 0 0 20px rgba(128, 238, 152, 0.2);
+  color: var(--accent-ink);
+  text-shadow: 0 0 20px var(--accent-line);
 }
 
 .fi-card-value.fi-risk {
-  color: #FF2E93;
-  text-shadow: 0 0 20px rgba(255, 46, 147, 0.2);
+  color: var(--danger);
+  text-shadow: 0 0 20px var(--danger-line);
 }
 
 .fi-card-hold {
-  border-color: rgba(255, 230, 0, 0.1);
-  background: linear-gradient(135deg, rgba(255, 230, 0, 0.03) 0%, rgba(255, 230, 0, 0.01) 100%);
+  border-color: var(--warn-line);
+  background: linear-gradient(135deg, var(--warn-soft) 0%, var(--warn-soft) 100%);
 }
 
 .fi-card-progress {
-  border-color: rgba(128, 238, 152, 0.1);
-  background: linear-gradient(135deg, rgba(128, 238, 152, 0.03) 0%, rgba(128, 238, 152, 0.01) 100%);
+  border-color: var(--accent-line);
+  background: linear-gradient(135deg, var(--accent-soft) 0%, var(--accent-soft) 100%);
 }
 
 .fi-card-risk {
-  border-color: rgba(255, 46, 147, 0.1);
-  background: linear-gradient(135deg, rgba(255, 46, 147, 0.03) 0%, rgba(255, 46, 147, 0.01) 100%);
+  border-color: var(--danger-line);
+  background: linear-gradient(135deg, var(--danger-soft) 0%, var(--danger-soft) 100%);
 }
 
 /* ─── Compact Financial Impact pill (next to the Week over Week chart) ──── */
@@ -440,28 +438,28 @@
   left: 0;
   width: 4px;
   height: 100%;
-  background: var(--card-accent, #64748B);
+  background: var(--card-accent);
 }
 
 /* Status colors and accents for project cards */
 .project-carousel-card.card-status-hold {
   --card-accent: var(--color-yellow);
-  box-shadow: 0 4px 20px -10px rgba(255, 230, 0, 0.15);
+  box-shadow: 0 4px 20px -10px var(--warn-line);
 }
 .project-carousel-card.card-status-check {
   --card-accent: var(--color-mint);
-  box-shadow: 0 4px 20px -10px rgba(70, 223, 177, 0.15);
+  box-shadow: 0 4px 20px -10px var(--accent-line);
 }
 .project-carousel-card.card-status-review {
   --card-accent: var(--color-cyan);
-  box-shadow: 0 4px 20px -10px rgba(9, 209, 199, 0.15);
+  box-shadow: 0 4px 20px -10px var(--accent-line);
 }
 .project-carousel-card.card-status-eng {
-  --card-accent: #8A2BE2;
-  box-shadow: 0 4px 20px -10px rgba(138, 43, 226, 0.15);
+  --card-accent: var(--text);
+  box-shadow: 0 4px 20px -10px var(--overlay-15);
 }
 .project-carousel-card.card-status-nesting {
-  --card-accent: #9CA3AF;
+  --card-accent: var(--text-muted);
   box-shadow: 0 4px 20px -10px rgba(156, 163, 175, 0.15);
 }
 
@@ -469,7 +467,7 @@
   transform: translateY(-4px);
   background: var(--overlay-04);
   border-color: var(--overlay-10);
-  box-shadow: 0 8px 30px -10px var(--card-accent, #64748B);
+  box-shadow: 0 8px 30px -10px var(--card-accent);
 }
 
 .proj-card-header {
@@ -496,24 +494,24 @@
 }
 
 .proj-status-badge.card-status-hold {
-  background: rgba(255, 230, 0, 0.1);
-  color: var(--color-yellow);
+  background: var(--warn-soft);
+  color: var(--warn-ink);
 }
 .proj-status-badge.card-status-check {
-  background: rgba(70, 223, 177, 0.1);
-  color: var(--color-mint);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
 }
 .proj-status-badge.card-status-review {
-  background: rgba(9, 209, 199, 0.1);
-  color: var(--color-cyan);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
 }
 .proj-status-badge.card-status-eng {
-  background: rgba(138, 43, 226, 0.1);
-  color: #8A2BE2;
+  background: var(--surface-2);
+  color: var(--text);
 }
 .proj-status-badge.card-status-nesting {
-  background: rgba(156, 163, 175, 0.1);
-  color: #9CA3AF;
+  background: var(--overlay-10);
+  color: var(--text-muted);
 }
 
 .proj-name {
@@ -531,7 +529,7 @@
   justify-content: space-between;
   font-size: 0.8rem;
   color: var(--text-secondary);
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--overlay-10);
   padding: 10px;
   border-radius: var(--radius-sm);
   margin-top: 4px;
@@ -549,8 +547,8 @@
 .proj-notes {
   font-size: 0.75rem;
   color: var(--text-muted);
-  background: rgba(255, 46, 147, 0.03);
-  border: 1px dashed rgba(255, 46, 147, 0.1);
+  background: var(--danger-soft);
+  border: 1px dashed var(--danger-line);
   border-radius: var(--radius-sm);
   padding: 10px;
   margin-top: auto;
@@ -561,8 +559,8 @@
 
 /* Carousel Key Takeaways Alert Banner */
 .carousel-takeaways {
-  background: linear-gradient(135deg, rgba(70, 223, 177, 0.03) 0%, rgba(9, 209, 199, 0.05) 100%);
-  border: 1px solid rgba(70, 223, 177, 0.1);
+  background: linear-gradient(135deg, var(--accent-soft) 0%, var(--accent-soft) 100%);
+  border: 1px solid var(--accent-line);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
   margin-top: var(--spacing-sm);
@@ -779,13 +777,13 @@
 :root.light-theme .section-title svg,
 :root.light-theme .alert-banner-header svg,
 :root.light-theme .takeaways-title svg {
-  color: #1F2320;
+  color: var(--text);
 }
 
 :root.light-theme .history-badge {
-  color: #6B6F6C;
-  background: #F3F4F3;
-  border-color: #E4E6E4;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border-color: var(--border);
 }
 
 :root.light-theme .pipeline-value {
@@ -793,26 +791,26 @@
   -webkit-background-clip: border-box;
   background-clip: border-box;
   -webkit-text-fill-color: currentColor;
-  color: #1F2320;
+  color: var(--text);
   text-shadow: none;
 }
 
 :root.light-theme .fi-card-value.fi-hold,
 :root.light-theme .fi-card-value.fi-progress {
-  color: #1F2320;
+  color: var(--text);
   text-shadow: none;
 }
 
 :root.light-theme .fi-card-value.fi-risk {
-  color: #E5484D;
+  color: var(--danger);
   text-shadow: none;
 }
 
 :root.light-theme .carousel-takeaways {
-  background: #FAFAFA;
-  border-color: #E4E6E4;
+  background: var(--surface-2);
+  border-color: var(--border);
 }
 
 :root.light-theme .takeaways-title {
-  color: #1F2320;
+  color: var(--text);
 }

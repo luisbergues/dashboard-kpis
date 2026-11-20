@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { X, Calendar, Search, StickyNote } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
-import { useTheme } from '../utils/ThemeContext';
 import { formatDisplayDate } from '../utils/dateFormat';
 
 // `archivedAt` is stored as a plain ISO string (see completedProjectsArchive.js),
@@ -20,16 +19,13 @@ export function parseArchivedAt(archivedAt) {
 
 export default function CompletedProjectsModal({ projects, onClose, activeProjectSos, projectNotes = {} }) {
   const { language } = useLanguage();
-  const { theme } = useTheme();
-  const isLight = theme === 'light';
   const [searchTerm, setSearchTerm] = useState('');
-  // background is var(--bg-surface) (real theme background), so hardcoded
-  // near-white text below it was invisible in light theme.
+  // Tokens de la paleta: siguen al tema solos.
   const C = {
-    title: isLight ? '#0f172a' : '#fff',
-    body: isLight ? '#475569' : '#94A3B8',
-    name: isLight ? '#1e293b' : '#E2E8F0',
-    faint: isLight ? '#64748b' : '#64748B',
+    title: 'var(--text)',
+    body: 'var(--text-muted)',
+    name: 'var(--text)',
+    faint: 'var(--text-muted)',
   };
 
   const visibleProjects = useMemo(() => {
@@ -132,7 +128,7 @@ export default function CompletedProjectsModal({ projects, onClose, activeProjec
                             ? (language === 'es' ? 'Proyecto archivado: ya no está en Pipeline' : 'Archived project: no longer in Pipeline')
                             : undefined}
                           style={{
-                            borderBottom: '1px solid rgba(255,255,255,0.05)',
+                            borderBottom: '1px solid var(--border)',
                             opacity: isInPipeline ? 1 : 0.75,
                             transition: 'background 0.15s ease',
                           }}
@@ -142,7 +138,7 @@ export default function CompletedProjectsModal({ projects, onClose, activeProjec
                               href={`${window.location.origin}${window.location.pathname}?project=${p.so}`}
                               target="_blank"
                               rel="noreferrer"
-                              style={{ color: '#09D1C7', textDecoration: 'none', cursor: 'pointer' }}
+                              style={{ color: 'var(--accent-ink)', textDecoration: 'none', cursor: 'pointer' }}
                             >
                               {p.so}
                             </a>

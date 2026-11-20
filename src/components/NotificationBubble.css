@@ -11,20 +11,20 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #FF4B4B, #FF8F00);
-  color: #ffffff;
+  background: var(--text);
+  color: var(--on-primary);
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  box-shadow: 0 4px 15px rgba(255, 75, 75, 0.4);
+  box-shadow: 0 4px 12px var(--overlay-15);
 }
 
 .notification-toggle-btn:hover {
   transform: scale(1.1) translateY(-2px);
-  box-shadow: 0 6px 24px rgba(255, 75, 75, 0.6);
+  box-shadow: 0 6px 24px var(--danger-line);
 }
 
 .notification-toggle-btn:active {
@@ -35,8 +35,8 @@
   position: absolute;
   top: 0;
   right: 0;
-  background-color: #ffffff;
-  color: #FF4B4B;
+  background-color: var(--danger);
+  color: var(--on-primary);
   font-size: 12px;
   font-weight: 700;
   width: 22px;
@@ -46,7 +46,7 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  border: 2px solid #FF4B4B;
+  border: 2px solid var(--danger);
 }
 
 /* Popover Window */
@@ -67,7 +67,7 @@
 }
 
 :root.light-theme .notification-window {
-  background: #FFFFFF !important;
+  background: var(--surface) !important;
   border: 1px solid var(--card-border) !important;
 }
 
@@ -98,7 +98,7 @@
 }
 
 :root.light-theme .notification-header {
-  background: #F6F7F0 !important;
+  background: var(--surface-2) !important;
   border-bottom: 1px solid var(--card-border) !important;
 }
 
@@ -127,8 +127,8 @@
 
 .notification-count {
   font-size: 0.8rem;
-  background: rgba(255, 75, 75, 0.15);
-  color: #FF4B4B;
+  background: var(--danger-soft);
+  color: var(--danger-ink);
   padding: 2px 8px;
   border-radius: 12px;
   font-weight: 600;
@@ -168,7 +168,7 @@
 }
 
 :root.light-theme .notification-item {
-  background: #FFFFFF !important;
+  background: var(--surface) !important;
   border: 1px solid var(--card-border) !important;
 }
 
@@ -179,7 +179,7 @@
 }
 
 :root.light-theme .notification-item:hover {
-  background: #F6F7F0 !important;
+  background: var(--surface-2) !important;
   border-color: var(--card-border) !important;
 }
 
@@ -189,31 +189,31 @@
 }
 
 .notification-item.error .notification-icon {
-  color: #ef4444;
+  color: var(--danger);
 }
 
 .notification-item.warning .notification-icon {
-  color: #f59e0b;
+  color: var(--warn);
 }
 
 .notification-item.info .notification-icon {
-  color: #3b82f6;
+  color: var(--text);
 }
 
 .notification-item.designer_review .notification-icon {
-  color: #8B5CF6;
+  color: var(--text);
 }
 
 /* Naranja: el mismo color con el que el calendario pinta los eventos de
    Finals (ver CalendarView.css .cal-finals-event). */
 .notification-item.finals .notification-icon {
-  color: var(--color-orange, #ffa500);
+  color: var(--color-orange);
 }
 
 /* Un finals cuya fecha ya paso y que nadie tomo es una falla, no un aviso:
    se pinta con el rojo de los errores. */
 .notification-item.finals_overdue .notification-icon {
-  color: #ef4444;
+  color: var(--danger);
 }
 
 .notification-content {
@@ -238,7 +238,7 @@
 
 /* Light theme: campanita carbón lisa; el badge numérico sigue rojo. */
 :root.light-theme .notification-toggle-btn {
-  background: #2B2B2B;
+  background: var(--text);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
