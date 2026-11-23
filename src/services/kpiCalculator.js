@@ -482,7 +482,13 @@ function isoWeekKey(date) {
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-  return { key: `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`, weekStart: d };
+  // `d` es el JUEVES de la semana (truco ISO para el número de semana) y en
+  // UTC: usarlo como etiqueta mostraba el miércoles en Argentina (UTC-3), así
+  // que el eje decía "Nov 25" un lunes 23. La etiqueta es el LUNES en hora
+  // local, igual que "Week of ..." del Dashboard y weeklyCompleted.js.
+  const offsetToMonday = (date.getDay() + 6) % 7;
+  const weekStart = new Date(date.getFullYear(), date.getMonth(), date.getDate() - offsetToMonday);
+  return { key: `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`, weekStart };
 }
 
 /**
