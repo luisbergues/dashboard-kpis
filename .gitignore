@@ -41,3 +41,6 @@ verify-archive-rules.js
 *.log
 debug*
 test-*.html
+
+# Volcado de la planilla de KPIs (SO#, montos): datos de la empresa, nunca al repo.
+temp_data.csv

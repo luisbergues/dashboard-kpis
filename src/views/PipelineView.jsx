@@ -718,11 +718,14 @@ function PipelineViewInner({
               onClick={() => setSelectedImage(null)}
               aria-label={language === 'es' ? 'Cerrar imagen' : 'Close image'}
               style={{
+                // Va sobre el fondo fijo oscuro del visor (rgba(0,0,0,0.85)) en
+                // los dos temas: blanco fijo, no var(--text), o la X desaparece
+                // en modo claro.
                 position: 'absolute', top: '0', right: '-50px',
-                background: 'none', border: 'none', color: 'var(--text)',
+                border: 'none', color: '#FFFFFF',
                 cursor: 'pointer', padding: '8px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'var(--overlay-10)', borderRadius: '50%'
+                background: 'rgba(255, 255, 255, 0.1)', borderRadius: '50%'
               }}
             >
               <X size={24} />

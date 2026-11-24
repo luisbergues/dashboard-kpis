@@ -1,7 +1,9 @@
 // Vercel serverless function — translates free-text content (e.g. the
 // spreadsheet-sourced Executive/Weekly Summary) to Spanish via Gemini.
 // Keeps GEMINI_API_KEY server-side only (never exposed to the client bundle).
-import { requireAuth } from './_lib/verifyAuth.js';
+// Solo usuarios APROBADOS: con requireAuth bastaba registrarse (status
+// 'pending') para usar Gemini sin límite y gastar la cuota del proyecto.
+import { requireApprovedUser } from './_lib/requireApprovedUser.js';
 import { getGeminiApiKey } from './_lib/getGeminiApiKey.js';
 import { fetchGeminiWithRetry } from './_lib/fetchGeminiWithRetry.js';
 
@@ -17,7 +19,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (!(await requireAuth(req, res))) return;
+  if (!(await requireApprovedUser(req, res))) return;
 
   const apiKey = getGeminiApiKey();
   if (!apiKey) {

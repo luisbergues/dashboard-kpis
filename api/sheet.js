@@ -88,13 +88,59 @@ function getSheetsAuth() {
   });
 }
 
-// gid -> titulo de la pestaña. Se consulta en cada invocacion a proposito: una
-// funcion serverless no tiene un proceso vivo donde cachear, y renombrar una
-// pestaña no debe romper la lectura.
+// ─── Cache en memoria de la instancia ─────────────────────────────────────
+// Todas las lecturas pasan por UNA cuenta de servicio, y la cuota de lectura
+// de la Sheets API es por cuenta (60/min por defecto). Con el polling de 30 s
+// de la app, sin cache cada pestaña abierta gastaba ~8 llamadas/min y con
+// unas 7 abiertas se agotaba (502). Vercel Fluid Compute reutiliza instancias,
+// asi que estas variables de modulo sobreviven entre requests.
+//
+// Seguridad: la cache se consulta DESPUES de autenticar y autorizar en el
+// handler; nunca se sirve a quien no paso esos chequeos.
+const TITLES_TTL_MS = 10 * 60 * 1000; // los nombres de pestaña casi no cambian
+const VALUES_TTL_MS = 25 * 1000;      // un poco menos que el polling de 30 s
+
+let titlesCache = null; // { spreadsheetId, byGid: Map<gid, title>, expires }
+const valuesCache = new Map(); // `${spreadsheetId}:${gid}` -> { promise, expires }
+
+// gid -> titulo de la pestaña. Una sola llamada trae los titulos de TODAS las
+// pestañas; se guardan 10 minutos. Si una pestaña se renombra, la lectura falla
+// una vez, se invalida (ver handler) y la siguiente vuelve a resolver.
 async function resolveTitle(sheets, spreadsheetId, gid) {
-  const meta = await sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets.properties(sheetId,title)' });
-  const found = (meta.data.sheets || []).find((s) => s.properties?.sheetId === gid);
-  return found?.properties?.title || null;
+  const now = Date.now();
+  if (!titlesCache || titlesCache.spreadsheetId !== spreadsheetId || titlesCache.expires < now) {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets.properties(sheetId,title)' });
+    const byGid = new Map();
+    for (const s of meta.data.sheets || []) {
+      if (s.properties) byGid.set(s.properties.sheetId, s.properties.title);
+    }
+    titlesCache = { spreadsheetId, byGid, expires: now + TITLES_TTL_MS };
+  }
+  return titlesCache.byGid.get(gid) || null;
+}
+
+// Lee una pestaña con cache corta y deduplicacion: si 5 pestañas del navegador
+// piden lo mismo a la vez, se hace UNA llamada a Google y todas esperan esa
+// misma promesa. Una lectura fallida no queda cacheada.
+function readValuesCached(sheets, spreadsheetId, gid, title) {
+  const key = `${spreadsheetId}:${gid}`;
+  const now = Date.now();
+  const hit = valuesCache.get(key);
+  if (hit && hit.expires > now) return hit.promise;
+
+  const promise = sheets.spreadsheets.values
+    .get({
+      spreadsheetId,
+      range: title,
+      // Los parsers esperan el texto tal como se ve en la planilla (fechas y
+      // montos ya formateados), que es lo que daba el export CSV.
+      valueRenderOption: 'FORMATTED_VALUE',
+      dateTimeRenderOption: 'FORMATTED_STRING',
+    })
+    .then((result) => padRows(result.data.values));
+  valuesCache.set(key, { promise, expires: now + VALUES_TTL_MS });
+  promise.catch(() => valuesCache.delete(key));
+  return promise;
 }
 
 /**
@@ -151,6 +197,8 @@ export default async function handler(req, res) {
   const spreadsheetId = process.env.SHEET_ID;
   const auth = getSheetsAuth();
   if (!spreadsheetId || !auth) {
+    // Se loguea: antes este 500 no dejaba rastro en los logs de Vercel.
+    console.error('Sheets access not configured:', { hasSheetId: Boolean(spreadsheetId), hasServiceAccount: Boolean(auth) });
     res.status(500).json({ error: 'Sheets access not configured (SHEET_ID / GOOGLE_SA)' });
     return;
   }
@@ -159,21 +207,17 @@ export default async function handler(req, res) {
     const sheets = google.sheets({ version: 'v4', auth });
     const title = await resolveTitle(sheets, spreadsheetId, entry.gid);
     if (!title) {
+      console.error(`Sheet tab not found: gid ${entry.gid} (${name})`);
       res.status(404).json({ error: 'Sheet tab not found' });
       return;
     }
-    const result = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: title,
-      // Los parsers esperan el texto tal como se ve en la planilla (fechas y
-      // montos ya formateados), que es lo que daba el export CSV.
-      valueRenderOption: 'FORMATTED_VALUE',
-      dateTimeRenderOption: 'FORMATTED_STRING',
-    });
+    const values = await readValuesCached(sheets, spreadsheetId, entry.gid, title);
     // Privado: no debe quedar en ningun cache compartido ni en un CDN.
     res.setHeader('Cache-Control', 'private, max-age=60');
-    res.status(200).json({ values: padRows(result.data.values) });
+    res.status(200).json({ values });
   } catch (error) {
+    // Puede ser una pestaña renombrada: que la proxima request re-resuelva.
+    titlesCache = null;
     console.error('Error reading sheet:', error?.message || error);
     res.status(502).json({ error: 'Could not read the spreadsheet' });
   }
